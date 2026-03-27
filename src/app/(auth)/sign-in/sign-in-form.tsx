@@ -1,11 +1,15 @@
 "use client";
 
 import { useActionState } from "react";
-import { authInitialState, signInAction } from "@/app/(auth)/sign-in/actions";
+import { signInAction } from "@/app/(auth)/sign-in/actions";
 import { Button } from "@/components/ui/button";
 
 const inputClassName =
   "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
+
+const authInitialState = {
+  error: null,
+};
 
 export function SignInForm() {
   const [signInState, signInFormAction, signInPending] = useActionState(

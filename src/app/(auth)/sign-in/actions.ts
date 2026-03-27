@@ -8,10 +8,6 @@ interface AuthState {
   error: string | null;
 }
 
-const initialState: AuthState = { error: null };
-
-export const authInitialState = initialState;
-
 const getErrorMessage = (error: unknown) => {
   if (error instanceof Error && error.message.length > 0) {
     return error.message;
