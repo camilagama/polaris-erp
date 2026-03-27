@@ -1,27 +1,17 @@
 "use client";
 
 import { useActionState } from "react";
-import {
-  authInitialState,
-  bootstrapAdminAction,
-  signInAction,
-} from "@/app/(auth)/sign-in/actions";
+import { authInitialState, signInAction } from "@/app/(auth)/sign-in/actions";
 import { Button } from "@/components/ui/button";
-
-interface SignInFormProps {
-  canBootstrap: boolean;
-}
 
 const inputClassName =
   "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
 
-export function SignInForm({ canBootstrap }: SignInFormProps) {
+export function SignInForm() {
   const [signInState, signInFormAction, signInPending] = useActionState(
     signInAction,
     authInitialState
   );
-  const [bootstrapState, bootstrapFormAction, bootstrapPending] =
-    useActionState(bootstrapAdminAction, authInitialState);
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
@@ -109,77 +99,6 @@ export function SignInForm({ canBootstrap }: SignInFormProps) {
             {signInPending ? "Entrando..." : "Entrar no painel"}
           </Button>
         </form>
-
-        {canBootstrap ? (
-          <div className="mt-8 border-border/60 border-t pt-6">
-            <div className="mb-4 space-y-1">
-              <h3 className="font-semibold text-base">Primeiro acesso</h3>
-              <p className="text-muted-foreground text-sm">
-                Nenhum usuario foi encontrado. Crie o administrador inicial da
-                operacao.
-              </p>
-            </div>
-            <form action={bootstrapFormAction} className="space-y-4">
-              <div className="space-y-2">
-                <label className="font-medium text-sm" htmlFor="name">
-                  Nome
-                </label>
-                <input
-                  className={inputClassName}
-                  id="name"
-                  name="name"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <label
-                  className="font-medium text-sm"
-                  htmlFor="bootstrap-email"
-                >
-                  Email
-                </label>
-                <input
-                  className={inputClassName}
-                  id="bootstrap-email"
-                  name="email"
-                  required
-                  type="email"
-                />
-              </div>
-              <div className="space-y-2">
-                <label
-                  className="font-medium text-sm"
-                  htmlFor="bootstrap-password"
-                >
-                  Senha
-                </label>
-                <input
-                  className={inputClassName}
-                  id="bootstrap-password"
-                  minLength={8}
-                  name="password"
-                  required
-                  type="password"
-                />
-              </div>
-              {bootstrapState.error ? (
-                <p className="text-destructive text-sm">
-                  {bootstrapState.error}
-                </p>
-              ) : null}
-              <Button
-                className="w-full"
-                disabled={bootstrapPending}
-                type="submit"
-                variant="secondary"
-              >
-                {bootstrapPending
-                  ? "Criando administrador..."
-                  : "Criar administrador inicial"}
-              </Button>
-            </form>
-          </div>
-        ) : null}
       </section>
     </div>
   );
