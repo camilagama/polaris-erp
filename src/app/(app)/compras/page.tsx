@@ -182,7 +182,7 @@ export default async function PurchasesPage({
               />
             </div>
             <button
-              className="h-10 rounded-xl bg-primary px-4 font-medium text-primary-foreground text-sm transition hover:bg-primary/90"
+              className="h-10 w-full rounded-xl bg-primary px-4 font-medium text-primary-foreground text-sm transition hover:bg-primary/90 sm:w-auto"
               type="submit"
             >
               Registrar compra
@@ -233,7 +233,7 @@ export default async function PurchasesPage({
                       </p>
                     ) : null}
                   </div>
-                  <div className="flex flex-wrap items-start justify-end gap-2">
+                  <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:flex-wrap sm:items-start sm:justify-end">
                     {purchase.status !== "received" &&
                     purchase.status !== "canceled" ? (
                       <>
@@ -244,7 +244,7 @@ export default async function PurchasesPage({
                             value={purchase.id}
                           />
                           <button
-                            className="h-10 rounded-xl bg-primary px-4 font-medium text-primary-foreground text-sm transition hover:bg-primary/90"
+                            className="h-10 w-full rounded-xl bg-primary px-4 font-medium text-primary-foreground text-sm transition hover:bg-primary/90 sm:w-auto"
                             type="submit"
                           >
                             Marcar recebida
@@ -257,7 +257,7 @@ export default async function PurchasesPage({
                             value={purchase.id}
                           />
                           <button
-                            className="h-10 rounded-xl border border-border px-4 font-medium text-sm transition hover:bg-muted"
+                            className="h-10 w-full rounded-xl border border-border px-4 font-medium text-sm transition hover:bg-muted sm:w-auto"
                             type="submit"
                           >
                             Cancelar

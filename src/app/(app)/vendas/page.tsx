@@ -156,7 +156,7 @@ export default async function SalesPage({
               />
             </div>
             <button
-              className="h-10 rounded-xl bg-primary px-4 font-medium text-primary-foreground text-sm transition hover:bg-primary/90"
+              className="h-10 w-full rounded-xl bg-primary px-4 font-medium text-primary-foreground text-sm transition hover:bg-primary/90 sm:w-auto"
               type="submit"
             >
               Confirmar venda
@@ -200,10 +200,13 @@ export default async function SalesPage({
                         </p>
                       </div>
                       {sale.status === "canceled" ? null : (
-                        <form action={cancelSaleAction}>
+                        <form
+                          action={cancelSaleAction}
+                          className="w-full sm:w-auto"
+                        >
                           <input name="saleId" type="hidden" value={sale.id} />
                           <button
-                            className="h-10 rounded-xl border border-border px-4 font-medium text-sm transition hover:bg-muted"
+                            className="h-10 w-full rounded-xl border border-border px-4 font-medium text-sm transition hover:bg-muted sm:w-auto"
                             type="submit"
                           >
                             Cancelar
@@ -244,7 +247,7 @@ export default async function SalesPage({
                               {product?.name || `Produto #${item.productId}`}
                             </p>
                             <p>{item.quantity} un</p>
-                            <p className="font-medium">
+                            <p className="font-medium md:text-right">
                               venda {formatCurrency(item.lineSubtotal)} · custo{" "}
                               {formatCurrency(item.costSnapshotTotal)}
                             </p>

@@ -23,13 +23,15 @@ export function PageLayout({
           <p className="font-semibold text-primary text-xs uppercase tracking-[0.18em]">
             {eyebrow}
           </p>
-          <h1 className="font-heading font-semibold text-3xl tracking-tight">
+          <h1 className="font-heading font-semibold text-2xl tracking-tight sm:text-3xl">
             {title}
           </h1>
-          <p className="max-w-3xl text-muted-foreground">{description}</p>
+          <p className="max-w-3xl text-muted-foreground text-sm sm:text-base">
+            {description}
+          </p>
         </div>
         {actions ? (
-          <div className="flex items-center gap-3">{actions}</div>
+          <div className="flex flex-wrap items-center gap-3">{actions}</div>
         ) : null}
       </div>
       {children}
@@ -47,7 +49,7 @@ export function Surface({
   return (
     <section
       className={cn(
-        "rounded-2xl border border-border/60 bg-card p-5 shadow-sm",
+        "rounded-2xl border border-border/60 bg-card p-4 shadow-sm sm:p-5",
         className
       )}
     >

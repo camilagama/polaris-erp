@@ -23,14 +23,18 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center border-border/60 border-b bg-background/80 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/70">
           <SidebarTrigger />
-          <div className="ml-4">
-            <p className="font-semibold text-sm">DG Imports</p>
-            <p className="text-muted-foreground text-xs">
+          <div className="ml-3 min-w-0 sm:ml-4">
+            <p className="truncate font-semibold text-sm sm:text-base">
+              DG Imports
+            </p>
+            <p className="truncate text-[11px] text-muted-foreground sm:text-xs">
               Operacao protegida e orientada a transacoes
             </p>
           </div>
         </header>
-        <div className="flex flex-1 flex-col bg-background p-6">{children}</div>
+        <div className="flex flex-1 flex-col bg-background px-4 py-4 sm:px-6 sm:py-6">
+          {children}
+        </div>
       </SidebarInset>
     </SidebarProvider>
   );

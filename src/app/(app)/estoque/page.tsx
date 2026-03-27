@@ -146,7 +146,7 @@ export default async function InventoryPage({
               />
             </div>
             <button
-              className="h-10 rounded-xl bg-primary px-4 font-medium text-primary-foreground text-sm transition hover:bg-primary/90"
+              className="h-10 w-full rounded-xl bg-primary px-4 font-medium text-primary-foreground text-sm transition hover:bg-primary/90 sm:w-auto"
               type="submit"
             >
               Registrar movimento

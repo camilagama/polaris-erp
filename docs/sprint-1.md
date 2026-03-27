@@ -37,7 +37,7 @@
 - [x] Seed inicial idempotente para parametros e usuario principal
 - [x] Checklist operacional inicial documentado
 - [x] Estados vazios especificos por modulo com orientacao operacional
-- [ ] Revisao de UX mobile por tela
+- [x] Revisao de UX mobile por tela
 - [ ] E2E de login, compra, venda, recebimento e dashboard
 
 ## Marcos de aceite
@@ -53,6 +53,6 @@
 
 Concluir a Fase 8 com polimento operacional:
 
-1. Revisao responsiva final nas telas principais.
-2. E2E cobrindo login, compra, venda, recebimento e dashboard.
-3. Checklist de smoke test para go-live apos deploy.
+1. E2E cobrindo login, compra, venda, recebimento e dashboard.
+2. Checklist de smoke test para go-live apos deploy.
+3. Revisao final com dados reais antes de fechar o Marco F.

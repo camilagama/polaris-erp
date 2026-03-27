@@ -12,7 +12,7 @@ import { formatCurrency, formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const metricCardClassName =
-  "rounded-2xl border border-border/60 bg-card/90 p-5 shadow-sm";
+  "rounded-2xl border border-border/60 bg-card/90 p-4 shadow-sm sm:p-5";
 
 const periodOptions = [
   { label: "7 dias", value: 7 },
@@ -125,10 +125,10 @@ export default async function DashboardPage({
           <p className="font-semibold text-primary text-xs uppercase tracking-[0.18em]">
             Visao geral
           </p>
-          <h1 className="font-heading font-semibold text-3xl tracking-tight">
+          <h1 className="font-heading font-semibold text-2xl tracking-tight sm:text-3xl">
             Dashboard operacional
           </h1>
-          <p className="max-w-3xl text-muted-foreground">
+          <p className="max-w-3xl text-muted-foreground text-sm sm:text-base">
             Indicadores reais da V1: faturamento, lucro, caixa recebido, capital
             em estoque e sinais de produtos parados ou com saldo critico.
           </p>
@@ -154,25 +154,25 @@ export default async function DashboardPage({
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <div className={metricCardClassName}>
           <p className="text-muted-foreground text-sm">Faturamento bruto</p>
-          <p className="mt-3 font-heading font-semibold text-3xl">
+          <p className="mt-3 font-heading font-semibold text-2xl sm:text-3xl">
             {formatCurrency(grossRevenue)}
           </p>
         </div>
         <div className={metricCardClassName}>
           <p className="text-muted-foreground text-sm">Lucro bruto</p>
-          <p className="mt-3 font-heading font-semibold text-3xl">
+          <p className="mt-3 font-heading font-semibold text-2xl sm:text-3xl">
             {formatCurrency(grossProfit)}
           </p>
         </div>
         <div className={metricCardClassName}>
           <p className="text-muted-foreground text-sm">Lucro liquido</p>
-          <p className="mt-3 font-heading font-semibold text-3xl">
+          <p className="mt-3 font-heading font-semibold text-2xl sm:text-3xl">
             {formatCurrency(netProfit)}
           </p>
         </div>
         <div className={metricCardClassName}>
           <p className="text-muted-foreground text-sm">Margem bruta</p>
-          <p className="mt-3 font-heading font-semibold text-3xl">
+          <p className="mt-3 font-heading font-semibold text-2xl sm:text-3xl">
             {grossMargin.toFixed(1)}%
           </p>
         </div>
@@ -181,25 +181,25 @@ export default async function DashboardPage({
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <div className={metricCardClassName}>
           <p className="text-muted-foreground text-sm">Recebido bruto</p>
-          <p className="mt-3 font-heading font-semibold text-3xl">
+          <p className="mt-3 font-heading font-semibold text-2xl sm:text-3xl">
             {formatCurrency(receivedGross)}
           </p>
         </div>
         <div className={metricCardClassName}>
           <p className="text-muted-foreground text-sm">Recebido liquido</p>
-          <p className="mt-3 font-heading font-semibold text-3xl">
+          <p className="mt-3 font-heading font-semibold text-2xl sm:text-3xl">
             {formatCurrency(receivedNet)}
           </p>
         </div>
         <div className={metricCardClassName}>
           <p className="text-muted-foreground text-sm">Ticket medio</p>
-          <p className="mt-3 font-heading font-semibold text-3xl">
+          <p className="mt-3 font-heading font-semibold text-2xl sm:text-3xl">
             {formatCurrency(averageTicket)}
           </p>
         </div>
         <div className={metricCardClassName}>
           <p className="text-muted-foreground text-sm">Taxas no periodo</p>
-          <p className="mt-3 font-heading font-semibold text-3xl">
+          <p className="mt-3 font-heading font-semibold text-2xl sm:text-3xl">
             {formatCurrency(totalFees)}
           </p>
         </div>
@@ -208,25 +208,25 @@ export default async function DashboardPage({
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <div className={metricCardClassName}>
           <p className="text-muted-foreground text-sm">Capital em estoque</p>
-          <p className="mt-3 font-heading font-semibold text-3xl">
+          <p className="mt-3 font-heading font-semibold text-2xl sm:text-3xl">
             {formatCurrency(stockValue)}
           </p>
         </div>
         <div className={metricCardClassName}>
           <p className="text-muted-foreground text-sm">Produtos ativos</p>
-          <p className="mt-3 font-heading font-semibold text-3xl">
+          <p className="mt-3 font-heading font-semibold text-2xl sm:text-3xl">
             {activeProducts.length}
           </p>
         </div>
         <div className={metricCardClassName}>
           <p className="text-muted-foreground text-sm">Estoque critico</p>
-          <p className="mt-3 font-heading font-semibold text-3xl">
+          <p className="mt-3 font-heading font-semibold text-2xl sm:text-3xl">
             {lowStockProducts.length}
           </p>
         </div>
         <div className={metricCardClassName}>
           <p className="text-muted-foreground text-sm">Produtos parados</p>
-          <p className="mt-3 font-heading font-semibold text-3xl">
+          <p className="mt-3 font-heading font-semibold text-2xl sm:text-3xl">
             {staleProducts.length}
           </p>
         </div>
@@ -262,7 +262,7 @@ export default async function DashboardPage({
                       {formatDateTime(sale.saleDate)}
                     </p>
                   </div>
-                  <div className="text-right text-sm">
+                  <div className="text-sm md:text-right">
                     <p className="font-semibold">
                       {formatCurrency(sale.orderTotal)}
                     </p>
