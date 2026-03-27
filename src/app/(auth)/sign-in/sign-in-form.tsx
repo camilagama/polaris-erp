@@ -1,8 +1,11 @@
 "use client";
 
-import { useActionState } from "react";
+import { GoogleIcon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { useActionState, useEffect, useState } from "react";
 import { signInAction } from "@/app/(auth)/sign-in/actions";
 import { Button } from "@/components/ui/button";
+import { authClient } from "@/lib/auth-client";
 
 const inputClassName =
   "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
@@ -16,6 +19,36 @@ export function SignInForm() {
     signInAction,
     authInitialState
   );
+  const [googlePending, setGooglePending] = useState(false);
+  const [googleError, setGoogleError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const initializeOneTap = async () => {
+      await authClient.oneTap({
+        callbackURL: "/",
+        context: "signin",
+      });
+    };
+
+    initializeOneTap();
+  }, []);
+
+  const handleGoogleSignIn = async () => {
+    setGooglePending(true);
+    setGoogleError(null);
+
+    const result = await authClient.signIn.social({
+      callbackURL: "/",
+      provider: "google",
+    });
+
+    if (result.error) {
+      setGoogleError(
+        result.error.message ?? "Nao foi possivel entrar com Google."
+      );
+      setGooglePending(false);
+    }
+  };
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
@@ -68,6 +101,34 @@ export function SignInForm() {
           <p className="text-muted-foreground text-sm">
             Use email e senha para acessar a area protegida da operacao.
           </p>
+        </div>
+
+        <div className="space-y-3">
+          <Button
+            className="h-10 w-full"
+            disabled={googlePending}
+            onClick={handleGoogleSignIn}
+            type="button"
+            variant="secondary"
+          >
+            <HugeiconsIcon icon={GoogleIcon} strokeWidth={2} />
+            {googlePending ? "Redirecionando..." : "Continuar com Google"}
+          </Button>
+          <p className="text-center text-muted-foreground text-xs">
+            One Tap abre automaticamente quando o Google permitir o prompt neste
+            navegador.
+          </p>
+          {googleError ? (
+            <p className="text-destructive text-sm">{googleError}</p>
+          ) : null}
+        </div>
+
+        <div className="my-6 flex items-center gap-3">
+          <div className="h-px flex-1 bg-border/60" />
+          <span className="text-muted-foreground text-xs uppercase tracking-[0.18em]">
+            ou
+          </span>
+          <div className="h-px flex-1 bg-border/60" />
         </div>
 
         <form action={signInFormAction} className="space-y-4">

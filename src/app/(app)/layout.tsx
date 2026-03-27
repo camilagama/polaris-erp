@@ -30,9 +30,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             </p>
           </div>
         </header>
-        <div className="flex flex-1 flex-col bg-[radial-gradient(circle_at_top_left,_color-mix(in_oklch,_var(--primary)_10%,_transparent),_transparent_28%)] p-6">
-          {children}
-        </div>
+        <div className="flex flex-1 flex-col bg-background p-6">{children}</div>
       </SidebarInset>
     </SidebarProvider>
   );

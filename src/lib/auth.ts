@@ -2,6 +2,7 @@ import "server-only";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
+import { oneTap } from "better-auth/plugins";
 import { db } from "@/db";
 import { accounts, sessions, users, verifications } from "@/db/schema";
 import { serverEnv } from "@/lib/env";
@@ -25,5 +26,18 @@ export const auth = betterAuth({
     minPasswordLength: 8,
     autoSignIn: true,
   },
-  plugins: [nextCookies()],
+  socialProviders: {
+    google: {
+      clientId: serverEnv.GOOGLE_CLIENT_ID,
+      clientSecret: serverEnv.GOOGLE_CLIENT_SECRET,
+      disableImplicitSignUp: true,
+    },
+  },
+  plugins: [
+    nextCookies(),
+    oneTap({
+      clientId: serverEnv.GOOGLE_CLIENT_ID,
+      disableSignup: true,
+    }),
+  ],
 });
