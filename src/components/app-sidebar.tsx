@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  CreditCardIcon,
   DollarCircleIcon,
   Home01Icon,
   Logout01Icon,
@@ -61,7 +60,6 @@ const navigationItems = [
   { href: "/produtos", label: "Produtos", icon: PackageIcon },
   { href: "/estoque", label: "Estoque", icon: Store04Icon },
   { href: "/vendas", label: "Vendas", icon: DollarCircleIcon },
-  { href: "/recebimentos", label: "Recebimentos", icon: CreditCardIcon },
   { href: "/configuracoes", label: "Configuracoes", icon: Settings01Icon },
 ] as const;
 

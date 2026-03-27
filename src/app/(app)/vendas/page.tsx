@@ -1,29 +1,55 @@
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import {
   EmptyState,
   FeedbackBanner,
   PageLayout,
   Surface,
 } from "@/app/(app)/_components/page-layout";
+import { createReceiptAction } from "@/app/(app)/recebimentos/actions";
 import { cancelSaleAction, createSaleAction } from "@/app/(app)/vendas/actions";
 import { SalesForm } from "@/app/(app)/vendas/sales-form";
 import { db } from "@/db";
-import { products, saleItems, sales } from "@/db/schema";
+import { products, receipts, saleItems, sales } from "@/db/schema";
 import { getSearchParamValue } from "@/lib/action-feedback";
-import { formatCurrency, formatDateTime } from "@/lib/format";
+import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
+
+const inputClassName =
+  "h-10 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
 
 export default async function SalesPage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const [productRows, saleRows, saleItemRows, resolvedSearchParams] =
-    await Promise.all([
-      db.select().from(products).orderBy(desc(products.updatedAt)),
-      db.select().from(sales).orderBy(desc(sales.createdAt)),
-      db.select().from(saleItems),
-      searchParams,
-    ]);
+  const [
+    productRows,
+    saleRows,
+    saleItemRows,
+    receiptRows,
+    resolvedSearchParams,
+  ] = await Promise.all([
+    db.select().from(products).orderBy(desc(products.updatedAt)),
+    db.select().from(sales).orderBy(desc(sales.createdAt)),
+    db.select().from(saleItems),
+    db
+      .select({
+        dueDate: receipts.dueDate,
+        effectiveDate: receipts.effectiveDate,
+        feeAmount: receipts.feeAmount,
+        grossAmount: receipts.grossAmount,
+        id: receipts.id,
+        method: receipts.method,
+        netAmount: receipts.netAmount,
+        notes: receipts.notes,
+        saleId: receipts.saleId,
+        saleStatus: sales.status,
+        status: receipts.status,
+      })
+      .from(receipts)
+      .innerJoin(sales, eq(sales.id, receipts.saleId))
+      .orderBy(desc(receipts.createdAt)),
+    searchParams,
+  ]);
   const error = getSearchParamValue(resolvedSearchParams.error);
   const message = getSearchParamValue(resolvedSearchParams.message);
   const productMap = new Map(
@@ -38,10 +64,19 @@ export default async function SalesPage({
     },
     new Map()
   );
+  const receiptsBySaleId = receiptRows.reduce<Map<number, typeof receiptRows>>(
+    (map, receipt) => {
+      const currentReceipts = map.get(receipt.saleId) ?? [];
+      currentReceipts.push(receipt);
+      map.set(receipt.saleId, currentReceipts);
+      return map;
+    },
+    new Map()
+  );
 
   return (
     <PageLayout
-      description="Vendas baixam estoque, usam o preco atual do produto como base e deixam o financeiro separado para ser resolvido em recebimentos."
+      description="Vendas concentram estoque e financeiro: criam o pedido, baixam saldo e registram recebimentos, taxas, refund e chargeback no mesmo lugar."
       eyebrow="Vendas"
       title="Fluxo comercial"
     >
@@ -64,8 +99,8 @@ export default async function SalesPage({
             <div>
               <h2 className="font-semibold text-lg">Vendas registradas</h2>
               <p className="text-muted-foreground text-sm">
-                Status operacional e financeiro ficam visiveis sem misturar
-                caixa com estoque.
+                O financeiro agora fica dentro da propria venda, sem modulo
+                separado.
               </p>
             </div>
             <span className="rounded-full bg-muted px-3 py-1 font-medium text-xs">
@@ -76,6 +111,7 @@ export default async function SalesPage({
             {saleRows.length > 0 ? (
               saleRows.map((sale) => {
                 const items = itemsBySaleId.get(sale.id) ?? [];
+                const saleReceipts = receiptsBySaleId.get(sale.id) ?? [];
 
                 return (
                   <div
@@ -109,6 +145,7 @@ export default async function SalesPage({
                         </form>
                       )}
                     </div>
+
                     <div className="mt-3 grid gap-2 text-sm md:grid-cols-3">
                       <p>
                         Pedido:{" "}
@@ -129,6 +166,7 @@ export default async function SalesPage({
                         </span>
                       </p>
                     </div>
+
                     <div className="mt-4 space-y-2">
                       {items.map((item) => {
                         const product = productMap.get(item.productId);
@@ -150,6 +188,207 @@ export default async function SalesPage({
                         );
                       })}
                     </div>
+
+                    <div className="mt-4 grid gap-4 rounded-2xl border border-border/50 bg-card/70 p-4 xl:grid-cols-[1fr_0.9fr]">
+                      <div className="space-y-3">
+                        <div>
+                          <h3 className="font-semibold text-sm">
+                            Financeiro da venda
+                          </h3>
+                          <p className="text-muted-foreground text-xs">
+                            Registre aqui pagamento, parcial, pendencia, refund
+                            ou chargeback.
+                          </p>
+                        </div>
+                        {saleReceipts.length > 0 ? (
+                          saleReceipts.map((receipt) => (
+                            <div
+                              className="rounded-xl border border-border/50 bg-background/70 px-3 py-3 text-sm"
+                              key={receipt.id}
+                            >
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] uppercase tracking-[0.12em]">
+                                  {receipt.status}
+                                </span>
+                                <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] uppercase tracking-[0.12em]">
+                                  {receipt.method}
+                                </span>
+                              </div>
+                              <div className="mt-2 grid gap-1 text-muted-foreground text-xs sm:grid-cols-2">
+                                <p>
+                                  Bruto:{" "}
+                                  <span className="font-medium text-foreground">
+                                    {formatCurrency(receipt.grossAmount)}
+                                  </span>
+                                </p>
+                                <p>
+                                  Liquido:{" "}
+                                  <span className="font-medium text-foreground">
+                                    {formatCurrency(receipt.netAmount)}
+                                  </span>
+                                </p>
+                                <p>
+                                  Taxa:{" "}
+                                  <span className="font-medium text-foreground">
+                                    {formatCurrency(receipt.feeAmount)}
+                                  </span>
+                                </p>
+                                <p>
+                                  Efetivo:{" "}
+                                  <span className="font-medium text-foreground">
+                                    {formatDate(receipt.effectiveDate)}
+                                  </span>
+                                </p>
+                              </div>
+                              {receipt.notes ? (
+                                <p className="mt-2 text-muted-foreground text-xs">
+                                  {receipt.notes}
+                                </p>
+                              ) : null}
+                            </div>
+                          ))
+                        ) : (
+                          <EmptyState
+                            description="Esta venda ainda nao tem nenhum evento financeiro registrado."
+                            title="Sem eventos financeiros"
+                          />
+                        )}
+                      </div>
+
+                      <form action={createReceiptAction} className="space-y-3">
+                        <input name="saleId" type="hidden" value={sale.id} />
+                        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-1">
+                          <div className="space-y-2">
+                            <label
+                              className="font-medium text-sm"
+                              htmlFor={`grossAmount-${sale.id}`}
+                            >
+                              Valor bruto
+                            </label>
+                            <input
+                              className={inputClassName}
+                              id={`grossAmount-${sale.id}`}
+                              min="0"
+                              name="grossAmount"
+                              required
+                              step="0.01"
+                              type="number"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label
+                              className="font-medium text-sm"
+                              htmlFor={`feeAmount-${sale.id}`}
+                            >
+                              Taxa
+                            </label>
+                            <input
+                              className={inputClassName}
+                              defaultValue="0"
+                              id={`feeAmount-${sale.id}`}
+                              min="0"
+                              name="feeAmount"
+                              step="0.01"
+                              type="number"
+                            />
+                          </div>
+                        </div>
+                        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-1">
+                          <div className="space-y-2">
+                            <label
+                              className="font-medium text-sm"
+                              htmlFor={`status-${sale.id}`}
+                            >
+                              Tipo do evento
+                            </label>
+                            <select
+                              className={inputClassName}
+                              defaultValue="received"
+                              id={`status-${sale.id}`}
+                              name="status"
+                              required
+                            >
+                              <option value="received">Recebido</option>
+                              <option value="partial">Parcial</option>
+                              <option value="pending">Pendente</option>
+                              <option value="refunded">Refund</option>
+                              <option value="chargeback">Chargeback</option>
+                              <option value="canceled">Cancelado</option>
+                            </select>
+                          </div>
+                          <div className="space-y-2">
+                            <label
+                              className="font-medium text-sm"
+                              htmlFor={`method-${sale.id}`}
+                            >
+                              Metodo
+                            </label>
+                            <select
+                              className={inputClassName}
+                              defaultValue="pix"
+                              id={`method-${sale.id}`}
+                              name="method"
+                              required
+                            >
+                              <option value="pix">PIX</option>
+                              <option value="cash">Dinheiro</option>
+                              <option value="card">Cartao</option>
+                              <option value="payment_link">Link</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-1">
+                          <div className="space-y-2">
+                            <label
+                              className="font-medium text-sm"
+                              htmlFor={`dueDate-${sale.id}`}
+                            >
+                              Vencimento
+                            </label>
+                            <input
+                              className={inputClassName}
+                              id={`dueDate-${sale.id}`}
+                              name="dueDate"
+                              type="date"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label
+                              className="font-medium text-sm"
+                              htmlFor={`effectiveDate-${sale.id}`}
+                            >
+                              Data efetiva
+                            </label>
+                            <input
+                              className={inputClassName}
+                              id={`effectiveDate-${sale.id}`}
+                              name="effectiveDate"
+                              type="date"
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <label
+                            className="font-medium text-sm"
+                            htmlFor={`notes-${sale.id}`}
+                          >
+                            Observacoes
+                          </label>
+                          <textarea
+                            className="min-h-24 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                            id={`notes-${sale.id}`}
+                            name="notes"
+                          />
+                        </div>
+                        <button
+                          className="h-10 w-full rounded-xl bg-primary px-4 font-medium text-primary-foreground text-sm transition hover:bg-primary/90"
+                          type="submit"
+                        >
+                          Registrar evento financeiro
+                        </button>
+                      </form>
+                    </div>
+
                     {sale.notes ? (
                       <p className="mt-3 text-muted-foreground text-sm">
                         {sale.notes}
@@ -160,7 +399,7 @@ export default async function SalesPage({
               })
             ) : (
               <EmptyState
-                description="Assim que houver estoque recebido, registre a primeira venda. O sistema baixa saldo, grava snapshot de custo e libera o financeiro em recebimentos."
+                description="Assim que houver estoque recebido, registre a primeira venda. O sistema baixa saldo, grava snapshot de custo e agora tambem concentra o financeiro no mesmo fluxo."
                 title="Nenhuma venda registrada ainda"
               />
             )}

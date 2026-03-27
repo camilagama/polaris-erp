@@ -26,7 +26,7 @@ const receiptSchema = z.object({
 });
 
 const redirectWithResult = (params: Record<string, string | undefined>) =>
-  redirect(buildRedirectPath("/recebimentos", params));
+  redirect(buildRedirectPath("/vendas", params));
 
 const toOptionalDate = (value?: string) => {
   if (!value) {
@@ -75,7 +75,6 @@ export async function createReceiptAction(formData: FormData) {
 
   revalidatePath("/");
   revalidatePath("/vendas");
-  revalidatePath("/recebimentos");
   return redirectWithResult({
     message: "Recebimento registrado e venda recalculada.",
   });
