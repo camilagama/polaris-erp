@@ -15,7 +15,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <SidebarTrigger />
           <div className="flex-1" />
         </header>
-        <div className="flex flex-1 flex-col gap-4 bg-muted/20 p-6 md:p-8">
+        <div className="flex flex-1 flex-col gap-4 bg-background p-6">
           {children}
         </div>
       </SidebarInset>
