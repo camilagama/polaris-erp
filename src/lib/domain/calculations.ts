@@ -69,3 +69,28 @@ export const calculateSaleOrderTotal = (input: {
   roundMoney(
     input.itemsSubtotal - input.discountAmount + input.shippingChargedAmount
   );
+
+export const deriveSaleStatus = (input: {
+  hasChargeback: boolean;
+  hasRefund: boolean;
+  orderTotal: number;
+  receivedGrossTotal: number;
+}) => {
+  if (input.hasChargeback) {
+    return "chargeback" as const;
+  }
+
+  if (input.hasRefund) {
+    return "refunded" as const;
+  }
+
+  if (input.receivedGrossTotal <= 0) {
+    return "awaiting_payment" as const;
+  }
+
+  if (input.receivedGrossTotal < input.orderTotal) {
+    return "partially_paid" as const;
+  }
+
+  return "paid" as const;
+};

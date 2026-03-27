@@ -6,6 +6,7 @@ import {
   calculateReceiptNetAmount,
   calculateSaleItemsSubtotal,
   calculateSaleOrderTotal,
+  deriveSaleStatus,
 } from "@/lib/domain/calculations";
 
 describe("domain calculations", () => {
@@ -64,5 +65,52 @@ describe("domain calculations", () => {
         shippingChargedAmount: 12,
       })
     ).toBe(92);
+  });
+
+  it("derives sale status from receipts and exceptional events", () => {
+    expect(
+      deriveSaleStatus({
+        hasChargeback: false,
+        hasRefund: false,
+        orderTotal: 200,
+        receivedGrossTotal: 0,
+      })
+    ).toBe("awaiting_payment");
+
+    expect(
+      deriveSaleStatus({
+        hasChargeback: false,
+        hasRefund: false,
+        orderTotal: 200,
+        receivedGrossTotal: 120,
+      })
+    ).toBe("partially_paid");
+
+    expect(
+      deriveSaleStatus({
+        hasChargeback: false,
+        hasRefund: false,
+        orderTotal: 200,
+        receivedGrossTotal: 200,
+      })
+    ).toBe("paid");
+
+    expect(
+      deriveSaleStatus({
+        hasChargeback: false,
+        hasRefund: true,
+        orderTotal: 200,
+        receivedGrossTotal: 200,
+      })
+    ).toBe("refunded");
+
+    expect(
+      deriveSaleStatus({
+        hasChargeback: true,
+        hasRefund: true,
+        orderTotal: 200,
+        receivedGrossTotal: 200,
+      })
+    ).toBe("chargeback");
   });
 });
