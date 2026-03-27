@@ -80,3 +80,23 @@ export function FeedbackBanner({
     </div>
   );
 }
+
+export function EmptyState({
+  action,
+  description,
+  title,
+}: {
+  action?: ReactNode;
+  description: string;
+  title: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-border border-dashed bg-muted/20 px-5 py-10 text-center">
+      <div className="mx-auto max-w-md space-y-2">
+        <h3 className="font-semibold text-base">{title}</h3>
+        <p className="text-muted-foreground text-sm">{description}</p>
+        {action ? <div className="pt-2">{action}</div> : null}
+      </div>
+    </div>
+  );
+}

@@ -1,5 +1,6 @@
 import { asc } from "drizzle-orm";
 import {
+  EmptyState,
   FeedbackBanner,
   PageLayout,
   Surface,
@@ -169,9 +170,10 @@ export default async function ProductsPage({
                 );
               })
             ) : (
-              <div className="rounded-2xl border border-border border-dashed px-4 py-10 text-center text-muted-foreground text-sm">
-                Nenhum produto cadastrado ainda.
-              </div>
+              <EmptyState
+                description="Comece cadastrando o primeiro item no formulario ao lado. Sem produto ativo, compras, estoque e vendas nao conseguem operar."
+                title="Nenhum produto cadastrado ainda"
+              />
             )}
           </div>
         </Surface>

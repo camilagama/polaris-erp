@@ -1,5 +1,6 @@
 import { desc } from "drizzle-orm";
 import {
+  EmptyState,
   FeedbackBanner,
   PageLayout,
   Surface,
@@ -260,9 +261,10 @@ export default async function SalesPage({
                 );
               })
             ) : (
-              <div className="rounded-2xl border border-border border-dashed px-4 py-10 text-center text-muted-foreground text-sm">
-                Nenhuma venda registrada ainda.
-              </div>
+              <EmptyState
+                description="Assim que houver estoque recebido, registre a primeira venda. O sistema baixa saldo, grava snapshot de custo e libera o financeiro em recebimentos."
+                title="Nenhuma venda registrada ainda"
+              />
             )}
           </div>
         </Surface>

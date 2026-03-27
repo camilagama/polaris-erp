@@ -1,5 +1,6 @@
 import { desc, eq } from "drizzle-orm";
 import {
+  EmptyState,
   FeedbackBanner,
   PageLayout,
   Surface,
@@ -268,9 +269,10 @@ export default async function PurchasesPage({
                 </div>
               ))
             ) : (
-              <div className="rounded-2xl border border-border border-dashed px-4 py-10 text-center text-muted-foreground text-sm">
-                Nenhuma compra registrada ainda.
-              </div>
+              <EmptyState
+                description="Depois de cadastrar produtos, lance as compras aqui e marque como recebidas somente quando a mercadoria entrar fisicamente."
+                title="Nenhuma compra registrada ainda"
+              />
             )}
           </div>
         </Surface>

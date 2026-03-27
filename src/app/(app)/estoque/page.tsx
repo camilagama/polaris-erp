@@ -1,5 +1,6 @@
 import { desc } from "drizzle-orm";
 import {
+  EmptyState,
   FeedbackBanner,
   PageLayout,
   Surface,
@@ -202,9 +203,10 @@ export default async function InventoryPage({
                 );
               })
             ) : (
-              <div className="rounded-2xl border border-border border-dashed px-4 py-10 text-center text-muted-foreground text-sm">
-                Nenhum movimento registrado ainda.
-              </div>
+              <EmptyState
+                description="O historico aparece quando uma compra recebida, venda, ajuste, perda ou avaria gerar movimento no ledger. Use esta tela para conferencias rapidas."
+                title="Nenhum movimento registrado ainda"
+              />
             )}
           </div>
         </Surface>

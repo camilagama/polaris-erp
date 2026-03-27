@@ -1,5 +1,6 @@
 import { desc, eq } from "drizzle-orm";
 import {
+  EmptyState,
   FeedbackBanner,
   PageLayout,
   Surface,
@@ -260,9 +261,10 @@ export default async function ReceiptsPage({
                 </div>
               ))
             ) : (
-              <div className="rounded-2xl border border-border border-dashed px-4 py-10 text-center text-muted-foreground text-sm">
-                Nenhum recebimento registrado ainda.
-              </div>
+              <EmptyState
+                description="Quando a primeira venda acontecer, registre aqui o recebimento real, mesmo que seja parcial, pendente, refund ou chargeback."
+                title="Nenhum recebimento registrado ainda"
+              />
             )}
           </div>
         </Surface>
