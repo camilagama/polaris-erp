@@ -6,13 +6,25 @@ import {
   File02Icon,
   Home01Icon,
   Layers01Icon,
+  Logout01Icon,
   Settings01Icon,
+  UserCircleIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ComponentProps } from "react";
 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Sidebar,
   SidebarContent,
@@ -54,11 +66,17 @@ const navigationItems = [
 
 export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
-  const { state } = useSidebar();
+  const { state, isMobile } = useSidebar();
+
+  const user = {
+    name: "Administrador",
+    email: "admin@dgimports.com",
+    avatar: "",
+  };
 
   return (
     <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader className="flex h-16 items-center border-border/40 border-b px-4 pt-5">
+      <SidebarHeader className="flex h-16 items-center px-4 pt-5">
         {state === "expanded" ? (
           <Link
             className="flex w-full items-center gap-3 font-medium text-base text-foreground uppercase tracking-[0.24em]"
@@ -113,20 +131,79 @@ export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="border-border/40 border-t p-4">
-        <div className="flex items-center gap-3">
-          <div className="size-8 shrink-0 rounded-full bg-muted" />
-          {state === "expanded" && (
-            <div className="flex flex-col overflow-hidden">
-              <span className="truncate font-medium text-sm">
-                Administrador
-              </span>
-              <span className="truncate text-muted-foreground text-xs">
-                admin@dgimports.com
-              </span>
-            </div>
-          )}
-        </div>
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <SidebarMenuButton
+                  className="rounded-sm data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                  size="lg"
+                >
+                  <Avatar className="size-8 rounded-full">
+                    <AvatarImage alt={user.name} src={user.avatar} />
+                    <AvatarFallback className="rounded-full bg-muted-foreground/10">
+                      AD
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="grid flex-1 text-left text-sm leading-tight">
+                    <span className="truncate font-semibold">{user.name}</span>
+                    <span className="truncate text-muted-foreground text-xs">
+                      {user.email}
+                    </span>
+                  </div>
+                </SidebarMenuButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+                side={isMobile ? "bottom" : "right"}
+                sideOffset={4}
+              >
+                <DropdownMenuLabel className="p-0 font-normal">
+                  <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+                    <Avatar className="size-8 rounded-lg">
+                      <AvatarImage alt={user.name} src={user.avatar} />
+                      <AvatarFallback className="rounded-lg bg-muted-foreground/10">
+                        AD
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="grid flex-1 text-left text-sm leading-tight">
+                      <span className="truncate font-semibold">
+                        {user.name}
+                      </span>
+                      <span className="truncate text-muted-foreground text-xs">
+                        {user.email}
+                      </span>
+                    </div>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuGroup>
+                  <DropdownMenuItem>
+                    <HugeiconsIcon
+                      className="mr-2 size-4"
+                      icon={UserCircleIcon}
+                    />
+                    Perfil
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <HugeiconsIcon
+                      className="mr-2 size-4"
+                      icon={Settings01Icon}
+                    />
+                    Configurações
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="text-destructive focus:bg-destructive focus:text-destructive-foreground">
+                  <HugeiconsIcon className="mr-2 size-4" icon={Logout01Icon} />
+                  Sair
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
