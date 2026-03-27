@@ -26,15 +26,24 @@ const toMoneyString = (value: number) => roundMoney(value).toFixed(2);
 interface ProductInput {
   category?: string;
   description?: string;
+  initialStock: number;
   name: string;
   notes?: string;
+  salePrice: number;
+  unitCost: number;
 }
 
 interface InventoryAdjustmentInput {
   note?: string;
   productId: number;
   quantity: number;
-  type: "adjustment_plus" | "adjustment_minus" | "damage" | "loss";
+  type:
+    | "purchase_in"
+    | "adjustment_plus"
+    | "adjustment_minus"
+    | "damage"
+    | "loss";
+  unitCost?: number;
 }
 
 interface PurchaseInput {
@@ -91,16 +100,34 @@ export const createProduct = async (
   input: ProductInput,
   createdByUserId: string
 ) =>
-  db
-    .insert(products)
-    .values({
-      category: input.category || null,
-      createdByUserId,
-      description: input.description || null,
-      name: input.name,
-      notes: input.notes || null,
-    })
-    .returning();
+  db.transaction(async (tx) => {
+    const [product] = await tx
+      .insert(products)
+      .values({
+        averageCost: toMoneyString(input.unitCost),
+        category: input.category || null,
+        createdByUserId,
+        currentStock: input.initialStock,
+        description: input.description || null,
+        name: input.name,
+        notes: input.notes || null,
+        salePrice: toMoneyString(input.salePrice),
+      })
+      .returning();
+
+    if (input.initialStock > 0) {
+      await tx.insert(inventoryMovements).values({
+        createdByUserId,
+        note: "Estoque inicial informado no cadastro do produto.",
+        productId: product.id,
+        quantityDelta: input.initialStock,
+        type: "purchase_in",
+        unitCostSnapshot: toMoneyString(input.unitCost),
+      });
+    }
+
+    return [product];
+  });
 
 export const updateProductStatus = async (
   productId: number,
@@ -127,12 +154,35 @@ export const createInventoryAdjustment = async (
     }
 
     const normalizedQuantity =
-      input.type === "adjustment_plus" ? input.quantity : input.quantity * -1;
+      input.type === "purchase_in" || input.type === "adjustment_plus"
+        ? input.quantity
+        : input.quantity * -1;
     const nextStock = product.currentStock + normalizedQuantity;
 
     if (nextStock < 0) {
       throw new Error("O ajuste deixaria o estoque negativo.");
     }
+
+    if (
+      input.type === "purchase_in" &&
+      !(input.unitCost && input.unitCost > 0)
+    ) {
+      throw new Error("Informe o custo unitario da entrada.");
+    }
+
+    const nextAverageCost =
+      input.type === "purchase_in"
+        ? calculateMovingAverageCost({
+            currentAverageCost: toNumber(product.averageCost),
+            currentStock: product.currentStock,
+            incomingQuantity: input.quantity,
+            incomingTotalCost: input.quantity * (input.unitCost ?? 0),
+          })
+        : toNumber(product.averageCost);
+    const unitCostSnapshot =
+      input.type === "purchase_in"
+        ? toMoneyString(input.unitCost ?? 0)
+        : toMoneyString(toNumber(product.averageCost));
 
     await tx.insert(inventoryMovements).values({
       createdByUserId,
@@ -140,12 +190,13 @@ export const createInventoryAdjustment = async (
       productId: product.id,
       quantityDelta: normalizedQuantity,
       type: input.type,
-      unitCostSnapshot: toMoneyString(toNumber(product.averageCost)),
+      unitCostSnapshot,
     });
 
     await tx
       .update(products)
       .set({
+        averageCost: toMoneyString(nextAverageCost),
         currentStock: nextStock,
         updatedAt: new Date(),
       })

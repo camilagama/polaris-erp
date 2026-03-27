@@ -10,8 +10,11 @@ import { requireSession } from "@/lib/session";
 const createProductSchema = z.object({
   category: z.string().trim().max(120).optional(),
   description: z.string().trim().max(2000).optional(),
+  initialStock: z.coerce.number().int().min(0),
   name: z.string().trim().min(2).max(160),
   notes: z.string().trim().max(2000).optional(),
+  salePrice: z.coerce.number().positive(),
+  unitCost: z.coerce.number().positive(),
 });
 
 const statusSchema = z.object({
@@ -27,8 +30,11 @@ export async function createProductAction(formData: FormData) {
   const parsed = createProductSchema.safeParse({
     category: formData.get("category") ?? "",
     description: formData.get("description") ?? "",
+    initialStock: formData.get("initialStock") ?? 0,
     name: formData.get("name") ?? "",
     notes: formData.get("notes") ?? "",
+    salePrice: formData.get("salePrice") ?? 0,
+    unitCost: formData.get("unitCost") ?? 0,
   });
 
   if (!parsed.success) {

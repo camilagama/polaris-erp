@@ -11,7 +11,14 @@ const inventorySchema = z.object({
   note: z.string().trim().max(2000).optional(),
   productId: z.coerce.number().int().positive(),
   quantity: z.coerce.number().int().positive(),
-  type: z.enum(["adjustment_plus", "adjustment_minus", "damage", "loss"]),
+  type: z.enum([
+    "purchase_in",
+    "adjustment_plus",
+    "adjustment_minus",
+    "damage",
+    "loss",
+  ]),
+  unitCost: z.coerce.number().min(0).optional(),
 });
 
 const redirectWithResult = (params: Record<string, string | undefined>) =>
@@ -24,6 +31,7 @@ export async function createInventoryAdjustmentAction(formData: FormData) {
     productId: formData.get("productId"),
     quantity: formData.get("quantity"),
     type: formData.get("type"),
+    unitCost: formData.get("unitCost") ?? undefined,
   });
 
   if (!parsed.success) {

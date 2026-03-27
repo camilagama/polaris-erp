@@ -7,7 +7,6 @@ import {
   Logout01Icon,
   PackageIcon,
   Settings01Icon,
-  ShoppingBag02Icon,
   Store04Icon,
   UserCircleIcon,
 } from "@hugeicons/core-free-icons";
@@ -60,7 +59,6 @@ const DGImportsLogo = ({ className }: { className?: string }) => (
 const navigationItems = [
   { href: "/", label: "Dashboard", icon: Home01Icon },
   { href: "/produtos", label: "Produtos", icon: PackageIcon },
-  { href: "/compras", label: "Compras", icon: ShoppingBag02Icon },
   { href: "/estoque", label: "Estoque", icon: Store04Icon },
   { href: "/vendas", label: "Vendas", icon: DollarCircleIcon },
   { href: "/recebimentos", label: "Recebimentos", icon: CreditCardIcon },

@@ -6,6 +6,7 @@ import {
   calculateReceiptNetAmount,
   calculateSaleItemsSubtotal,
   calculateSaleOrderTotal,
+  calculateSuggestedSalePrice,
   deriveSaleStatus,
 } from "@/lib/domain/calculations";
 
@@ -49,6 +50,16 @@ describe("domain calculations", () => {
 
   it("computes receipt net amount", () => {
     expect(calculateReceiptNetAmount(150, 12.5)).toBe(137.5);
+  });
+
+  it("suggests the minimum sale price from cost, fee and target margin", () => {
+    expect(
+      calculateSuggestedSalePrice({
+        cost: 100,
+        feePercent: 5,
+        marginPercent: 15,
+      })
+    ).toBe(125);
   });
 
   it("computes sale subtotal and order total", () => {

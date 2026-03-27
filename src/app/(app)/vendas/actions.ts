@@ -31,19 +31,14 @@ const redirectWithResult = (params: Record<string, string | undefined>) =>
 
 const parseSaleItems = (formData: FormData) => {
   const items: z.infer<typeof saleItemSchema>[] = [];
+  const productIds = formData.getAll("itemProductId");
+  const quantities = formData.getAll("itemQuantity");
+  const prices = formData.getAll("itemPrice");
 
-  for (const index of [1, 2, 3, 4]) {
-    const productIdValue = String(
-      formData.get(`item_product_${index}`) ?? ""
-    ).trim();
-    const quantityValue = String(
-      formData.get(`item_quantity_${index}`) ?? ""
-    ).trim();
-    const priceValue = String(formData.get(`item_price_${index}`) ?? "").trim();
-
-    if (!(productIdValue && quantityValue && priceValue)) {
-      continue;
-    }
+  for (const [index, productId] of productIds.entries()) {
+    const productIdValue = String(productId ?? "").trim();
+    const quantityValue = String(quantities[index] ?? "").trim();
+    const priceValue = String(prices[index] ?? "").trim();
 
     const parsedItem = saleItemSchema.safeParse({
       productId: productIdValue,
@@ -52,7 +47,7 @@ const parseSaleItems = (formData: FormData) => {
     });
 
     if (!parsedItem.success) {
-      throw new Error(`Revise o item ${index} da venda.`);
+      throw new Error(`Revise o item ${index + 1} da venda.`);
     }
 
     items.push(parsedItem.data);

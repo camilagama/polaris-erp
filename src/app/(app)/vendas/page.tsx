@@ -6,13 +6,11 @@ import {
   Surface,
 } from "@/app/(app)/_components/page-layout";
 import { cancelSaleAction, createSaleAction } from "@/app/(app)/vendas/actions";
+import { SalesForm } from "@/app/(app)/vendas/sales-form";
 import { db } from "@/db";
 import { products, saleItems, sales } from "@/db/schema";
 import { getSearchParamValue } from "@/lib/action-feedback";
 import { formatCurrency, formatDateTime } from "@/lib/format";
-
-const inputClassName =
-  "h-10 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
 
 export default async function SalesPage({
   searchParams,
@@ -43,7 +41,7 @@ export default async function SalesPage({
 
   return (
     <PageLayout
-      description="Vendas agora baixam estoque, gravam snapshot de custo por item e deixam o financeiro separado para ser resolvido em recebimentos."
+      description="Vendas baixam estoque, usam o preco atual do produto como base e deixam o financeiro separado para ser resolvido em recebimentos."
       eyebrow="Vendas"
       title="Fluxo comercial"
     >
@@ -54,114 +52,11 @@ export default async function SalesPage({
           <div className="mb-5 space-y-2">
             <h2 className="font-semibold text-lg">Nova venda</h2>
             <p className="text-muted-foreground text-sm">
-              Ate quatro linhas por lancamento. Itens repetidos sao consolidados
-              no servidor.
+              Comece com um item e adicione outros so quando precisar. Frete e
+              desconto continuam no nivel do pedido.
             </p>
           </div>
-          <form action={createSaleAction} className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <label className="font-medium text-sm" htmlFor="channel">
-                  Canal
-                </label>
-                <input
-                  className={inputClassName}
-                  defaultValue="WhatsApp"
-                  id="channel"
-                  name="channel"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="font-medium text-sm" htmlFor="discountAmount">
-                  Desconto do pedido
-                </label>
-                <input
-                  className={inputClassName}
-                  defaultValue="0"
-                  id="discountAmount"
-                  min="0"
-                  name="discountAmount"
-                  step="0.01"
-                  type="number"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label
-                className="font-medium text-sm"
-                htmlFor="shippingChargedAmount"
-              >
-                Frete cobrado
-              </label>
-              <input
-                className={inputClassName}
-                defaultValue="0"
-                id="shippingChargedAmount"
-                min="0"
-                name="shippingChargedAmount"
-                step="0.01"
-                type="number"
-              />
-            </div>
-
-            <div className="space-y-3">
-              <p className="font-medium text-sm">Itens</p>
-              {[1, 2, 3, 4].map((index) => (
-                <div
-                  className="grid gap-3 rounded-2xl border border-border/60 bg-background/60 p-3 md:grid-cols-[1.3fr_0.6fr_0.7fr]"
-                  key={index}
-                >
-                  <select
-                    className={inputClassName}
-                    defaultValue=""
-                    name={`item_product_${index}`}
-                  >
-                    <option value="">Item {index}</option>
-                    {productRows
-                      .filter((product) => product.status === "active")
-                      .map((product) => (
-                        <option key={product.id} value={product.id}>
-                          {product.name} · estoque {product.currentStock}
-                        </option>
-                      ))}
-                  </select>
-                  <input
-                    className={inputClassName}
-                    min="1"
-                    name={`item_quantity_${index}`}
-                    placeholder="Qtd"
-                    type="number"
-                  />
-                  <input
-                    className={inputClassName}
-                    min="0"
-                    name={`item_price_${index}`}
-                    placeholder="Preco"
-                    step="0.01"
-                    type="number"
-                  />
-                </div>
-              ))}
-            </div>
-
-            <div className="space-y-2">
-              <label className="font-medium text-sm" htmlFor="notes">
-                Observacoes
-              </label>
-              <textarea
-                className="min-h-24 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                id="notes"
-                name="notes"
-              />
-            </div>
-            <button
-              className="h-10 w-full rounded-xl bg-primary px-4 font-medium text-primary-foreground text-sm transition hover:bg-primary/90 sm:w-auto"
-              type="submit"
-            >
-              Confirmar venda
-            </button>
-          </form>
+          <SalesForm action={createSaleAction} products={productRows} />
         </Surface>
 
         <Surface>

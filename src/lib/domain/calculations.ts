@@ -49,6 +49,26 @@ export const calculateMovingAverageCost = (input: {
   );
 };
 
+export const calculateSuggestedSalePrice = (input: {
+  cost: number;
+  feePercent: number;
+  marginPercent: number;
+}) => {
+  const feeRate = input.feePercent / 100;
+  const marginRate = input.marginPercent / 100;
+  const denominator = 1 - feeRate - marginRate;
+
+  if (input.cost <= 0) {
+    return 0;
+  }
+
+  if (denominator <= 0) {
+    return roundMoney(input.cost);
+  }
+
+  return roundMoney(input.cost / denominator);
+};
+
 export const calculateReceiptNetAmount = (
   grossAmount: number,
   feeAmount: number

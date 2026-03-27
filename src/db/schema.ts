@@ -124,6 +124,7 @@ export const products = pgTable("products", {
   status: productStatusEnum("status").default("active").notNull(),
   currentStock: integer("current_stock").default(0).notNull(),
   averageCost: money("average_cost"),
+  salePrice: money("sale_price"),
   lastSoldAt: timestamp("last_sold_at"),
   createdByUserId: text("created_by_user_id").references(() => users.id, {
     onDelete: "set null",

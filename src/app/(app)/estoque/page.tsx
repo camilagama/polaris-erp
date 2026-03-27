@@ -79,10 +79,10 @@ export default async function InventoryPage({
       <div className="grid gap-6 xl:grid-cols-[0.8fr_1.2fr]">
         <Surface className="h-fit">
           <div className="mb-5 space-y-2">
-            <h2 className="font-semibold text-lg">Registrar ajuste</h2>
+            <h2 className="font-semibold text-lg">Reposicao e ajustes</h2>
             <p className="text-muted-foreground text-sm">
-              Use para acerto manual, perda ou avaria. Estoque negativo continua
-              bloqueado.
+              Entradas simples substituem o antigo modulo de compras. Ajustes,
+              perdas e avarias continuam aqui.
             </p>
           </div>
           <form action={createInventoryAdjustmentAction} className="space-y-4">
@@ -115,6 +115,7 @@ export default async function InventoryPage({
                   name="type"
                   required
                 >
+                  <option value="purchase_in">Entrada de reposicao</option>
                   <option value="adjustment_plus">Ajuste positivo</option>
                   <option value="adjustment_minus">Ajuste negativo</option>
                   <option value="loss">Perda</option>
@@ -134,6 +135,24 @@ export default async function InventoryPage({
                   type="number"
                 />
               </div>
+            </div>
+            <div className="space-y-2">
+              <label className="font-medium text-sm" htmlFor="unitCost">
+                Custo unitario da entrada
+              </label>
+              <input
+                className={inputClassName}
+                defaultValue="0"
+                id="unitCost"
+                min="0"
+                name="unitCost"
+                step="0.01"
+                type="number"
+              />
+              <p className="text-muted-foreground text-xs">
+                Obrigatorio quando o tipo for entrada de reposicao. Nos demais
+                movimentos, o sistema usa o custo medio atual.
+              </p>
             </div>
             <div className="space-y-2">
               <label className="font-medium text-sm" htmlFor="note">
@@ -204,7 +223,7 @@ export default async function InventoryPage({
               })
             ) : (
               <EmptyState
-                description="O historico aparece quando uma compra recebida, venda, ajuste, perda ou avaria gerar movimento no ledger. Use esta tela para conferencias rapidas."
+                description="O historico aparece quando uma reposicao, venda, ajuste, perda ou avaria gerar movimento no ledger. Use esta tela para conferencias rapidas."
                 title="Nenhum movimento registrado ainda"
               />
             )}

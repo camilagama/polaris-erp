@@ -9,27 +9,32 @@ import {
   createProductAction,
   updateProductStatusAction,
 } from "@/app/(app)/produtos/actions";
+import { ProductForm } from "@/app/(app)/produtos/product-form";
 import { db } from "@/db";
-import { products } from "@/db/schema";
+import { products, systemSettings } from "@/db/schema";
 import { getSearchParamValue } from "@/lib/action-feedback";
+import {
+  calculateSuggestedSalePrice,
+  toNumber,
+} from "@/lib/domain/calculations";
 import { formatCurrency } from "@/lib/format";
-
-const inputClassName =
-  "h-10 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
-const textAreaClassName =
-  "min-h-24 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
 
 export default async function ProductsPage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const [productRows, resolvedSearchParams] = await Promise.all([
+  const [productRows, settingsRows, resolvedSearchParams] = await Promise.all([
     db.select().from(products).orderBy(asc(products.name)),
+    db.select().from(systemSettings).limit(1),
     searchParams,
   ]);
   const error = getSearchParamValue(resolvedSearchParams.error);
   const message = getSearchParamValue(resolvedSearchParams.message);
+  const settings = settingsRows[0];
+  const estimatedFeePercent = toNumber(settings?.estimatedFeePercent ?? 5);
+  const minimumMarginPercent = toNumber(settings?.minimumMarginPercent ?? 15);
+  const targetMarginPercent = toNumber(settings?.targetMarginPercent ?? 25);
 
   return (
     <PageLayout
@@ -44,57 +49,16 @@ export default async function ProductsPage({
           <div className="mb-5 space-y-2">
             <h2 className="font-semibold text-lg">Novo produto</h2>
             <p className="text-muted-foreground text-sm">
-              Cadastre apenas o necessario para operar compras, estoque e
-              vendas.
+              O cadastro ja concentra custo, preco e estoque inicial. Reposicao
+              futura entra direto pelo modulo de estoque.
             </p>
           </div>
-          <form action={createProductAction} className="space-y-4">
-            <div className="space-y-2">
-              <label className="font-medium text-sm" htmlFor="name">
-                Nome
-              </label>
-              <input
-                className={inputClassName}
-                id="name"
-                name="name"
-                required
-              />
-            </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <label className="font-medium text-sm" htmlFor="category">
-                  Categoria
-                </label>
-                <input
-                  className={inputClassName}
-                  id="category"
-                  name="category"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="font-medium text-sm" htmlFor="description">
-                  Descricao curta
-                </label>
-                <input
-                  className={inputClassName}
-                  id="description"
-                  name="description"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label className="font-medium text-sm" htmlFor="notes">
-                Observacoes
-              </label>
-              <textarea className={textAreaClassName} id="notes" name="notes" />
-            </div>
-            <button
-              className="h-10 w-full rounded-xl bg-primary px-4 font-medium text-primary-foreground text-sm transition hover:bg-primary/90 sm:w-auto"
-              type="submit"
-            >
-              Salvar produto
-            </button>
-          </form>
+          <ProductForm
+            action={createProductAction}
+            estimatedFeePercent={estimatedFeePercent}
+            minimumMarginPercent={minimumMarginPercent}
+            targetMarginPercent={targetMarginPercent}
+          />
         </Surface>
 
         <Surface>
@@ -146,6 +110,24 @@ export default async function ProductsPage({
                         <p className="text-muted-foreground">Custo medio</p>
                         <p className="font-semibold">
                           {formatCurrency(product.averageCost)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Preco atual</p>
+                        <p className="font-semibold">
+                          {formatCurrency(product.salePrice)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Preco minimo</p>
+                        <p className="font-semibold">
+                          {formatCurrency(
+                            calculateSuggestedSalePrice({
+                              cost: toNumber(product.averageCost),
+                              feePercent: estimatedFeePercent,
+                              marginPercent: minimumMarginPercent,
+                            })
+                          )}
                         </p>
                       </div>
                     </div>
