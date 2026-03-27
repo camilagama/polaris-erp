@@ -8,7 +8,6 @@ import {
 } from "@/app/(app)/_components/page-layout";
 import {
   createProductAction,
-  createProductMovementAction,
   updateProductCommercialDataAction,
   updateProductStatusAction,
 } from "@/app/(app)/produtos/actions";
@@ -25,17 +24,16 @@ import { cn } from "@/lib/utils";
 
 const inputClassName =
   "h-10 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
-const textAreaClassName =
-  "min-h-24 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
 
 const movementTypeLabels = {
   adjustment_minus: "Correcao negativa",
   adjustment_plus: "Correcao positiva",
   cancel_restock: "Estorno de cancelamento",
-  customer_return: "Devolucao",
+  customer_return: "Devolucao de cliente",
   damage: "Avaria",
+  initial_stock: "Estoque inicial",
   loss: "Perda",
-  purchase_in: "Reposicao",
+  purchase_in: "Recebimento de compra",
   sale_out: "Venda",
 } as const;
 
@@ -69,7 +67,6 @@ const buildProductsHref = ({
   }
 
   const search = searchParams.toString();
-
   return search ? `/produtos?${search}` : "/produtos";
 };
 
@@ -103,6 +100,8 @@ const getProductsPageState = ({
 
     const searchTarget = [
       product.name,
+      product.sku ?? "",
+      product.barcode ?? "",
       product.category ?? "",
       product.description ?? "",
     ]
@@ -142,9 +141,45 @@ const getSelectedMovements = async (
     .from(inventoryMovements)
     .where(eq(inventoryMovements.productId, selectedProductId))
     .orderBy(desc(inventoryMovements.occurredAt))
-    .limit(historyMode === "all" ? 50 : 5);
+    .limit(historyMode === "all" ? 50 : 8);
 };
 
+const getProductListCardState = (input: {
+  estimatedFeePercent: number;
+  lowStockThreshold: number;
+  minimumMarginPercent: number;
+  product: typeof products.$inferSelect;
+  selectedProductId: number | null;
+  staleCutoff: Date;
+}) => {
+  const minimumSuggestedPrice = calculateSuggestedSalePrice({
+    cost: toNumber(input.product.averageCost),
+    feePercent: input.estimatedFeePercent,
+    marginPercent: input.minimumMarginPercent,
+  });
+  const productLowStockThreshold =
+    input.product.minimumStock > 0
+      ? input.product.minimumStock
+      : input.lowStockThreshold;
+  const isLowStock =
+    input.product.status === "active" &&
+    input.product.currentStock <= productLowStockThreshold;
+  const isStale =
+    input.product.status === "active" &&
+    (!input.product.lastSoldAt || input.product.lastSoldAt < input.staleCutoff);
+  const isMarginRisk =
+    toNumber(input.product.salePrice) < minimumSuggestedPrice;
+
+  return {
+    isLowStock,
+    isMarginRisk,
+    isSelected: input.selectedProductId === input.product.id,
+    isStale,
+    productLowStockThreshold,
+  };
+};
+
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: this page coordinates catalog, details, and history in one server-rendered view.
 export default async function ProductsPage({
   searchParams,
 }: {
@@ -184,9 +219,15 @@ export default async function ProductsPage({
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
           <Link
             className="inline-flex h-10 items-center justify-center rounded-xl border border-border px-4 font-medium text-sm transition hover:bg-muted"
-            href="/produtos"
+            href="/compras"
           >
-            Novo produto
+            Nova compra
+          </Link>
+          <Link
+            className="inline-flex h-10 items-center justify-center rounded-xl border border-border px-4 font-medium text-sm transition hover:bg-muted"
+            href="/estoque"
+          >
+            Ajustar estoque
           </Link>
           <Link
             className="inline-flex h-10 items-center justify-center rounded-xl border border-border px-4 font-medium text-sm transition hover:bg-muted"
@@ -196,21 +237,21 @@ export default async function ProductsPage({
           </Link>
         </div>
       }
-      description="Produtos agora concentram cadastro, estoque, preco e historico. A ideia e operar o item inteiro em um unico lugar."
+      description="Produtos agora ficam focados em catalogo, dados comerciais e leitura do item. Entradas e ajustes operacionais foram separados em Compras e Estoque."
       eyebrow="Catalogo"
       title="Produtos"
     >
       <FeedbackBanner error={error} message={message} />
 
-      <div className="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
+      <div className="grid gap-6 xl:grid-cols-[0.94fr_1.06fr]">
         <Surface className="h-fit">
           <div className="mb-5 space-y-2">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h2 className="font-semibold text-lg">Catalogo</h2>
                 <p className="text-muted-foreground text-sm">
-                  Clique em um item para ver resumo, movimentar estoque e
-                  consultar o historico sem sair desta tela.
+                  Selecione um item para consultar seu resumo comercial e o
+                  historico de movimentacoes.
                 </p>
               </div>
               <span className="rounded-full bg-muted px-3 py-1 font-medium text-xs">
@@ -227,7 +268,7 @@ export default async function ProductsPage({
                   defaultValue={query}
                   id="q"
                   name="q"
-                  placeholder="Nome, categoria ou descricao"
+                  placeholder="Nome, SKU, codigo de barras ou categoria"
                 />
                 <button
                   className="h-10 rounded-xl border border-border px-4 font-medium text-sm transition hover:bg-muted"
@@ -241,33 +282,33 @@ export default async function ProductsPage({
 
           <div className="space-y-3">
             {filteredProducts.length > 0 ? (
+              // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: product cards derive multiple operational badges inline for scanability.
               filteredProducts.map((product) => {
-                const minimumSuggestedPrice = calculateSuggestedSalePrice({
-                  cost: toNumber(product.averageCost),
-                  feePercent: estimatedFeePercent,
-                  marginPercent: minimumMarginPercent,
-                });
-                const isLowStock =
-                  product.status === "active" &&
-                  product.currentStock <= lowStockThreshold;
-                const isStale =
-                  product.status === "active" &&
-                  (!product.lastSoldAt || product.lastSoldAt < staleCutoff);
-                const isMarginRisk =
-                  toNumber(product.salePrice) < minimumSuggestedPrice;
-                const productHref = buildProductsHref({
-                  productId: product.id,
-                  query,
+                const {
+                  isLowStock,
+                  isMarginRisk,
+                  isSelected,
+                  isStale,
+                  productLowStockThreshold,
+                } = getProductListCardState({
+                  estimatedFeePercent,
+                  lowStockThreshold,
+                  minimumMarginPercent,
+                  product,
+                  selectedProductId: selectedProduct?.id ?? null,
+                  staleCutoff,
                 });
 
                 return (
                   <Link
                     className={cn(
                       "block rounded-2xl border border-border/60 bg-background/70 p-4 transition hover:border-primary/40 hover:bg-muted/20",
-                      selectedProduct?.id === product.id &&
-                        "border-primary/50 bg-primary/5"
+                      isSelected && "border-primary/50 bg-primary/5"
                     )}
-                    href={productHref}
+                    href={buildProductsHref({
+                      productId: product.id,
+                      query,
+                    })}
                     key={product.id}
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -275,6 +316,12 @@ export default async function ProductsPage({
                         <p className="font-semibold">{product.name}</p>
                         <p className="text-muted-foreground text-sm">
                           {product.category || "Sem categoria"}
+                        </p>
+                        <p className="text-muted-foreground text-xs">
+                          {product.sku ? `SKU ${product.sku}` : "Sem SKU"} ·{" "}
+                          {product.barcode
+                            ? "Com codigo de barras"
+                            : "Sem codigo"}
                         </p>
                       </div>
                       <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] uppercase tracking-[0.12em]">
@@ -293,9 +340,9 @@ export default async function ProductsPage({
                         </p>
                       </div>
                       <div>
-                        <p className="text-muted-foreground">Custo atual</p>
+                        <p className="text-muted-foreground">Minimo</p>
                         <p className="font-semibold">
-                          {formatCurrency(product.averageCost)}
+                          {productLowStockThreshold}
                         </p>
                       </div>
                     </div>
@@ -338,36 +385,50 @@ export default async function ProductsPage({
                       {selectedProduct.name}
                     </p>
                     <p className="text-muted-foreground text-sm">
-                      {selectedProduct.category || "Sem categoria"} -{" "}
+                      {selectedProduct.category || "Sem categoria"} ·{" "}
                       {selectedProduct.status === "active"
                         ? "Produto ativo"
                         : "Produto inativo"}
                     </p>
                   </div>
-                  <form action={updateProductStatusAction}>
-                    <input
-                      name="productId"
-                      type="hidden"
-                      value={selectedProduct.id}
-                    />
-                    <input
-                      name="status"
-                      type="hidden"
-                      value={
-                        selectedProduct.status === "active"
-                          ? "inactive"
-                          : "active"
-                      }
-                    />
-                    <button
-                      className="h-10 w-full rounded-xl border border-border px-4 font-medium text-sm transition hover:bg-muted sm:w-auto"
-                      type="submit"
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <Link
+                      className="inline-flex h-10 items-center justify-center rounded-xl border border-border px-4 font-medium text-sm transition hover:bg-muted"
+                      href={`/compras?productId=${selectedProduct.id}`}
                     >
-                      {selectedProduct.status === "active"
-                        ? "Inativar"
-                        : "Reativar"}
-                    </button>
-                  </form>
+                      Comprar item
+                    </Link>
+                    <Link
+                      className="inline-flex h-10 items-center justify-center rounded-xl border border-border px-4 font-medium text-sm transition hover:bg-muted"
+                      href={`/estoque?productId=${selectedProduct.id}`}
+                    >
+                      Ajustar estoque
+                    </Link>
+                    <form action={updateProductStatusAction}>
+                      <input
+                        name="productId"
+                        type="hidden"
+                        value={selectedProduct.id}
+                      />
+                      <input
+                        name="status"
+                        type="hidden"
+                        value={
+                          selectedProduct.status === "active"
+                            ? "inactive"
+                            : "active"
+                        }
+                      />
+                      <button
+                        className="h-10 w-full rounded-xl border border-border px-4 font-medium text-sm transition hover:bg-muted sm:w-auto"
+                        type="submit"
+                      >
+                        {selectedProduct.status === "active"
+                          ? "Inativar"
+                          : "Reativar"}
+                      </button>
+                    </form>
+                  </div>
                 </div>
 
                 <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -381,10 +442,10 @@ export default async function ProductsPage({
                   </div>
                   <div className="rounded-2xl border border-border/60 bg-background/60 p-4">
                     <p className="text-muted-foreground text-xs uppercase tracking-[0.12em]">
-                      Custo atual
+                      Estoque minimo
                     </p>
                     <p className="mt-2 font-semibold text-2xl">
-                      {formatCurrency(selectedProduct.averageCost)}
+                      {selectedProduct.minimumStock}
                     </p>
                   </div>
                   <div className="rounded-2xl border border-border/60 bg-background/60 p-4">
@@ -393,6 +454,14 @@ export default async function ProductsPage({
                     </p>
                     <p className="mt-2 font-semibold text-2xl">
                       {formatCurrency(selectedProduct.salePrice)}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-border/60 bg-background/60 p-4">
+                    <p className="text-muted-foreground text-xs uppercase tracking-[0.12em]">
+                      Custo medio
+                    </p>
+                    <p className="mt-2 font-semibold text-2xl">
+                      {formatCurrency(selectedProduct.averageCost)}
                     </p>
                   </div>
                   <div className="rounded-2xl border border-border/60 bg-background/60 p-4">
@@ -423,26 +492,61 @@ export default async function ProductsPage({
                       )}
                     </p>
                   </div>
-                  <div className="rounded-2xl border border-border/60 bg-background/60 p-4">
-                    <p className="text-muted-foreground text-xs uppercase tracking-[0.12em]">
-                      Ultima venda
-                    </p>
-                    <p className="mt-2 font-semibold text-lg">
-                      {formatDate(selectedProduct.lastSoldAt)}
-                    </p>
-                  </div>
                 </div>
 
-                <div className="grid gap-4 xl:grid-cols-2">
+                <div className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
+                  <div className="rounded-2xl border border-border/60 bg-background/60 p-4">
+                    <div className="space-y-1">
+                      <h3 className="font-semibold">Identificacao do item</h3>
+                      <p className="text-muted-foreground text-sm">
+                        Dados de referencia para compra, venda e conferencia
+                        fisica.
+                      </p>
+                    </div>
+                    <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+                      <div>
+                        <p className="text-muted-foreground">SKU</p>
+                        <p className="font-medium">
+                          {selectedProduct.sku || "Nao informado"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">
+                          Codigo de barras
+                        </p>
+                        <p className="font-medium">
+                          {selectedProduct.barcode || "Nao informado"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Ultima venda</p>
+                        <p className="font-medium">
+                          {formatDate(selectedProduct.lastSoldAt)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Descricao</p>
+                        <p className="font-medium">
+                          {selectedProduct.description || "Sem descricao curta"}
+                        </p>
+                      </div>
+                    </div>
+                    {selectedProduct.notes ? (
+                      <p className="mt-4 text-muted-foreground text-sm">
+                        {selectedProduct.notes}
+                      </p>
+                    ) : null}
+                  </div>
+
                   <form
                     action={updateProductCommercialDataAction}
                     className="space-y-3 rounded-2xl border border-border/60 bg-background/60 p-4"
                   >
                     <div className="space-y-1">
-                      <h3 className="font-semibold">Editar preco</h3>
+                      <h3 className="font-semibold">Atualizar preco</h3>
                       <p className="text-muted-foreground text-sm">
-                        Atualize o preco de venda sem sair do contexto do
-                        produto.
+                        O custo medio agora so pode ser alterado por compra
+                        recebida. Aqui voce atualiza apenas o preco de venda.
                       </p>
                     </div>
                     <input
@@ -450,15 +554,24 @@ export default async function ProductsPage({
                       type="hidden"
                       value={selectedProduct.id}
                     />
-                    <input
-                      className={inputClassName}
-                      defaultValue={toNumber(selectedProduct.salePrice)}
-                      min="0"
-                      name="salePrice"
-                      required
-                      step="0.01"
-                      type="number"
-                    />
+                    <div className="space-y-2">
+                      <label
+                        className="font-medium text-sm"
+                        htmlFor="salePrice"
+                      >
+                        Preco de venda
+                      </label>
+                      <input
+                        className={inputClassName}
+                        defaultValue={toNumber(selectedProduct.salePrice)}
+                        id="salePrice"
+                        min="0"
+                        name="salePrice"
+                        required
+                        step="0.01"
+                        type="number"
+                      />
+                    </div>
                     <button
                       className="h-10 w-full rounded-xl border border-border px-4 font-medium text-sm transition hover:bg-muted sm:w-auto"
                       type="submit"
@@ -466,275 +579,7 @@ export default async function ProductsPage({
                       Salvar preco
                     </button>
                   </form>
-
-                  <form
-                    action={updateProductCommercialDataAction}
-                    className="space-y-3 rounded-2xl border border-border/60 bg-background/60 p-4"
-                  >
-                    <div className="space-y-1">
-                      <h3 className="font-semibold">Editar custo atual</h3>
-                      <p className="text-muted-foreground text-sm">
-                        Use apenas quando precisar corrigir o custo base do
-                        produto.
-                      </p>
-                    </div>
-                    <input
-                      name="productId"
-                      type="hidden"
-                      value={selectedProduct.id}
-                    />
-                    <input
-                      className={inputClassName}
-                      defaultValue={toNumber(selectedProduct.averageCost)}
-                      min="0"
-                      name="averageCost"
-                      required
-                      step="0.01"
-                      type="number"
-                    />
-                    <button
-                      className="h-10 w-full rounded-xl border border-border px-4 font-medium text-sm transition hover:bg-muted sm:w-auto"
-                      type="submit"
-                    >
-                      Salvar custo
-                    </button>
-                  </form>
                 </div>
-              </section>
-
-              <section className="space-y-4">
-                <div className="space-y-1">
-                  <h2 className="font-semibold text-lg">Operacoes do item</h2>
-                  <p className="text-muted-foreground text-sm">
-                    Reposicao e correcao ficam visiveis o tempo todo. Excecoes
-                    ficam em acoes avancadas.
-                  </p>
-                </div>
-                <div className="grid gap-4 xl:grid-cols-2">
-                  <form
-                    action={createProductMovementAction}
-                    className="space-y-3 rounded-2xl border border-border/60 bg-background/60 p-4"
-                  >
-                    <div className="space-y-1">
-                      <h3 className="font-semibold">Repor estoque</h3>
-                      <p className="text-muted-foreground text-sm">
-                        Recalcula o custo medio com base na nova entrada.
-                      </p>
-                    </div>
-                    <input
-                      name="productId"
-                      type="hidden"
-                      value={selectedProduct.id}
-                    />
-                    <input name="type" type="hidden" value="purchase_in" />
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <label
-                          className="font-medium text-sm"
-                          htmlFor="restock-quantity"
-                        >
-                          Quantidade
-                        </label>
-                        <input
-                          className={inputClassName}
-                          id="restock-quantity"
-                          min="1"
-                          name="quantity"
-                          required
-                          step="1"
-                          type="number"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label
-                          className="font-medium text-sm"
-                          htmlFor="restock-cost"
-                        >
-                          Custo unitario
-                        </label>
-                        <input
-                          className={inputClassName}
-                          id="restock-cost"
-                          min="0"
-                          name="unitCost"
-                          required
-                          step="0.01"
-                          type="number"
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <label
-                        className="font-medium text-sm"
-                        htmlFor="restock-note"
-                      >
-                        Observacao
-                      </label>
-                      <textarea
-                        className={textAreaClassName}
-                        id="restock-note"
-                        name="note"
-                      />
-                    </div>
-                    <button
-                      className="h-10 w-full rounded-xl bg-primary px-4 font-medium text-primary-foreground text-sm transition hover:bg-primary/90 sm:w-auto"
-                      type="submit"
-                    >
-                      Registrar reposicao
-                    </button>
-                  </form>
-
-                  <form
-                    action={createProductMovementAction}
-                    className="space-y-3 rounded-2xl border border-border/60 bg-background/60 p-4"
-                  >
-                    <div className="space-y-1">
-                      <h3 className="font-semibold">Corrigir estoque</h3>
-                      <p className="text-muted-foreground text-sm">
-                        Ajusta o saldo sem recalcular custo medio.
-                      </p>
-                    </div>
-                    <input
-                      name="productId"
-                      type="hidden"
-                      value={selectedProduct.id}
-                    />
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <label
-                          className="font-medium text-sm"
-                          htmlFor="adjustment-type"
-                        >
-                          Tipo
-                        </label>
-                        <select
-                          className={inputClassName}
-                          defaultValue="adjustment_plus"
-                          id="adjustment-type"
-                          name="type"
-                        >
-                          <option value="adjustment_plus">
-                            Correcao positiva
-                          </option>
-                          <option value="adjustment_minus">
-                            Correcao negativa
-                          </option>
-                        </select>
-                      </div>
-                      <div className="space-y-2">
-                        <label
-                          className="font-medium text-sm"
-                          htmlFor="adjustment-quantity"
-                        >
-                          Quantidade
-                        </label>
-                        <input
-                          className={inputClassName}
-                          id="adjustment-quantity"
-                          min="1"
-                          name="quantity"
-                          required
-                          step="1"
-                          type="number"
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <label
-                        className="font-medium text-sm"
-                        htmlFor="adjustment-note"
-                      >
-                        Observacao
-                      </label>
-                      <textarea
-                        className={textAreaClassName}
-                        id="adjustment-note"
-                        name="note"
-                      />
-                    </div>
-                    <button
-                      className="h-10 w-full rounded-xl border border-border px-4 font-medium text-sm transition hover:bg-muted sm:w-auto"
-                      type="submit"
-                    >
-                      Registrar correcao
-                    </button>
-                  </form>
-                </div>
-
-                <details className="rounded-2xl border border-border/60 bg-background/60 p-4">
-                  <summary className="cursor-pointer list-none font-semibold">
-                    Acoes avancadas
-                  </summary>
-                  <p className="mt-2 text-muted-foreground text-sm">
-                    Use apenas para excecoes como perda, avaria ou devolucao.
-                  </p>
-                  <form
-                    action={createProductMovementAction}
-                    className="mt-4 space-y-3"
-                  >
-                    <input
-                      name="productId"
-                      type="hidden"
-                      value={selectedProduct.id}
-                    />
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <label
-                          className="font-medium text-sm"
-                          htmlFor="advanced-type"
-                        >
-                          Acao
-                        </label>
-                        <select
-                          className={inputClassName}
-                          defaultValue="loss"
-                          id="advanced-type"
-                          name="type"
-                        >
-                          <option value="loss">Perda</option>
-                          <option value="damage">Avaria</option>
-                          <option value="customer_return">Devolucao</option>
-                        </select>
-                      </div>
-                      <div className="space-y-2">
-                        <label
-                          className="font-medium text-sm"
-                          htmlFor="advanced-quantity"
-                        >
-                          Quantidade
-                        </label>
-                        <input
-                          className={inputClassName}
-                          id="advanced-quantity"
-                          min="1"
-                          name="quantity"
-                          required
-                          step="1"
-                          type="number"
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <label
-                        className="font-medium text-sm"
-                        htmlFor="advanced-note"
-                      >
-                        Observacao
-                      </label>
-                      <textarea
-                        className={textAreaClassName}
-                        id="advanced-note"
-                        name="note"
-                      />
-                    </div>
-                    <button
-                      className="h-10 w-full rounded-xl border border-border px-4 font-medium text-sm transition hover:bg-muted sm:w-auto"
-                      type="submit"
-                    >
-                      Salvar acao avancada
-                    </button>
-                  </form>
-                </details>
               </section>
 
               <section className="space-y-4">
@@ -744,7 +589,7 @@ export default async function ProductsPage({
                     <p className="text-muted-foreground text-sm">
                       {historyMode === "all"
                         ? "Mostrando um historico ampliado deste produto."
-                        : "Mostrando os 5 movimentos mais recentes deste produto."}
+                        : "Mostrando os 8 movimentos mais recentes deste produto."}
                     </p>
                   </div>
                   <Link
@@ -801,7 +646,7 @@ export default async function ProductsPage({
                     ))
                   ) : (
                     <EmptyState
-                      description="Assim que houver reposicao, correcao, perda, venda ou cancelamento, o historico deste produto aparece aqui."
+                      description="Assim que houver estoque inicial, compra recebida, venda ou ajuste, o historico deste produto aparece aqui."
                       title="Nenhum movimento encontrado"
                     />
                   )}
@@ -813,8 +658,8 @@ export default async function ProductsPage({
               <div className="space-y-2">
                 <h2 className="font-semibold text-lg">Novo produto</h2>
                 <p className="text-muted-foreground text-sm">
-                  Cadastre nome, custo, preco e estoque inicial. Depois disso,
-                  toda a manutencao do item acontece aqui mesmo.
+                  Cadastre identificacao, custo, preco e estoque inicial. Depois
+                  disso, entradas e ajustes passam a viver em Compras e Estoque.
                 </p>
               </div>
               <ProductForm

@@ -2,12 +2,18 @@ import { desc } from "drizzle-orm";
 import Link from "next/link";
 import { db } from "@/db";
 import {
+  paymentEvents,
   products,
-  receipts,
   saleItems,
   sales,
   systemSettings,
 } from "@/db/schema";
+import { toNumber } from "@/lib/domain/calculations";
+import {
+  calculateSaleGrossProfit,
+  calculateSaleNetProfit,
+  summarizePaymentLedger,
+} from "@/lib/domain/payment-ledger";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -42,12 +48,12 @@ export default async function DashboardPage({
   const now = new Date();
   const periodStart = subtractDays(now, selectedPeriod);
 
-  const [productRows, saleRows, saleItemRows, receiptRows, settingsRows] =
+  const [productRows, saleRows, saleItemRows, paymentRows, settingsRows] =
     await Promise.all([
       db.select().from(products).orderBy(desc(products.updatedAt)),
       db.select().from(sales).orderBy(desc(sales.saleDate)),
       db.select().from(saleItems),
-      db.select().from(receipts).orderBy(desc(receipts.createdAt)),
+      db.select().from(paymentEvents).orderBy(desc(paymentEvents.createdAt)),
       db.select().from(systemSettings).limit(1),
     ]);
 
@@ -57,9 +63,11 @@ export default async function DashboardPage({
   const lowStockThreshold = settingsRows[0]?.lowStockThreshold ?? 2;
   const staleProductDays = settingsRows[0]?.staleProductDays ?? 45;
   const staleCutoff = subtractDays(now, staleProductDays);
-  const lowStockProducts = activeProducts.filter(
-    (product) => product.currentStock <= lowStockThreshold
-  );
+  const lowStockProducts = activeProducts.filter((product) => {
+    const productMinimum =
+      product.minimumStock > 0 ? product.minimumStock : lowStockThreshold;
+    return product.currentStock <= productMinimum;
+  });
   const staleProducts = activeProducts.filter((product) => {
     if (!product.lastSoldAt) {
       return true;
@@ -80,40 +88,86 @@ export default async function DashboardPage({
   const filteredSaleItems = saleItemRows.filter((item) =>
     filteredSaleIds.has(item.saleId)
   );
-  const filteredReceipts = receiptRows.filter(
-    (receipt) =>
-      filteredSaleIds.has(receipt.saleId) &&
-      receipt.status !== "pending" &&
-      receipt.status !== "canceled"
+  const filteredPayments = paymentRows.filter((payment) =>
+    filteredSaleIds.has(payment.saleId)
   );
 
   const soldAmount = filteredSales.reduce(
     (total, sale) => total + Number(sale.orderTotal ?? 0),
     0
   );
-  const receivedGross = filteredSales.reduce(
-    (total, sale) => total + Number(sale.receivedGrossTotal ?? 0),
-    0
-  );
+  const ticketAverage =
+    filteredSales.length > 0 ? soldAmount / filteredSales.length : 0;
+  const grossProfit = filteredSales.reduce((total, sale) => {
+    const items = filteredSaleItems.filter((item) => item.saleId === sale.id);
+    const costOfGoodsSold = items.reduce(
+      (costTotal, item) => costTotal + toNumber(item.costSnapshotTotal),
+      0
+    );
+
+    return (
+      total +
+      calculateSaleGrossProfit(toNumber(sale.orderTotal), costOfGoodsSold)
+    );
+  }, 0);
+  const netProfit = filteredSales.reduce((total, sale) => {
+    const items = filteredSaleItems.filter((item) => item.saleId === sale.id);
+    const salePayments = filteredPayments.filter(
+      (payment) => payment.saleId === sale.id
+    );
+    const costOfGoodsSold = items.reduce(
+      (costTotal, item) => costTotal + toNumber(item.costSnapshotTotal),
+      0
+    );
+    const paymentSummary = summarizePaymentLedger(
+      toNumber(sale.orderTotal),
+      salePayments
+    );
+
+    return (
+      total +
+      calculateSaleNetProfit({
+        confirmedChargebackGross: paymentSummary.confirmedChargebackGross,
+        confirmedFeeTotal: paymentSummary.confirmedFeeTotal,
+        confirmedRefundGross: paymentSummary.confirmedRefundGross,
+        costOfGoodsSold,
+        orderTotal: toNumber(sale.orderTotal),
+      })
+    );
+  }, 0);
   const receivedNet = filteredSales.reduce(
     (total, sale) => total + Number(sale.receivedNetTotal ?? 0),
     0
   );
-  const costOfGoodsSold = filteredSaleItems.reduce(
-    (total, item) => total + Number(item.costSnapshotTotal ?? 0),
-    0
-  );
-  const estimatedProfit = receivedNet - costOfGoodsSold;
-  const pendingAmount = Math.max(soldAmount - receivedGross, 0);
-  const paymentCosts = filteredReceipts.reduce(
-    (total, receipt) => total + Number(receipt.feeAmount ?? 0),
-    0
-  );
-  const recentSales = filteredSales.slice(0, 5).map((sale) => ({
-    ...sale,
-    itemCount: filteredSaleItems.filter((item) => item.saleId === sale.id)
-      .length,
-  }));
+  const receivableTotal = filteredSales.reduce((total, sale) => {
+    const salePayments = filteredPayments.filter(
+      (payment) => payment.saleId === sale.id
+    );
+    const paymentSummary = summarizePaymentLedger(
+      toNumber(sale.orderTotal),
+      salePayments
+    );
+
+    return total + paymentSummary.amountDue;
+  }, 0);
+  const paymentCosts = filteredPayments
+    .filter((payment) => payment.status === "confirmed")
+    .reduce((total, payment) => total + Number(payment.feeAmount ?? 0), 0);
+  const recentSales = filteredSales.slice(0, 5).map((sale) => {
+    const itemCount = filteredSaleItems.filter(
+      (item) => item.saleId === sale.id
+    ).length;
+    const paymentSummary = summarizePaymentLedger(
+      toNumber(sale.orderTotal),
+      filteredPayments.filter((payment) => payment.saleId === sale.id)
+    );
+
+    return {
+      ...sale,
+      amountDue: paymentSummary.amountDue,
+      itemCount,
+    };
+  });
 
   return (
     <div className="space-y-6">
@@ -126,8 +180,9 @@ export default async function DashboardPage({
             Dashboard operacional
           </h1>
           <p className="max-w-3xl text-muted-foreground text-sm sm:text-base">
-            O foco aqui e responder rapido como esta a operacao: vendido,
-            recebido, pendente e sinais simples de saude do catalogo.
+            O foco agora e separar operacao e caixa com mais clareza: quanto foi
+            vendido, quanto gerou de margem, quanto entrou e quanto ainda falta
+            receber.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -148,7 +203,7 @@ export default async function DashboardPage({
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         <div className={metricCardClassName}>
           <p className="text-muted-foreground text-sm">Vendido no periodo</p>
           <p className="mt-3 font-heading font-semibold text-2xl sm:text-3xl">
@@ -156,29 +211,38 @@ export default async function DashboardPage({
           </p>
         </div>
         <div className={metricCardClassName}>
-          <p className="text-muted-foreground text-sm">Lucro estimado</p>
+          <p className="text-muted-foreground text-sm">Lucro bruto</p>
           <p className="mt-3 font-heading font-semibold text-2xl sm:text-3xl">
-            {formatCurrency(estimatedProfit)}
+            {formatCurrency(grossProfit)}
           </p>
         </div>
         <div className={metricCardClassName}>
-          <p className="text-muted-foreground text-sm">Recebido</p>
+          <p className="text-muted-foreground text-sm">Lucro liquido</p>
+          <p className="mt-3 font-heading font-semibold text-2xl sm:text-3xl">
+            {formatCurrency(netProfit)}
+          </p>
+        </div>
+        <div className={metricCardClassName}>
+          <p className="text-muted-foreground text-sm">Recebido liquido</p>
           <p className="mt-3 font-heading font-semibold text-2xl sm:text-3xl">
             {formatCurrency(receivedNet)}
           </p>
-          <p className="mt-1 text-muted-foreground text-xs">
-            Ja descontando custos de pagamento.
-          </p>
         </div>
         <div className={metricCardClassName}>
-          <p className="text-muted-foreground text-sm">Pendente</p>
+          <p className="text-muted-foreground text-sm">A receber</p>
           <p className="mt-3 font-heading font-semibold text-2xl sm:text-3xl">
-            {formatCurrency(pendingAmount)}
+            {formatCurrency(receivableTotal)}
           </p>
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
+        <div className={metricCardClassName}>
+          <p className="text-muted-foreground text-sm">Ticket medio</p>
+          <p className="mt-3 font-heading font-semibold text-2xl sm:text-3xl">
+            {formatCurrency(ticketAverage)}
+          </p>
+        </div>
         <div className={metricCardClassName}>
           <p className="text-muted-foreground text-sm">Estoque baixo</p>
           <p className="mt-3 font-heading font-semibold text-2xl sm:text-3xl">
@@ -186,9 +250,9 @@ export default async function DashboardPage({
           </p>
           <Link
             className="mt-4 inline-flex text-primary text-sm transition hover:opacity-80"
-            href="/produtos"
+            href="/estoque"
           >
-            Resolver em Produtos
+            Resolver em Estoque
           </Link>
         </div>
         <div className={metricCardClassName}>
@@ -206,7 +270,7 @@ export default async function DashboardPage({
             {formatCurrency(stockValue)}
           </p>
           <p className="mt-1 text-muted-foreground text-xs">
-            Custos de pagamento no periodo: {formatCurrency(paymentCosts)}
+            Taxas financeiras no periodo: {formatCurrency(paymentCosts)}
           </p>
         </div>
       </div>
@@ -230,11 +294,11 @@ export default async function DashboardPage({
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="font-medium text-sm">Venda #{sale.id}</p>
                       <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] uppercase tracking-[0.12em]">
-                        {sale.status}
+                        {sale.paymentStatus}
                       </span>
                     </div>
                     <p className="text-muted-foreground text-xs">
-                      {sale.channel} - {sale.itemCount} itens -{" "}
+                      {sale.channel} · {sale.itemCount} itens ·{" "}
                       {formatDateTime(sale.saleDate)}
                     </p>
                   </div>
@@ -243,7 +307,7 @@ export default async function DashboardPage({
                       {formatCurrency(sale.orderTotal)}
                     </p>
                     <p className="text-muted-foreground">
-                      recebido {formatCurrency(sale.receivedNetTotal)}
+                      falta receber {formatCurrency(sale.amountDue)}
                     </p>
                   </div>
                 </div>
@@ -265,23 +329,36 @@ export default async function DashboardPage({
             >
               <p className="font-medium text-sm">Produtos</p>
               <p className="text-muted-foreground text-sm">
-                Cadastre item, ajuste preco e resolva estoque baixo.
+                Cadastre item, defina preco e consulte historico.
               </p>
             </Link>
             <Link
               className="block rounded-xl border border-border/50 bg-background/60 px-4 py-3 transition hover:bg-muted/40"
-              href="/vendas"
+              href="/compras"
             >
-              <p className="font-medium text-sm">Vendas</p>
+              <p className="font-medium text-sm">Compras</p>
               <p className="text-muted-foreground text-sm">
-                Registre pedidos, pagamentos e acompanhe pendencias.
+                Registre entradas e receba mercadoria com custo composto.
               </p>
             </Link>
-            <div className="rounded-xl border border-border/50 bg-background/60 px-4 py-3 text-sm">
-              <p>{lowStockProducts.length} produtos com baixo estoque.</p>
-              <p>{staleProducts.length} produtos parados.</p>
-              <p>{filteredSales.length} vendas no periodo.</p>
-            </div>
+            <Link
+              className="block rounded-xl border border-border/50 bg-background/60 px-4 py-3 transition hover:bg-muted/40"
+              href="/estoque"
+            >
+              <p className="font-medium text-sm">Estoque</p>
+              <p className="text-muted-foreground text-sm">
+                Faça ajustes manuais e acompanhe alertas de saldo.
+              </p>
+            </Link>
+            <Link
+              className="block rounded-xl border border-border/50 bg-background/60 px-4 py-3 transition hover:bg-muted/40"
+              href="/recebimentos"
+            >
+              <p className="font-medium text-sm">Caixa</p>
+              <p className="text-muted-foreground text-sm">
+                Consulte pagamentos, refunds, chargebacks e valores em aberto.
+              </p>
+            </Link>
           </div>
         </section>
       </div>

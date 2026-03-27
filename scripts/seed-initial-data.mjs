@@ -15,10 +15,16 @@ if (!connectionString) {
 }
 
 const seedUser = {
-  email: "contato.juniordiniz@gmail.com",
-  name: "Junior Diniz",
-  password: "DgImports@2026!",
+  email: process.env.SEED_USER_EMAIL,
+  name: process.env.SEED_USER_NAME,
+  password: process.env.SEED_USER_PASSWORD,
 };
+
+if (!(seedUser.email && seedUser.name && seedUser.password)) {
+  throw new Error(
+    "Defina SEED_USER_EMAIL, SEED_USER_NAME e SEED_USER_PASSWORD antes de rodar o seed."
+  );
+}
 
 const seedSettings = {
   estimatedFeePercent: "5.00",

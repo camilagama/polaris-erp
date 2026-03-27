@@ -1,10 +1,10 @@
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   inventoryMovements,
+  paymentEvents,
   products,
   purchases,
-  receipts,
   saleItems,
   sales,
   systemSettings,
@@ -13,23 +13,30 @@ import {
   calculateMovingAverageCost,
   calculatePurchaseTotal,
   calculatePurchaseUnitCost,
-  calculateReceiptNetAmount,
   calculateSaleItemsSubtotal,
   calculateSaleOrderTotal,
-  deriveSaleStatus,
   roundMoney,
   toNumber,
 } from "@/lib/domain/calculations";
+import {
+  calculatePaymentEventNetAmount,
+  type PaymentEventStatus,
+  type PaymentMethodType,
+  summarizePaymentLedger,
+} from "@/lib/domain/payment-ledger";
 
 const toMoneyString = (value: number) => roundMoney(value).toFixed(2);
 
 interface ProductInput {
+  barcode?: string;
   category?: string;
   description?: string;
   initialStock: number;
+  minimumStock?: number;
   name: string;
   notes?: string;
   salePrice: number;
+  sku?: string;
   unitCost: number;
 }
 
@@ -38,13 +45,11 @@ interface InventoryAdjustmentInput {
   productId: number;
   quantity: number;
   type:
-    | "purchase_in"
     | "adjustment_plus"
     | "adjustment_minus"
     | "customer_return"
     | "damage"
     | "loss";
-  unitCost?: number;
 }
 
 interface PurchaseInput {
@@ -72,30 +77,140 @@ interface SaleItemInput {
   unitSalePrice: number;
 }
 
+interface SalePaymentInput {
+  dueDate?: Date | null;
+  effectiveDate?: Date | null;
+  feeAmount?: number;
+  grossAmount: number;
+  method: PaymentMethodType;
+  notes?: string;
+  status: PaymentEventStatus;
+}
+
 interface SaleInput {
   channel: string;
   discountAmount?: number;
   items: SaleItemInput[];
   notes?: string;
+  payments?: SalePaymentInput[];
   shippingChargedAmount?: number;
 }
 
-interface ReceiptInput {
-  dueDate?: Date | null;
-  effectiveDate?: Date | null;
-  feeAmount?: number;
-  grossAmount: number;
-  method: "pix" | "cash" | "card" | "payment_link";
-  notes?: string;
+interface PaymentEventInput extends SalePaymentInput {
   saleId: number;
-  status:
-    | "pending"
-    | "partial"
-    | "received"
-    | "canceled"
-    | "refunded"
-    | "chargeback";
+  type: "payment" | "refund" | "chargeback";
 }
+
+const lockProductRows = async (
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  productIds: number[]
+) => {
+  const uniqueSortedIds = Array.from(new Set(productIds)).sort(
+    (left, right) => left - right
+  );
+
+  for (const productId of uniqueSortedIds) {
+    await tx.execute(
+      sql`select id from products where id = ${productId} for update`
+    );
+  }
+
+  return uniqueSortedIds;
+};
+
+const getLockedProducts = (
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  productIds: number[]
+) => {
+  if (productIds.length === 0) {
+    return Promise.resolve([]);
+  }
+
+  return tx.select().from(products).where(inArray(products.id, productIds));
+};
+
+const validateSaleOrderTotal = (orderTotal: number) => {
+  if (orderTotal < 0) {
+    throw new Error("O desconto nao pode deixar o pedido negativo.");
+  }
+};
+
+const normalizePaymentEventInput = (input: PaymentEventInput) => {
+  if (input.grossAmount <= 0) {
+    throw new Error("Informe um valor bruto maior que zero.");
+  }
+
+  const feeAmount = input.feeAmount ?? 0;
+
+  if (feeAmount < 0) {
+    throw new Error("A taxa nao pode ser negativa.");
+  }
+
+  if (feeAmount > input.grossAmount) {
+    throw new Error("A taxa nao pode ser maior do que o valor bruto.");
+  }
+
+  if (input.status === "confirmed" && !input.effectiveDate) {
+    throw new Error("Informe a data efetiva para eventos confirmados.");
+  }
+
+  if (input.type !== "payment" && input.status !== "confirmed") {
+    throw new Error(
+      "Refunds e chargebacks devem ser registrados como confirmados."
+    );
+  }
+
+  return {
+    dueDate: input.dueDate ?? null,
+    effectiveDate: input.effectiveDate ?? null,
+    feeAmount,
+    grossAmount: input.grossAmount,
+    netAmount: calculatePaymentEventNetAmount({
+      feeAmount,
+      grossAmount: input.grossAmount,
+      type: input.type,
+    }),
+    notes: input.notes?.trim() || null,
+    status: input.status,
+    type: input.type,
+  };
+};
+
+const recalculateSaleFinancials = async (
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  saleId: number
+) => {
+  const [sale] = await tx
+    .select()
+    .from(sales)
+    .where(eq(sales.id, saleId))
+    .limit(1);
+
+  if (!sale) {
+    throw new Error("Venda nao encontrada.");
+  }
+
+  const salePaymentRows = await tx
+    .select()
+    .from(paymentEvents)
+    .where(eq(paymentEvents.saleId, saleId));
+  const summary = summarizePaymentLedger(
+    toNumber(sale.orderTotal),
+    salePaymentRows
+  );
+
+  await tx
+    .update(sales)
+    .set({
+      paymentStatus: summary.paymentStatus,
+      receivedGrossTotal: toMoneyString(summary.confirmedGrossTotal),
+      receivedNetTotal: toMoneyString(summary.confirmedNetTotal),
+      updatedAt: new Date(),
+    })
+    .where(eq(sales.id, saleId));
+
+  return summary;
+};
 
 export const createProduct = async (
   input: ProductInput,
@@ -106,13 +221,16 @@ export const createProduct = async (
       .insert(products)
       .values({
         averageCost: toMoneyString(input.unitCost),
-        category: input.category || null,
+        barcode: input.barcode?.trim() || null,
+        category: input.category?.trim() || null,
         createdByUserId,
         currentStock: input.initialStock,
-        description: input.description || null,
-        name: input.name,
-        notes: input.notes || null,
+        description: input.description?.trim() || null,
+        minimumStock: input.minimumStock ?? 0,
+        name: input.name.trim(),
+        notes: input.notes?.trim() || null,
         salePrice: toMoneyString(input.salePrice),
+        sku: input.sku?.trim() || null,
       })
       .returning();
 
@@ -122,7 +240,7 @@ export const createProduct = async (
         note: "Estoque inicial informado no cadastro do produto.",
         productId: product.id,
         quantityDelta: input.initialStock,
-        type: "purchase_in",
+        type: "initial_stock",
         unitCostSnapshot: toMoneyString(input.unitCost),
       });
     }
@@ -140,9 +258,8 @@ export const updateProductStatus = async (
     .where(eq(products.id, productId));
 
 export const updateProductCommercialData = async (input: {
-  averageCost?: number;
   productId: number;
-  salePrice?: number;
+  salePrice: number;
 }) => {
   const [product] = await db
     .select()
@@ -154,20 +271,10 @@ export const updateProductCommercialData = async (input: {
     throw new Error("Produto nao encontrado.");
   }
 
-  const averageCost =
-    typeof input.averageCost === "number"
-      ? toMoneyString(input.averageCost)
-      : product.averageCost;
-  const salePrice =
-    typeof input.salePrice === "number"
-      ? toMoneyString(input.salePrice)
-      : product.salePrice;
-
   await db
     .update(products)
     .set({
-      averageCost,
-      salePrice,
+      salePrice: toMoneyString(input.salePrice),
       updatedAt: new Date(),
     })
     .where(eq(products.id, input.productId));
@@ -178,20 +285,16 @@ export const createInventoryAdjustment = async (
   createdByUserId: string
 ) =>
   db.transaction(async (tx) => {
-    const [product] = await tx
-      .select()
-      .from(products)
-      .where(eq(products.id, input.productId))
-      .limit(1);
+    await lockProductRows(tx, [input.productId]);
+
+    const [product] = await getLockedProducts(tx, [input.productId]);
 
     if (!product) {
       throw new Error("Produto nao encontrado.");
     }
 
     const normalizedQuantity =
-      input.type === "purchase_in" ||
-      input.type === "adjustment_plus" ||
-      input.type === "customer_return"
+      input.type === "adjustment_plus" || input.type === "customer_return"
         ? input.quantity
         : input.quantity * -1;
     const nextStock = product.currentStock + normalizedQuantity;
@@ -200,40 +303,18 @@ export const createInventoryAdjustment = async (
       throw new Error("O ajuste deixaria o estoque negativo.");
     }
 
-    if (
-      input.type === "purchase_in" &&
-      !(input.unitCost && input.unitCost > 0)
-    ) {
-      throw new Error("Informe o custo unitario da entrada.");
-    }
-
-    const nextAverageCost =
-      input.type === "purchase_in"
-        ? calculateMovingAverageCost({
-            currentAverageCost: toNumber(product.averageCost),
-            currentStock: product.currentStock,
-            incomingQuantity: input.quantity,
-            incomingTotalCost: input.quantity * (input.unitCost ?? 0),
-          })
-        : toNumber(product.averageCost);
-    const unitCostSnapshot =
-      input.type === "purchase_in"
-        ? toMoneyString(input.unitCost ?? 0)
-        : toMoneyString(toNumber(product.averageCost));
-
     await tx.insert(inventoryMovements).values({
       createdByUserId,
-      note: input.note || null,
+      note: input.note?.trim() || null,
       productId: product.id,
       quantityDelta: normalizedQuantity,
       type: input.type,
-      unitCostSnapshot,
+      unitCostSnapshot: product.averageCost,
     });
 
     await tx
       .update(products)
       .set({
-        averageCost: toMoneyString(nextAverageCost),
         currentStock: nextStock,
         updatedAt: new Date(),
       })
@@ -255,7 +336,7 @@ export const createPurchase = (
   return db.insert(purchases).values({
     cardFeeAmount: toMoneyString(input.cardFeeAmount ?? 0),
     createdByUserId,
-    notes: input.notes || null,
+    notes: input.notes?.trim() || null,
     otherCostsAmount: toMoneyString(input.otherCostsAmount ?? 0),
     productId: input.productId,
     quantity: input.quantity,
@@ -290,11 +371,9 @@ export const receivePurchase = async (
       throw new Error("Nao e possivel receber uma compra cancelada.");
     }
 
-    const [product] = await tx
-      .select()
-      .from(products)
-      .where(eq(products.id, purchase.productId))
-      .limit(1);
+    await lockProductRows(tx, [purchase.productId]);
+
+    const [product] = await getLockedProducts(tx, [purchase.productId]);
 
     if (!product) {
       throw new Error("Produto da compra nao encontrado.");
@@ -390,55 +469,6 @@ export const upsertSystemSettings = async (input: SettingsInput) => {
     .where(eq(systemSettings.id, existingSettings.id));
 };
 
-const recalculateSaleFinancials = async (saleId: number) => {
-  const [sale] = await db
-    .select()
-    .from(sales)
-    .where(eq(sales.id, saleId))
-    .limit(1);
-
-  if (!sale) {
-    throw new Error("Venda nao encontrada.");
-  }
-
-  const saleReceiptRows = await db
-    .select()
-    .from(receipts)
-    .where(eq(receipts.saleId, saleId));
-
-  const effectiveReceipts = saleReceiptRows.filter(
-    (receipt) => receipt.status !== "pending" && receipt.status !== "canceled"
-  );
-  const receivedGrossTotal = effectiveReceipts.reduce(
-    (total, receipt) => total + toNumber(receipt.grossAmount),
-    0
-  );
-  const receivedNetTotal = effectiveReceipts.reduce(
-    (total, receipt) => total + toNumber(receipt.netAmount),
-    0
-  );
-  const nextStatus = deriveSaleStatus({
-    hasChargeback: effectiveReceipts.some(
-      (receipt) => receipt.status === "chargeback"
-    ),
-    hasRefund: effectiveReceipts.some(
-      (receipt) => receipt.status === "refunded"
-    ),
-    orderTotal: toNumber(sale.orderTotal),
-    receivedGrossTotal,
-  });
-
-  await db
-    .update(sales)
-    .set({
-      receivedGrossTotal: toMoneyString(receivedGrossTotal),
-      receivedNetTotal: toMoneyString(receivedNetTotal),
-      status: nextStatus,
-      updatedAt: new Date(),
-    })
-    .where(eq(sales.id, saleId));
-};
-
 export const createSale = async (input: SaleInput, createdByUserId: string) =>
   db.transaction(async (tx) => {
     const mergedItems = new Map<number, SaleItemInput>();
@@ -455,7 +485,11 @@ export const createSale = async (input: SaleInput, createdByUserId: string) =>
     }
 
     const normalizedItems = Array.from(mergedItems.values());
-    const productRows = await tx.select().from(products);
+    const lockedProductIds = await lockProductRows(
+      tx,
+      normalizedItems.map((item) => item.productId)
+    );
+    const productRows = await getLockedProducts(tx, lockedProductIds);
     const productMap = new Map(
       productRows.map((product) => [product.id, product])
     );
@@ -480,18 +514,29 @@ export const createSale = async (input: SaleInput, createdByUserId: string) =>
       itemsSubtotal,
       shippingChargedAmount,
     });
+    validateSaleOrderTotal(orderTotal);
+
+    const paymentLines = input.payments ?? [];
+    const paymentGrossTotal = roundMoney(
+      paymentLines.reduce((total, payment) => total + payment.grossAmount, 0)
+    );
+
+    if (paymentGrossTotal > orderTotal) {
+      throw new Error("Os pagamentos nao podem ultrapassar o total da venda.");
+    }
 
     const [sale] = await tx
       .insert(sales)
       .values({
-        channel: input.channel,
+        channel: input.channel.trim(),
         createdByUserId,
         discountAmount: toMoneyString(discountAmount),
         itemsSubtotal: toMoneyString(itemsSubtotal),
-        notes: input.notes || null,
+        notes: input.notes?.trim() || null,
         orderTotal: toMoneyString(orderTotal),
+        paymentStatus: "unpaid",
         shippingChargedAmount: toMoneyString(shippingChargedAmount),
-        status: "awaiting_payment",
+        status: "finalized",
       })
       .returning();
 
@@ -536,11 +581,36 @@ export const createSale = async (input: SaleInput, createdByUserId: string) =>
         .where(eq(products.id, product.id));
     }
 
+    for (const payment of paymentLines) {
+      const normalizedPayment = normalizePaymentEventInput({
+        ...payment,
+        saleId: sale.id,
+        type: "payment",
+      });
+
+      await tx.insert(paymentEvents).values({
+        createdByUserId,
+        dueDate: normalizedPayment.dueDate,
+        effectiveDate: normalizedPayment.effectiveDate,
+        feeAmount: toMoneyString(normalizedPayment.feeAmount),
+        grossAmount: toMoneyString(normalizedPayment.grossAmount),
+        method: payment.method,
+        netAmount: toMoneyString(normalizedPayment.netAmount),
+        notes: normalizedPayment.notes,
+        saleId: sale.id,
+        status: normalizedPayment.status,
+        type: normalizedPayment.type,
+      });
+    }
+
+    await recalculateSaleFinancials(tx, sale.id);
     return sale;
   });
 
 export const cancelSale = async (saleId: number, createdByUserId: string) =>
   db.transaction(async (tx) => {
+    await tx.execute(sql`select id from sales where id = ${saleId} for update`);
+
     const [sale] = await tx
       .select()
       .from(sales)
@@ -555,9 +625,14 @@ export const cancelSale = async (saleId: number, createdByUserId: string) =>
       throw new Error("Essa venda ja foi cancelada.");
     }
 
-    if (toNumber(sale.receivedGrossTotal) > 0) {
+    const salePaymentRows = await tx
+      .select()
+      .from(paymentEvents)
+      .where(eq(paymentEvents.saleId, saleId));
+
+    if (salePaymentRows.some((payment) => payment.status !== "canceled")) {
       throw new Error(
-        "Nao e possivel cancelar uma venda que ja possui recebimentos."
+        "Nao e possivel cancelar uma venda que ja possui eventos financeiros."
       );
     }
 
@@ -565,6 +640,10 @@ export const cancelSale = async (saleId: number, createdByUserId: string) =>
       .select()
       .from(saleItems)
       .where(eq(saleItems.saleId, saleId));
+    await lockProductRows(
+      tx,
+      items.map((item) => item.productId)
+    );
 
     for (const item of items) {
       const [product] = await tx
@@ -599,42 +678,55 @@ export const cancelSale = async (saleId: number, createdByUserId: string) =>
     await tx
       .update(sales)
       .set({
+        paymentStatus: "unpaid",
+        receivedGrossTotal: toMoneyString(0),
+        receivedNetTotal: toMoneyString(0),
         status: "canceled",
         updatedAt: new Date(),
       })
       .where(eq(sales.id, saleId));
   });
 
-export const createReceipt = async (
-  input: ReceiptInput,
+export const createPaymentEvent = async (
+  input: PaymentEventInput,
   createdByUserId: string
-) => {
-  const [sale] = await db
-    .select()
-    .from(sales)
-    .where(eq(sales.id, input.saleId))
-    .limit(1);
+) =>
+  db.transaction(async (tx) => {
+    await tx.execute(
+      sql`select id from sales where id = ${input.saleId} for update`
+    );
 
-  if (!sale) {
-    throw new Error("Venda nao encontrada.");
-  }
+    const [sale] = await tx
+      .select()
+      .from(sales)
+      .where(eq(sales.id, input.saleId))
+      .limit(1);
 
-  const grossAmount = input.grossAmount;
-  const feeAmount = input.feeAmount ?? 0;
-  const netAmount = calculateReceiptNetAmount(grossAmount, feeAmount);
+    if (!sale) {
+      throw new Error("Venda nao encontrada.");
+    }
 
-  await db.insert(receipts).values({
-    createdByUserId,
-    dueDate: input.dueDate ?? null,
-    effectiveDate: input.effectiveDate ?? null,
-    feeAmount: toMoneyString(feeAmount),
-    grossAmount: toMoneyString(grossAmount),
-    method: input.method,
-    netAmount: toMoneyString(netAmount),
-    notes: input.notes || null,
-    saleId: input.saleId,
-    status: input.status,
+    if (sale.status === "canceled") {
+      throw new Error(
+        "Nao e possivel registrar eventos em uma venda cancelada."
+      );
+    }
+
+    const normalizedPayment = normalizePaymentEventInput(input);
+
+    await tx.insert(paymentEvents).values({
+      createdByUserId,
+      dueDate: normalizedPayment.dueDate,
+      effectiveDate: normalizedPayment.effectiveDate,
+      feeAmount: toMoneyString(normalizedPayment.feeAmount),
+      grossAmount: toMoneyString(normalizedPayment.grossAmount),
+      method: input.method,
+      netAmount: toMoneyString(normalizedPayment.netAmount),
+      notes: normalizedPayment.notes,
+      saleId: input.saleId,
+      status: normalizedPayment.status,
+      type: normalizedPayment.type,
+    });
+
+    await recalculateSaleFinancials(tx, input.saleId);
   });
-
-  await recalculateSaleFinancials(input.saleId);
-};

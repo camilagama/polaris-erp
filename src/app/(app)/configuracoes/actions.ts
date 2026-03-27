@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { buildRedirectPath } from "@/lib/action-feedback";
 import { upsertSystemSettings } from "@/lib/domain/operations";
+import { requireSession } from "@/lib/session";
 
 const settingsSchema = z.object({
   estimatedFeePercent: z.coerce.number().min(0),
@@ -18,6 +19,7 @@ const redirectWithResult = (params: Record<string, string | undefined>) =>
   redirect(buildRedirectPath("/configuracoes", params));
 
 export async function saveSettingsAction(formData: FormData) {
+  await requireSession();
   const parsed = settingsSchema.safeParse({
     estimatedFeePercent: formData.get("estimatedFeePercent"),
     lowStockThreshold: formData.get("lowStockThreshold"),

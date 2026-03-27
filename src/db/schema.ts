@@ -36,29 +36,37 @@ export const purchaseStatusEnum = pgEnum("purchase_status", [
 ]);
 export const saleStatusEnum = pgEnum("sale_status", [
   "draft",
-  "awaiting_payment",
-  "partially_paid",
-  "paid",
   "finalized",
   "canceled",
+]);
+export const paymentStatusEnum = pgEnum("payment_status", [
+  "unpaid",
+  "partially_paid",
+  "paid",
   "refunded",
   "chargeback",
 ]);
-export const receiptStatusEnum = pgEnum("receipt_status", [
+export const paymentEventStatusEnum = pgEnum("payment_event_status", [
   "pending",
-  "partial",
-  "received",
   "canceled",
-  "refunded",
-  "chargeback",
+  "confirmed",
 ]);
-export const receiptMethodEnum = pgEnum("receipt_method", [
+export const paymentMethodTypeEnum = pgEnum("payment_method_type", [
   "pix",
   "cash",
-  "card",
+  "card_debit",
+  "card_credit",
   "payment_link",
+  "bank_transfer",
+  "other",
+]);
+export const paymentEventTypeEnum = pgEnum("payment_event_type", [
+  "payment",
+  "refund",
+  "chargeback",
 ]);
 export const inventoryMovementTypeEnum = pgEnum("inventory_movement_type", [
+  "initial_stock",
   "purchase_in",
   "sale_out",
   "adjustment_plus",
@@ -118,11 +126,14 @@ export const verifications = pgTable("verifications", {
 export const products = pgTable("products", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 160 }).notNull(),
+  sku: varchar("sku", { length: 80 }),
+  barcode: varchar("barcode", { length: 120 }),
   description: text("description"),
   category: varchar("category", { length: 120 }),
   notes: text("notes"),
   status: productStatusEnum("status").default("active").notNull(),
   currentStock: integer("current_stock").default(0).notNull(),
+  minimumStock: integer("minimum_stock").default(0).notNull(),
   averageCost: money("average_cost"),
   salePrice: money("sale_price"),
   lastSoldAt: timestamp("last_sold_at"),
@@ -160,7 +171,10 @@ export const sales = pgTable("sales", {
   id: serial("id").primaryKey(),
   saleDate: timestamp("sale_date").default(sql`CURRENT_TIMESTAMP`).notNull(),
   channel: varchar("channel", { length: 80 }).notNull(),
-  status: saleStatusEnum("status").default("draft").notNull(),
+  status: saleStatusEnum("status").default("finalized").notNull(),
+  paymentStatus: paymentStatusEnum("payment_status")
+    .default("unpaid")
+    .notNull(),
   itemsSubtotal: money("items_subtotal"),
   discountAmount: money("discount_amount"),
   shippingChargedAmount: money("shipping_charged_amount"),
@@ -190,7 +204,7 @@ export const saleItems = pgTable("sale_items", {
   ...timestamps,
 });
 
-export const receipts = pgTable("receipts", {
+export const paymentEvents = pgTable("payment_events", {
   id: serial("id").primaryKey(),
   saleId: integer("sale_id")
     .notNull()
@@ -200,8 +214,9 @@ export const receipts = pgTable("receipts", {
   grossAmount: money("gross_amount"),
   feeAmount: money("fee_amount"),
   netAmount: money("net_amount"),
-  method: receiptMethodEnum("method").notNull(),
-  status: receiptStatusEnum("status").default("pending").notNull(),
+  type: paymentEventTypeEnum("type").default("payment").notNull(),
+  method: paymentMethodTypeEnum("method").notNull(),
+  status: paymentEventStatusEnum("status").default("pending").notNull(),
   notes: text("notes"),
   createdByUserId: text("created_by_user_id").references(() => users.id, {
     onDelete: "set null",

@@ -57,7 +57,10 @@ const DGImportsLogo = ({ className }: { className?: string }) => (
 const navigationItems = [
   { href: "/", label: "Dashboard", icon: Home01Icon },
   { href: "/produtos", label: "Produtos", icon: PackageIcon },
+  { href: "/compras", label: "Compras", icon: PackageIcon },
+  { href: "/estoque", label: "Estoque", icon: PackageIcon },
   { href: "/vendas", label: "Vendas", icon: DollarCircleIcon },
+  { href: "/recebimentos", label: "Caixa", icon: DollarCircleIcon },
   { href: "/configuracoes", label: "Configuracoes", icon: Settings01Icon },
 ] as const;
 

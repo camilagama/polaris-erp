@@ -99,6 +99,7 @@ export async function receivePurchaseAction(formData: FormData) {
 }
 
 export async function cancelPurchaseAction(formData: FormData) {
+  await requireSession();
   const parsed = purchaseIdSchema.safeParse({
     purchaseId: formData.get("purchaseId"),
   });

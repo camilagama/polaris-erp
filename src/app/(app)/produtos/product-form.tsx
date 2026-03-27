@@ -38,21 +38,34 @@ export function ProductForm({
 
   return (
     <form action={action} className="space-y-4">
-      <div className="space-y-2">
-        <label className="font-medium text-sm" htmlFor="name">
-          Nome
-        </label>
-        <input className={inputClassName} id="name" name="name" required />
-      </div>
       <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-2 md:col-span-2">
+          <label className="font-medium text-sm" htmlFor="name">
+            Nome
+          </label>
+          <input className={inputClassName} id="name" name="name" required />
+        </div>
         <div className="space-y-2">
+          <label className="font-medium text-sm" htmlFor="sku">
+            SKU
+          </label>
+          <input className={inputClassName} id="sku" name="sku" />
+        </div>
+        <div className="space-y-2">
+          <label className="font-medium text-sm" htmlFor="barcode">
+            Codigo de barras
+          </label>
+          <input className={inputClassName} id="barcode" name="barcode" />
+        </div>
+        <div className="space-y-2 md:col-span-2">
           <label className="font-medium text-sm" htmlFor="category">
             Categoria
           </label>
           <input className={inputClassName} id="category" name="category" />
         </div>
       </div>
-      <div className="grid gap-4 md:grid-cols-3">
+
+      <div className="grid gap-4 rounded-2xl border border-border/60 bg-background/60 p-4 md:grid-cols-4">
         <div className="space-y-2">
           <label className="font-medium text-sm" htmlFor="unitCost">
             Custo unitario atual
@@ -95,6 +108,20 @@ export function ProductForm({
             id="initialStock"
             min="0"
             name="initialStock"
+            step="1"
+            type="number"
+          />
+        </div>
+        <div className="space-y-2">
+          <label className="font-medium text-sm" htmlFor="minimumStock">
+            Estoque minimo
+          </label>
+          <input
+            className={inputClassName}
+            defaultValue="0"
+            id="minimumStock"
+            min="0"
+            name="minimumStock"
             step="1"
             type="number"
           />

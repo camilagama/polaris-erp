@@ -15,6 +15,13 @@
       "when": 1774637348869,
       "tag": "20260327184908_v1_reset_domain_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1774642200000,
+      "tag": "20260328001000_store_single_cash_refactor",
+      "breakpoints": true
     }
   ]
 }

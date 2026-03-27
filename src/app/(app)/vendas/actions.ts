@@ -8,6 +8,16 @@ import { cancelSale, createSale } from "@/lib/domain/operations";
 import { requireSession } from "@/lib/session";
 
 const moneyField = z.coerce.number().min(0);
+const paymentMethodSchema = z.enum([
+  "pix",
+  "cash",
+  "card_debit",
+  "card_credit",
+  "payment_link",
+  "bank_transfer",
+  "other",
+]);
+const paymentStatusSchema = z.enum(["pending", "confirmed"]);
 
 const saleSchema = z.object({
   channel: z.string().trim().min(2).max(80),
@@ -25,9 +35,34 @@ const saleItemSchema = z.object({
   quantity: z.coerce.number().int().positive(),
   unitSalePrice: moneyField,
 });
+const salePaymentSchema = z.object({
+  dueDate: z.string().optional(),
+  effectiveDate: z.string().optional(),
+  feeAmount: moneyField,
+  grossAmount: z.coerce.number().positive(),
+  method: paymentMethodSchema,
+  status: paymentStatusSchema,
+});
 
 const redirectWithResult = (params: Record<string, string | undefined>) =>
   redirect(buildRedirectPath("/vendas", params));
+
+const toOptionalDate = (value?: string) => {
+  if (!value) {
+    return null;
+  }
+
+  return new Date(`${value}T00:00:00`);
+};
+
+interface ParsedSalePayment {
+  dueDate: Date | null;
+  effectiveDate: Date | null;
+  feeAmount: number;
+  grossAmount: number;
+  method: z.infer<typeof paymentMethodSchema>;
+  status: z.infer<typeof paymentStatusSchema>;
+}
 
 const parseSaleItems = (formData: FormData) => {
   const items: z.infer<typeof saleItemSchema>[] = [];
@@ -60,6 +95,48 @@ const parseSaleItems = (formData: FormData) => {
   return items;
 };
 
+const parseSalePayments = (formData: FormData) => {
+  const payments: ParsedSalePayment[] = [];
+  const grossAmounts = formData.getAll("paymentGrossAmount");
+  const feeAmounts = formData.getAll("paymentFeeAmount");
+  const methods = formData.getAll("paymentMethod");
+  const statuses = formData.getAll("paymentStatus");
+  const dueDates = formData.getAll("paymentDueDate");
+  const effectiveDates = formData.getAll("paymentEffectiveDate");
+
+  for (const [index, grossAmount] of grossAmounts.entries()) {
+    const grossAmountValue = String(grossAmount ?? "").trim();
+
+    if (!grossAmountValue) {
+      continue;
+    }
+
+    const parsedPayment = salePaymentSchema.safeParse({
+      dueDate: String(dueDates[index] ?? "").trim(),
+      effectiveDate: String(effectiveDates[index] ?? "").trim(),
+      feeAmount: String(feeAmounts[index] ?? "0").trim(),
+      grossAmount: grossAmountValue,
+      method: String(methods[index] ?? "").trim(),
+      status: String(statuses[index] ?? "").trim(),
+    });
+
+    if (!parsedPayment.success) {
+      throw new Error(`Revise o pagamento ${index + 1} da venda.`);
+    }
+
+    payments.push({
+      dueDate: toOptionalDate(parsedPayment.data.dueDate),
+      effectiveDate: toOptionalDate(parsedPayment.data.effectiveDate),
+      feeAmount: parsedPayment.data.feeAmount,
+      grossAmount: parsedPayment.data.grossAmount,
+      method: parsedPayment.data.method,
+      status: parsedPayment.data.status,
+    });
+  }
+
+  return payments;
+};
+
 export async function createSaleAction(formData: FormData) {
   const session = await requireSession();
   const parsedSale = saleSchema.safeParse({
@@ -77,11 +154,13 @@ export async function createSaleAction(formData: FormData) {
 
   try {
     const items = parseSaleItems(formData);
+    const payments = parseSalePayments(formData);
 
     await createSale(
       {
         ...parsedSale.data,
         items,
+        payments,
       },
       session.user.id
     );

@@ -1,4 +1,5 @@
-import { desc, eq } from "drizzle-orm";
+import { desc } from "drizzle-orm";
+import Link from "next/link";
 import {
   EmptyState,
   FeedbackBanner,
@@ -9,12 +10,54 @@ import { createReceiptAction } from "@/app/(app)/recebimentos/actions";
 import { cancelSaleAction, createSaleAction } from "@/app/(app)/vendas/actions";
 import { SalesForm } from "@/app/(app)/vendas/sales-form";
 import { db } from "@/db";
-import { products, receipts, saleItems, sales } from "@/db/schema";
+import { paymentEvents, products, saleItems, sales } from "@/db/schema";
 import { getSearchParamValue } from "@/lib/action-feedback";
+import { toNumber } from "@/lib/domain/calculations";
+import {
+  calculateSaleGrossProfit,
+  calculateSaleNetProfit,
+  summarizePaymentLedger,
+} from "@/lib/domain/payment-ledger";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
 
 const inputClassName =
   "h-10 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
+
+const paymentTypeLabels = {
+  chargeback: "Chargeback",
+  payment: "Pagamento",
+  refund: "Refund",
+} as const;
+
+const paymentStatusLabels = {
+  canceled: "Cancelado",
+  confirmed: "Confirmado",
+  pending: "Pendente",
+} as const;
+
+const saleStatusLabels = {
+  canceled: "Cancelada",
+  draft: "Rascunho",
+  finalized: "Finalizada",
+} as const;
+
+const salePaymentStatusLabels = {
+  chargeback: "Chargeback",
+  paid: "Paga",
+  partially_paid: "Parcial",
+  refunded: "Reembolsada",
+  unpaid: "Em aberto",
+} as const;
+
+const paymentMethodLabels = {
+  bank_transfer: "Transferencia",
+  card_credit: "Cartao credito",
+  card_debit: "Cartao debito",
+  cash: "Dinheiro",
+  other: "Outro",
+  payment_link: "Link",
+  pix: "PIX",
+} as const;
 
 export default async function SalesPage({
   searchParams,
@@ -25,29 +68,13 @@ export default async function SalesPage({
     productRows,
     saleRows,
     saleItemRows,
-    receiptRows,
+    paymentRows,
     resolvedSearchParams,
   ] = await Promise.all([
     db.select().from(products).orderBy(desc(products.updatedAt)),
     db.select().from(sales).orderBy(desc(sales.createdAt)),
     db.select().from(saleItems),
-    db
-      .select({
-        dueDate: receipts.dueDate,
-        effectiveDate: receipts.effectiveDate,
-        feeAmount: receipts.feeAmount,
-        grossAmount: receipts.grossAmount,
-        id: receipts.id,
-        method: receipts.method,
-        netAmount: receipts.netAmount,
-        notes: receipts.notes,
-        saleId: receipts.saleId,
-        saleStatus: sales.status,
-        status: receipts.status,
-      })
-      .from(receipts)
-      .innerJoin(sales, eq(sales.id, receipts.saleId))
-      .orderBy(desc(receipts.createdAt)),
+    db.select().from(paymentEvents).orderBy(desc(paymentEvents.createdAt)),
     searchParams,
   ]);
   const error = getSearchParamValue(resolvedSearchParams.error);
@@ -64,11 +91,11 @@ export default async function SalesPage({
     },
     new Map()
   );
-  const receiptsBySaleId = receiptRows.reduce<Map<number, typeof receiptRows>>(
-    (map, receipt) => {
-      const currentReceipts = map.get(receipt.saleId) ?? [];
-      currentReceipts.push(receipt);
-      map.set(receipt.saleId, currentReceipts);
+  const paymentsBySaleId = paymentRows.reduce<Map<number, typeof paymentRows>>(
+    (map, payment) => {
+      const currentPayments = map.get(payment.saleId) ?? [];
+      currentPayments.push(payment);
+      map.set(payment.saleId, currentPayments);
       return map;
     },
     new Map()
@@ -76,42 +103,79 @@ export default async function SalesPage({
 
   return (
     <PageLayout
-      description="Vendas concentram estoque e financeiro: criam o pedido, baixam saldo e registram recebimentos, taxas, refund e chargeback no mesmo lugar."
+      actions={
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+          <Link
+            className="inline-flex h-10 items-center justify-center rounded-xl border border-border px-4 font-medium text-sm transition hover:bg-muted"
+            href="/recebimentos"
+          >
+            Ver caixa
+          </Link>
+          <Link
+            className="inline-flex h-10 items-center justify-center rounded-xl border border-border px-4 font-medium text-sm transition hover:bg-muted"
+            href="/compras"
+          >
+            Registrar compra
+          </Link>
+        </div>
+      }
+      description="Vendas agora separam melhor pedido e caixa: os itens baixam estoque na confirmacao, e o ledger financeiro acompanha pagamento, refund e chargeback com metodos mais granulares."
       eyebrow="Vendas"
       title="Fluxo comercial"
     >
       <FeedbackBanner error={error} message={message} />
 
-      <div className="grid gap-6 xl:grid-cols-[0.86fr_1.14fr]">
+      <div className="grid gap-6 xl:grid-cols-[0.84fr_1.16fr]">
         <Surface className="h-fit">
           <div className="mb-5 space-y-2">
             <h2 className="font-semibold text-lg">Nova venda</h2>
             <p className="text-muted-foreground text-sm">
-              Comece com um item e adicione outros so quando precisar. Frete e
-              desconto continuam no nivel do pedido.
+              Comece pelos itens, confira o resumo e so depois distribua os
+              pagamentos iniciais.
             </p>
           </div>
           <SalesForm action={createSaleAction} products={productRows} />
         </Surface>
 
         <Surface>
-          <div className="mb-5 flex items-center justify-between">
+          <div className="mb-5 flex items-center justify-between gap-3">
             <div>
               <h2 className="font-semibold text-lg">Vendas registradas</h2>
               <p className="text-muted-foreground text-sm">
-                O financeiro agora fica dentro da propria venda, sem modulo
-                separado.
+                Cada venda exibe operacao e caixa lado a lado, sem misturar
+                status comercial com status financeiro.
               </p>
             </div>
             <span className="rounded-full bg-muted px-3 py-1 font-medium text-xs">
               {saleRows.length} vendas
             </span>
           </div>
+
           <div className="space-y-3">
             {saleRows.length > 0 ? (
               saleRows.map((sale) => {
                 const items = itemsBySaleId.get(sale.id) ?? [];
-                const saleReceipts = receiptsBySaleId.get(sale.id) ?? [];
+                const salePayments = paymentsBySaleId.get(sale.id) ?? [];
+                const costOfGoodsSold = items.reduce(
+                  (total, item) => total + toNumber(item.costSnapshotTotal),
+                  0
+                );
+                const paymentSummary = summarizePaymentLedger(
+                  toNumber(sale.orderTotal),
+                  salePayments
+                );
+                const grossProfit = calculateSaleGrossProfit(
+                  toNumber(sale.orderTotal),
+                  costOfGoodsSold
+                );
+                const netProfit = calculateSaleNetProfit({
+                  confirmedChargebackGross:
+                    paymentSummary.confirmedChargebackGross,
+                  confirmedFeeTotal: paymentSummary.confirmedFeeTotal,
+                  confirmedRefundGross: paymentSummary.confirmedRefundGross,
+                  costOfGoodsSold,
+                  orderTotal: toNumber(sale.orderTotal),
+                });
 
                 return (
                   <div
@@ -123,7 +187,10 @@ export default async function SalesPage({
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="font-semibold">Venda #{sale.id}</p>
                           <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] uppercase tracking-[0.12em]">
-                            {sale.status}
+                            {saleStatusLabels[sale.status]}
+                          </span>
+                          <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] uppercase tracking-[0.12em]">
+                            {salePaymentStatusLabels[sale.paymentStatus]}
                           </span>
                         </div>
                         <p className="text-muted-foreground text-sm">
@@ -146,25 +213,31 @@ export default async function SalesPage({
                       )}
                     </div>
 
-                    <div className="mt-3 grid gap-2 text-sm md:grid-cols-3">
-                      <p>
-                        Pedido:{" "}
-                        <span className="font-semibold">
+                    <div className="mt-4 grid gap-3 text-sm md:grid-cols-4">
+                      <div>
+                        <p className="text-muted-foreground">Pedido</p>
+                        <p className="font-semibold">
                           {formatCurrency(sale.orderTotal)}
-                        </span>
-                      </p>
-                      <p>
-                        Recebido bruto:{" "}
-                        <span className="font-semibold">
-                          {formatCurrency(sale.receivedGrossTotal)}
-                        </span>
-                      </p>
-                      <p>
-                        Recebido liquido:{" "}
-                        <span className="font-semibold">
-                          {formatCurrency(sale.receivedNetTotal)}
-                        </span>
-                      </p>
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">A receber</p>
+                        <p className="font-semibold">
+                          {formatCurrency(paymentSummary.amountDue)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Lucro bruto</p>
+                        <p className="font-semibold">
+                          {formatCurrency(grossProfit)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Lucro liquido</p>
+                        <p className="font-semibold">
+                          {formatCurrency(netProfit)}
+                        </p>
+                      </div>
                     </div>
 
                     <div className="mt-4 space-y-2">
@@ -189,60 +262,63 @@ export default async function SalesPage({
                       })}
                     </div>
 
-                    <div className="mt-4 grid gap-4 rounded-2xl border border-border/50 bg-card/70 p-4 xl:grid-cols-[1fr_0.9fr]">
+                    <div className="mt-4 grid gap-4 rounded-2xl border border-border/50 bg-card/70 p-4 xl:grid-cols-[1fr_0.94fr]">
                       <div className="space-y-3">
                         <div>
                           <h3 className="font-semibold text-sm">
-                            Financeiro da venda
+                            Ledger financeiro
                           </h3>
                           <p className="text-muted-foreground text-xs">
-                            Registre aqui pagamento, parcial, pendencia, refund
-                            ou chargeback.
+                            Use o ledger para registrar pagamentos, refunds,
+                            chargebacks e pendencias sem perder o historico.
                           </p>
                         </div>
-                        {saleReceipts.length > 0 ? (
-                          saleReceipts.map((receipt) => (
+                        {salePayments.length > 0 ? (
+                          salePayments.map((payment) => (
                             <div
                               className="rounded-xl border border-border/50 bg-background/70 px-3 py-3 text-sm"
-                              key={receipt.id}
+                              key={payment.id}
                             >
                               <div className="flex flex-wrap items-center gap-2">
                                 <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] uppercase tracking-[0.12em]">
-                                  {receipt.status}
+                                  {paymentTypeLabels[payment.type]}
                                 </span>
                                 <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] uppercase tracking-[0.12em]">
-                                  {receipt.method}
+                                  {paymentStatusLabels[payment.status]}
+                                </span>
+                                <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] uppercase tracking-[0.12em]">
+                                  {paymentMethodLabels[payment.method]}
                                 </span>
                               </div>
                               <div className="mt-2 grid gap-1 text-muted-foreground text-xs sm:grid-cols-2">
                                 <p>
                                   Bruto:{" "}
                                   <span className="font-medium text-foreground">
-                                    {formatCurrency(receipt.grossAmount)}
+                                    {formatCurrency(payment.grossAmount)}
                                   </span>
                                 </p>
                                 <p>
-                                  Liquido:{" "}
+                                  Efeito liquido:{" "}
                                   <span className="font-medium text-foreground">
-                                    {formatCurrency(receipt.netAmount)}
+                                    {formatCurrency(payment.netAmount)}
                                   </span>
                                 </p>
                                 <p>
                                   Taxa:{" "}
                                   <span className="font-medium text-foreground">
-                                    {formatCurrency(receipt.feeAmount)}
+                                    {formatCurrency(payment.feeAmount)}
                                   </span>
                                 </p>
                                 <p>
                                   Efetivo:{" "}
                                   <span className="font-medium text-foreground">
-                                    {formatDate(receipt.effectiveDate)}
+                                    {formatDate(payment.effectiveDate)}
                                   </span>
                                 </p>
                               </div>
-                              {receipt.notes ? (
+                              {payment.notes ? (
                                 <p className="mt-2 text-muted-foreground text-xs">
-                                  {receipt.notes}
+                                  {payment.notes}
                                 </p>
                               ) : null}
                             </div>
@@ -257,6 +333,24 @@ export default async function SalesPage({
 
                       <form action={createReceiptAction} className="space-y-3">
                         <input name="saleId" type="hidden" value={sale.id} />
+                        <div className="space-y-2">
+                          <label
+                            className="font-medium text-sm"
+                            htmlFor={`type-${sale.id}`}
+                          >
+                            Tipo do evento
+                          </label>
+                          <select
+                            className={inputClassName}
+                            defaultValue="payment"
+                            id={`type-${sale.id}`}
+                            name="type"
+                          >
+                            <option value="payment">Pagamento</option>
+                            <option value="refund">Refund</option>
+                            <option value="chargeback">Chargeback</option>
+                          </select>
+                        </div>
                         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-1">
                           <div className="space-y-2">
                             <label
@@ -299,20 +393,17 @@ export default async function SalesPage({
                               className="font-medium text-sm"
                               htmlFor={`status-${sale.id}`}
                             >
-                              Tipo do evento
+                              Estado
                             </label>
                             <select
                               className={inputClassName}
-                              defaultValue="received"
+                              defaultValue="confirmed"
                               id={`status-${sale.id}`}
                               name="status"
                               required
                             >
-                              <option value="received">Recebido</option>
-                              <option value="partial">Parcial</option>
+                              <option value="confirmed">Confirmado</option>
                               <option value="pending">Pendente</option>
-                              <option value="refunded">Refund</option>
-                              <option value="chargeback">Chargeback</option>
                               <option value="canceled">Cancelado</option>
                             </select>
                           </div>
@@ -332,8 +423,15 @@ export default async function SalesPage({
                             >
                               <option value="pix">PIX</option>
                               <option value="cash">Dinheiro</option>
-                              <option value="card">Cartao</option>
+                              <option value="card_debit">Cartao debito</option>
+                              <option value="card_credit">
+                                Cartao credito
+                              </option>
                               <option value="payment_link">Link</option>
+                              <option value="bank_transfer">
+                                Transferencia
+                              </option>
+                              <option value="other">Outro</option>
                             </select>
                           </div>
                         </div>
@@ -399,7 +497,7 @@ export default async function SalesPage({
               })
             ) : (
               <EmptyState
-                description="Assim que houver estoque recebido, registre a primeira venda. O sistema baixa saldo, grava snapshot de custo e agora tambem concentra o financeiro no mesmo fluxo."
+                description="Assim que houver estoque disponivel, registre a primeira venda. O checkout ja aceita pagamentos iniciais e o ledger cuida do restante."
                 title="Nenhuma venda registrada ainda"
               />
             )}
