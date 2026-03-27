@@ -20,13 +20,13 @@
 - [x] Proxy protegendo rotas privadas e redirecionando para `/sign-in`
 - [x] Schema novo do dominio com `products`, `purchases`, `inventory_movements`, `sales`, `sale_items`, `receipts` e `system_settings`
 - [x] Migrations aplicadas no Neon com `DATABASE_URL_DIRECT`
-- [x] CRUD de produtos com inativacao segura
-- [x] Ajustes manuais, perdas e avarias no estoque
-- [x] Compras com recebimento que recalcula custo medio
+- [x] Produtos como hub operacional com cadastro, preco, custo, estoque e historico no mesmo lugar
+- [x] Reposicao, correcao, perdas, avarias e devolucao embutidas em `Produtos`
+- [x] `Compras` removido da operacao diaria e redirecionado para `Produtos`
 - [x] Vendas multi-itens com snapshot de custo e bloqueio de estoque negativo
 - [x] Cancelamento de venda com recomposicao explicita de estoque
-- [x] Recebimentos com bruto, liquido, taxas e recalculo do status financeiro da venda
-- [x] Dashboard real com filtros de periodo e indicadores operacionais/financeiros
+- [x] `Recebimentos` removido da operacao diaria e absorvido por `Vendas`
+- [x] Dashboard simplificado com foco em vendido, lucro estimado, recebido, pendente e saude do catalogo
 - [x] Testes unitarios das regras matematicas base
 - [x] Build e lint limpos
 
@@ -43,9 +43,9 @@
 ## Marcos de aceite
 
 - [x] Marco A: usuario entra, cadastra produto e ajusta estoque sem inconsistencias
-- [x] Marco B: compra `received` aumenta saldo e recalcula custo medio corretamente
+- [x] Marco B: reposicao dentro de `Produtos` aumenta saldo e recalcula custo medio corretamente
 - [x] Marco C: venda multi-itens bloqueia falta de estoque e grava snapshot de custo
-- [x] Marco D: recebimentos alteram o status da venda e distinguem bruto de liquido
+- [x] Marco D: pagamentos dentro da venda alteram o status e distinguem bruto de liquido
 - [x] Marco E: dashboard bate com dados transacionais e separa operacao de caixa
 - [~] Marco F: operacao consegue abandonar planilha para uso diario basico
 
@@ -53,6 +53,6 @@
 
 Concluir a Fase 8 com polimento operacional:
 
-1. E2E cobrindo login, compra, venda, recebimento e dashboard.
+1. E2E cobrindo login, produto, reposicao, venda, pagamento e dashboard.
 2. Checklist de smoke test para go-live apos deploy.
 3. Revisao final com dados reais antes de fechar o Marco F.

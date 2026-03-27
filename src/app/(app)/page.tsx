@@ -87,7 +87,7 @@ export default async function DashboardPage({
       receipt.status !== "canceled"
   );
 
-  const grossRevenue = filteredSales.reduce(
+  const soldAmount = filteredSales.reduce(
     (total, sale) => total + Number(sale.orderTotal ?? 0),
     0
   );
@@ -103,15 +103,12 @@ export default async function DashboardPage({
     (total, item) => total + Number(item.costSnapshotTotal ?? 0),
     0
   );
-  const totalFees = filteredReceipts.reduce(
+  const estimatedProfit = receivedNet - costOfGoodsSold;
+  const pendingAmount = Math.max(soldAmount - receivedGross, 0);
+  const paymentCosts = filteredReceipts.reduce(
     (total, receipt) => total + Number(receipt.feeAmount ?? 0),
     0
   );
-  const grossProfit = grossRevenue - costOfGoodsSold;
-  const netProfit = receivedNet - costOfGoodsSold;
-  const grossMargin = grossRevenue > 0 ? (grossProfit / grossRevenue) * 100 : 0;
-  const averageTicket =
-    filteredSales.length > 0 ? grossRevenue / filteredSales.length : 0;
   const recentSales = filteredSales.slice(0, 5).map((sale) => ({
     ...sale,
     itemCount: filteredSaleItems.filter((item) => item.saleId === sale.id)
@@ -129,8 +126,8 @@ export default async function DashboardPage({
             Dashboard operacional
           </h1>
           <p className="max-w-3xl text-muted-foreground text-sm sm:text-base">
-            Indicadores reais da V1: faturamento, lucro, caixa recebido, capital
-            em estoque e sinais de produtos parados ou com saldo critico.
+            O foco aqui e responder rapido como esta a operacao: vendido,
+            recebido, pendente e sinais simples de saude do catalogo.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -153,81 +150,63 @@ export default async function DashboardPage({
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <div className={metricCardClassName}>
-          <p className="text-muted-foreground text-sm">Faturamento bruto</p>
+          <p className="text-muted-foreground text-sm">Vendido no periodo</p>
           <p className="mt-3 font-heading font-semibold text-2xl sm:text-3xl">
-            {formatCurrency(grossRevenue)}
+            {formatCurrency(soldAmount)}
           </p>
         </div>
         <div className={metricCardClassName}>
-          <p className="text-muted-foreground text-sm">Lucro bruto</p>
+          <p className="text-muted-foreground text-sm">Lucro estimado</p>
           <p className="mt-3 font-heading font-semibold text-2xl sm:text-3xl">
-            {formatCurrency(grossProfit)}
+            {formatCurrency(estimatedProfit)}
           </p>
         </div>
         <div className={metricCardClassName}>
-          <p className="text-muted-foreground text-sm">Lucro liquido</p>
-          <p className="mt-3 font-heading font-semibold text-2xl sm:text-3xl">
-            {formatCurrency(netProfit)}
-          </p>
-        </div>
-        <div className={metricCardClassName}>
-          <p className="text-muted-foreground text-sm">Margem bruta</p>
-          <p className="mt-3 font-heading font-semibold text-2xl sm:text-3xl">
-            {grossMargin.toFixed(1)}%
-          </p>
-        </div>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <div className={metricCardClassName}>
-          <p className="text-muted-foreground text-sm">Recebido bruto</p>
-          <p className="mt-3 font-heading font-semibold text-2xl sm:text-3xl">
-            {formatCurrency(receivedGross)}
-          </p>
-        </div>
-        <div className={metricCardClassName}>
-          <p className="text-muted-foreground text-sm">Recebido liquido</p>
+          <p className="text-muted-foreground text-sm">Recebido</p>
           <p className="mt-3 font-heading font-semibold text-2xl sm:text-3xl">
             {formatCurrency(receivedNet)}
           </p>
-        </div>
-        <div className={metricCardClassName}>
-          <p className="text-muted-foreground text-sm">Ticket medio</p>
-          <p className="mt-3 font-heading font-semibold text-2xl sm:text-3xl">
-            {formatCurrency(averageTicket)}
+          <p className="mt-1 text-muted-foreground text-xs">
+            Ja descontando custos de pagamento.
           </p>
         </div>
         <div className={metricCardClassName}>
-          <p className="text-muted-foreground text-sm">Taxas no periodo</p>
+          <p className="text-muted-foreground text-sm">Pendente</p>
           <p className="mt-3 font-heading font-semibold text-2xl sm:text-3xl">
-            {formatCurrency(totalFees)}
+            {formatCurrency(pendingAmount)}
           </p>
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-3">
         <div className={metricCardClassName}>
-          <p className="text-muted-foreground text-sm">Capital em estoque</p>
-          <p className="mt-3 font-heading font-semibold text-2xl sm:text-3xl">
-            {formatCurrency(stockValue)}
-          </p>
-        </div>
-        <div className={metricCardClassName}>
-          <p className="text-muted-foreground text-sm">Produtos ativos</p>
-          <p className="mt-3 font-heading font-semibold text-2xl sm:text-3xl">
-            {activeProducts.length}
-          </p>
-        </div>
-        <div className={metricCardClassName}>
-          <p className="text-muted-foreground text-sm">Estoque critico</p>
+          <p className="text-muted-foreground text-sm">Estoque baixo</p>
           <p className="mt-3 font-heading font-semibold text-2xl sm:text-3xl">
             {lowStockProducts.length}
           </p>
+          <Link
+            className="mt-4 inline-flex text-primary text-sm transition hover:opacity-80"
+            href="/produtos"
+          >
+            Resolver em Produtos
+          </Link>
         </div>
         <div className={metricCardClassName}>
           <p className="text-muted-foreground text-sm">Produtos parados</p>
           <p className="mt-3 font-heading font-semibold text-2xl sm:text-3xl">
             {staleProducts.length}
+          </p>
+          <p className="mt-1 text-muted-foreground text-xs">
+            Sem giro dentro da janela de {staleProductDays} dias.
+          </p>
+        </div>
+        <div className={metricCardClassName}>
+          <p className="text-muted-foreground text-sm">Capital em estoque</p>
+          <p className="mt-3 font-heading font-semibold text-2xl sm:text-3xl">
+            {formatCurrency(stockValue)}
+          </p>
+          <p className="mt-1 text-muted-foreground text-xs">
+            Custos de pagamento no periodo: {formatCurrency(paymentCosts)}
           </p>
         </div>
       </div>
@@ -235,12 +214,9 @@ export default async function DashboardPage({
       <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
         <section className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm">
           <div className="mb-4">
-            <h2 className="font-semibold text-lg">
-              Vendas recentes no periodo
-            </h2>
+            <h2 className="font-semibold text-lg">Vendas recentes</h2>
             <p className="text-muted-foreground text-sm">
-              Leituras de pedido, recebimento e status financeiro no corte
-              atual.
+              Resumo rapido das vendas do recorte atual.
             </p>
           </div>
           <div className="space-y-3">
@@ -258,7 +234,7 @@ export default async function DashboardPage({
                       </span>
                     </div>
                     <p className="text-muted-foreground text-xs">
-                      {sale.channel} · {sale.itemCount} itens ·{" "}
+                      {sale.channel} - {sale.itemCount} itens -{" "}
                       {formatDateTime(sale.saleDate)}
                     </p>
                   </div>
@@ -267,7 +243,7 @@ export default async function DashboardPage({
                       {formatCurrency(sale.orderTotal)}
                     </p>
                     <p className="text-muted-foreground">
-                      liq. {formatCurrency(sale.receivedNetTotal)}
+                      recebido {formatCurrency(sale.receivedNetTotal)}
                     </p>
                   </div>
                 </div>
@@ -281,20 +257,31 @@ export default async function DashboardPage({
         </section>
 
         <section className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm">
-          <h2 className="font-semibold text-lg">Alertas do periodo</h2>
-          <div className="mt-4 space-y-3 text-sm">
-            {[
-              `${lowStockProducts.length} produtos em estoque critico com limite de ${lowStockThreshold}.`,
-              `${staleProducts.length} produtos sem giro dentro da janela de ${staleProductDays} dias.`,
-              `${filteredSales.length} vendas consideradas no recorte atual.`,
-            ].map((item) => (
-              <div
-                className="rounded-xl border border-border/50 bg-background/60 px-4 py-3"
-                key={item}
-              >
-                {item}
-              </div>
-            ))}
+          <h2 className="font-semibold text-lg">Atalhos da operacao</h2>
+          <div className="mt-4 space-y-3">
+            <Link
+              className="block rounded-xl border border-border/50 bg-background/60 px-4 py-3 transition hover:bg-muted/40"
+              href="/produtos"
+            >
+              <p className="font-medium text-sm">Produtos</p>
+              <p className="text-muted-foreground text-sm">
+                Cadastre item, ajuste preco e resolva estoque baixo.
+              </p>
+            </Link>
+            <Link
+              className="block rounded-xl border border-border/50 bg-background/60 px-4 py-3 transition hover:bg-muted/40"
+              href="/vendas"
+            >
+              <p className="font-medium text-sm">Vendas</p>
+              <p className="text-muted-foreground text-sm">
+                Registre pedidos, pagamentos e acompanhe pendencias.
+              </p>
+            </Link>
+            <div className="rounded-xl border border-border/50 bg-background/60 px-4 py-3 text-sm">
+              <p>{lowStockProducts.length} produtos com baixo estoque.</p>
+              <p>{staleProducts.length} produtos parados.</p>
+              <p>{filteredSales.length} vendas no periodo.</p>
+            </div>
           </div>
         </section>
       </div>

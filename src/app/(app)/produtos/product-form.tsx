@@ -51,16 +51,6 @@ export function ProductForm({
           </label>
           <input className={inputClassName} id="category" name="category" />
         </div>
-        <div className="space-y-2">
-          <label className="font-medium text-sm" htmlFor="description">
-            Descricao curta
-          </label>
-          <input
-            className={inputClassName}
-            id="description"
-            name="description"
-          />
-        </div>
       </div>
       <div className="grid gap-4 md:grid-cols-3">
         <div className="space-y-2">
@@ -154,12 +144,29 @@ export function ProductForm({
         </div>
       </div>
 
-      <div className="space-y-2">
-        <label className="font-medium text-sm" htmlFor="notes">
-          Observacoes
-        </label>
-        <textarea className={textAreaClassName} id="notes" name="notes" />
-      </div>
+      <details className="rounded-2xl border border-border/60 bg-background/60 p-4">
+        <summary className="cursor-pointer list-none font-medium text-sm">
+          Detalhes opcionais
+        </summary>
+        <div className="mt-4 space-y-4">
+          <div className="space-y-2">
+            <label className="font-medium text-sm" htmlFor="description">
+              Descricao curta
+            </label>
+            <input
+              className={inputClassName}
+              id="description"
+              name="description"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="font-medium text-sm" htmlFor="notes">
+              Observacoes
+            </label>
+            <textarea className={textAreaClassName} id="notes" name="notes" />
+          </div>
+        </div>
+      </details>
       <button
         className="h-10 w-full rounded-xl bg-primary px-4 font-medium text-primary-foreground text-sm transition hover:bg-primary/90 sm:w-auto"
         type="submit"

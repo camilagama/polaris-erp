@@ -41,6 +41,7 @@ interface InventoryAdjustmentInput {
     | "purchase_in"
     | "adjustment_plus"
     | "adjustment_minus"
+    | "customer_return"
     | "damage"
     | "loss";
   unitCost?: number;
@@ -126,7 +127,7 @@ export const createProduct = async (
       });
     }
 
-    return [product];
+    return product;
   });
 
 export const updateProductStatus = async (
@@ -137,6 +138,40 @@ export const updateProductStatus = async (
     .update(products)
     .set({ status, updatedAt: new Date() })
     .where(eq(products.id, productId));
+
+export const updateProductCommercialData = async (input: {
+  averageCost?: number;
+  productId: number;
+  salePrice?: number;
+}) => {
+  const [product] = await db
+    .select()
+    .from(products)
+    .where(eq(products.id, input.productId))
+    .limit(1);
+
+  if (!product) {
+    throw new Error("Produto nao encontrado.");
+  }
+
+  const averageCost =
+    typeof input.averageCost === "number"
+      ? toMoneyString(input.averageCost)
+      : product.averageCost;
+  const salePrice =
+    typeof input.salePrice === "number"
+      ? toMoneyString(input.salePrice)
+      : product.salePrice;
+
+  await db
+    .update(products)
+    .set({
+      averageCost,
+      salePrice,
+      updatedAt: new Date(),
+    })
+    .where(eq(products.id, input.productId));
+};
 
 export const createInventoryAdjustment = async (
   input: InventoryAdjustmentInput,
@@ -154,7 +189,9 @@ export const createInventoryAdjustment = async (
     }
 
     const normalizedQuantity =
-      input.type === "purchase_in" || input.type === "adjustment_plus"
+      input.type === "purchase_in" ||
+      input.type === "adjustment_plus" ||
+      input.type === "customer_return"
         ? input.quantity
         : input.quantity * -1;
     const nextStock = product.currentStock + normalizedQuantity;

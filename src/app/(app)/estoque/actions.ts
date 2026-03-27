@@ -15,6 +15,7 @@ const inventorySchema = z.object({
     "purchase_in",
     "adjustment_plus",
     "adjustment_minus",
+    "customer_return",
     "damage",
     "loss",
   ]),
@@ -22,7 +23,7 @@ const inventorySchema = z.object({
 });
 
 const redirectWithResult = (params: Record<string, string | undefined>) =>
-  redirect(buildRedirectPath("/estoque", params));
+  redirect(buildRedirectPath("/produtos", params));
 
 export async function createInventoryAdjustmentAction(formData: FormData) {
   const session = await requireSession();
@@ -52,8 +53,8 @@ export async function createInventoryAdjustmentAction(formData: FormData) {
   }
 
   revalidatePath("/");
-  revalidatePath("/estoque");
   revalidatePath("/produtos");
+  revalidatePath("/vendas");
   return redirectWithResult({
     message: "Movimento de estoque registrado.",
   });
