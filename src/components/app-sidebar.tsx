@@ -1,13 +1,14 @@
 "use client";
 
 import {
-  Contact01Icon,
-  DragDropIcon,
-  File02Icon,
+  CreditCardIcon,
+  DollarCircleIcon,
   Home01Icon,
-  Layers01Icon,
   Logout01Icon,
+  PackageIcon,
   Settings01Icon,
+  ShoppingBag02Icon,
+  Store04Icon,
   UserCircleIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -16,6 +17,7 @@ import { usePathname } from "next/navigation";
 import type { ComponentProps } from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -56,23 +58,36 @@ const DGImportsLogo = ({ className }: { className?: string }) => (
 );
 
 const navigationItems = [
-  { href: "/", label: "Início", icon: Home01Icon },
-  { href: "/vendas", label: "Vendas", icon: DragDropIcon },
-  { href: "/clientes", label: "Clientes", icon: Contact01Icon },
-  { href: "/produtos", label: "Produtos", icon: File02Icon },
-  { href: "/categorias", label: "Categorias", icon: Layers01Icon },
-  { href: "/configuracoes", label: "Configurações", icon: Settings01Icon },
+  { href: "/", label: "Dashboard", icon: Home01Icon },
+  { href: "/produtos", label: "Produtos", icon: PackageIcon },
+  { href: "/compras", label: "Compras", icon: ShoppingBag02Icon },
+  { href: "/estoque", label: "Estoque", icon: Store04Icon },
+  { href: "/vendas", label: "Vendas", icon: DollarCircleIcon },
+  { href: "/recebimentos", label: "Recebimentos", icon: CreditCardIcon },
+  { href: "/configuracoes", label: "Configuracoes", icon: Settings01Icon },
 ] as const;
 
-export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
+type AppSidebarProps = ComponentProps<typeof Sidebar> & {
+  onSignOut: () => Promise<void>;
+  user: {
+    email: string;
+    image?: string | null;
+    name: string;
+  };
+};
+
+const getUserInitials = (name: string) =>
+  name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+
+export function AppSidebar({ onSignOut, user, ...props }: AppSidebarProps) {
   const pathname = usePathname();
   const { state, isMobile } = useSidebar();
-
-  const user = {
-    name: "Administrador",
-    email: "admin@dgimports.com",
-    avatar: "",
-  };
+  const initials = getUserInitials(user.name);
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -141,9 +156,9 @@ export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
                   size="lg"
                 >
                   <Avatar className="size-8 rounded-full">
-                    <AvatarImage alt={user.name} src={user.avatar} />
+                    <AvatarImage alt={user.name} src={user.image ?? ""} />
                     <AvatarFallback className="rounded-full bg-muted-foreground/10">
-                      AD
+                      {initials}
                     </AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight">
@@ -163,9 +178,9 @@ export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
                 <DropdownMenuLabel className="p-0 font-normal">
                   <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                     <Avatar className="size-8 rounded-lg">
-                      <AvatarImage alt={user.name} src={user.avatar} />
+                      <AvatarImage alt={user.name} src={user.image ?? ""} />
                       <AvatarFallback className="rounded-lg bg-muted-foreground/10">
-                        AD
+                        {initials}
                       </AvatarFallback>
                     </Avatar>
                     <div className="grid flex-1 text-left text-sm leading-tight">
@@ -185,20 +200,33 @@ export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
                       className="mr-2 size-4"
                       icon={UserCircleIcon}
                     />
-                    Perfil
+                    Area interna
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <HugeiconsIcon
-                      className="mr-2 size-4"
-                      icon={Settings01Icon}
-                    />
-                    Configurações
+                  <DropdownMenuItem asChild>
+                    <Link href="/configuracoes">
+                      <HugeiconsIcon
+                        className="mr-2 size-4"
+                        icon={Settings01Icon}
+                      />
+                      Configuracoes
+                    </Link>
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-destructive focus:bg-destructive focus:text-destructive-foreground">
-                  <HugeiconsIcon className="mr-2 size-4" icon={Logout01Icon} />
-                  Sair
+                <DropdownMenuItem asChild variant="destructive">
+                  <form action={onSignOut} className="w-full">
+                    <Button
+                      className="h-auto w-full justify-start px-0 py-0 text-destructive hover:bg-transparent hover:text-destructive"
+                      type="submit"
+                      variant="ghost"
+                    >
+                      <HugeiconsIcon
+                        className="mr-2 size-4"
+                        icon={Logout01Icon}
+                      />
+                      Sair
+                    </Button>
+                  </form>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

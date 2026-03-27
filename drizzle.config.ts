@@ -6,7 +6,7 @@ export default defineConfig({
   schema: "./src/db/schema.ts",
   out: "./src/db/migrations",
   dbCredentials: {
-    url: process.env.DATABASE_URL ?? "",
+    url: process.env.DATABASE_URL_DIRECT ?? process.env.DATABASE_URL ?? "",
   },
   migrations: {
     prefix: "timestamp",

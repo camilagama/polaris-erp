@@ -1,0 +1,34 @@
+import { getSessionCookie } from "better-auth/cookies";
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
+
+const publicAuthRoutes = ["/sign-in"];
+
+export function proxy(request: NextRequest) {
+  const sessionCookie = getSessionCookie(request);
+  const { pathname } = request.nextUrl;
+  const isAuthRoute = publicAuthRoutes.includes(pathname);
+
+  if (!(sessionCookie || isAuthRoute)) {
+    return NextResponse.redirect(new URL("/sign-in", request.url));
+  }
+
+  if (sessionCookie && isAuthRoute) {
+    return NextResponse.redirect(new URL("/", request.url));
+  }
+
+  return NextResponse.next();
+}
+
+export const proxyConfig = {
+  matcher: [
+    "/",
+    "/sign-in",
+    "/produtos/:path*",
+    "/compras/:path*",
+    "/estoque/:path*",
+    "/vendas/:path*",
+    "/recebimentos/:path*",
+    "/configuracoes/:path*",
+  ],
+};

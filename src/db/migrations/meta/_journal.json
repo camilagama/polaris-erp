@@ -8,6 +8,13 @@
       "when": 1774629173922,
       "tag": "20260327163253_purple_chamber",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1774637348869,
+      "tag": "20260327184908_v1_reset_domain_schema",
+      "breakpoints": true
     }
   ]
 }
