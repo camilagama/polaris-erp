@@ -12,11 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from "@/components/ui/input-group";
+import { InputGroup, InputGroupAddon } from "@/components/ui/input-group";
 import { cn } from "@/lib/utils";
 
 function Command({
@@ -74,14 +70,14 @@ function CommandInput({
   return (
     <div className="p-1 pb-0" data-slot="command-input-wrapper">
       <InputGroup className="h-8! bg-input/20 dark:bg-input/30">
-        <InputGroupInput
-          asChild
-          className={cn("w-full text-xs/relaxed outline-hidden", className)}
-          data-slot="command-input"
+        <CommandPrimitive.Input
+          className={cn(
+            "flex-1 rounded-none border-0 bg-transparent px-2 text-xs/relaxed shadow-none outline-hidden ring-0 placeholder:text-muted-foreground focus-visible:ring-0",
+            className
+          )}
+          data-slot="input-group-control"
           {...props}
-        >
-          <CommandPrimitive.Input />
-        </InputGroupInput>
+        />
         <InputGroupAddon>
           <HugeiconsIcon
             className="size-3.5 shrink-0 opacity-50"
