@@ -87,7 +87,6 @@ export const systemSettings = pgTable("system_settings", {
   id: serial("id").primaryKey(),
   targetMarginPercent: money("target_margin_percent"),
   minimumMarginPercent: money("minimum_margin_percent"),
-  staleProductDays: integer("stale_product_days").default(45).notNull(),
   estimatedFeePercent: money("estimated_fee_percent"),
   ...timestamps,
 });

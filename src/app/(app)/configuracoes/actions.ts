@@ -11,7 +11,6 @@ import { requireSession } from "@/lib/session";
 const settingsSchema = z.object({
   estimatedFeePercent: z.coerce.number().min(0),
   minimumMarginPercent: z.coerce.number().min(0),
-  staleProductDays: z.coerce.number().int().min(1),
   targetMarginPercent: z.coerce.number().min(0),
 });
 
@@ -23,7 +22,6 @@ export async function saveSettingsAction(formData: FormData) {
   const parsed = settingsSchema.safeParse({
     estimatedFeePercent: formData.get("estimatedFeePercent"),
     minimumMarginPercent: formData.get("minimumMarginPercent"),
-    staleProductDays: formData.get("staleProductDays"),
     targetMarginPercent: formData.get("targetMarginPercent"),
   });
 
@@ -36,7 +34,6 @@ export async function saveSettingsAction(formData: FormData) {
   const values = {
     estimatedFeePercent: String(parsed.data.estimatedFeePercent),
     minimumMarginPercent: String(parsed.data.minimumMarginPercent),
-    staleProductDays: parsed.data.staleProductDays,
     targetMarginPercent: String(parsed.data.targetMarginPercent),
   };
 

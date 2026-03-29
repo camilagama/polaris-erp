@@ -36,6 +36,7 @@ import {
   SidebarRail,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
 
 const DGImportsLogo = ({ className }: { className?: string }) => (
   <svg
@@ -116,6 +117,10 @@ export function AppSidebar({ onSignOut, user, ...props }: AppSidebarProps) {
                   <SidebarMenuItem key={item.label}>
                     <SidebarMenuButton
                       asChild
+                      className={cn(
+                        active &&
+                          "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
+                      )}
                       isActive={active}
                       tooltip={item.label}
                     >
@@ -136,10 +141,7 @@ export function AppSidebar({ onSignOut, user, ...props }: AppSidebarProps) {
           <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <SidebarMenuButton
-                  className="rounded-sm data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-                  size="lg"
-                >
+                <SidebarMenuButton className="rounded-sm" size="lg">
                   <Avatar className="size-8 rounded-full">
                     <AvatarImage alt={user.name} src={user.image ?? ""} />
                     <AvatarFallback className="rounded-full bg-muted-foreground/10">
