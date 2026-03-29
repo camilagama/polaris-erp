@@ -25,12 +25,17 @@ import {
 import { Label } from "@/components/ui/label";
 
 const productSchema = z.object({
-  sku: z.string().optional(),
   name: z.string().min(1, "Nome é obrigatório"),
   description: z.string().optional().default(""),
-  costPrice: z.string().min(1, "Obrigatório"),
-  price: z.string().min(1, "Obrigatório"),
-  stock: z.string().min(1, "Obrigatório"),
+  costPrice: z
+    .string()
+    .min(1, "Obrigatório")
+    .regex(/^\d+([.,]\d{1,2})?$/, "Formato inválido"),
+  price: z
+    .string()
+    .min(1, "Obrigatório")
+    .regex(/^\d+([.,]\d{1,2})?$/, "Formato inválido"),
+  stock: z.number().min(0, "Mínimo 0"),
 });
 
 export function RegisterProductDialog() {
@@ -38,21 +43,19 @@ export function RegisterProductDialog() {
 
   const form = useForm({
     defaultValues: {
-      sku: "",
       name: "",
       description: "",
       costPrice: "",
       price: "",
-      stock: "0",
+      stock: 0,
     },
     onSubmit: async ({ value }) => {
       await createProductAction({
-        sku: value.sku || undefined,
         name: value.name,
         description: value.description || undefined,
-        costPrice: value.costPrice,
-        price: value.price,
-        stock: value.stock,
+        costPrice: value.costPrice.replace(",", "."),
+        price: value.price.replace(",", "."),
+        stock: value.stock.toString(),
       });
       setOpen(false);
       form.reset();
@@ -79,69 +82,36 @@ export function RegisterProductDialog() {
           }}
         >
           <div className="flex flex-col gap-4 py-4">
-            <div className="grid grid-cols-3 gap-4">
-              <form.Field
-                name="sku"
-                validators={{
-                  onChange: ({ value }) => {
-                    const res = productSchema.shape.sku.safeParse(value);
-                    return res.success
-                      ? undefined
-                      : res.error.issues[0].message;
-                  },
-                }}
-              >
-                {(field) => (
-                  <div className="col-span-1 flex flex-col gap-1.5">
-                    <Label htmlFor={field.name}>SKU</Label>
-                    <Input
-                      id={field.name}
-                      name={field.name}
-                      onBlur={field.handleBlur}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      placeholder="e.g. PRD-01"
-                      value={field.state.value}
-                    />
-                    {field.state.meta.errors &&
-                    field.state.meta.errors.length > 0 ? (
-                      <em className="text-[11px] text-destructive">
-                        {field.state.meta.errors.join(", ")}
-                      </em>
-                    ) : null}
-                  </div>
-                )}
-              </form.Field>
-              <form.Field
-                name="name"
-                validators={{
-                  onChange: ({ value }) => {
-                    const res = productSchema.shape.name.safeParse(value);
-                    return res.success
-                      ? undefined
-                      : res.error.issues[0].message;
-                  },
-                }}
-              >
-                {(field) => (
-                  <div className="col-span-2 flex flex-col gap-1.5">
-                    <Label htmlFor={field.name}>Nome</Label>
-                    <Input
-                      id={field.name}
-                      name={field.name}
-                      onBlur={field.handleBlur}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      value={field.state.value}
-                    />
-                    {field.state.meta.errors &&
-                    field.state.meta.errors.length > 0 ? (
-                      <em className="text-[11px] text-destructive">
-                        {field.state.meta.errors.join(", ")}
-                      </em>
-                    ) : null}
-                  </div>
-                )}
-              </form.Field>
-            </div>
+            <form.Field
+              name="name"
+              validators={{
+                onChange: ({ value }) => {
+                  const res = productSchema.shape.name.safeParse(value);
+                  return res.success ? undefined : res.error.issues[0].message;
+                },
+              }}
+            >
+              {(field) => (
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor={field.name}>Nome do Produto</Label>
+                  <Input
+                    id={field.name}
+                    name={field.name}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder="Ex: iPhone 16 Pro Max"
+                    value={field.state.value}
+                  />
+                  {field.state.meta.errors &&
+                  field.state.meta.errors.length > 0 ? (
+                    <em className="text-[11px] text-destructive">
+                      {field.state.meta.errors.join(", ")}
+                    </em>
+                  ) : null}
+                </div>
+              )}
+            </form.Field>
+
             <form.Field name="description">
               {(field) => (
                 <div className="flex flex-col gap-1.5">
@@ -152,14 +122,15 @@ export function RegisterProductDialog() {
                       name={field.name}
                       onBlur={field.handleBlur}
                       onChange={(e) => field.handleChange(e.target.value)}
-                      placeholder="Detalhes adicionais sobre o produto..."
+                      placeholder="Detalhes sobre versão, cor, etc..."
                       value={field.state.value}
                     />
                   </InputGroup>
                 </div>
               )}
             </form.Field>
-            <div className="grid grid-cols-3 gap-4">
+
+            <div className="grid grid-cols-2 gap-4">
               <form.Field
                 name="costPrice"
                 validators={{
@@ -173,7 +144,7 @@ export function RegisterProductDialog() {
               >
                 {(field) => (
                   <div className="flex flex-col gap-1.5">
-                    <Label htmlFor={field.name}>Custo Uni.</Label>
+                    <Label htmlFor={field.name}>Custo Unitário</Label>
                     <InputGroup>
                       <InputGroupAddon>
                         <InputGroupText>R$</InputGroupText>
@@ -196,6 +167,7 @@ export function RegisterProductDialog() {
                   </div>
                 )}
               </form.Field>
+
               <form.Field
                 name="price"
                 validators={{
@@ -209,7 +181,7 @@ export function RegisterProductDialog() {
               >
                 {(field) => (
                   <div className="flex flex-col gap-1.5">
-                    <Label htmlFor={field.name}>Venda</Label>
+                    <Label htmlFor={field.name}>Preço de Venda</Label>
                     <InputGroup>
                       <InputGroupAddon>
                         <InputGroupText>R$</InputGroupText>
@@ -232,43 +204,44 @@ export function RegisterProductDialog() {
                   </div>
                 )}
               </form.Field>
-              <form.Field
-                name="stock"
-                validators={{
-                  onChange: ({ value }) => {
-                    const res = productSchema.shape.stock.safeParse(value);
-                    return res.success
-                      ? undefined
-                      : res.error.issues[0].message;
-                  },
-                }}
-              >
-                {(field) => (
-                  <div className="flex flex-col gap-1.5">
-                    <Label htmlFor={field.name}>Estoque Inic.</Label>
-                    <InputGroup>
-                      <InputGroupInput
-                        id={field.name}
-                        name={field.name}
-                        onBlur={field.handleBlur}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                        type="number"
-                        value={field.state.value}
-                      />
-                      <InputGroupAddon align="inline-end">
-                        <InputGroupText>un</InputGroupText>
-                      </InputGroupAddon>
-                    </InputGroup>
-                    {field.state.meta.errors &&
-                    field.state.meta.errors.length > 0 ? (
-                      <em className="text-[11px] text-destructive">
-                        {field.state.meta.errors.join(", ")}
-                      </em>
-                    ) : null}
-                  </div>
-                )}
-              </form.Field>
             </div>
+
+            <form.Field
+              name="stock"
+              validators={{
+                onChange: ({ value }) => {
+                  const res = productSchema.shape.stock.safeParse(value);
+                  return res.success ? undefined : res.error.issues[0].message;
+                },
+              }}
+            >
+              {(field) => (
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor={field.name}>Estoque Inicial</Label>
+                  <InputGroup>
+                    <InputGroupInput
+                      id={field.name}
+                      name={field.name}
+                      onBlur={field.handleBlur}
+                      onChange={(e) =>
+                        field.handleChange(Number(e.target.value))
+                      }
+                      type="number"
+                      value={field.state.value}
+                    />
+                    <InputGroupAddon align="inline-end">
+                      <InputGroupText>unidades</InputGroupText>
+                    </InputGroupAddon>
+                  </InputGroup>
+                  {field.state.meta.errors &&
+                  field.state.meta.errors.length > 0 ? (
+                    <em className="text-[11px] text-destructive">
+                      {field.state.meta.errors.join(", ")}
+                    </em>
+                  ) : null}
+                </div>
+              )}
+            </form.Field>
           </div>
           <DialogFooter>
             <form.Subscribe

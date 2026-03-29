@@ -1,4 +1,11 @@
-import { boolean, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  decimal,
+  integer,
+  pgTable,
+  text,
+  timestamp,
+} from "drizzle-orm/pg-core";
 
 export const timestamps = {
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -58,11 +65,12 @@ export const products = pgTable("products", {
   id: text("id")
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
-  sku: text("sku").unique(),
   name: text("name").notNull(),
   description: text("description"),
-  costPrice: text("cost_price").notNull().default("0"), // Preço de custo (usando text para evitar imprecisões de float no postgres, formato '10.50')
-  price: text("price").notNull(), // Preço de venda
-  stock: text("stock").default("0").notNull(), // Mudaremos a modelagem para manter como texto (por compatibilidade) ou integer. O Drizzle lida bem com integer("stock").
+  costPrice: decimal("cost_price", { precision: 12, scale: 2 })
+    .notNull()
+    .default("0"),
+  price: decimal("price", { precision: 12, scale: 2 }).notNull().default("0"),
+  stock: integer("stock").default(0).notNull(),
   ...timestamps,
 });

@@ -9,12 +9,11 @@ export async function getProductsAction() {
 }
 
 export async function createProductAction(data: {
-  sku?: string;
   name: string;
   description?: string;
   costPrice: string;
   price: string;
-  stock: string;
+  stock: number;
 }) {
   await db.insert(products).values({
     ...data,
