@@ -61,12 +61,22 @@ export const verifications = pgTable("verifications", {
   ...timestamps,
 });
 
+export const categories = pgTable("categories", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  name: text("name").notNull().unique(),
+  description: text("description"),
+  ...timestamps,
+});
+
 export const products = pgTable("products", {
   id: text("id")
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
   name: text("name").notNull(),
   description: text("description"),
+  categoryId: text("category_id").references(() => categories.id),
   costPrice: decimal("cost_price", { precision: 12, scale: 2 })
     .notNull()
     .default("0"),

@@ -10,6 +10,7 @@ export async function getProductsAction() {
 
 export async function createProductAction(data: {
   name: string;
+  categoryId: string;
   description?: string;
   costPrice: string;
   price: string;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useForm } from "@tanstack/react-form";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { z } from "zod";
 import { createProductAction } from "@/app/(app)/produtos/actions";
 import { Button } from "@/components/ui/button";
@@ -23,10 +23,20 @@ import {
   InputGroupTextarea,
 } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { getCategoriesAction } from "./category-actions";
+import { ManageCategoriesDialog } from "./manage-categories-dialog";
 
 const productSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
   description: z.string().optional().default(""),
+  categoryId: z.string().min(1, "Categoria é obrigatória"),
   costPrice: z.coerce.number().min(0, "Mínimo 0"),
   price: z.coerce.number().min(0, "Mínimo 0"),
   stock: z.coerce.number().min(0, "Mínimo 0"),
@@ -34,11 +44,25 @@ const productSchema = z.object({
 
 export function RegisterProductDialog() {
   const [open, setOpen] = useState(false);
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>(
+    []
+  );
+
+  useEffect(() => {
+    async function load() {
+      const data = await getCategoriesAction();
+      setCategories(data);
+    }
+    if (open) {
+      load();
+    }
+  }, [open]);
 
   const form = useForm({
     defaultValues: {
       name: "",
       description: "",
+      categoryId: "",
       costPrice: 0,
       price: 0,
       stock: 0,
@@ -47,9 +71,10 @@ export function RegisterProductDialog() {
       await createProductAction({
         name: value.name,
         description: value.description || undefined,
+        categoryId: value.categoryId,
         costPrice: value.costPrice.toString(),
         price: value.price.toString(),
-        stock: value.stock.toString(),
+        stock: value.stock,
       });
       setOpen(false);
       form.reset();
@@ -96,6 +121,46 @@ export function RegisterProductDialog() {
                     placeholder="Ex: iPhone 16 Pro Max"
                     value={field.state.value}
                   />
+                  {field.state.meta.errors &&
+                  field.state.meta.errors.length > 0 ? (
+                    <em className="text-[11px] text-destructive">
+                      {field.state.meta.errors.join(", ")}
+                    </em>
+                  ) : null}
+                </div>
+              )}
+            </form.Field>
+
+            <form.Field
+              name="categoryId"
+              validators={{
+                onChange: ({ value }) => {
+                  const res = productSchema.shape.categoryId.safeParse(value);
+                  return res.success ? undefined : res.error.issues[0].message;
+                },
+              }}
+            >
+              {(field) => (
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor={field.name}>Categoria</Label>
+                    <ManageCategoriesDialog />
+                  </div>
+                  <Select
+                    onValueChange={field.handleChange}
+                    value={field.state.value}
+                  >
+                    <SelectTrigger id={field.name}>
+                      <SelectValue placeholder="Selecione uma categoria" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   {field.state.meta.errors &&
                   field.state.meta.errors.length > 0 ? (
                     <em className="text-[11px] text-destructive">
