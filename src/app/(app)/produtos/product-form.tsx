@@ -45,18 +45,7 @@ export function ProductForm({
           </label>
           <input className={inputClassName} id="name" name="name" required />
         </div>
-        <div className="space-y-2">
-          <label className="font-medium text-sm" htmlFor="sku">
-            SKU
-          </label>
-          <input className={inputClassName} id="sku" name="sku" />
-        </div>
-        <div className="space-y-2">
-          <label className="font-medium text-sm" htmlFor="barcode">
-            Codigo de barras
-          </label>
-          <input className={inputClassName} id="barcode" name="barcode" />
-        </div>
+
         <div className="space-y-2 md:col-span-2">
           <label className="font-medium text-sm" htmlFor="category">
             Categoria
@@ -98,7 +87,7 @@ export function ProductForm({
             value={salePrice}
           />
         </div>
-        <div className="space-y-2">
+        <div className="space-y-2 md:col-span-2">
           <label className="font-medium text-sm" htmlFor="initialStock">
             Estoque inicial
           </label>
@@ -108,20 +97,6 @@ export function ProductForm({
             id="initialStock"
             min="0"
             name="initialStock"
-            step="1"
-            type="number"
-          />
-        </div>
-        <div className="space-y-2">
-          <label className="font-medium text-sm" htmlFor="minimumStock">
-            Estoque minimo
-          </label>
-          <input
-            className={inputClassName}
-            defaultValue="0"
-            id="minimumStock"
-            min="0"
-            name="minimumStock"
             step="1"
             type="number"
           />

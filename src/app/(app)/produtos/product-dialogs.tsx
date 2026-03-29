@@ -101,14 +101,6 @@ function NewProductDialog({
               <span>Categoria</span>
               <Input id="product-category" name="category" />
             </label>
-            <label className={fieldClassName} htmlFor="product-sku">
-              <span>SKU</span>
-              <Input id="product-sku" name="sku" />
-            </label>
-            <label className={fieldClassName} htmlFor="product-barcode">
-              <span>Código de barras</span>
-              <Input id="product-barcode" name="barcode" />
-            </label>
             <label className={fieldClassName} htmlFor="product-unit-cost">
               <span>Custo atual</span>
               <Input
@@ -128,16 +120,6 @@ function NewProductDialog({
                 name="salePrice"
                 required
                 step="0.01"
-                type="number"
-              />
-            </label>
-            <label className={fieldClassName} htmlFor="product-minimum-stock">
-              <span>Estoque mínimo</span>
-              <Input
-                id="product-minimum-stock"
-                min="0"
-                name="minimumStock"
-                step="1"
                 type="number"
               />
             </label>

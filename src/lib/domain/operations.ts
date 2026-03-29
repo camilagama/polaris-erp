@@ -28,14 +28,11 @@ import {
 const toMoneyString = (value: number) => roundMoney(value).toFixed(2);
 
 interface ProductInput {
-  barcode?: string;
   category?: string;
   description?: string;
-  minimumStock?: number;
   name: string;
   notes?: string;
   salePrice: number;
-  sku?: string;
   unitCost: number;
 }
 
@@ -255,15 +252,12 @@ export const createProduct = async (
       .insert(products)
       .values({
         averageCost: toMoneyString(input.unitCost),
-        barcode: input.barcode?.trim() || null,
         category: input.category?.trim() || null,
         createdByUserId,
         description: input.description?.trim() || null,
-        minimumStock: input.minimumStock ?? 0,
         name: input.name.trim(),
         notes: input.notes?.trim() || null,
         salePrice: toMoneyString(input.salePrice),
-        sku: input.sku?.trim() || null,
       })
       .returning();
 

@@ -13,14 +13,11 @@ import {
 import { requireSession } from "@/lib/session";
 
 const createProductSchema = z.object({
-  barcode: z.string().trim().max(120).optional(),
   category: z.string().trim().max(120).optional(),
   description: z.string().trim().max(2000).optional(),
-  minimumStock: z.coerce.number().int().min(0).optional(),
   name: z.string().trim().min(2).max(160),
   notes: z.string().trim().max(2000).optional(),
   salePrice: z.coerce.number().positive(),
-  sku: z.string().trim().max(80).optional(),
   unitCost: z.coerce.number().positive(),
 });
 
@@ -62,14 +59,11 @@ const redirectWithProductResult = (
 export async function createProductAction(formData: FormData) {
   const session = await requireSession();
   const parsed = createProductSchema.safeParse({
-    barcode: formData.get("barcode") ?? "",
     category: formData.get("category") ?? "",
     description: formData.get("description") ?? "",
-    minimumStock: formData.get("minimumStock") ?? 0,
     name: formData.get("name") ?? "",
     notes: formData.get("notes") ?? "",
     salePrice: formData.get("salePrice") ?? 0,
-    sku: formData.get("sku") ?? "",
     unitCost: formData.get("unitCost") ?? 0,
   });
 

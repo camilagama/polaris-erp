@@ -66,14 +66,12 @@ const getProductRowState = ({
   lowStockThreshold: number;
   product: typeof products.$inferSelect;
 }) => {
-  const minimum =
-    product.minimumStock > 0 ? product.minimumStock : lowStockThreshold;
   const isLowStock =
-    product.status === "active" && product.currentStock <= minimum;
+    product.status === "active" && product.currentStock <= lowStockThreshold;
 
   return {
     isLowStock,
-    minimum,
+    minimum: lowStockThreshold,
   };
 };
 
@@ -110,9 +108,7 @@ export default async function ProductsPage({
   );
   const lowStockThreshold = settingsRows[0]?.lowStockThreshold ?? 2;
   const lowStockProducts = activeProducts.filter((product) => {
-    const minimum =
-      product.minimumStock > 0 ? product.minimumStock : lowStockThreshold;
-    return product.currentStock <= minimum;
+    return product.currentStock <= lowStockThreshold;
   });
   const stockValue = activeProducts.reduce(
     (total, product) =>
@@ -183,7 +179,6 @@ export default async function ProductsPage({
                   <TableHead>Produto</TableHead>
                   <TableHead>Categoria</TableHead>
                   <TableHead>Estoque</TableHead>
-                  <TableHead>Mínimo</TableHead>
                   <TableHead>Custo</TableHead>
                   <TableHead>Preço</TableHead>
                   <TableHead>Status</TableHead>
@@ -193,7 +188,7 @@ export default async function ProductsPage({
               </TableHeader>
               <TableBody>
                 {productRows.map((product) => {
-                  const { isLowStock, minimum } = getProductRowState({
+                  const { isLowStock } = getProductRowState({
                     lowStockThreshold,
                     product,
                   });
@@ -203,9 +198,6 @@ export default async function ProductsPage({
                       <TableCell>
                         <div className="flex flex-col gap-1">
                           <span className="font-medium">{product.name}</span>
-                          <span className="text-muted-foreground">
-                            {product.sku || "Sem SKU"}
-                          </span>
                         </div>
                       </TableCell>
                       <TableCell>{product.category || "-"}</TableCell>
@@ -217,7 +209,6 @@ export default async function ProductsPage({
                           ) : null}
                         </div>
                       </TableCell>
-                      <TableCell>{minimum}</TableCell>
                       <TableCell>
                         {formatCurrency(product.averageCost)}
                       </TableCell>

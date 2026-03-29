@@ -64,9 +64,7 @@ export default async function DashboardPage({
   const staleProductDays = settingsRows[0]?.staleProductDays ?? 45;
   const staleCutoff = subtractDays(now, staleProductDays);
   const lowStockProducts = activeProducts.filter((product) => {
-    const productMinimum =
-      product.minimumStock > 0 ? product.minimumStock : lowStockThreshold;
-    return product.currentStock <= productMinimum;
+    return product.currentStock <= lowStockThreshold;
   });
   const staleProducts = activeProducts.filter((product) => {
     if (!product.lastSoldAt) {
