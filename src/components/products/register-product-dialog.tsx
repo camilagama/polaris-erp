@@ -27,15 +27,9 @@ import { Label } from "@/components/ui/label";
 const productSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
   description: z.string().optional().default(""),
-  costPrice: z
-    .string()
-    .min(1, "Obrigatório")
-    .regex(/^\d+([.,]\d{1,2})?$/, "Formato inválido"),
-  price: z
-    .string()
-    .min(1, "Obrigatório")
-    .regex(/^\d+([.,]\d{1,2})?$/, "Formato inválido"),
-  stock: z.number().min(0, "Mínimo 0"),
+  costPrice: z.coerce.number().min(0, "Mínimo 0"),
+  price: z.coerce.number().min(0, "Mínimo 0"),
+  stock: z.coerce.number().min(0, "Mínimo 0"),
 });
 
 export function RegisterProductDialog() {
@@ -45,16 +39,16 @@ export function RegisterProductDialog() {
     defaultValues: {
       name: "",
       description: "",
-      costPrice: "",
-      price: "",
+      costPrice: 0,
+      price: 0,
       stock: 0,
     },
     onSubmit: async ({ value }) => {
       await createProductAction({
         name: value.name,
         description: value.description || undefined,
-        costPrice: value.costPrice.replace(",", "."),
-        price: value.price.replace(",", "."),
+        costPrice: value.costPrice.toString(),
+        price: value.price.toString(),
         stock: value.stock.toString(),
       });
       setOpen(false);
@@ -153,8 +147,12 @@ export function RegisterProductDialog() {
                         id={field.name}
                         name={field.name}
                         onBlur={field.handleBlur}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                        placeholder="0,00"
+                        onChange={(e) =>
+                          field.handleChange(Number(e.target.value))
+                        }
+                        placeholder="0.00"
+                        step="0.01"
+                        type="number"
                         value={field.state.value}
                       />
                     </InputGroup>
@@ -190,8 +188,12 @@ export function RegisterProductDialog() {
                         id={field.name}
                         name={field.name}
                         onBlur={field.handleBlur}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                        placeholder="0,00"
+                        onChange={(e) =>
+                          field.handleChange(Number(e.target.value))
+                        }
+                        placeholder="0.00"
+                        step="0.01"
+                        type="number"
                         value={field.state.value}
                       />
                     </InputGroup>
