@@ -5,11 +5,21 @@ import {
   DeliveryBox01Icon,
   Edit02Icon,
   PencilEdit02Icon,
+  Sorting05Icon,
+  Tick02Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useState } from "react";
 import { DatePickerField } from "@/components/date-picker-field";
 import { Button } from "@/components/ui/button";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import {
   Dialog,
   DialogContent,
@@ -21,6 +31,11 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   Select,
   SelectContent,
   SelectGroup,
@@ -29,6 +44,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 
 interface ProductOption {
   currentStock: number;
@@ -37,6 +53,7 @@ interface ProductOption {
 }
 
 interface ProductDialogsProps {
+  categories: string[];
   createProductAction: (formData: FormData) => void | Promise<void>;
   createProductMovementAction: (formData: FormData) => void | Promise<void>;
   createPurchaseAction: (formData: FormData) => void | Promise<void>;
@@ -53,6 +70,7 @@ interface UpdatePriceDialogProps {
 const fieldClassName = "flex flex-col gap-2";
 
 export function ProductDialogs({
+  categories,
   createProductAction,
   createProductMovementAction,
   createPurchaseAction,
@@ -60,7 +78,7 @@ export function ProductDialogs({
 }: ProductDialogsProps) {
   return (
     <div className="flex flex-wrap gap-2">
-      <NewProductDialog action={createProductAction} />
+      <NewProductDialog action={createProductAction} categories={categories} />
       <NewPurchaseDialog action={createPurchaseAction} products={products} />
       <NewAdjustmentDialog
         action={createProductMovementAction}
@@ -70,10 +88,103 @@ export function ProductDialogs({
   );
 }
 
+function CategoryCombobox({
+  categories,
+  defaultValue = "",
+  name,
+}: {
+  categories: string[];
+  defaultValue?: string;
+  name: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState(defaultValue);
+  const [search, setSearch] = useState("");
+
+  const filteredCategories = categories.filter((c) =>
+    c.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div className="flex flex-col gap-2">
+      <input name={name} type="hidden" value={value} />
+      <Popover onOpenChange={setOpen} open={open}>
+        <PopoverTrigger asChild>
+          <Button
+            aria-expanded={open}
+            className="w-full justify-between font-normal"
+            role="combobox"
+            variant="outline"
+          >
+            {value || "Selecione ou digite..."}
+            <HugeiconsIcon
+              className="ml-2 shrink-0 opacity-50"
+              icon={Sorting05Icon}
+            />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent
+          className="w-full p-0"
+          portalProps={{ forceMount: true }}
+        >
+          <Command shouldFilter={false}>
+            <CommandInput
+              onValueChange={setSearch}
+              placeholder="Procurar categoria..."
+              value={search}
+            />
+            <CommandList>
+              <CommandEmpty className="flex flex-col gap-2 p-4">
+                <span className="text-muted-foreground text-xs">
+                  Nenhuma categoria encontrada.
+                </span>
+                <Button
+                  className="h-8 w-full text-xs"
+                  onClick={() => {
+                    setValue(search);
+                    setOpen(false);
+                  }}
+                  type="button"
+                  variant="secondary"
+                >
+                  Usar "{search}"
+                </Button>
+              </CommandEmpty>
+              <CommandGroup>
+                {filteredCategories.map((category) => (
+                  <CommandItem
+                    key={category}
+                    onSelect={(currentValue) => {
+                      setValue(currentValue === value ? "" : currentValue);
+                      setOpen(false);
+                    }}
+                    value={category}
+                  >
+                    <HugeiconsIcon
+                      className={cn(
+                        "mr-2 opacity-0",
+                        value === category ? "opacity-100" : ""
+                      )}
+                      icon={Tick02Icon}
+                    />
+                    {category}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
 function NewProductDialog({
   action,
+  categories,
 }: {
   action: (formData: FormData) => void | Promise<void>;
+  categories: string[];
 }) {
   return (
     <Dialog>
@@ -96,10 +207,10 @@ function NewProductDialog({
               <span>Nome</span>
               <Input id="product-name" name="name" required />
             </label>
-            <label className={fieldClassName} htmlFor="product-category">
+            <div className={fieldClassName}>
               <span>Categoria</span>
-              <Input id="product-category" name="category" />
-            </label>
+              <CategoryCombobox categories={categories} name="category" />
+            </div>
             <label className={fieldClassName} htmlFor="product-unit-cost">
               <span>Custo atual</span>
               <Input

@@ -81,6 +81,14 @@ export default async function ProductsPage({
     searchParams,
   ]);
 
+  const categories = Array.from(
+    new Set(
+      productRows
+        .map((p) => p.category)
+        .filter((c): c is string => !!c && c.trim() !== "")
+    )
+  ).sort();
+
   const error = getSearchParamValue(resolvedSearchParams.error);
   const message = getSearchParamValue(resolvedSearchParams.message);
   const productMap = new Map(
@@ -103,6 +111,7 @@ export default async function ProductsPage({
     <PageLayout
       actions={
         <ProductDialogs
+          categories={categories}
           createProductAction={createProductAction}
           createProductMovementAction={createProductMovementAction}
           createPurchaseAction={createPurchaseAction}
