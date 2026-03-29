@@ -31,7 +31,6 @@ interface ProductInput {
   barcode?: string;
   category?: string;
   description?: string;
-  initialStock: number;
   minimumStock?: number;
   name: string;
   notes?: string;
@@ -53,13 +52,10 @@ interface InventoryAdjustmentInput {
 }
 
 interface PurchaseInput {
-  cardFeeAmount?: number;
   notes?: string;
-  otherCostsAmount?: number;
   productId: number;
+  purchaseDate?: Date | null;
   quantity: number;
-  shippingAmount?: number;
-  status: "draft" | "registered";
   supplierAmount: number;
 }
 
@@ -93,6 +89,7 @@ interface SaleInput {
   items: SaleItemInput[];
   notes?: string;
   payments?: SalePaymentInput[];
+  saleDate?: Date | null;
   shippingChargedAmount?: number;
 }
 
@@ -100,6 +97,43 @@ interface PaymentEventInput extends SalePaymentInput {
   saleId: number;
   type: "payment" | "refund" | "chargeback";
 }
+
+const mergeSaleItems = (items: SaleItemInput[]) => {
+  const mergedItems = new Map<number, SaleItemInput>();
+
+  for (const item of items) {
+    const existingItem = mergedItems.get(item.productId);
+
+    if (existingItem) {
+      existingItem.quantity += item.quantity;
+      existingItem.unitSalePrice = item.unitSalePrice;
+    } else {
+      mergedItems.set(item.productId, { ...item });
+    }
+  }
+
+  return Array.from(mergedItems.values());
+};
+
+const ensureSaleStockAvailability = ({
+  normalizedItems,
+  productMap,
+}: {
+  normalizedItems: SaleItemInput[];
+  productMap: Map<number, typeof products.$inferSelect>;
+}) => {
+  for (const item of normalizedItems) {
+    const product = productMap.get(item.productId);
+
+    if (!product) {
+      throw new Error(`Produto ${item.productId} nao encontrado.`);
+    }
+
+    if (product.currentStock < item.quantity) {
+      throw new Error(`Estoque insuficiente para ${product.name}.`);
+    }
+  }
+};
 
 const lockProductRows = async (
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
@@ -224,7 +258,6 @@ export const createProduct = async (
         barcode: input.barcode?.trim() || null,
         category: input.category?.trim() || null,
         createdByUserId,
-        currentStock: input.initialStock,
         description: input.description?.trim() || null,
         minimumStock: input.minimumStock ?? 0,
         name: input.name.trim(),
@@ -233,17 +266,6 @@ export const createProduct = async (
         sku: input.sku?.trim() || null,
       })
       .returning();
-
-    if (input.initialStock > 0) {
-      await tx.insert(inventoryMovements).values({
-        createdByUserId,
-        note: "Estoque inicial informado no cadastro do produto.",
-        productId: product.id,
-        quantityDelta: input.initialStock,
-        type: "initial_stock",
-        unitCostSnapshot: toMoneyString(input.unitCost),
-      });
-    }
 
     return product;
   });
@@ -326,22 +348,23 @@ export const createPurchase = (
   createdByUserId: string
 ) => {
   const totalCost = calculatePurchaseTotal({
-    cardFeeAmount: input.cardFeeAmount ?? 0,
-    otherCostsAmount: input.otherCostsAmount ?? 0,
-    shippingAmount: input.shippingAmount ?? 0,
+    cardFeeAmount: 0,
+    otherCostsAmount: 0,
+    shippingAmount: 0,
     supplierAmount: input.supplierAmount,
   });
   const unitCost = calculatePurchaseUnitCost(totalCost, input.quantity);
 
   return db.insert(purchases).values({
-    cardFeeAmount: toMoneyString(input.cardFeeAmount ?? 0),
+    cardFeeAmount: toMoneyString(0),
     createdByUserId,
     notes: input.notes?.trim() || null,
-    otherCostsAmount: toMoneyString(input.otherCostsAmount ?? 0),
+    otherCostsAmount: toMoneyString(0),
+    purchaseDate: input.purchaseDate ?? new Date(),
     productId: input.productId,
     quantity: input.quantity,
-    shippingAmount: toMoneyString(input.shippingAmount ?? 0),
-    status: input.status,
+    shippingAmount: toMoneyString(0),
+    status: "registered",
     supplierAmount: toMoneyString(input.supplierAmount),
     totalCost: toMoneyString(totalCost),
     unitCost: toMoneyString(unitCost),
@@ -471,20 +494,7 @@ export const upsertSystemSettings = async (input: SettingsInput) => {
 
 export const createSale = async (input: SaleInput, createdByUserId: string) =>
   db.transaction(async (tx) => {
-    const mergedItems = new Map<number, SaleItemInput>();
-
-    for (const item of input.items) {
-      const existingItem = mergedItems.get(item.productId);
-
-      if (existingItem) {
-        existingItem.quantity += item.quantity;
-        existingItem.unitSalePrice = item.unitSalePrice;
-      } else {
-        mergedItems.set(item.productId, { ...item });
-      }
-    }
-
-    const normalizedItems = Array.from(mergedItems.values());
+    const normalizedItems = mergeSaleItems(input.items);
     const lockedProductIds = await lockProductRows(
       tx,
       normalizedItems.map((item) => item.productId)
@@ -493,18 +503,10 @@ export const createSale = async (input: SaleInput, createdByUserId: string) =>
     const productMap = new Map(
       productRows.map((product) => [product.id, product])
     );
-
-    for (const item of normalizedItems) {
-      const product = productMap.get(item.productId);
-
-      if (!product) {
-        throw new Error(`Produto ${item.productId} nao encontrado.`);
-      }
-
-      if (product.currentStock < item.quantity) {
-        throw new Error(`Estoque insuficiente para ${product.name}.`);
-      }
-    }
+    ensureSaleStockAvailability({
+      normalizedItems,
+      productMap,
+    });
 
     const itemsSubtotal = calculateSaleItemsSubtotal(normalizedItems);
     const discountAmount = input.discountAmount ?? 0;
@@ -535,6 +537,7 @@ export const createSale = async (input: SaleInput, createdByUserId: string) =>
         notes: input.notes?.trim() || null,
         orderTotal: toMoneyString(orderTotal),
         paymentStatus: "unpaid",
+        saleDate: input.saleDate ?? new Date(),
         shippingChargedAmount: toMoneyString(shippingChargedAmount),
         status: "finalized",
       })

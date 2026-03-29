@@ -1,12 +1,28 @@
 "use client";
 
+import { Add01Icon, Delete02Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { useState } from "react";
+import { DatePickerField } from "@/components/date-picker-field";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { formatCurrency } from "@/lib/format";
-
-const inputClassName =
-  "h-10 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
-const lineButtonClassName =
-  "inline-flex h-10 items-center justify-center rounded-xl border border-border px-4 font-medium text-sm transition hover:bg-muted";
 
 interface ProductOption {
   currentStock: number;
@@ -50,12 +66,7 @@ const createPaymentLine = (id: number): PaymentLine => ({
 
 export function SalesForm({ action, products }: SalesFormProps) {
   const [lines, setLines] = useState<SaleLine[]>([
-    {
-      id: 1,
-      productId: "",
-      quantity: "1",
-      unitSalePrice: "",
-    },
+    { id: 1, productId: "", quantity: "1", unitSalePrice: "" },
   ]);
   const [payments, setPayments] = useState<PaymentLine[]>([
     createPaymentLine(1),
@@ -91,26 +102,6 @@ export function SalesForm({ action, products }: SalesFormProps) {
     );
   };
 
-  const addLine = () => {
-    setLines((currentLines) => [
-      ...currentLines,
-      {
-        id: (currentLines.at(-1)?.id ?? 0) + 1,
-        productId: "",
-        quantity: "1",
-        unitSalePrice: "",
-      },
-    ]);
-  };
-
-  const removeLine = (lineId: number) => {
-    setLines((currentLines) =>
-      currentLines.length === 1
-        ? currentLines
-        : currentLines.filter((line) => line.id !== lineId)
-    );
-  };
-
   const updatePayment = (
     paymentId: number,
     nextPayment: Partial<PaymentLine>
@@ -122,135 +113,190 @@ export function SalesForm({ action, products }: SalesFormProps) {
     );
   };
 
-  const addPayment = () => {
-    setPayments((currentPayments) => [
-      ...currentPayments,
-      createPaymentLine((currentPayments.at(-1)?.id ?? 0) + 1),
-    ]);
-  };
-
-  const removePayment = (paymentId: number) => {
-    setPayments((currentPayments) =>
-      currentPayments.length === 1
-        ? currentPayments
-        : currentPayments.filter((payment) => payment.id !== paymentId)
-    );
-  };
-
   return (
-    <form action={action} className="space-y-5">
-      <div className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="font-medium text-sm">Itens da venda</p>
-            <p className="text-muted-foreground text-xs">
-              Monte o carrinho antes de ajustar desconto, frete ou pagamentos.
-            </p>
-          </div>
-          <button
-            className={lineButtonClassName}
-            onClick={addLine}
-            type="button"
-          >
-            Adicionar item
-          </button>
-        </div>
+    <form action={action} className="flex flex-col gap-4">
+      <Card size="sm">
+        <CardHeader>
+          <CardTitle>Dados da venda</CardTitle>
+          <CardDescription>Comece pela data e pelos itens.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4 sm:grid-cols-2">
+          <label className="flex flex-col gap-2" htmlFor="sale-date">
+            <span>Data da venda</span>
+            <DatePickerField id="sale-date" name="saleDate" />
+          </label>
+          <label className="flex flex-col gap-2" htmlFor="sale-channel">
+            <span>Canal</span>
+            <Input
+              defaultValue="Loja física"
+              id="sale-channel"
+              name="channel"
+              required
+            />
+          </label>
+        </CardContent>
+      </Card>
 
-        {lines.map((line, index) => (
-          <div
-            className="space-y-3 rounded-2xl border border-border/60 bg-background/60 p-3"
-            key={line.id}
-          >
-            <div className="flex items-center justify-between gap-3">
-              <p className="font-medium text-sm">Item {index + 1}</p>
-              {lines.length > 1 ? (
-                <button
-                  className="text-muted-foreground text-sm transition hover:text-foreground"
-                  onClick={() => removeLine(line.id)}
-                  type="button"
-                >
-                  Remover
-                </button>
-              ) : null}
+      <Card size="sm">
+        <CardHeader>
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <CardTitle>Itens</CardTitle>
+              <CardDescription>
+                Monte a venda antes dos pagamentos.
+              </CardDescription>
             </div>
-            <div className="grid gap-3 md:grid-cols-[1.4fr_0.6fr_0.8fr]">
-              <select
-                className={inputClassName}
+            <Button
+              onClick={() =>
+                setLines((currentLines) => [
+                  ...currentLines,
+                  {
+                    id: (currentLines.at(-1)?.id ?? 0) + 1,
+                    productId: "",
+                    quantity: "1",
+                    unitSalePrice: "",
+                  },
+                ])
+              }
+              type="button"
+              variant="outline"
+            >
+              <HugeiconsIcon data-icon="inline-start" icon={Add01Icon} />
+              Item
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          {lines.map((line, index) => (
+            <div className="grid gap-3 rounded-lg border p-3" key={line.id}>
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-medium">Item {index + 1}</span>
+                {lines.length > 1 ? (
+                  <Button
+                    onClick={() =>
+                      setLines((currentLines) =>
+                        currentLines.filter(
+                          (currentLine) => currentLine.id !== line.id
+                        )
+                      )
+                    }
+                    size="sm"
+                    type="button"
+                    variant="ghost"
+                  >
+                    <HugeiconsIcon
+                      data-icon="inline-start"
+                      icon={Delete02Icon}
+                    />
+                    Remover
+                  </Button>
+                ) : null}
+              </div>
+              <input
                 name="itemProductId"
-                onChange={(event) => {
-                  const selectedProduct = activeProducts.find(
-                    (product) => String(product.id) === event.target.value
-                  );
-
-                  updateLine(line.id, {
-                    productId: event.target.value,
-                    unitSalePrice: selectedProduct?.salePrice ?? "",
-                  });
-                }}
-                required
+                type="hidden"
                 value={line.productId}
-              >
-                <option value="">Selecione um produto</option>
-                {activeProducts.map((product) => (
-                  <option key={product.id} value={product.id}>
-                    {product.name} · estoque {product.currentStock}
-                  </option>
-                ))}
-              </select>
-              <input
-                className={inputClassName}
-                min="1"
-                name="itemQuantity"
-                onChange={(event) =>
-                  updateLine(line.id, { quantity: event.target.value })
-                }
-                placeholder="Qtd"
-                required
-                type="number"
-                value={line.quantity}
               />
-              <input
-                className={inputClassName}
+              <div className="grid gap-3 md:grid-cols-[1.3fr_0.5fr_0.7fr]">
+                <div className="flex flex-col gap-2">
+                  <span>Produto</span>
+                  <Select
+                    onValueChange={(value) => {
+                      const selectedProduct = activeProducts.find(
+                        (product) => String(product.id) === value
+                      );
+
+                      updateLine(line.id, {
+                        productId: value,
+                        unitSalePrice: selectedProduct?.salePrice ?? "",
+                      });
+                    }}
+                    value={line.productId}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione um produto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        {activeProducts.map((product) => (
+                          <SelectItem
+                            key={product.id}
+                            value={String(product.id)}
+                          >
+                            {product.name} • estoque {product.currentStock}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <label
+                  className="flex flex-col gap-2"
+                  htmlFor={`item-quantity-${line.id}`}
+                >
+                  <span>Qtd.</span>
+                  <Input
+                    id={`item-quantity-${line.id}`}
+                    min="1"
+                    name="itemQuantity"
+                    onChange={(event) =>
+                      updateLine(line.id, { quantity: event.target.value })
+                    }
+                    required
+                    step="1"
+                    type="number"
+                    value={line.quantity}
+                  />
+                </label>
+                <label
+                  className="flex flex-col gap-2"
+                  htmlFor={`item-price-${line.id}`}
+                >
+                  <span>Preço</span>
+                  <Input
+                    id={`item-price-${line.id}`}
+                    min="0"
+                    name="itemPrice"
+                    onChange={(event) =>
+                      updateLine(line.id, { unitSalePrice: event.target.value })
+                    }
+                    required
+                    step="0.01"
+                    type="number"
+                    value={line.unitSalePrice}
+                  />
+                </label>
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-4 lg:grid-cols-[1fr_0.7fr]">
+        <Card size="sm">
+          <CardHeader>
+            <CardTitle>Resumo</CardTitle>
+            <CardDescription>Desconto e frete, se houver.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 sm:grid-cols-2">
+            <label className="flex flex-col gap-2" htmlFor="discountAmount">
+              <span>Desconto</span>
+              <Input
+                id="discountAmount"
                 min="0"
-                name="itemPrice"
-                onChange={(event) =>
-                  updateLine(line.id, { unitSalePrice: event.target.value })
-                }
-                placeholder="Preco"
-                required
+                name="discountAmount"
+                onChange={(event) => setDiscountAmount(event.target.value)}
                 step="0.01"
                 type="number"
-                value={line.unitSalePrice}
+                value={discountAmount}
               />
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="grid gap-4 rounded-2xl border border-border/60 bg-background/60 p-4 md:grid-cols-[1.1fr_0.9fr]">
-        <div className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <label className="font-medium text-sm" htmlFor="channel">
-                Canal
-              </label>
-              <input
-                className={inputClassName}
-                defaultValue="Loja fisica"
-                id="channel"
-                name="channel"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <label
-                className="font-medium text-sm"
-                htmlFor="shippingChargedAmount"
-              >
-                Frete cobrado
-              </label>
-              <input
-                className={inputClassName}
+            </label>
+            <label
+              className="flex flex-col gap-2"
+              htmlFor="shippingChargedAmount"
+            >
+              <span>Frete cobrado</span>
+              <Input
                 id="shippingChargedAmount"
                 min="0"
                 name="shippingChargedAmount"
@@ -261,211 +307,233 @@ export function SalesForm({ action, products }: SalesFormProps) {
                 type="number"
                 value={shippingChargedAmount}
               />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="font-medium text-sm" htmlFor="discountAmount">
-              Desconto do pedido
             </label>
-            <input
-              className={inputClassName}
-              id="discountAmount"
-              min="0"
-              name="discountAmount"
-              onChange={(event) => setDiscountAmount(event.target.value)}
-              step="0.01"
-              type="number"
-              value={discountAmount}
-            />
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        <div className="rounded-2xl border border-border/60 bg-card/70 p-4">
-          <p className="text-muted-foreground text-xs uppercase tracking-[0.14em]">
-            Resumo rapido
-          </p>
-          <div className="mt-3 space-y-2 text-sm">
-            <p className="flex items-center justify-between gap-3">
+        <Card size="sm">
+          <CardHeader>
+            <CardTitle>Totais</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-2 text-sm">
+            <div className="flex items-center justify-between gap-3">
               <span className="text-muted-foreground">Subtotal</span>
-              <span className="font-medium">
-                {formatCurrency(estimatedSubtotal)}
-              </span>
-            </p>
-            <p className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground">Pedido</span>
+              <span>{formatCurrency(estimatedSubtotal)}</span>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-muted-foreground">Total do pedido</span>
               <span className="font-medium">
                 {formatCurrency(estimatedOrderTotal)}
               </span>
-            </p>
-            <p className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground">Pagto confirmado</span>
-              <span className="font-medium">
-                {formatCurrency(estimatedConfirmedPayments)}
-              </span>
-            </p>
-            <p className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground">A receber</span>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-muted-foreground">Pago na largada</span>
+              <span>{formatCurrency(estimatedConfirmedPayments)}</span>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-muted-foreground">Fica em aberto</span>
               <span className="font-semibold">
                 {formatCurrency(
                   Math.max(estimatedOrderTotal - estimatedConfirmedPayments, 0)
                 )}
               </span>
-            </p>
-          </div>
-        </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      <div className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="font-medium text-sm">Pagamentos iniciais</p>
-            <p className="text-muted-foreground text-xs">
-              Use uma ou mais linhas para PIX, dinheiro, cartao ou pagamento
-              pendente.
-            </p>
+      <Card size="sm">
+        <CardHeader>
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <CardTitle>Pagamentos iniciais</CardTitle>
+              <CardDescription>
+                PIX, dinheiro, cartão ou pendência.
+              </CardDescription>
+            </div>
+            <Button
+              onClick={() =>
+                setPayments((currentPayments) => [
+                  ...currentPayments,
+                  createPaymentLine((currentPayments.at(-1)?.id ?? 0) + 1),
+                ])
+              }
+              type="button"
+              variant="outline"
+            >
+              <HugeiconsIcon data-icon="inline-start" icon={Add01Icon} />
+              Pagamento
+            </Button>
           </div>
-          <button
-            className={lineButtonClassName}
-            onClick={addPayment}
-            type="button"
-          >
-            Adicionar pagamento
-          </button>
-        </div>
-
-        {payments.map((payment, index) => (
-          <div
-            className="space-y-3 rounded-2xl border border-border/60 bg-background/60 p-3"
-            key={payment.id}
-          >
-            <div className="flex items-center justify-between gap-3">
-              <p className="font-medium text-sm">Pagamento {index + 1}</p>
-              {payments.length > 1 ? (
-                <button
-                  className="text-muted-foreground text-sm transition hover:text-foreground"
-                  onClick={() => removePayment(payment.id)}
-                  type="button"
-                >
-                  Remover
-                </button>
-              ) : null}
-            </div>
-
-            <div className="grid gap-3 md:grid-cols-4">
-              <input
-                className={inputClassName}
-                min="0"
-                name="paymentGrossAmount"
-                onChange={(event) =>
-                  updatePayment(payment.id, { grossAmount: event.target.value })
-                }
-                placeholder="Valor bruto"
-                step="0.01"
-                type="number"
-                value={payment.grossAmount}
-              />
-              <input
-                className={inputClassName}
-                min="0"
-                name="paymentFeeAmount"
-                onChange={(event) =>
-                  updatePayment(payment.id, { feeAmount: event.target.value })
-                }
-                placeholder="Taxa"
-                step="0.01"
-                type="number"
-                value={payment.feeAmount}
-              />
-              <select
-                className={inputClassName}
-                name="paymentMethod"
-                onChange={(event) =>
-                  updatePayment(payment.id, { method: event.target.value })
-                }
-                value={payment.method}
-              >
-                <option value="pix">PIX</option>
-                <option value="cash">Dinheiro</option>
-                <option value="card_debit">Cartao debito</option>
-                <option value="card_credit">Cartao credito</option>
-                <option value="payment_link">Link</option>
-                <option value="bank_transfer">Transferencia</option>
-                <option value="other">Outro</option>
-              </select>
-              <select
-                className={inputClassName}
-                name="paymentStatus"
-                onChange={(event) =>
-                  updatePayment(payment.id, { status: event.target.value })
-                }
-                value={payment.status}
-              >
-                <option value="confirmed">Confirmado</option>
-                <option value="pending">Pendente</option>
-              </select>
-            </div>
-
-            <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-2">
-                <label
-                  className="font-medium text-sm"
-                  htmlFor={`paymentDue-${payment.id}`}
-                >
-                  Vencimento
-                </label>
-                <input
-                  className={inputClassName}
-                  id={`paymentDue-${payment.id}`}
-                  name="paymentDueDate"
-                  onChange={(event) =>
-                    updatePayment(payment.id, { dueDate: event.target.value })
-                  }
-                  type="date"
-                  value={payment.dueDate}
-                />
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          {payments.map((payment, index) => (
+            <div className="grid gap-3 rounded-lg border p-3" key={payment.id}>
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-medium">Pagamento {index + 1}</span>
+                {payments.length > 1 ? (
+                  <Button
+                    onClick={() =>
+                      setPayments((currentPayments) =>
+                        currentPayments.filter(
+                          (currentPayment) => currentPayment.id !== payment.id
+                        )
+                      )
+                    }
+                    size="sm"
+                    type="button"
+                    variant="ghost"
+                  >
+                    <HugeiconsIcon
+                      data-icon="inline-start"
+                      icon={Delete02Icon}
+                    />
+                    Remover
+                  </Button>
+                ) : null}
               </div>
-              <div className="space-y-2">
+              <div className="grid gap-3 md:grid-cols-4">
                 <label
-                  className="font-medium text-sm"
-                  htmlFor={`paymentEffective-${payment.id}`}
+                  className="flex flex-col gap-2"
+                  htmlFor={`payment-gross-${payment.id}`}
                 >
-                  Data efetiva
+                  <span>Valor</span>
+                  <Input
+                    id={`payment-gross-${payment.id}`}
+                    min="0"
+                    name="paymentGrossAmount"
+                    onChange={(event) =>
+                      updatePayment(payment.id, {
+                        grossAmount: event.target.value,
+                      })
+                    }
+                    step="0.01"
+                    type="number"
+                    value={payment.grossAmount}
+                  />
                 </label>
-                <input
-                  className={inputClassName}
-                  id={`paymentEffective-${payment.id}`}
-                  name="paymentEffectiveDate"
-                  onChange={(event) =>
-                    updatePayment(payment.id, {
-                      effectiveDate: event.target.value,
-                    })
-                  }
-                  type="date"
-                  value={payment.effectiveDate}
-                />
+                <label
+                  className="flex flex-col gap-2"
+                  htmlFor={`payment-fee-${payment.id}`}
+                >
+                  <span>Taxa</span>
+                  <Input
+                    id={`payment-fee-${payment.id}`}
+                    min="0"
+                    name="paymentFeeAmount"
+                    onChange={(event) =>
+                      updatePayment(payment.id, {
+                        feeAmount: event.target.value,
+                      })
+                    }
+                    step="0.01"
+                    type="number"
+                    value={payment.feeAmount}
+                  />
+                </label>
+                <div className="flex flex-col gap-2">
+                  <span>Método</span>
+                  <input
+                    name="paymentMethod"
+                    type="hidden"
+                    value={payment.method}
+                  />
+                  <Select
+                    onValueChange={(value) =>
+                      updatePayment(payment.id, { method: value })
+                    }
+                    value={payment.method}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem value="pix">PIX</SelectItem>
+                        <SelectItem value="cash">Dinheiro</SelectItem>
+                        <SelectItem value="card_debit">
+                          Cartão débito
+                        </SelectItem>
+                        <SelectItem value="card_credit">
+                          Cartão crédito
+                        </SelectItem>
+                        <SelectItem value="payment_link">Link</SelectItem>
+                        <SelectItem value="bank_transfer">
+                          Transferência
+                        </SelectItem>
+                        <SelectItem value="other">Outro</SelectItem>
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <span>Status</span>
+                  <input
+                    name="paymentStatus"
+                    type="hidden"
+                    value={payment.status}
+                  />
+                  <Select
+                    onValueChange={(value) =>
+                      updatePayment(payment.id, { status: value })
+                    }
+                    value={payment.status}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem value="confirmed">Confirmado</SelectItem>
+                        <SelectItem value="pending">Pendente</SelectItem>
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <label
+                  className="flex flex-col gap-2"
+                  htmlFor={`payment-due-${payment.id}`}
+                >
+                  <span>Vencimento</span>
+                  <DatePickerField
+                    defaultValue={payment.dueDate}
+                    id={`payment-due-${payment.id}`}
+                    name="paymentDueDate"
+                  />
+                </label>
+                <label
+                  className="flex flex-col gap-2"
+                  htmlFor={`payment-effective-${payment.id}`}
+                >
+                  <span>Data efetiva</span>
+                  <DatePickerField
+                    defaultValue={payment.effectiveDate}
+                    id={`payment-effective-${payment.id}`}
+                    name="paymentEffectiveDate"
+                  />
+                </label>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </CardContent>
+      </Card>
 
-      <div className="space-y-2">
-        <label className="font-medium text-sm" htmlFor="notes">
-          Observacoes
-        </label>
-        <textarea
-          className="min-h-24 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-          id="notes"
-          name="notes"
-        />
-      </div>
-      <button
-        className="h-10 w-full rounded-xl bg-primary px-4 font-medium text-primary-foreground text-sm transition hover:bg-primary/90 sm:w-auto"
-        type="submit"
-      >
-        Confirmar venda
-      </button>
+      <label className="flex flex-col gap-2" htmlFor="sale-notes">
+        <span>Observações</span>
+        <Textarea id="sale-notes" name="notes" />
+      </label>
+
+      <DialogFooterAction />
     </form>
+  );
+}
+
+function DialogFooterAction() {
+  return (
+    <div className="flex justify-end">
+      <Button type="submit">Salvar venda</Button>
+    </div>
   );
 }

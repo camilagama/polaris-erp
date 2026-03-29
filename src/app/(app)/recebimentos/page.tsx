@@ -1,11 +1,26 @@
 import { desc } from "drizzle-orm";
 import Link from "next/link";
 import {
-  EmptyState,
   FeedbackBanner,
   PageLayout,
-  Surface,
 } from "@/app/(app)/_components/page-layout";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { db } from "@/db";
 import { paymentEvents, sales } from "@/db/schema";
 import { getSearchParamValue } from "@/lib/action-feedback";
@@ -14,9 +29,9 @@ import { summarizePaymentLedger } from "@/lib/domain/payment-ledger";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
 
 const paymentMethodLabels = {
-  bank_transfer: "Transferencia",
-  card_credit: "Cartao credito",
-  card_debit: "Cartao debito",
+  bank_transfer: "Transferência",
+  card_credit: "Cartão crédito",
+  card_debit: "Cartão débito",
   cash: "Dinheiro",
   other: "Outro",
   payment_link: "Link",
@@ -39,6 +54,7 @@ export default async function ReceiptsPage({
     db.select().from(paymentEvents).orderBy(desc(paymentEvents.createdAt)),
     searchParams,
   ]);
+
   const error = getSearchParamValue(resolvedSearchParams.error);
   const message = getSearchParamValue(resolvedSearchParams.message);
   const saleMap = new Map(saleRows.map((sale) => [sale.id, sale]));
@@ -47,25 +63,31 @@ export default async function ReceiptsPage({
   );
   const cashTotal = confirmedPayments
     .filter((payment) => payment.method === "cash")
-    .reduce((total, payment) => {
-      const direction = payment.type === "payment" ? 1 : -1;
-      return total + direction * toNumber(payment.netAmount);
-    }, 0);
+    .reduce(
+      (total, payment) =>
+        total +
+        (payment.type === "payment" ? 1 : -1) * toNumber(payment.netAmount),
+      0
+    );
   const pixTotal = confirmedPayments
     .filter((payment) => payment.method === "pix")
-    .reduce((total, payment) => {
-      const direction = payment.type === "payment" ? 1 : -1;
-      return total + direction * toNumber(payment.netAmount);
-    }, 0);
+    .reduce(
+      (total, payment) =>
+        total +
+        (payment.type === "payment" ? 1 : -1) * toNumber(payment.netAmount),
+      0
+    );
   const cardTotal = confirmedPayments
     .filter(
       (payment) =>
         payment.method === "card_credit" || payment.method === "card_debit"
     )
-    .reduce((total, payment) => {
-      const direction = payment.type === "payment" ? 1 : -1;
-      return total + direction * toNumber(payment.netAmount);
-    }, 0);
+    .reduce(
+      (total, payment) =>
+        total +
+        (payment.type === "payment" ? 1 : -1) * toNumber(payment.netAmount),
+      0
+    );
   const receivableTotal = saleRows.reduce((total, sale) => {
     const ledger = summarizePaymentLedger(
       toNumber(sale.orderTotal),
@@ -78,138 +100,112 @@ export default async function ReceiptsPage({
   return (
     <PageLayout
       actions={
-        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-          <Link
-            className="inline-flex h-10 items-center justify-center rounded-xl border border-border px-4 font-medium text-sm transition hover:bg-muted"
-            href="/vendas"
-          >
-            Voltar para vendas
-          </Link>
-        </div>
+        <Button asChild variant="outline">
+          <Link href="/vendas">Voltar para vendas</Link>
+        </Button>
       }
-      description="Caixa e recebimentos agora ganham uma visao propria do ledger financeiro para consulta rapida de entradas, refunds, chargebacks e valores ainda em aberto."
+      description="Caixa ficou padronizado com a mesma leitura de tabela usada em produtos e vendas."
       eyebrow="Caixa"
       title="Recebimentos"
     >
       <FeedbackBanner error={error} message={message} />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Surface>
-          <p className="text-muted-foreground text-sm">Dinheiro liquido</p>
-          <p className="mt-3 font-semibold text-2xl">
-            {formatCurrency(cashTotal)}
-          </p>
-        </Surface>
-        <Surface>
-          <p className="text-muted-foreground text-sm">PIX liquido</p>
-          <p className="mt-3 font-semibold text-2xl">
-            {formatCurrency(pixTotal)}
-          </p>
-        </Surface>
-        <Surface>
-          <p className="text-muted-foreground text-sm">Cartoes liquidos</p>
-          <p className="mt-3 font-semibold text-2xl">
-            {formatCurrency(cardTotal)}
-          </p>
-        </Surface>
-        <Surface>
-          <p className="text-muted-foreground text-sm">A receber</p>
-          <p className="mt-3 font-semibold text-2xl">
-            {formatCurrency(receivableTotal)}
-          </p>
-        </Surface>
+        <Card>
+          <CardHeader>
+            <CardDescription>Dinheiro líquido</CardDescription>
+            <CardTitle>{formatCurrency(cashTotal)}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardDescription>PIX líquido</CardDescription>
+            <CardTitle>{formatCurrency(pixTotal)}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardDescription>Cartões líquidos</CardDescription>
+            <CardTitle>{formatCurrency(cardTotal)}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardDescription>A receber</CardDescription>
+            <CardTitle>{formatCurrency(receivableTotal)}</CardTitle>
+          </CardHeader>
+        </Card>
       </div>
 
-      <Surface>
-        <div className="mb-5 flex items-center justify-between gap-3">
-          <div>
-            <h2 className="font-semibold text-lg">Ledger recente</h2>
-            <p className="text-muted-foreground text-sm">
-              Todos os eventos financeiros confirmados, pendentes ou cancelados
-              das vendas.
-            </p>
-          </div>
-          <span className="rounded-full bg-muted px-3 py-1 font-medium text-xs">
-            {paymentRows.length} eventos
-          </span>
-        </div>
-
-        <div className="space-y-3">
+      <Card>
+        <CardHeader>
+          <CardTitle>Eventos financeiros</CardTitle>
+          <CardDescription>
+            Todos os pagamentos e reversões em ordem cronológica.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
           {paymentRows.length > 0 ? (
-            paymentRows.map((payment) => {
-              const sale = saleMap.get(payment.saleId);
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Venda</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Método</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Bruto</TableHead>
+                  <TableHead>Líquido</TableHead>
+                  <TableHead>Efetiva</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paymentRows.map((payment) => {
+                  const sale = saleMap.get(payment.saleId);
 
-              return (
-                <div
-                  className="rounded-2xl border border-border/60 bg-background/70 p-4"
-                  key={payment.id}
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="space-y-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="font-semibold">
-                          {paymentTypeLabels[payment.type]}
-                        </p>
-                        <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] uppercase tracking-[0.12em]">
-                          {paymentMethodLabels[payment.method]}
-                        </span>
-                        <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] uppercase tracking-[0.12em]">
+                  return (
+                    <TableRow key={payment.id}>
+                      <TableCell>{formatDateTime(payment.createdAt)}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1">
+                          <span>#{payment.saleId}</span>
+                          <span className="text-muted-foreground">
+                            {sale?.channel || "-"}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{paymentTypeLabels[payment.type]}</TableCell>
+                      <TableCell>
+                        {paymentMethodLabels[payment.method]}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            payment.status === "confirmed"
+                              ? "secondary"
+                              : "outline"
+                          }
+                        >
                           {payment.status}
-                        </span>
-                      </div>
-                      <p className="text-muted-foreground text-sm">
-                        Venda #{payment.saleId} ·{" "}
-                        {sale?.channel || "Canal nao informado"} ·{" "}
-                        {formatDateTime(payment.createdAt)}
-                      </p>
-                    </div>
-                    <div className="text-right text-sm">
-                      <p className="font-semibold">
-                        {formatCurrency(payment.netAmount)}
-                      </p>
-                      <p className="text-muted-foreground">
-                        bruto {formatCurrency(payment.grossAmount)}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mt-3 grid gap-2 text-muted-foreground text-sm md:grid-cols-3">
-                    <p>
-                      Taxa:{" "}
-                      <span className="font-medium text-foreground">
-                        {formatCurrency(payment.feeAmount)}
-                      </span>
-                    </p>
-                    <p>
-                      Vencimento:{" "}
-                      <span className="font-medium text-foreground">
-                        {formatDate(payment.dueDate)}
-                      </span>
-                    </p>
-                    <p>
-                      Data efetiva:{" "}
-                      <span className="font-medium text-foreground">
-                        {formatDate(payment.effectiveDate)}
-                      </span>
-                    </p>
-                  </div>
-
-                  {payment.notes ? (
-                    <p className="mt-3 text-muted-foreground text-sm">
-                      {payment.notes}
-                    </p>
-                  ) : null}
-                </div>
-              );
-            })
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {formatCurrency(payment.grossAmount)}
+                      </TableCell>
+                      <TableCell>{formatCurrency(payment.netAmount)}</TableCell>
+                      <TableCell>{formatDate(payment.effectiveDate)}</TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
           ) : (
-            <EmptyState
-              description="Os eventos financeiros criados nas vendas tambem ficam visiveis aqui para leitura de caixa."
-              title="Nenhum evento financeiro registrado ainda"
-            />
+            <p className="text-muted-foreground text-sm">
+              Nenhum evento financeiro registrado ainda.
+            </p>
           )}
-        </div>
-      </Surface>
+        </CardContent>
+      </Card>
     </PageLayout>
   );
 }

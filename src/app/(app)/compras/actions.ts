@@ -12,13 +12,10 @@ import {
 import { requireSession } from "@/lib/session";
 
 const createPurchaseSchema = z.object({
-  cardFeeAmount: z.coerce.number().min(0).optional(),
   notes: z.string().trim().max(2000).optional(),
-  otherCostsAmount: z.coerce.number().min(0).optional(),
+  purchaseDate: z.string().optional(),
   productId: z.coerce.number().int().positive(),
   quantity: z.coerce.number().int().positive(),
-  shippingAmount: z.coerce.number().min(0).optional(),
-  status: z.enum(["draft", "registered"]),
   supplierAmount: z.coerce.number().min(0),
 });
 
@@ -27,18 +24,23 @@ const purchaseIdSchema = z.object({
 });
 
 const redirectWithResult = (params: Record<string, string | undefined>) =>
-  redirect(buildRedirectPath("/compras", params));
+  redirect(buildRedirectPath("/produtos", params));
+
+const toOptionalDate = (value?: string) => {
+  if (!value) {
+    return null;
+  }
+
+  return new Date(`${value}T00:00:00`);
+};
 
 export async function createPurchaseAction(formData: FormData) {
   const session = await requireSession();
   const parsed = createPurchaseSchema.safeParse({
-    cardFeeAmount: formData.get("cardFeeAmount") ?? 0,
     notes: formData.get("notes") ?? "",
-    otherCostsAmount: formData.get("otherCostsAmount") ?? 0,
+    purchaseDate: formData.get("purchaseDate") ?? "",
     productId: formData.get("productId"),
     quantity: formData.get("quantity"),
-    shippingAmount: formData.get("shippingAmount") ?? 0,
-    status: formData.get("status"),
     supplierAmount: formData.get("supplierAmount"),
   });
 
@@ -49,7 +51,13 @@ export async function createPurchaseAction(formData: FormData) {
   }
 
   try {
-    await createPurchase(parsed.data, session.user.id);
+    await createPurchase(
+      {
+        ...parsed.data,
+        purchaseDate: toOptionalDate(parsed.data.purchaseDate),
+      },
+      session.user.id
+    );
   } catch (error) {
     return redirectWithResult({
       error:
@@ -61,6 +69,7 @@ export async function createPurchaseAction(formData: FormData) {
 
   revalidatePath("/");
   revalidatePath("/compras");
+  revalidatePath("/produtos");
   return redirectWithResult({
     message: "Compra registrada.",
   });
@@ -122,6 +131,7 @@ export async function cancelPurchaseAction(formData: FormData) {
   }
 
   revalidatePath("/compras");
+  revalidatePath("/produtos");
   return redirectWithResult({
     message: "Compra cancelada.",
   });

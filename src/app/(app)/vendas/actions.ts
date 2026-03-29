@@ -23,6 +23,7 @@ const saleSchema = z.object({
   channel: z.string().trim().min(2).max(80),
   discountAmount: moneyField,
   notes: z.string().trim().max(2000).optional(),
+  saleDate: z.string().optional(),
   shippingChargedAmount: moneyField,
 });
 
@@ -143,6 +144,7 @@ export async function createSaleAction(formData: FormData) {
     channel: formData.get("channel"),
     discountAmount: formData.get("discountAmount") ?? 0,
     notes: formData.get("notes") ?? "",
+    saleDate: formData.get("saleDate") ?? "",
     shippingChargedAmount: formData.get("shippingChargedAmount") ?? 0,
   });
 
@@ -161,6 +163,7 @@ export async function createSaleAction(formData: FormData) {
         ...parsedSale.data,
         items,
         payments,
+        saleDate: toOptionalDate(parsedSale.data.saleDate),
       },
       session.user.id
     );
