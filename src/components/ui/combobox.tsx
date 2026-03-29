@@ -90,12 +90,18 @@ export function Combobox({
     onCreateNew?.(trimmedSearch);
   };
 
+  const normalizeString = (str: string) =>
+    str
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+
   const filteredOptions = allOptions.filter((option) =>
-    option.label.toLowerCase().includes(search.toLowerCase())
+    normalizeString(option.label).includes(normalizeString(search))
   );
 
   const exactMatch = allOptions.some(
-    (opt) => opt.label.toLowerCase() === search.trim().toLowerCase()
+    (opt) => normalizeString(opt.label) === normalizeString(search.trim())
   );
 
   return (

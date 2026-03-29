@@ -12,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -200,7 +201,7 @@ export function SalesForm({ action, products }: SalesFormProps) {
               <div className="grid gap-3 md:grid-cols-[1.3fr_0.5fr_0.7fr]">
                 <div className="flex flex-col gap-2">
                   <span>Produto</span>
-                  <Select
+                  <Combobox
                     onValueChange={(value) => {
                       const selectedProduct = activeProducts.find(
                         (product) => String(product.id) === value
@@ -211,24 +212,14 @@ export function SalesForm({ action, products }: SalesFormProps) {
                         unitSalePrice: selectedProduct?.salePrice ?? "",
                       });
                     }}
+                    options={activeProducts.map((product) => ({
+                      label: `${product.name} • estoque ${product.currentStock}`,
+                      value: String(product.id),
+                    }))}
+                    placeholder="Selecione um produto"
+                    searchPlaceholder="Buscar produto..."
                     value={line.productId}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione um produto" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        {activeProducts.map((product) => (
-                          <SelectItem
-                            key={product.id}
-                            value={String(product.id)}
-                          >
-                            {product.name} • estoque {product.currentStock}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
+                  />
                 </div>
                 <label
                   className="flex flex-col gap-2"
