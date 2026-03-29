@@ -53,3 +53,16 @@ export const verifications = pgTable("verifications", {
   expiresAt: timestamp("expires_at").notNull(),
   ...timestamps,
 });
+
+export const products = pgTable("products", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  sku: text("sku").unique(),
+  name: text("name").notNull(),
+  description: text("description"),
+  costPrice: text("cost_price").notNull().default("0"), // Preço de custo (usando text para evitar imprecisões de float no postgres, formato '10.50')
+  price: text("price").notNull(), // Preço de venda
+  stock: text("stock").default("0").notNull(), // Mudaremos a modelagem para manter como texto (por compatibilidade) ou integer. O Drizzle lida bem com integer("stock").
+  ...timestamps,
+});

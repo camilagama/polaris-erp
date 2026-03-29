@@ -3,6 +3,7 @@
 import {
   Home01Icon,
   Logout01Icon,
+  ShoppingBag01Icon,
   UserCircleIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -53,6 +54,7 @@ const DGImportsLogo = ({ className }: { className?: string }) => (
 
 const navigationItems = [
   { href: "/", label: "Dashboard", icon: Home01Icon },
+  { href: "/produtos", label: "Produtos", icon: ShoppingBag01Icon },
 ] as const;
 
 type AppSidebarProps = ComponentProps<typeof Sidebar> & {
