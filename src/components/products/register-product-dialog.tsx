@@ -136,34 +136,47 @@ export function RegisterProductDialog() {
                   },
                 }}
               >
-                {(field) => (
-                  <div className="flex flex-col gap-1.5">
-                    <Label htmlFor={field.name}>Custo Unitário</Label>
-                    <InputGroup>
-                      <InputGroupAddon>
-                        <InputGroupText>R$</InputGroupText>
-                      </InputGroupAddon>
-                      <InputGroupInput
-                        id={field.name}
-                        name={field.name}
-                        onBlur={field.handleBlur}
-                        onChange={(e) =>
-                          field.handleChange(Number(e.target.value))
-                        }
-                        placeholder="0.00"
-                        step="0.01"
-                        type="number"
-                        value={field.state.value}
-                      />
-                    </InputGroup>
-                    {field.state.meta.errors &&
-                    field.state.meta.errors.length > 0 ? (
-                      <em className="text-[11px] text-destructive">
-                        {field.state.meta.errors.join(", ")}
-                      </em>
-                    ) : null}
-                  </div>
-                )}
+                {(field) => {
+                  const handleChange = (
+                    e: React.ChangeEvent<HTMLInputElement>
+                  ) => {
+                    let val = e.target.value;
+                    if (val.includes(".")) {
+                      const [int, dec] = val.split(".");
+                      if (dec.length > 2) {
+                        val = `${int}.${dec.slice(0, 2)}`;
+                      }
+                    }
+                    field.handleChange(Number(val));
+                  };
+
+                  return (
+                    <div className="flex flex-col gap-1.5">
+                      <Label htmlFor={field.name}>Custo Unitário</Label>
+                      <InputGroup>
+                        <InputGroupAddon>
+                          <InputGroupText>R$</InputGroupText>
+                        </InputGroupAddon>
+                        <InputGroupInput
+                          id={field.name}
+                          name={field.name}
+                          onBlur={field.handleBlur}
+                          onChange={handleChange}
+                          placeholder="0.00"
+                          step="0.01"
+                          type="number"
+                          value={field.state.value}
+                        />
+                      </InputGroup>
+                      {field.state.meta.errors &&
+                      field.state.meta.errors.length > 0 ? (
+                        <em className="text-[11px] text-destructive">
+                          {field.state.meta.errors.join(", ")}
+                        </em>
+                      ) : null}
+                    </div>
+                  );
+                }}
               </form.Field>
 
               <form.Field
@@ -177,34 +190,47 @@ export function RegisterProductDialog() {
                   },
                 }}
               >
-                {(field) => (
-                  <div className="flex flex-col gap-1.5">
-                    <Label htmlFor={field.name}>Preço de Venda</Label>
-                    <InputGroup>
-                      <InputGroupAddon>
-                        <InputGroupText>R$</InputGroupText>
-                      </InputGroupAddon>
-                      <InputGroupInput
-                        id={field.name}
-                        name={field.name}
-                        onBlur={field.handleBlur}
-                        onChange={(e) =>
-                          field.handleChange(Number(e.target.value))
-                        }
-                        placeholder="0.00"
-                        step="0.01"
-                        type="number"
-                        value={field.state.value}
-                      />
-                    </InputGroup>
-                    {field.state.meta.errors &&
-                    field.state.meta.errors.length > 0 ? (
-                      <em className="text-[11px] text-destructive">
-                        {field.state.meta.errors.join(", ")}
-                      </em>
-                    ) : null}
-                  </div>
-                )}
+                {(field) => {
+                  const handleChange = (
+                    e: React.ChangeEvent<HTMLInputElement>
+                  ) => {
+                    let val = e.target.value;
+                    if (val.includes(".")) {
+                      const [int, dec] = val.split(".");
+                      if (dec.length > 2) {
+                        val = `${int}.${dec.slice(0, 2)}`;
+                      }
+                    }
+                    field.handleChange(Number(val));
+                  };
+
+                  return (
+                    <div className="flex flex-col gap-1.5">
+                      <Label htmlFor={field.name}>Preço de Venda</Label>
+                      <InputGroup>
+                        <InputGroupAddon>
+                          <InputGroupText>R$</InputGroupText>
+                        </InputGroupAddon>
+                        <InputGroupInput
+                          id={field.name}
+                          name={field.name}
+                          onBlur={field.handleBlur}
+                          onChange={handleChange}
+                          placeholder="0.00"
+                          step="0.01"
+                          type="number"
+                          value={field.state.value}
+                        />
+                      </InputGroup>
+                      {field.state.meta.errors &&
+                      field.state.meta.errors.length > 0 ? (
+                        <em className="text-[11px] text-destructive">
+                          {field.state.meta.errors.join(", ")}
+                        </em>
+                      ) : null}
+                    </div>
+                  );
+                }}
               </form.Field>
             </div>
 

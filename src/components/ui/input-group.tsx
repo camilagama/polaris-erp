@@ -21,18 +21,16 @@ function InputGroup({ className, ...props }: React.ComponentProps<"fieldset">) {
 }
 
 const inputGroupAddonVariants = cva(
-  "flex h-auto cursor-text select-none items-center justify-center gap-1 py-2 font-medium text-muted-foreground text-xs/relaxed **:data-[slot=kbd]:rounded-[calc(var(--radius-sm)-2px)] **:data-[slot=kbd]:bg-muted-foreground/10 **:data-[slot=kbd]:px-1 **:data-[slot=kbd]:text-[0.625rem] group-data-[disabled=true]/input-group:opacity-50 [&>svg:not([class*='size-'])]:size-3.5",
+  "flex h-full cursor-text select-none items-center justify-center gap-1.5 px-3 font-medium text-muted-foreground text-xs/relaxed **:data-[slot=kbd]:rounded-[calc(var(--radius-sm)-2px)] **:data-[slot=kbd]:bg-muted-foreground/10 **:data-[slot=kbd]:px-1 **:data-[slot=kbd]:text-[0.625rem] group-data-[disabled=true]/input-group:opacity-50 [&>svg:not([class*='size-'])]:size-3.5",
   {
     variants: {
       align: {
-        "inline-start":
-          "order-first pl-2 has-[>button]:ml-[-0.275rem] has-[>kbd]:ml-[-0.275rem]",
-        "inline-end":
-          "order-last pr-2 has-[>button]:mr-[-0.275rem] has-[>kbd]:mr-[-0.275rem]",
+        "inline-start": "order-first",
+        "inline-end": "order-last",
         "block-start":
-          "order-first w-full justify-start px-2 pt-2 group-has-[>input]/input-group:pt-2 [.border-b]:pb-2",
+          "order-first w-full justify-start py-2 group-has-[>input]/input-group:pt-2 [.border-b]:pb-2",
         "block-end":
-          "order-last w-full justify-start px-2 pb-2 group-has-[>input]/input-group:pb-2 [.border-t]:pt-2",
+          "order-last w-full justify-start py-2 group-has-[>input]/input-group:pb-2 [.border-t]:pt-2",
       },
     },
     defaultVariants: {
@@ -61,7 +59,7 @@ function InputGroupAddon({
     <button
       className={cn(
         inputGroupAddonVariants({ align }),
-        "appearance-none border-none bg-transparent p-0 outline-none focus:ring-0",
+        "appearance-none border-none bg-transparent outline-none focus:ring-0",
         className
       )}
       data-align={align}
