@@ -1,27 +1,12 @@
-import { sql } from "drizzle-orm";
-import {
-  boolean,
-  integer,
-  numeric,
-  pgTable,
-  serial,
-  text,
-  timestamp,
-  varchar,
-} from "drizzle-orm/pg-core";
+import { boolean, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
-const timestamps = {
-  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
-  updatedAt: timestamp("updated_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+export const timestamps = {
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdateFn(() => new Date())
+    .notNull(),
 };
-
-const money = (name: string) =>
-  numeric(name, {
-    precision: 12,
-    scale: 2,
-  })
-    .default("0")
-    .notNull();
 
 export const users = pgTable("users", {
   id: text("id").primaryKey(),
@@ -66,27 +51,5 @@ export const verifications = pgTable("verifications", {
   identifier: text("identifier").notNull(),
   value: text("value").notNull(),
   expiresAt: timestamp("expires_at").notNull(),
-  ...timestamps,
-});
-
-export const products = pgTable("products", {
-  id: serial("id").primaryKey(),
-  name: varchar("name", { length: 160 }).notNull(),
-  category: varchar("category", { length: 120 }),
-  notes: text("notes"),
-  currentStock: integer("current_stock").default(0).notNull(),
-  averageCost: money("average_cost"),
-  salePrice: money("sale_price"),
-  createdByUserId: text("created_by_user_id").references(() => users.id, {
-    onDelete: "set null",
-  }),
-  ...timestamps,
-});
-
-export const systemSettings = pgTable("system_settings", {
-  id: serial("id").primaryKey(),
-  targetMarginPercent: money("target_margin_percent"),
-  minimumMarginPercent: money("minimum_margin_percent"),
-  estimatedFeePercent: money("estimated_fee_percent"),
   ...timestamps,
 });

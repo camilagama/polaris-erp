@@ -3,8 +3,6 @@
 import {
   Home01Icon,
   Logout01Icon,
-  PackageIcon,
-  Settings01Icon,
   UserCircleIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -55,8 +53,6 @@ const DGImportsLogo = ({ className }: { className?: string }) => (
 
 const navigationItems = [
   { href: "/", label: "Dashboard", icon: Home01Icon },
-  { href: "/produtos", label: "Produtos", icon: PackageIcon },
-  { href: "/configuracoes", label: "Configuracoes", icon: Settings01Icon },
 ] as const;
 
 type AppSidebarProps = ComponentProps<typeof Sidebar> & {
@@ -188,15 +184,6 @@ export function AppSidebar({ onSignOut, user, ...props }: AppSidebarProps) {
                       icon={UserCircleIcon}
                     />
                     Area interna
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/configuracoes">
-                      <HugeiconsIcon
-                        className="mr-2 size-4"
-                        icon={Settings01Icon}
-                      />
-                      Configuracoes
-                    </Link>
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />

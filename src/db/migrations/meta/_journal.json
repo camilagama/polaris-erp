@@ -22,6 +22,13 @@
       "when": 1774642200000,
       "tag": "20260328001000_store_single_cash_refactor",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1774771942515,
+      "tag": "20260329081222_fuzzy_gravity",
+      "breakpoints": true
     }
   ]
 }
