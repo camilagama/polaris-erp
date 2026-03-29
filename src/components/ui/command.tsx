@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { InputGroup, InputGroupAddon } from "@/components/ui/input-group";
+
 import { cn } from "@/lib/utils";
 
 function Command({
@@ -67,24 +67,23 @@ function CommandInput({
   ...props
 }: React.ComponentProps<typeof CommandPrimitive.Input>) {
   return (
-    <div className="p-1 pb-0" data-slot="command-input-wrapper">
-      <InputGroup className="h-8! bg-input/20 dark:bg-input/30">
-        <CommandPrimitive.Input
-          className={cn(
-            "w-full text-xs/relaxed outline-hidden disabled:cursor-not-allowed disabled:opacity-50",
-            className
-          )}
-          data-slot="command-input"
-          {...props}
-        />
-        <InputGroupAddon>
-          <HugeiconsIcon
-            className="size-3.5 shrink-0 opacity-50"
-            icon={SearchIcon}
-            strokeWidth={2}
-          />
-        </InputGroupAddon>
-      </InputGroup>
+    <div
+      className="flex h-9 items-center gap-1.5 rounded-lg bg-input/20 p-1 px-2.5 pb-0 dark:bg-input/30"
+      data-slot="command-input-wrapper"
+    >
+      <CommandPrimitive.Input
+        className={cn(
+          "flex-1 text-xs/relaxed outline-hidden disabled:cursor-not-allowed disabled:opacity-50",
+          className
+        )}
+        data-slot="command-input"
+        {...props}
+      />
+      <HugeiconsIcon
+        className="size-3.5 shrink-0 opacity-50"
+        icon={SearchIcon}
+        strokeWidth={2}
+      />
     </div>
   );
 }
