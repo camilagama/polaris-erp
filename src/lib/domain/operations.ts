@@ -11,7 +11,6 @@ import {
 } from "@/db/schema";
 import {
   calculateMovingAverageCost,
-  calculatePurchaseTotal,
   calculatePurchaseUnitCost,
   calculateSaleItemsSubtotal,
   calculateSaleOrderTotal,
@@ -27,28 +26,22 @@ import {
 
 const toMoneyString = (value: number) => roundMoney(value).toFixed(2);
 
-interface ProductInput {
+export interface ProductInput {
   category?: string;
-  description?: string;
   name: string;
   notes?: string;
   salePrice: number;
   unitCost: number;
 }
 
-interface InventoryAdjustmentInput {
+export interface InventoryAdjustmentInput {
   note?: string;
   productId: number;
   quantity: number;
-  type:
-    | "adjustment_plus"
-    | "adjustment_minus"
-    | "customer_return"
-    | "damage"
-    | "loss";
+  type: "adjustment_plus" | "adjustment_minus";
 }
 
-interface PurchaseInput {
+export interface PurchaseInput {
   notes?: string;
   productId: number;
   purchaseDate?: Date | null;
@@ -56,7 +49,7 @@ interface PurchaseInput {
   supplierAmount: number;
 }
 
-interface SettingsInput {
+export interface SettingsInput {
   estimatedFeePercent: number;
   lowStockThreshold: number;
   minimumMarginPercent: number;
@@ -64,13 +57,13 @@ interface SettingsInput {
   targetMarginPercent: number;
 }
 
-interface SaleItemInput {
+export interface SaleItemInput {
   productId: number;
   quantity: number;
   unitSalePrice: number;
 }
 
-interface SalePaymentInput {
+export interface SalePaymentInput {
   dueDate?: Date | null;
   effectiveDate?: Date | null;
   feeAmount?: number;
@@ -80,7 +73,7 @@ interface SalePaymentInput {
   status: PaymentEventStatus;
 }
 
-interface SaleInput {
+export interface SaleInput {
   channel: string;
   discountAmount?: number;
   items: SaleItemInput[];
@@ -90,7 +83,7 @@ interface SaleInput {
   shippingChargedAmount?: number;
 }
 
-interface PaymentEventInput extends SalePaymentInput {
+export interface PaymentEventInput extends SalePaymentInput {
   saleId: number;
   type: "payment" | "refund" | "chargeback";
 }
@@ -254,7 +247,6 @@ export const createProduct = async (
         averageCost: toMoneyString(input.unitCost),
         category: input.category?.trim() || null,
         createdByUserId,
-        description: input.description?.trim() || null,
         name: input.name.trim(),
         notes: input.notes?.trim() || null,
         salePrice: toMoneyString(input.salePrice),
@@ -310,9 +302,7 @@ export const createInventoryAdjustment = async (
     }
 
     const normalizedQuantity =
-      input.type === "adjustment_plus" || input.type === "customer_return"
-        ? input.quantity
-        : input.quantity * -1;
+      input.type === "adjustment_plus" ? input.quantity : input.quantity * -1;
     const nextStock = product.currentStock + normalizedQuantity;
 
     if (nextStock < 0) {
@@ -337,59 +327,31 @@ export const createInventoryAdjustment = async (
       .where(eq(products.id, product.id));
   });
 
-export const createPurchase = (
+export const createPurchase = async (
   input: PurchaseInput,
-  createdByUserId: string
-) => {
-  const totalCost = calculatePurchaseTotal({
-    cardFeeAmount: 0,
-    otherCostsAmount: 0,
-    shippingAmount: 0,
-    supplierAmount: input.supplierAmount,
-  });
-  const unitCost = calculatePurchaseUnitCost(totalCost, input.quantity);
-
-  return db.insert(purchases).values({
-    cardFeeAmount: toMoneyString(0),
-    createdByUserId,
-    notes: input.notes?.trim() || null,
-    otherCostsAmount: toMoneyString(0),
-    purchaseDate: input.purchaseDate ?? new Date(),
-    productId: input.productId,
-    quantity: input.quantity,
-    shippingAmount: toMoneyString(0),
-    status: "registered",
-    supplierAmount: toMoneyString(input.supplierAmount),
-    totalCost: toMoneyString(totalCost),
-    unitCost: toMoneyString(unitCost),
-  });
-};
-
-export const receivePurchase = async (
-  purchaseId: number,
   createdByUserId: string
 ) =>
   db.transaction(async (tx) => {
+    const totalCost = input.supplierAmount;
+    const unitCost = calculatePurchaseUnitCost(totalCost, input.quantity);
+
     const [purchase] = await tx
-      .select()
-      .from(purchases)
-      .where(eq(purchases.id, purchaseId))
-      .limit(1);
-
-    if (!purchase) {
-      throw new Error("Compra nao encontrada.");
-    }
-
-    if (purchase.status === "received") {
-      throw new Error("Essa compra ja foi recebida.");
-    }
-
-    if (purchase.status === "canceled") {
-      throw new Error("Nao e possivel receber uma compra cancelada.");
-    }
+      .insert(purchases)
+      .values({
+        createdByUserId,
+        notes: input.notes?.trim() || null,
+        purchaseDate: input.purchaseDate ?? new Date(),
+        productId: input.productId,
+        quantity: input.quantity,
+        status: "received",
+        supplierAmount: toMoneyString(input.supplierAmount),
+        totalCost: toMoneyString(totalCost),
+        unitCost: toMoneyString(unitCost),
+        receivedAt: new Date(),
+      })
+      .returning();
 
     await lockProductRows(tx, [purchase.productId]);
-
     const [product] = await getLockedProducts(tx, [purchase.productId]);
 
     if (!product) {
@@ -401,7 +363,7 @@ export const receivePurchase = async (
       currentAverageCost: toNumber(product.averageCost),
       currentStock: product.currentStock,
       incomingQuantity: purchase.quantity,
-      incomingTotalCost: toNumber(purchase.totalCost),
+      incomingTotalCost: totalCost,
     });
 
     await tx
@@ -413,25 +375,27 @@ export const receivePurchase = async (
       })
       .where(eq(products.id, product.id));
 
-    await tx
-      .update(purchases)
-      .set({
-        receivedAt: new Date(),
-        status: "received",
-        updatedAt: new Date(),
-      })
-      .where(eq(purchases.id, purchase.id));
-
     await tx.insert(inventoryMovements).values({
       createdByUserId,
-      note: "Entrada gerada pelo recebimento da compra.",
+      note: "Entrada registrada diretamente.",
       productId: product.id,
       purchaseId: purchase.id,
       quantityDelta: purchase.quantity,
       type: "purchase_in",
       unitCostSnapshot: purchase.unitCost,
     });
+
+    return purchase;
   });
+
+export const receivePurchase = (
+  _purchaseId: number,
+  _createdByUserId: string
+) => {
+  throw new Error(
+    "Fluxo de recebimento manual desativado. Use a entrada direta."
+  );
+};
 
 export const cancelPurchase = async (purchaseId: number) => {
   const [purchase] = await db
@@ -659,7 +623,7 @@ export const cancelSale = async (saleId: number, createdByUserId: string) =>
         productId: product.id,
         quantityDelta: item.quantity,
         saleId,
-        type: "cancel_restock",
+        type: "adjustment_plus",
         unitCostSnapshot: item.costSnapshotUnit,
       });
 

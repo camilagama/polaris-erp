@@ -87,8 +87,7 @@ function NewProductDialog({
         <DialogHeader>
           <DialogTitle>Cadastrar produto</DialogTitle>
           <DialogDescription>
-            Só o necessário para começar a vender: identificação, preço, custo e
-            estoque mínimo.
+            Só o necessário para começar a vender: identificação, preço e custo.
           </DialogDescription>
         </DialogHeader>
         <form action={action} className="flex flex-col gap-4">
@@ -123,14 +122,14 @@ function NewProductDialog({
                 type="number"
               />
             </label>
-            <label className={fieldClassName} htmlFor="product-description">
-              <span>Descrição curta</span>
-              <Input id="product-description" name="description" />
-            </label>
           </div>
           <label className={fieldClassName} htmlFor="product-notes">
-            <span>Observações</span>
-            <Textarea id="product-notes" name="notes" />
+            <span>Informações adicionais</span>
+            <Textarea
+              id="product-notes"
+              name="notes"
+              placeholder="Ex: Tamanho, cor, fornecedor preferencial..."
+            />
           </label>
           <DialogFooter>
             <Button type="submit">Salvar produto</Button>
@@ -256,7 +255,7 @@ function NewAdjustmentDialog({
         <DialogHeader>
           <DialogTitle>Ajustar estoque</DialogTitle>
           <DialogDescription>
-            Use apenas para correção, perda, avaria ou devolução.
+            Use apenas para correção rápida, perdas ou retiradas.
           </DialogDescription>
         </DialogHeader>
         <form action={action} className="flex flex-col gap-4">
@@ -281,7 +280,7 @@ function NewAdjustmentDialog({
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className={fieldClassName}>
-              <span>Motivo</span>
+              <span>Tipo de ajuste</span>
               <Select onValueChange={setType} value={type}>
                 <SelectTrigger>
                   <SelectValue />
@@ -289,14 +288,11 @@ function NewAdjustmentDialog({
                 <SelectContent>
                   <SelectGroup>
                     <SelectItem value="adjustment_plus">
-                      Correção positiva
+                      Acréscimo (+)
                     </SelectItem>
                     <SelectItem value="adjustment_minus">
-                      Correção negativa
+                      Retirada (-)
                     </SelectItem>
-                    <SelectItem value="loss">Perda</SelectItem>
-                    <SelectItem value="damage">Avaria</SelectItem>
-                    <SelectItem value="customer_return">Devolução</SelectItem>
                   </SelectGroup>
                 </SelectContent>
               </Select>
@@ -315,8 +311,12 @@ function NewAdjustmentDialog({
             </label>
           </div>
           <label className={fieldClassName} htmlFor="movement-note">
-            <span>Observação</span>
-            <Textarea id="movement-note" name="note" />
+            <span>Motivo / Observação</span>
+            <Textarea
+              id="movement-note"
+              name="note"
+              placeholder="Ex: Quebra, erro de contagem..."
+            />
           </label>
           <DialogFooter>
             <Button type="submit">Salvar ajuste</Button>

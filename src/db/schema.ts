@@ -29,16 +29,10 @@ export const productStatusEnum = pgEnum("product_status", [
   "inactive",
 ]);
 export const purchaseStatusEnum = pgEnum("purchase_status", [
-  "draft",
-  "registered",
   "received",
   "canceled",
 ]);
-export const saleStatusEnum = pgEnum("sale_status", [
-  "draft",
-  "finalized",
-  "canceled",
-]);
+export const saleStatusEnum = pgEnum("sale_status", ["finalized", "canceled"]);
 export const paymentStatusEnum = pgEnum("payment_status", [
   "unpaid",
   "partially_paid",
@@ -66,15 +60,10 @@ export const paymentEventTypeEnum = pgEnum("payment_event_type", [
   "chargeback",
 ]);
 export const inventoryMovementTypeEnum = pgEnum("inventory_movement_type", [
-  "initial_stock",
   "purchase_in",
   "sale_out",
   "adjustment_plus",
   "adjustment_minus",
-  "loss",
-  "damage",
-  "customer_return",
-  "cancel_restock",
 ]);
 
 export const users = pgTable("users", {
@@ -126,7 +115,6 @@ export const verifications = pgTable("verifications", {
 export const products = pgTable("products", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 160 }).notNull(),
-  description: text("description"),
   category: varchar("category", { length: 120 }),
   notes: text("notes"),
   status: productStatusEnum("status").default("active").notNull(),
@@ -150,12 +138,9 @@ export const purchases = pgTable("purchases", {
     .notNull(),
   quantity: integer("quantity").notNull(),
   supplierAmount: money("supplier_amount"),
-  shippingAmount: money("shipping_amount"),
-  cardFeeAmount: money("card_fee_amount"),
-  otherCostsAmount: money("other_costs_amount"),
   totalCost: money("total_cost"),
   unitCost: money("unit_cost"),
-  status: purchaseStatusEnum("status").default("draft").notNull(),
+  status: purchaseStatusEnum("status").default("received").notNull(),
   notes: text("notes"),
   receivedAt: timestamp("received_at"),
   createdByUserId: text("created_by_user_id").references(() => users.id, {

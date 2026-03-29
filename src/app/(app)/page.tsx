@@ -325,36 +325,28 @@ export default async function DashboardPage({
               className="block rounded-xl border border-border/50 bg-background/60 px-4 py-3 transition hover:bg-muted/40"
               href="/produtos"
             >
-              <p className="font-medium text-sm">Produtos</p>
+              <p className="font-medium text-sm">Produtos e Estoque</p>
               <p className="text-muted-foreground text-sm">
-                Cadastre item, defina preco e consulte historico.
+                Hub central: gerencie catálogo, registre entradas e faça
+                ajustes.
               </p>
             </Link>
             <Link
               className="block rounded-xl border border-border/50 bg-background/60 px-4 py-3 transition hover:bg-muted/40"
-              href="/compras"
+              href="/vendas"
             >
-              <p className="font-medium text-sm">Compras</p>
+              <p className="font-medium text-sm">Vendas</p>
               <p className="text-muted-foreground text-sm">
-                Registre entradas e receba mercadoria com custo composto.
-              </p>
-            </Link>
-            <Link
-              className="block rounded-xl border border-border/50 bg-background/60 px-4 py-3 transition hover:bg-muted/40"
-              href="/estoque"
-            >
-              <p className="font-medium text-sm">Estoque</p>
-              <p className="text-muted-foreground text-sm">
-                Faça ajustes manuais e acompanhe alertas de saldo.
+                Lance novas vendas e registre faturamento com baixa automática.
               </p>
             </Link>
             <Link
               className="block rounded-xl border border-border/50 bg-background/60 px-4 py-3 transition hover:bg-muted/40"
               href="/recebimentos"
             >
-              <p className="font-medium text-sm">Caixa</p>
+              <p className="font-medium text-sm">Fluxo de Caixa</p>
               <p className="text-muted-foreground text-sm">
-                Consulte pagamentos, refunds, chargebacks e valores em aberto.
+                Acompanhe o dinheiro: recebimentos, pendências e taxas.
               </p>
             </Link>
           </div>

@@ -14,7 +14,6 @@ import { requireSession } from "@/lib/session";
 
 const createProductSchema = z.object({
   category: z.string().trim().max(120).optional(),
-  description: z.string().trim().max(2000).optional(),
   name: z.string().trim().min(2).max(160),
   notes: z.string().trim().max(2000).optional(),
   salePrice: z.coerce.number().positive(),
@@ -35,13 +34,7 @@ const movementSchema = z.object({
   note: z.string().trim().max(2000).optional(),
   productId: z.coerce.number().int().positive(),
   quantity: z.coerce.number().int().positive(),
-  type: z.enum([
-    "adjustment_plus",
-    "adjustment_minus",
-    "customer_return",
-    "damage",
-    "loss",
-  ]),
+  type: z.enum(["adjustment_plus", "adjustment_minus"]),
 });
 
 const redirectWithResult = (params: Record<string, string | undefined>) =>
@@ -60,7 +53,6 @@ export async function createProductAction(formData: FormData) {
   const session = await requireSession();
   const parsed = createProductSchema.safeParse({
     category: formData.get("category") ?? "",
-    description: formData.get("description") ?? "",
     name: formData.get("name") ?? "",
     notes: formData.get("notes") ?? "",
     salePrice: formData.get("salePrice") ?? 0,

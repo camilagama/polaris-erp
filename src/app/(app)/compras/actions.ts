@@ -4,11 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { buildRedirectPath } from "@/lib/action-feedback";
-import {
-  cancelPurchase,
-  createPurchase,
-  receivePurchase,
-} from "@/lib/domain/operations";
+import { cancelPurchase, createPurchase } from "@/lib/domain/operations";
 import { requireSession } from "@/lib/session";
 
 const createPurchaseSchema = z.object({
@@ -68,42 +64,10 @@ export async function createPurchaseAction(formData: FormData) {
   }
 
   revalidatePath("/");
-  revalidatePath("/compras");
   revalidatePath("/produtos");
+
   return redirectWithResult({
-    message: "Compra registrada.",
-  });
-}
-
-export async function receivePurchaseAction(formData: FormData) {
-  const session = await requireSession();
-  const parsed = purchaseIdSchema.safeParse({
-    purchaseId: formData.get("purchaseId"),
-  });
-
-  if (!parsed.success) {
-    return redirectWithResult({
-      error: "Compra invalida.",
-    });
-  }
-
-  try {
-    await receivePurchase(parsed.data.purchaseId, session.user.id);
-  } catch (error) {
-    return redirectWithResult({
-      error:
-        error instanceof Error
-          ? error.message
-          : "Nao foi possivel receber a compra.",
-    });
-  }
-
-  revalidatePath("/");
-  revalidatePath("/compras");
-  revalidatePath("/estoque");
-  revalidatePath("/produtos");
-  return redirectWithResult({
-    message: "Compra recebida e integrada ao estoque.",
+    message: "Entrada registrada e estoque atualizado.",
   });
 }
 
@@ -115,7 +79,7 @@ export async function cancelPurchaseAction(formData: FormData) {
 
   if (!parsed.success) {
     return redirectWithResult({
-      error: "Compra invalida.",
+      error: "Compra ou entrada invalida.",
     });
   }
 
@@ -124,15 +88,13 @@ export async function cancelPurchaseAction(formData: FormData) {
   } catch (error) {
     return redirectWithResult({
       error:
-        error instanceof Error
-          ? error.message
-          : "Nao foi possivel cancelar a compra.",
+        error instanceof Error ? error.message : "Nao foi possivel cancelar.",
     });
   }
 
-  revalidatePath("/compras");
+  revalidatePath("/");
   revalidatePath("/produtos");
   return redirectWithResult({
-    message: "Compra cancelada.",
+    message: "Operacao cancelada.",
   });
 }

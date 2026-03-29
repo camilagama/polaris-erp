@@ -7,7 +7,6 @@ import {
 import {
   cancelPurchaseAction,
   createPurchaseAction,
-  receivePurchaseAction,
 } from "@/app/(app)/compras/actions";
 import {
   createProductAction,
@@ -48,8 +47,8 @@ import { toNumber } from "@/lib/domain/calculations";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 
 const movementTypeLabels = {
-  adjustment_minus: "Correção negativa",
-  adjustment_plus: "Correção positiva",
+  adjustment_minus: "Retirada",
+  adjustment_plus: "Acréscimo",
   cancel_restock: "Estorno",
   customer_return: "Devolução",
   damage: "Avaria",
@@ -58,22 +57,6 @@ const movementTypeLabels = {
   purchase_in: "Entrada",
   sale_out: "Venda",
 } as const;
-
-const getProductRowState = ({
-  lowStockThreshold,
-  product,
-}: {
-  lowStockThreshold: number;
-  product: typeof products.$inferSelect;
-}) => {
-  const isLowStock =
-    product.status === "active" && product.currentStock <= lowStockThreshold;
-
-  return {
-    isLowStock,
-    minimum: lowStockThreshold,
-  };
-};
 
 export default async function ProductsPage({
   searchParams,
@@ -130,45 +113,48 @@ export default async function ProductsPage({
           }))}
         />
       }
-      description="Produtos virou o centro da operação. Você cadastra o item, registra entrada e faz ajustes no mesmo lugar."
-      eyebrow="Catálogo"
-      title="Produtos"
+      description="Gerencie seu catálogo, registre entradas e acompanhe o giro de estoque em tempo real."
+      eyebrow="Operação"
+      title="Produtos e Estoque"
     >
       <FeedbackBanner error={error} message={message} />
 
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
-          <CardHeader>
-            <CardDescription>Produtos ativos</CardDescription>
-            <CardTitle>{activeProducts.length}</CardTitle>
+          <CardHeader className="pb-2">
+            <CardDescription>Itens ativos</CardDescription>
+            <CardTitle className="text-2xl">{activeProducts.length}</CardTitle>
           </CardHeader>
         </Card>
         <Card>
-          <CardHeader>
+          <CardHeader className="pb-2">
             <CardDescription>Estoque baixo</CardDescription>
-            <CardTitle>{lowStockProducts.length}</CardTitle>
+            <CardTitle className="text-2xl text-destructive">
+              {lowStockProducts.length}
+            </CardTitle>
           </CardHeader>
         </Card>
         <Card>
-          <CardHeader>
-            <CardDescription>Capital em estoque</CardDescription>
-            <CardTitle>{formatCurrency(stockValue)}</CardTitle>
+          <CardHeader className="pb-2">
+            <CardDescription>Valor em mãos</CardDescription>
+            <CardTitle className="text-2xl">
+              {formatCurrency(stockValue)}
+            </CardTitle>
           </CardHeader>
         </Card>
         <Card>
-          <CardHeader>
-            <CardDescription>Entradas recentes</CardDescription>
-            <CardTitle>{purchaseRows.length}</CardTitle>
+          <CardHeader className="pb-2">
+            <CardDescription>Entradas (mês)</CardDescription>
+            <CardTitle className="text-2xl">{purchaseRows.length}</CardTitle>
           </CardHeader>
         </Card>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Lista de produtos</CardTitle>
+          <CardTitle>Catálogo e Disponibilidade</CardTitle>
           <CardDescription>
-            Menos telas e menos ruído: status, estoque, custo e preço em uma
-            tabela só.
+            Preços de venda e custos médios atualizados automaticamente.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -178,43 +164,53 @@ export default async function ProductsPage({
                 <TableRow>
                   <TableHead>Produto</TableHead>
                   <TableHead>Categoria</TableHead>
-                  <TableHead>Estoque</TableHead>
-                  <TableHead>Custo</TableHead>
-                  <TableHead>Preço</TableHead>
+                  <TableHead>Em estoque</TableHead>
+                  <TableHead>Custo médio</TableHead>
+                  <TableHead>Preço venda</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Atualizado</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {productRows.map((product) => {
-                  const { isLowStock } = getProductRowState({
-                    lowStockThreshold,
-                    product,
-                  });
+                  const isLowStock =
+                    product.status === "active" &&
+                    product.currentStock <= lowStockThreshold;
 
                   return (
                     <TableRow key={product.id}>
                       <TableCell>
-                        <div className="flex flex-col gap-1">
-                          <span className="font-medium">{product.name}</span>
-                        </div>
+                        <span className="font-semibold">{product.name}</span>
                       </TableCell>
                       <TableCell>{product.category || "-"}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <span>{product.currentStock}</span>
-                          {isLowStock ? (
-                            <Badge variant="destructive">Baixo</Badge>
-                          ) : null}
+                          <span
+                            className={
+                              isLowStock ? "font-bold text-destructive" : ""
+                            }
+                          >
+                            {product.currentStock}
+                          </span>
+                          {isLowStock && (
+                            <Badge
+                              className="h-5 px-1.5 text-[10px] uppercase"
+                              variant="destructive"
+                            >
+                              Baixo
+                            </Badge>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>
                         {formatCurrency(product.averageCost)}
                       </TableCell>
-                      <TableCell>{formatCurrency(product.salePrice)}</TableCell>
+                      <TableCell className="font-medium text-emerald-600 dark:text-emerald-400">
+                        {formatCurrency(product.salePrice)}
+                      </TableCell>
                       <TableCell>
                         <Badge
+                          className="font-normal"
                           variant={
                             product.status === "active"
                               ? "secondary"
@@ -224,9 +220,8 @@ export default async function ProductsPage({
                           {product.status === "active" ? "Ativo" : "Inativo"}
                         </Badge>
                       </TableCell>
-                      <TableCell>{formatDateTime(product.updatedAt)}</TableCell>
                       <TableCell>
-                        <div className="flex justify-end gap-2">
+                        <div className="flex justify-end gap-2 text-right">
                           <UpdatePriceDialog
                             action={updateProductCommercialDataAction}
                             productId={product.id}
@@ -248,7 +243,7 @@ export default async function ProductsPage({
                                   : "active"
                               }
                             />
-                            <Button size="sm" type="submit" variant="outline">
+                            <Button size="sm" type="submit" variant="ghost">
                               {product.status === "active"
                                 ? "Inativar"
                                 : "Ativar"}
@@ -261,17 +256,20 @@ export default async function ProductsPage({
                 })}
               </TableBody>
             </Table>
-          ) : null}
+          ) : (
+            <div className="py-12 text-center text-muted-foreground">
+              Nenhum produto cadastrado. Comece criando um novo item.
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 xl:grid-cols-2">
+      <div className="grid gap-6 xl:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Entradas recentes</CardTitle>
+            <CardTitle>Histórico de Entradas</CardTitle>
             <CardDescription>
-              “Compra” agora é só entrada de mercadoria, sem campos financeiros
-              desnecessários.
+              Últimas reposições e aquisições de estoque.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -282,68 +280,44 @@ export default async function ProductsPage({
                     <TableHead>Data</TableHead>
                     <TableHead>Produto</TableHead>
                     <TableHead>Qtd.</TableHead>
-                    <TableHead>Custo total</TableHead>
-                    <TableHead>Custo unitário</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>Vlr. Total</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {purchaseRows.map((purchase) => (
                     <TableRow key={purchase.id}>
-                      <TableCell>
+                      <TableCell className="text-xs">
                         {formatDateTime(purchase.purchaseDate)}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="max-w-[140px] truncate font-medium">
                         {productMap.get(purchase.productId)?.name ||
-                          `Produto #${purchase.productId}`}
+                          `Item #${purchase.productId}`}
                       </TableCell>
                       <TableCell>{purchase.quantity}</TableCell>
                       <TableCell>
                         {formatCurrency(purchase.totalCost)}
                       </TableCell>
-                      <TableCell>{formatCurrency(purchase.unitCost)}</TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            purchase.status === "received"
-                              ? "secondary"
-                              : "outline"
-                          }
-                        >
-                          {purchase.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex justify-end gap-2">
-                          {purchase.status === "received" ||
-                          purchase.status === "canceled" ? null : (
-                            <>
-                              <form action={receivePurchaseAction}>
-                                <input
-                                  name="purchaseId"
-                                  type="hidden"
-                                  value={purchase.id}
-                                />
-                                <Button
-                                  size="sm"
-                                  type="submit"
-                                  variant="outline"
-                                >
-                                  Receber
-                                </Button>
-                              </form>
-                              <form action={cancelPurchaseAction}>
-                                <input
-                                  name="purchaseId"
-                                  type="hidden"
-                                  value={purchase.id}
-                                />
-                                <Button size="sm" type="submit" variant="ghost">
-                                  Cancelar
-                                </Button>
-                              </form>
-                            </>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end">
+                          {purchase.status === "canceled" ? (
+                            <Badge variant="outline">Cancelada</Badge>
+                          ) : (
+                            <form action={cancelPurchaseAction}>
+                              <input
+                                name="purchaseId"
+                                type="hidden"
+                                value={purchase.id}
+                              />
+                              <Button
+                                className="h-8 w-8 text-destructive"
+                                size="icon"
+                                type="submit"
+                                variant="ghost"
+                              >
+                                <span className="sr-only">Cancelar</span>✕
+                              </Button>
+                            </form>
                           )}
                         </div>
                       </TableCell>
@@ -352,8 +326,8 @@ export default async function ProductsPage({
                 </TableBody>
               </Table>
             ) : (
-              <p className="text-muted-foreground text-sm">
-                Nenhuma entrada registrada ainda.
+              <p className="py-8 text-center text-muted-foreground text-sm">
+                Sem registros de entrada.
               </p>
             )}
           </CardContent>
@@ -361,10 +335,9 @@ export default async function ProductsPage({
 
         <Card>
           <CardHeader>
-            <CardTitle>Movimentações recentes</CardTitle>
+            <CardTitle>Movimentação Recente</CardTitle>
             <CardDescription>
-              Trilho operacional para conferência rápida de perdas, devoluções,
-              ajustes e vendas.
+              Acompanhamento de saídas, ajustes e estornos.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -372,45 +345,57 @@ export default async function ProductsPage({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Produto</TableHead>
                     <TableHead>Tipo</TableHead>
+                    <TableHead>Produto</TableHead>
                     <TableHead>Qtd.</TableHead>
-                    <TableHead>Obs.</TableHead>
+                    <TableHead>Motivo</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {movementRows.map((movement) => (
                     <TableRow key={movement.id}>
                       <TableCell>
-                        {formatDateTime(movement.occurredAt)}
+                        <Badge className="font-normal" variant="outline">
+                          {movementTypeLabels[movement.type]}
+                        </Badge>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="max-w-[120px] truncate">
                         {productMap.get(movement.productId)?.name ||
-                          `Produto #${movement.productId}`}
+                          `Item #${movement.productId}`}
                       </TableCell>
-                      <TableCell>{movementTypeLabels[movement.type]}</TableCell>
-                      <TableCell>{movement.quantityDelta}</TableCell>
-                      <TableCell>{movement.note || "-"}</TableCell>
+                      <TableCell
+                        className={
+                          movement.quantityDelta < 0
+                            ? "font-medium text-destructive"
+                            : "font-medium text-emerald-600"
+                        }
+                      >
+                        {movement.quantityDelta > 0
+                          ? `+${movement.quantityDelta}`
+                          : movement.quantityDelta}
+                      </TableCell>
+                      <TableCell className="max-w-[140px] truncate text-muted-foreground text-xs italic">
+                        {movement.note || "-"}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             ) : (
-              <p className="text-muted-foreground text-sm">
-                Nenhuma movimentação registrada ainda.
+              <p className="py-8 text-center text-muted-foreground text-sm">
+                Sem histórico de movimentação.
               </p>
             )}
           </CardContent>
         </Card>
       </div>
 
-      <div className="flex gap-2">
-        <Button asChild variant="outline">
-          <Link href="/vendas">Ir para vendas</Link>
+      <div className="flex flex-wrap gap-4 pt-4">
+        <Button asChild className="min-w-[160px]" variant="outline">
+          <Link href="/vendas">Gerenciar Vendas</Link>
         </Button>
-        <Button asChild variant="outline">
-          <Link href="/recebimentos">Ir para caixa</Link>
+        <Button asChild className="min-w-[160px]" variant="outline">
+          <Link href="/recebimentos">Fluxo de Caixa</Link>
         </Button>
       </div>
     </PageLayout>
