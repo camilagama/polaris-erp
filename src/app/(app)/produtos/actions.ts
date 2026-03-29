@@ -17,11 +17,6 @@ const createProductSchema = z.object({
   unitCost: z.coerce.number().positive(),
 });
 
-const statusSchema = z.object({
-  productId: z.coerce.number().int().positive(),
-  status: z.enum(["active", "inactive"]),
-});
-
 const pricingSchema = z.object({
   productId: z.coerce.number().int().positive(),
   salePrice: z.coerce.number().positive(),
@@ -69,28 +64,6 @@ export async function createProductAction(formData: FormData) {
       error: "Nao foi possivel criar o produto.",
     });
   }
-}
-
-export async function updateProductStatusAction(formData: FormData) {
-  await requireSession();
-  const parsed = statusSchema.safeParse({
-    productId: formData.get("productId"),
-    status: formData.get("status"),
-  });
-
-  if (!parsed.success) {
-    return redirectWithResult({
-      error: "Nao foi possivel atualizar o status do produto.",
-    });
-  }
-
-  await db
-    .update(products)
-    .set({ status: parsed.data.status, updatedAt: new Date() })
-    .where(eq(products.id, parsed.data.productId));
-
-  revalidatePath("/produtos");
-  return redirectWithResult({ message: "Status do produto atualizado." });
 }
 
 export async function updateProductCommercialDataAction(formData: FormData) {

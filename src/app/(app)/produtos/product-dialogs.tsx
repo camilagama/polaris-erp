@@ -129,7 +129,7 @@ export function UpdatePriceDialog({
       <DialogTrigger asChild>
         <Button size="sm" variant="ghost">
           <HugeiconsIcon data-icon="inline-start" icon={Edit02Icon} />
-          Preço
+          Editar
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-md">

@@ -3,7 +3,6 @@ import {
   boolean,
   integer,
   numeric,
-  pgEnum,
   pgTable,
   serial,
   text,
@@ -23,11 +22,6 @@ const money = (name: string) =>
   })
     .default("0")
     .notNull();
-
-export const productStatusEnum = pgEnum("product_status", [
-  "active",
-  "inactive",
-]);
 
 export const users = pgTable("users", {
   id: text("id").primaryKey(),
@@ -80,11 +74,9 @@ export const products = pgTable("products", {
   name: varchar("name", { length: 160 }).notNull(),
   category: varchar("category", { length: 120 }),
   notes: text("notes"),
-  status: productStatusEnum("status").default("active").notNull(),
   currentStock: integer("current_stock").default(0).notNull(),
   averageCost: money("average_cost"),
   salePrice: money("sale_price"),
-  lastSoldAt: timestamp("last_sold_at"),
   createdByUserId: text("created_by_user_id").references(() => users.id, {
     onDelete: "set null",
   }),
@@ -95,7 +87,6 @@ export const systemSettings = pgTable("system_settings", {
   id: serial("id").primaryKey(),
   targetMarginPercent: money("target_margin_percent"),
   minimumMarginPercent: money("minimum_margin_percent"),
-  lowStockThreshold: integer("low_stock_threshold").default(2).notNull(),
   staleProductDays: integer("stale_product_days").default(45).notNull(),
   estimatedFeePercent: money("estimated_fee_percent"),
   ...timestamps,

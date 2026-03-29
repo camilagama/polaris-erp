@@ -26,7 +26,7 @@ export default async function SettingsPage({
 
   return (
     <PageLayout
-      description="Parametros simples da V1 para guiar estoque critico, margem alvo e leitura operacional do dashboard."
+      description="Parametros de margem e taxas para guiar análises operacionais."
       eyebrow="Parametros"
       title="Configuracoes"
     >
@@ -74,7 +74,7 @@ export default async function SettingsPage({
               type="number"
             />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2 md:col-span-2">
             <label
               className="font-medium text-sm"
               htmlFor="estimatedFeePercent"
@@ -88,34 +88,6 @@ export default async function SettingsPage({
               min="0"
               name="estimatedFeePercent"
               step="0.01"
-              type="number"
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="font-medium text-sm" htmlFor="lowStockThreshold">
-              Limite de estoque critico
-            </label>
-            <input
-              className={inputClassName}
-              defaultValue={settings?.lowStockThreshold ?? 2}
-              id="lowStockThreshold"
-              min="0"
-              name="lowStockThreshold"
-              step="1"
-              type="number"
-            />
-          </div>
-          <div className="space-y-2 md:col-span-2">
-            <label className="font-medium text-sm" htmlFor="staleProductDays">
-              Dias para considerar produto parado
-            </label>
-            <input
-              className={inputClassName}
-              defaultValue={settings?.staleProductDays ?? 45}
-              id="staleProductDays"
-              min="1"
-              name="staleProductDays"
-              step="1"
               type="number"
             />
           </div>
