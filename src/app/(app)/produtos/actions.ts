@@ -1,15 +1,12 @@
 "use server";
 
+import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { db } from "@/db";
+import { products } from "@/db/schema";
 import { buildRedirectPath } from "@/lib/action-feedback";
-import {
-  createInventoryAdjustment,
-  createProduct,
-  updateProductCommercialData,
-  updateProductStatus,
-} from "@/lib/domain/operations";
 import { requireSession } from "@/lib/session";
 
 const createProductSchema = z.object({
@@ -30,24 +27,8 @@ const pricingSchema = z.object({
   salePrice: z.coerce.number().positive(),
 });
 
-const movementSchema = z.object({
-  note: z.string().trim().max(2000).optional(),
-  productId: z.coerce.number().int().positive(),
-  quantity: z.coerce.number().int().positive(),
-  type: z.enum(["adjustment_plus", "adjustment_minus"]),
-});
-
 const redirectWithResult = (params: Record<string, string | undefined>) =>
   redirect(buildRedirectPath("/produtos", params));
-
-const redirectWithProductResult = (
-  productId: number,
-  params: Record<string, string | undefined>
-) =>
-  redirectWithResult({
-    productId: String(productId),
-    ...params,
-  });
 
 export async function createProductAction(formData: FormData) {
   const session = await requireSession();
@@ -66,20 +47,26 @@ export async function createProductAction(formData: FormData) {
   }
 
   try {
-    const product = await createProduct(parsed.data, session.user.id);
+    const category =
+      parsed.data.category && parsed.data.category.trim() !== ""
+        ? parsed.data.category.trim()
+        : null;
 
-    revalidatePath("/");
-    revalidatePath("/produtos");
-    revalidatePath("/vendas");
-    return redirectWithProductResult(product.id, {
-      message: "Produto criado com sucesso.",
+    await db.insert(products).values({
+      averageCost: String(parsed.data.unitCost),
+      category,
+      createdByUserId: session.user.id,
+      currentStock: 0,
+      name: parsed.data.name,
+      notes: parsed.data.notes,
+      salePrice: String(parsed.data.salePrice),
     });
-  } catch (error) {
+
+    revalidatePath("/produtos");
+    return redirectWithResult({ message: "Produto criado com sucesso." });
+  } catch {
     return redirectWithResult({
-      error:
-        error instanceof Error
-          ? error.message
-          : "Nao foi possivel criar o produto.",
+      error: "Nao foi possivel criar o produto.",
     });
   }
 }
@@ -97,13 +84,13 @@ export async function updateProductStatusAction(formData: FormData) {
     });
   }
 
-  await updateProductStatus(parsed.data.productId, parsed.data.status);
+  await db
+    .update(products)
+    .set({ status: parsed.data.status, updatedAt: new Date() })
+    .where(eq(products.id, parsed.data.productId));
 
-  revalidatePath("/");
   revalidatePath("/produtos");
-  return redirectWithProductResult(parsed.data.productId, {
-    message: "Status do produto atualizado.",
-  });
+  return redirectWithResult({ message: "Status do produto atualizado." });
 }
 
 export async function updateProductCommercialDataAction(formData: FormData) {
@@ -119,55 +106,14 @@ export async function updateProductCommercialDataAction(formData: FormData) {
     });
   }
 
-  try {
-    await updateProductCommercialData(parsed.data);
-  } catch (error) {
-    return redirectWithProductResult(parsed.data.productId, {
-      error:
-        error instanceof Error
-          ? error.message
-          : "Nao foi possivel atualizar os dados do produto.",
-    });
-  }
+  await db
+    .update(products)
+    .set({
+      salePrice: String(parsed.data.salePrice),
+      updatedAt: new Date(),
+    })
+    .where(eq(products.id, parsed.data.productId));
 
-  revalidatePath("/");
   revalidatePath("/produtos");
-  revalidatePath("/vendas");
-  return redirectWithProductResult(parsed.data.productId, {
-    message: "Dados do produto atualizados.",
-  });
-}
-
-export async function createProductMovementAction(formData: FormData) {
-  const session = await requireSession();
-  const parsed = movementSchema.safeParse({
-    note: formData.get("note") ?? "",
-    productId: formData.get("productId"),
-    quantity: formData.get("quantity"),
-    type: formData.get("type"),
-  });
-
-  if (!parsed.success) {
-    return redirectWithResult({
-      error: "Revise os dados da operacao antes de salvar.",
-    });
-  }
-
-  try {
-    await createInventoryAdjustment(parsed.data, session.user.id);
-  } catch (error) {
-    return redirectWithProductResult(parsed.data.productId, {
-      error:
-        error instanceof Error
-          ? error.message
-          : "Nao foi possivel registrar a operacao do produto.",
-    });
-  }
-
-  revalidatePath("/");
-  revalidatePath("/produtos");
-  revalidatePath("/vendas");
-  return redirectWithProductResult(parsed.data.productId, {
-    message: "Operacao do produto registrada.",
-  });
+  return redirectWithResult({ message: "Preco atualizado." });
 }
