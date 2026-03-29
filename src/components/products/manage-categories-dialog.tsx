@@ -208,7 +208,7 @@ export function ManageCategoriesDialog() {
               />
             </div>
             <Button
-              className="h-10 w-10 shrink-0"
+              className="h-7 w-7 shrink-0"
               onClick={handleCreate}
               size="icon"
             >
