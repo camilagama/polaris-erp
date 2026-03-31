@@ -71,6 +71,13 @@
       "when": 1774986600000,
       "tag": "20260331195000_simplify_write_off_reasons",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1774990800000,
+      "tag": "20260331210000_add_sales_module",
+      "breakpoints": true
     }
   ]
 }

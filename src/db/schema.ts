@@ -94,6 +94,8 @@ export const systemSettings = pgTable("system_settings", {
   ...timestamps,
 });
 
+export const saleStatusEnum = pgEnum("sale_status", ["completed", "cancelled"]);
+
 export const productWriteOffReasonEnum = pgEnum("product_write_off_reason", [
   "adjustment",
   "operational",
@@ -191,5 +193,78 @@ export const productStockWriteOffs = pgTable(
       table.productId,
       table.happenedOn
     ),
+  ]
+);
+
+export const sales = pgTable(
+  "sales",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    occurredOn: date("occurred_on").default(sql`CURRENT_DATE`).notNull(),
+    status: saleStatusEnum("status").default("completed").notNull(),
+    customerName: text("customer_name"),
+    notes: text("notes"),
+    totalAmount: decimal("total_amount", { precision: 12, scale: 2 })
+      .notNull()
+      .default("0"),
+    cancelledAt: timestamp("cancelled_at"),
+    ...timestamps,
+  },
+  (table) => [
+    check("sales_total_amount_non_negative", sql`${table.totalAmount} >= 0`),
+    index("sales_occurred_on_idx").on(table.occurredOn),
+    index("sales_status_idx").on(table.status),
+  ]
+);
+
+export const saleItems = pgTable(
+  "sale_items",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    saleId: text("sale_id")
+      .notNull()
+      .references(() => sales.id, { onDelete: "cascade" }),
+    productId: text("product_id")
+      .notNull()
+      .references(() => products.id, { onDelete: "cascade" }),
+    productNameSnapshot: text("product_name_snapshot").notNull(),
+    quantity: integer("quantity").notNull(),
+    unitPriceSnapshot: decimal("unit_price_snapshot", {
+      precision: 12,
+      scale: 2,
+    })
+      .notNull()
+      .default("0"),
+    unitCostSnapshot: decimal("unit_cost_snapshot", {
+      precision: 12,
+      scale: 2,
+    })
+      .notNull()
+      .default("0"),
+    lineTotal: decimal("line_total", {
+      precision: 12,
+      scale: 2,
+    })
+      .notNull()
+      .default("0"),
+    ...timestamps,
+  },
+  (table) => [
+    check("sale_items_quantity_positive", sql`${table.quantity} > 0`),
+    check(
+      "sale_items_unit_price_snapshot_non_negative",
+      sql`${table.unitPriceSnapshot} >= 0`
+    ),
+    check(
+      "sale_items_unit_cost_snapshot_non_negative",
+      sql`${table.unitCostSnapshot} >= 0`
+    ),
+    check("sale_items_line_total_non_negative", sql`${table.lineTotal} >= 0`),
+    index("sale_items_sale_id_idx").on(table.saleId),
+    index("sale_items_product_id_idx").on(table.productId),
   ]
 );

@@ -1,6 +1,6 @@
 # Documento de Regras de Negocio
 ## Plataforma Web de Gestao de Produtos para Revenda
-### Versao: V1.1 (estado atual em 31/03/2026)
+### Versao: V1.2 (estado atual em 31/03/2026)
 
 ## 1. Objetivo atual do sistema
 
@@ -9,6 +9,7 @@ O sistema atual tem foco operacional em:
 - cadastro e manutencao de produtos
 - controle de entradas e baixas de estoque
 - controle de custo medio por produto
+- registro de vendas concluidas com baixa de estoque
 - configuracao de margens para sugestao de preco
 
 A aplicacao permanece gerencial e nao fiscal/contabil.
@@ -20,6 +21,7 @@ A aplicacao permanece gerencial e nao fiscal/contabil.
 - autenticacao e area protegida
 - produtos
 - estoque (entrada e baixa)
+- vendas
 - configuracoes de catalogo e margens
 
 ### 2.2 Funcionalidades disponiveis
@@ -30,6 +32,8 @@ A aplicacao permanece gerencial e nao fiscal/contabil.
 - exclusao fisica de produto
 - registro de entrada de estoque com custo unitario e data
 - registro de baixa de estoque com motivo simplificado e observacoes
+- registro de venda com multiplos itens
+- cancelamento de venda com estorno automatico de estoque
 - historico de movimentacoes por produto
 - calculo de custo medio movel
 - sugestao de preco minimo e ideal por markup
@@ -40,7 +44,6 @@ A aplicacao permanece gerencial e nao fiscal/contabil.
 Nao esta implementado neste momento:
 
 - compras como modulo dedicado
-- vendas como modulo dedicado
 - recebimentos como modulo dedicado
 - dashboard com indicadores financeiros consolidados
 - anexos de documentos/fotos
@@ -104,6 +107,25 @@ Regra de detalhamento:
 
 - detalhes especificos (ex.: avaria, perda, devolucao, estorno) devem ir em observacoes
 
+### 5.4 Venda (MVP)
+
+Evento de saida comercial com:
+
+- data da venda
+- cliente opcional (texto livre)
+- 1 ou mais itens
+- quantidade inteira por item
+- preco unitario por item
+- total calculado por snapshot dos itens
+
+Regras do MVP:
+
+- venda nasce como `completed`
+- venda concluida reduz estoque imediatamente
+- venda nao e excluida fisicamente
+- correcao operacional ocorre por cancelamento
+- cancelamento muda status para `cancelled` e estorna estoque
+
 ## 6. Regras oficiais de estoque
 
 1. Estoque e agregado por produto.
@@ -112,6 +134,7 @@ Regra de detalhamento:
 4. Nao ha sobrescrita manual de saldo fora desses fluxos.
 5. Quantidade de entrada e baixa deve ser inteira.
 6. Datas recebidas na borda devem estar no formato ISO `YYYY-MM-DD`.
+7. Venda concluida reduz estoque; cancelamento de venda estorna estoque.
 
 ## 7. Regra de custo medio
 
@@ -174,14 +197,15 @@ Implicacao operacional:
 - cobertura mais ampla de testes de integracao de actions
 - dashboard financeiro consolidado
 
-## 12. Criterio para iniciar planejamento de vendas
+## 12. Criterio para iniciar planejamento de recebimentos
 
-Antes do planejamento do modulo de vendas, manter o estoque com:
+Antes do planejamento do modulo de recebimentos, manter vendas com:
 
 1. regras e documentacao alinhadas
 2. validacoes de borda estaveis
-3. testes de integracao das actions de estoque
+3. testes de integracao para criacao e cancelamento
 4. comportamento concorrente minimamente coberto em testes
+5. historico de produto exibindo eventos de venda e estorno
 
 ---
 

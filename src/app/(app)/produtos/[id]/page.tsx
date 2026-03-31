@@ -15,6 +15,7 @@ import { listCategoriesWithUsage } from "@/features/catalog/server";
 import { buildProductInventorySummary } from "@/features/products/history";
 import {
   getProductByIdAction,
+  getProductSalesByProductIdAction,
   getProductStockEntriesByProductIdAction,
   getProductStockWriteOffsByProductIdAction,
 } from "../actions";
@@ -32,16 +33,21 @@ export default async function ProdutoDetalhePage(
   props: PageProps<"/produtos/[id]">
 ) {
   const { id } = await props.params;
-  const [product, stockEntries, writeOffs, categories] = await Promise.all([
-    getProductByIdAction(id),
-    getProductStockEntriesByProductIdAction(id),
-    getProductStockWriteOffsByProductIdAction(id),
-    listCategoriesWithUsage(),
-  ]);
+  const [product, stockEntries, writeOffs, sales, categories] =
+    await Promise.all([
+      getProductByIdAction(id),
+      getProductStockEntriesByProductIdAction(id),
+      getProductStockWriteOffsByProductIdAction(id),
+      getProductSalesByProductIdAction(id),
+      listCategoriesWithUsage(),
+    ]);
 
   if (!product) {
     notFound();
   }
+
+  const linkedSalesCount = new Set(sales.map((saleItem) => saleItem.saleId))
+    .size;
 
   const averageCost = Number(product.costPrice);
   const inventorySummary = buildProductInventorySummary({
@@ -53,6 +59,18 @@ export default async function ProdutoDetalhePage(
       id: entry.id,
       quantity: entry.quantity,
       unitCost: Number(entry.unitCost),
+    })),
+    sales: sales.map((saleItem) => ({
+      cancelledAt: saleItem.cancelledAt
+        ? saleItem.cancelledAt.toISOString()
+        : null,
+      createdAt: saleItem.createdAt.toISOString(),
+      date: saleItem.occurredOn,
+      id: saleItem.id,
+      quantity: saleItem.quantity,
+      saleId: saleItem.saleId,
+      status: saleItem.status,
+      unitCost: Number(saleItem.unitCostSnapshot),
     })),
     writeOffs: writeOffs.map((writeOff) => ({
       createdAt: writeOff.createdAt.toISOString(),
@@ -82,6 +100,7 @@ export default async function ProdutoDetalhePage(
             id: category.id,
             name: category.name,
           }))}
+          linkedSalesCount={linkedSalesCount}
           product={product}
         />
       </div>
@@ -193,13 +212,31 @@ export default async function ProdutoDetalhePage(
                       </div>
                       <div className="shrink-0 text-right text-muted-foreground">
                         <p>{formatCurrency(item.unitCost)}</p>
-                        {item.variant === "writeOff" ? (
-                          <p className="text-destructive">
-                            Prej. {formatCurrency(item.totalValue)}
-                          </p>
-                        ) : (
-                          <p>{formatCurrency(item.totalValue)}</p>
-                        )}
+                        {(() => {
+                          if (item.variant === "writeOff") {
+                            return (
+                              <p className="text-destructive">
+                                Prej. {formatCurrency(item.totalValue)}
+                              </p>
+                            );
+                          }
+
+                          if (item.variant === "sale") {
+                            return (
+                              <p>Saida {formatCurrency(item.totalValue)}</p>
+                            );
+                          }
+
+                          if (item.variant === "saleReversal") {
+                            return (
+                              <p className="text-primary">
+                                Estorno {formatCurrency(item.totalValue)}
+                              </p>
+                            );
+                          }
+
+                          return <p>{formatCurrency(item.totalValue)}</p>;
+                        })()}
                       </div>
                     </div>
                   ))

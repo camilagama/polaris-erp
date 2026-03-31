@@ -1,6 +1,6 @@
 "use server";
 
-import { asc, desc, eq, sql } from "drizzle-orm";
+import { asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { refresh, revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/db";
@@ -9,6 +9,8 @@ import {
   productStockEntries,
   productStockWriteOffs,
   products,
+  saleItems,
+  sales,
 } from "@/db/schema";
 import { getProductCategoryById } from "@/features/catalog/server";
 import {
@@ -69,6 +71,7 @@ const stockWriteOffSchema = z.object({
 const revalidateProducts = () => {
   revalidatePath("/produtos");
   revalidatePath("/configuracoes");
+  revalidatePath("/vendas");
   refresh();
 };
 
@@ -132,6 +135,17 @@ export interface ProductStockWriteOffItem {
   productId: string;
   quantity: number;
   reason: "adjustment" | "operational";
+  unitCostSnapshot: string;
+}
+
+export interface ProductSaleHistoryItem {
+  cancelledAt: Date | null;
+  createdAt: Date;
+  id: string;
+  occurredOn: string;
+  quantity: number;
+  saleId: string;
+  status: "cancelled" | "completed";
   unitCostSnapshot: string;
 }
 
@@ -250,6 +264,32 @@ export async function getProductStockWriteOffsByProductIdAction(
     ...writeOff,
     quantity: Number(writeOff.quantity),
     reason: writeOff.reason as ProductStockWriteOffItem["reason"],
+  }));
+}
+
+export async function getProductSalesByProductIdAction(
+  productId: string
+): Promise<ProductSaleHistoryItem[]> {
+  const rows = await db
+    .select({
+      cancelledAt: sales.cancelledAt,
+      createdAt: saleItems.createdAt,
+      id: saleItems.id,
+      occurredOn: sales.occurredOn,
+      quantity: saleItems.quantity,
+      saleId: sales.id,
+      status: sales.status,
+      unitCostSnapshot: saleItems.unitCostSnapshot,
+    })
+    .from(saleItems)
+    .innerJoin(sales, eq(saleItems.saleId, sales.id))
+    .where(eq(saleItems.productId, productId))
+    .orderBy(desc(sales.occurredOn), desc(saleItems.createdAt));
+
+  return rows.map((row) => ({
+    ...row,
+    quantity: Number(row.quantity),
+    status: row.status as ProductSaleHistoryItem["status"],
   }));
 }
 
@@ -430,6 +470,24 @@ export async function unarchiveProductAction(id: string) {
 
 export async function deleteProductAction(id: string) {
   await requireActionSession();
-  await db.delete(products).where(eq(products.id, id));
+
+  await db.transaction(async (tx) => {
+    const relatedSales = await tx
+      .selectDistinct({ saleId: saleItems.saleId })
+      .from(saleItems)
+      .where(eq(saleItems.productId, id));
+
+    if (relatedSales.length > 0) {
+      await tx.delete(sales).where(
+        inArray(
+          sales.id,
+          relatedSales.map((item) => item.saleId)
+        )
+      );
+    }
+
+    await tx.delete(products).where(eq(products.id, id));
+  });
+
   revalidateProducts();
 }

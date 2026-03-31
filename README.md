@@ -1,6 +1,6 @@
 # DG Imports
 
-Aplicacao interna em Next.js 16 para operacao de revenda, com autenticacao, modulo de produtos/estoque e configuracoes operacionais.
+Aplicacao interna em Next.js 16 para operacao de revenda, com autenticacao, modulos de produtos/estoque, vendas e configuracoes operacionais.
 
 ## Stack
 
@@ -33,6 +33,8 @@ Fluxos de dominio ja modelados:
 - `products`: catalogo com custo medio, preco de venda e estoque
 - `product_stock_entries`: entradas de estoque
 - `product_stock_write_offs`: baixas de estoque
+- `sales`: vendas concluidas e canceladas
+- `sale_items`: itens por venda com snapshots de preco e custo
 
 ## Escopo atual
 
@@ -41,11 +43,11 @@ Disponivel hoje:
 - autenticacao e area protegida
 - produtos
 - estoque (entrada e baixa)
+- vendas (registro e cancelamento com estorno)
 - configuracoes de catalogo e markup
 
 Ainda nao implementado:
 
-- modulo de vendas
 - modulo de recebimentos
 - dashboard financeiro consolidado
 
@@ -57,4 +59,8 @@ Ainda nao implementado:
 - Preco abaixo do minimo gera alerta visual, mas continua permitido.
 - As baixas de estoque usam motivos simplificados (`adjustment` e `operational`) com detalhamento em observacoes.
 - Datas das actions de estoque devem estar no formato ISO (`YYYY-MM-DD`).
+- Vendas no MVP sao registradas como concluidas na hora, com baixa imediata de estoque.
+- Cancelamento de venda estorna automaticamente as quantidades para o estoque.
+- Venda nao possui exclusao fisica no MVP; o ajuste e feito por cancelamento.
+- Excluir um produto remove tambem vendas vinculadas a ele por decisao operacional atual.
 

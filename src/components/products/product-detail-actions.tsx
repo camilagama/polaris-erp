@@ -59,9 +59,11 @@ interface ProductCategoryOption {
 
 export function ProductDetailActions({
   categories,
+  linkedSalesCount,
   product,
 }: {
   categories: ProductCategoryOption[];
+  linkedSalesCount: number;
   product: ProductListItem;
 }) {
   const router = useRouter();
@@ -86,6 +88,7 @@ export function ProductDetailActions({
     "adjustment" | "operational"
   >("operational");
   const [writeOffNotes, setWriteOffNotes] = useState("");
+  const [deleteConfirmationName, setDeleteConfirmationName] = useState("");
 
   const handleEditProduct = () => {
     startTransition(async () => {
@@ -223,7 +226,10 @@ export function ProductDetailActions({
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
-            onSelect={() => setDeleting(true)}
+            onSelect={() => {
+              setDeleting(true);
+              setDeleteConfirmationName("");
+            }}
             variant="destructive"
           >
             <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
@@ -407,16 +413,51 @@ export function ProductDetailActions({
         </DialogContent>
       </Dialog>
 
-      <Dialog onOpenChange={setDeleting} open={deleting}>
+      <Dialog
+        onOpenChange={(open) => {
+          setDeleting(open);
+
+          if (!open) {
+            setDeleteConfirmationName("");
+          }
+        }}
+        open={deleting}
+      >
         <DialogContent className="sm:max-w-115">
           <DialogHeader>
             <DialogTitle>Deletar produto</DialogTitle>
             <DialogDescription>
               Esta acao e irreversivel. O produto sera apagado definitivamente,
               junto com qualquer relacao registrada para ele, como entradas e
-              baixas de estoque. E como se ele nunca tivesse existido.
+              baixas de estoque.
             </DialogDescription>
           </DialogHeader>
+          <div className="space-y-3">
+            {linkedSalesCount > 0 ? (
+              <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-destructive text-xs">
+                Este produto esta vinculado a {linkedSalesCount} venda
+                {linkedSalesCount > 1 ? "s" : ""}. Ao deletar, essas vendas e
+                seus itens tambem serao removidos.
+              </p>
+            ) : (
+              <p className="text-muted-foreground text-xs">
+                Nenhuma venda vinculada encontrada para este produto.
+              </p>
+            )}
+            <div className="space-y-1.5">
+              <Label htmlFor="detail-delete-confirmation">
+                Digite exatamente o nome do produto para confirmar
+              </Label>
+              <Input
+                id="detail-delete-confirmation"
+                onChange={(event) =>
+                  setDeleteConfirmationName(event.target.value)
+                }
+                placeholder={product.name}
+                value={deleteConfirmationName}
+              />
+            </div>
+          </div>
           <DialogFooter>
             <Button
               onClick={() => setDeleting(false)}
@@ -426,12 +467,16 @@ export function ProductDetailActions({
               Cancelar
             </Button>
             <Button
-              disabled={pending}
+              disabled={
+                pending || deleteConfirmationName.trim() !== product.name
+              }
               onClick={handleDeleteProduct}
               type="button"
               variant="destructive"
             >
-              Deletar definitivamente
+              {linkedSalesCount > 0
+                ? "Deletar produto e vendas"
+                : "Deletar definitivamente"}
             </Button>
           </DialogFooter>
         </DialogContent>

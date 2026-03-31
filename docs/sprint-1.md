@@ -8,7 +8,8 @@
 - [x] Fase 3, produtos e estoque base
 - [x] Fase 4, configuracoes de catalogo e markup
 - [~] Fase 5, polimento operacional
-- [ ] Fase 6, planejamento do modulo de vendas
+- [x] Fase 6, planejamento do modulo de vendas
+- [~] Fase 7, implementacao minima de vendas
 
 ## Entregas confirmadas
 
@@ -22,23 +23,27 @@
 - [x] Busca por nome e categoria na listagem de produtos
 - [x] Validacao de data ISO na borda das server actions de estoque
 - [x] Testes unitarios de regras matematicas centrais
+- [x] Modulo `Vendas` com listagem e detalhe
+- [x] Registro de venda multi-item com baixa imediata de estoque
+- [x] Cancelamento de venda com estorno automatico de estoque
+- [x] Testes iniciais de dominio e integracao para vendas
 
 ## Pontos em andamento
 
-- [~] Hardening de testes de integracao das actions
-- [~] Cobertura de cenarios concorrentes de estoque
-- [~] Revisao final de documentacao para estado real
+- [~] Integracao de eventos de venda no historico de produtos
+- [~] Hardening de testes de integracao para cancelamento de venda
+- [~] Revisao final de documentacao para estado real com vendas
 
 ## Pendencias para proxima fase
 
 - [ ] Dashboard operacional consolidado (alem de placeholder)
 - [ ] E2E completo cobrindo fluxos principais
-- [ ] Definicao e planejamento detalhado do modulo de vendas
+- [ ] Modulo de recebimentos (proxima etapa)
 
 ## Proximo passo ativo
 
-Concluir polimento operacional do estoque:
+Concluir estabilizacao do modulo de vendas:
 
-1. Finalizar bateria de testes de integracao e concorrencia.
-2. Executar smoke test com dados reais de operacao.
-3. Iniciar planejamento do modulo de vendas com base no estoque estabilizado.
+1. Integrar eventos de venda/estorno no historico de produto.
+2. Executar smoke test com dados reais de operacao para venda e cancelamento.
+3. Fechar documentacao oficial no estado real antes de iniciar recebimentos.

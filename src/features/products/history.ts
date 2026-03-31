@@ -24,6 +24,12 @@ export interface InventoryWriteOffInput extends InventoryHistoryEntryInput {
   reason: "adjustment" | "operational";
 }
 
+export interface InventorySaleInput extends InventoryHistoryEntryInput {
+  cancelledAt: string | null;
+  saleId: string;
+  status: "cancelled" | "completed";
+}
+
 const getWriteOffLabel = (reason: InventoryWriteOffInput["reason"]) => {
   if (reason === "operational") {
     return "Operacional";
@@ -36,11 +42,13 @@ export const buildProductInventorySummary = ({
   averageCost,
   currentStock,
   entries,
+  sales,
   writeOffs,
 }: {
   averageCost: number;
   currentStock: number;
   entries: InventoryHistoryEntryInput[];
+  sales: InventorySaleInput[];
   writeOffs: InventoryWriteOffInput[];
 }) => {
   const totalCost = averageCost * currentStock;
@@ -65,6 +73,40 @@ export const buildProductInventorySummary = ({
       unitCost: entry.unitCost,
       variant: "entry" as const,
     })),
+    ...sales.flatMap((sale) => {
+      const saleMovement = {
+        createdAt: sale.createdAt,
+        date: sale.date,
+        id: `sale-${sale.id}`,
+        label: "Venda",
+        notes: `Venda ${sale.saleId}`,
+        totalValue: sale.quantity * sale.unitCost,
+        quantityLabel: `-${sale.quantity} un.`,
+        unitCost: sale.unitCost,
+        variant: "sale" as const,
+      };
+
+      if (!(sale.status === "cancelled" && sale.cancelledAt)) {
+        return [saleMovement];
+      }
+
+      const reversalDate = sale.cancelledAt.slice(0, 10);
+
+      return [
+        saleMovement,
+        {
+          createdAt: sale.cancelledAt,
+          date: reversalDate,
+          id: `sale-reversal-${sale.id}`,
+          label: "Estorno de venda",
+          notes: `Venda ${sale.saleId} cancelada`,
+          totalValue: sale.quantity * sale.unitCost,
+          quantityLabel: `+${sale.quantity} un.`,
+          unitCost: sale.unitCost,
+          variant: "saleReversal" as const,
+        },
+      ];
+    }),
     ...writeOffs.map((writeOff) => ({
       createdAt: writeOff.createdAt,
       date: writeOff.date,

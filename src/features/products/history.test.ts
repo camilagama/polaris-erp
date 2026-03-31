@@ -15,6 +15,18 @@ describe("buildProductInventorySummary", () => {
           unitCost: 10,
         },
       ],
+      sales: [
+        {
+          cancelledAt: null,
+          createdAt: "2026-03-31T10:30:00.000Z",
+          date: "2026-03-31",
+          id: "sale-item-1",
+          quantity: 2,
+          saleId: "sale-1",
+          status: "completed",
+          unitCost: 12.5,
+        },
+      ],
       writeOffs: [
         {
           createdAt: "2026-03-31T11:00:00.000Z",
@@ -45,6 +57,17 @@ describe("buildProductInventorySummary", () => {
         variant: "writeOff",
       },
       {
+        createdAt: "2026-03-31T10:30:00.000Z",
+        date: "2026-03-31",
+        id: "sale-sale-item-1",
+        label: "Venda",
+        notes: "Venda sale-1",
+        quantityLabel: "-2 un.",
+        totalValue: 25,
+        unitCost: 12.5,
+        variant: "sale",
+      },
+      {
         createdAt: "2026-03-31T10:00:00.000Z",
         date: "2026-03-30",
         id: "entry-1",
@@ -71,6 +94,7 @@ describe("buildProductInventorySummary", () => {
           unitCost: 10,
         },
       ],
+      sales: [],
       writeOffs: [
         {
           createdAt: "2026-03-31T12:00:00.000Z",
@@ -86,5 +110,51 @@ describe("buildProductInventorySummary", () => {
 
     expect(summary.historyItems[0]?.id).toBe("writeoff-1");
     expect(summary.historyItems[1]?.id).toBe("entry-1");
+  });
+
+  it("adds stock reversal entry when a sale is cancelled", () => {
+    const summary = buildProductInventorySummary({
+      averageCost: 8,
+      currentStock: 5,
+      entries: [],
+      sales: [
+        {
+          cancelledAt: "2026-04-01T10:00:00.000Z",
+          createdAt: "2026-03-31T10:00:00.000Z",
+          date: "2026-03-31",
+          id: "sale-item-1",
+          quantity: 2,
+          saleId: "sale-1",
+          status: "cancelled",
+          unitCost: 8,
+        },
+      ],
+      writeOffs: [],
+    });
+
+    expect(summary.historyItems).toEqual([
+      {
+        createdAt: "2026-04-01T10:00:00.000Z",
+        date: "2026-04-01",
+        id: "sale-reversal-sale-item-1",
+        label: "Estorno de venda",
+        notes: "Venda sale-1 cancelada",
+        quantityLabel: "+2 un.",
+        totalValue: 16,
+        unitCost: 8,
+        variant: "saleReversal",
+      },
+      {
+        createdAt: "2026-03-31T10:00:00.000Z",
+        date: "2026-03-31",
+        id: "sale-sale-item-1",
+        label: "Venda",
+        notes: "Venda sale-1",
+        quantityLabel: "-2 un.",
+        totalValue: 16,
+        unitCost: 8,
+        variant: "sale",
+      },
+    ]);
   });
 });
