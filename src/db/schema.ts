@@ -95,6 +95,10 @@ export const systemSettings = pgTable("system_settings", {
 });
 
 export const saleStatusEnum = pgEnum("sale_status", ["completed", "cancelled"]);
+export const salePaymentMethodEnum = pgEnum("sale_payment_method", [
+  "pix",
+  "card",
+]);
 
 export const productWriteOffReasonEnum = pgEnum("product_write_off_reason", [
   "adjustment",
@@ -204,8 +208,17 @@ export const sales = pgTable(
       .$defaultFn(() => crypto.randomUUID()),
     occurredOn: date("occurred_on").default(sql`CURRENT_DATE`).notNull(),
     status: saleStatusEnum("status").default("completed").notNull(),
+    paymentMethod: salePaymentMethodEnum("payment_method")
+      .default("pix")
+      .notNull(),
     customerName: text("customer_name"),
     notes: text("notes"),
+    freightAmount: decimal("freight_amount", { precision: 12, scale: 2 })
+      .notNull()
+      .default("0"),
+    feeAmount: decimal("fee_amount", { precision: 12, scale: 2 })
+      .notNull()
+      .default("0"),
     totalAmount: decimal("total_amount", { precision: 12, scale: 2 })
       .notNull()
       .default("0"),
@@ -213,8 +226,14 @@ export const sales = pgTable(
     ...timestamps,
   },
   (table) => [
+    check(
+      "sales_freight_amount_non_negative",
+      sql`${table.freightAmount} >= 0`
+    ),
+    check("sales_fee_amount_non_negative", sql`${table.feeAmount} >= 0`),
     check("sales_total_amount_non_negative", sql`${table.totalAmount} >= 0`),
     index("sales_occurred_on_idx").on(table.occurredOn),
+    index("sales_payment_method_idx").on(table.paymentMethod),
     index("sales_status_idx").on(table.status),
   ]
 );

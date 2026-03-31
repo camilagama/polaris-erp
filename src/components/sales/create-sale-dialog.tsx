@@ -39,8 +39,9 @@ interface SaleRowDraft {
   id: string;
   productId: string;
   quantity: string;
-  unitPrice: string;
 }
+
+type PaymentMethod = "card" | "pix";
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("pt-BR", {
@@ -48,11 +49,13 @@ const formatCurrency = (value: number) =>
     style: "currency",
   }).format(value || 0);
 
+const roundCurrency = (value: number) =>
+  Math.round((value + Number.EPSILON) * 100) / 100;
+
 const createSaleRow = (): SaleRowDraft => ({
   id: crypto.randomUUID(),
   productId: "",
   quantity: "1",
-  unitPrice: "0",
 });
 
 export function CreateSaleDialog({
@@ -67,14 +70,23 @@ export function CreateSaleDialog({
     format(new Date(), "yyyy-MM-dd")
   );
   const [customerName, setCustomerName] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("pix");
+  const [freightAmount, setFreightAmount] = useState("0");
+  const [feeAmount, setFeeAmount] = useState("0");
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<SaleRowDraft[]>([createSaleRow()]);
 
-  const totalAmount = useMemo(
+  const productById = useMemo(
+    () => new Map(products.map((product) => [product.id, product])),
+    [products]
+  );
+
+  const itemSubtotal = useMemo(
     () =>
       items.reduce((acc, item) => {
         const quantity = Number(item.quantity);
-        const unitPrice = Number(item.unitPrice);
+        const selectedProduct = productById.get(item.productId);
+        const unitPrice = selectedProduct ? Number(selectedProduct.price) : 0;
 
         if (!(Number.isFinite(quantity) && Number.isFinite(unitPrice))) {
           return acc;
@@ -82,12 +94,30 @@ export function CreateSaleDialog({
 
         return acc + quantity * unitPrice;
       }, 0),
-    [items]
+    [items, productById]
   );
+
+  const parsedFreightAmount = Number(freightAmount);
+  const parsedFeeAmount = Number(feeAmount);
+
+  const totalAmount = useMemo(() => {
+    if (
+      !(
+        Number.isFinite(parsedFreightAmount) && Number.isFinite(parsedFeeAmount)
+      )
+    ) {
+      return itemSubtotal;
+    }
+
+    return roundCurrency(itemSubtotal + parsedFreightAmount - parsedFeeAmount);
+  }, [itemSubtotal, parsedFeeAmount, parsedFreightAmount]);
 
   const resetForm = () => {
     setOccurredOn(format(new Date(), "yyyy-MM-dd"));
     setCustomerName("");
+    setPaymentMethod("pix");
+    setFreightAmount("0");
+    setFeeAmount("0");
     setNotes("");
     setItems([createSaleRow()]);
   };
@@ -117,7 +147,6 @@ export function CreateSaleDialog({
       .map((item) => ({
         productId: item.productId,
         quantity: Number(item.quantity),
-        unitPrice: Number(item.unitPrice),
       }));
 
     if (payloadItems.length === 0) {
@@ -130,20 +159,33 @@ export function CreateSaleDialog({
         toast.error("Quantidade deve ser um numero inteiro maior que zero.");
         return;
       }
+    }
 
-      if (!Number.isFinite(item.unitPrice) || item.unitPrice < 0) {
-        toast.error("Preco de venda invalido.");
-        return;
-      }
+    if (!(Number.isFinite(parsedFreightAmount) && parsedFreightAmount >= 0)) {
+      toast.error("Frete deve ser um numero maior ou igual a zero.");
+      return;
+    }
+
+    if (!(Number.isFinite(parsedFeeAmount) && parsedFeeAmount >= 0)) {
+      toast.error("Taxa deve ser um numero maior ou igual a zero.");
+      return;
+    }
+
+    if (totalAmount < 0) {
+      toast.error("Total final da venda nao pode ser negativo.");
+      return;
     }
 
     startTransition(async () => {
       try {
         const saleId = await createSaleAction({
           customerName: customerName.trim() || undefined,
+          feeAmount: parsedFeeAmount,
+          freightAmount: parsedFreightAmount,
           items: payloadItems,
           notes: notes.trim() || undefined,
           occurredOn,
+          paymentMethod,
         });
 
         toast.success("Venda registrada.");
@@ -183,7 +225,7 @@ export function CreateSaleDialog({
         </DialogHeader>
 
         <div className="flex flex-col gap-4">
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-3">
             <div className="space-y-1.5">
               <Label htmlFor="sale-date">Data</Label>
               <Input
@@ -192,6 +234,23 @@ export function CreateSaleDialog({
                 type="date"
                 value={occurredOn}
               />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="sale-payment-method">Pagamento</Label>
+              <Select
+                onValueChange={(value) =>
+                  setPaymentMethod(value as PaymentMethod)
+                }
+                value={paymentMethod}
+              >
+                <SelectTrigger className="w-full" id="sale-payment-method">
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pix">Pix</SelectItem>
+                  <SelectItem value="card">Cartao</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="sale-customer">Cliente (opcional)</Label>
@@ -237,7 +296,9 @@ export function CreateSaleDialog({
                     (product) => product.id === item.productId
                   );
                   const quantity = Number(item.quantity);
-                  const unitPrice = Number(item.unitPrice);
+                  const unitPrice = selectedProduct
+                    ? Number(selectedProduct.price)
+                    : 0;
                   const lineTotal =
                     Number.isFinite(quantity) && Number.isFinite(unitPrice)
                       ? quantity * unitPrice
@@ -265,16 +326,9 @@ export function CreateSaleDialog({
                         <Label className="text-[11px] sm:hidden">Produto</Label>
                         <Select
                           onValueChange={(value) => {
-                            const selected = products.find(
-                              (product) => product.id === value
-                            );
-
                             updateItem(item.id, (currentItem) => ({
                               ...currentItem,
                               productId: value,
-                              unitPrice: selected
-                                ? String(Number(selected.price))
-                                : "0",
                             }));
                           }}
                           value={item.productId}
@@ -315,18 +369,9 @@ export function CreateSaleDialog({
 
                       <div className="space-y-1">
                         <Label className="text-[11px] sm:hidden">Preco</Label>
-                        <Input
-                          min="0"
-                          onChange={(event) =>
-                            updateItem(item.id, (currentItem) => ({
-                              ...currentItem,
-                              unitPrice: event.target.value,
-                            }))
-                          }
-                          step="0.01"
-                          type="number"
-                          value={item.unitPrice}
-                        />
+                        <div className="flex h-7 items-center rounded-md border border-border/50 px-2 text-xs">
+                          {formatCurrency(unitPrice)}
+                        </div>
                       </div>
 
                       <div className="space-y-1">
@@ -356,6 +401,31 @@ export function CreateSaleDialog({
             </div>
           </div>
 
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="sale-freight">Frete</Label>
+              <Input
+                id="sale-freight"
+                min="0"
+                onChange={(event) => setFreightAmount(event.target.value)}
+                step="0.01"
+                type="number"
+                value={freightAmount}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="sale-fee">Taxa</Label>
+              <Input
+                id="sale-fee"
+                min="0"
+                onChange={(event) => setFeeAmount(event.target.value)}
+                step="0.01"
+                type="number"
+                value={feeAmount}
+              />
+            </div>
+          </div>
+
           <div className="space-y-1.5">
             <Label htmlFor="sale-notes">Observacoes (opcional)</Label>
             <Textarea
@@ -366,11 +436,23 @@ export function CreateSaleDialog({
             />
           </div>
 
-          <div className="flex items-center justify-end gap-2 rounded-md border border-border/60 px-3 py-2">
-            <span className="text-muted-foreground text-xs">Total</span>
-            <strong className="font-semibold text-sm">
-              {formatCurrency(totalAmount)}
-            </strong>
+          <div className="space-y-1 rounded-md border border-border/60 px-3 py-2 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Subtotal dos itens</span>
+              <span>{formatCurrency(itemSubtotal)}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Frete</span>
+              <span>{formatCurrency(parsedFreightAmount || 0)}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Taxa</span>
+              <span>- {formatCurrency(parsedFeeAmount || 0)}</span>
+            </div>
+            <div className="flex items-center justify-between border-border/60 border-t pt-1.5">
+              <strong>Total final</strong>
+              <strong>{formatCurrency(totalAmount)}</strong>
+            </div>
           </div>
         </div>
 

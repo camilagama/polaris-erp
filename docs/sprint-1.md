@@ -9,7 +9,7 @@
 - [x] Fase 4, configuracoes de catalogo e markup
 - [~] Fase 5, polimento operacional
 - [x] Fase 6, planejamento do modulo de vendas
-- [~] Fase 7, implementacao minima de vendas
+- [x] Fase 7, implementacao minima de vendas
 
 ## Entregas confirmadas
 
@@ -25,14 +25,17 @@
 - [x] Testes unitarios de regras matematicas centrais
 - [x] Modulo `Vendas` com listagem e detalhe
 - [x] Registro de venda multi-item com baixa imediata de estoque
+- [x] Preco do item travado pelo catalogo no momento da venda
+- [x] Venda com pagamento (`Pix`/`Cartao`) e composicao de total por frete/taxa
 - [x] Cancelamento de venda com estorno automatico de estoque
 - [x] Testes iniciais de dominio e integracao para vendas
+- [x] Integracao de venda e estorno no historico de produtos
+- [x] Hardening de exclusao de produto com alerta de impacto em vendas
+- [x] Revisao da documentacao para estado real
 
 ## Pontos em andamento
 
-- [~] Integracao de eventos de venda no historico de produtos
-- [~] Hardening de testes de integracao para cancelamento de venda
-- [~] Revisao final de documentacao para estado real com vendas
+- [~] Smoke test operacional com dados reais para fluxo de venda e cancelamento
 
 ## Pendencias para proxima fase
 
@@ -42,8 +45,8 @@
 
 ## Proximo passo ativo
 
-Concluir estabilizacao do modulo de vendas:
+Concluir validacao final antes de iniciar recebimentos:
 
-1. Integrar eventos de venda/estorno no historico de produto.
-2. Executar smoke test com dados reais de operacao para venda e cancelamento.
-3. Fechar documentacao oficial no estado real antes de iniciar recebimentos.
+1. Executar smoke test com dados reais de operacao para venda e cancelamento.
+2. Confirmar consistencia entre relatorio operacional e historico por produto.
+3. Definir backlog minimo do modulo de recebimentos.

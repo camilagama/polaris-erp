@@ -31,6 +31,7 @@ interface ProductState {
   costPrice: number;
   id: string;
   name: string;
+  price: number;
   stock: number;
 }
 
@@ -79,6 +80,7 @@ const createSalesHarness = (productsState: ProductState[]): SalesHarness => {
             costPrice: product.costPrice.toFixed(2),
             id: product.id,
             name: product.name,
+            price: product.price.toFixed(2),
             stock: product.stock,
           }));
 
@@ -168,7 +170,6 @@ describe("sales server actions", () => {
           {
             productId: "product-1",
             quantity: 1,
-            unitPrice: 10,
           },
         ],
         occurredOn: "2026-03-31",
@@ -187,12 +188,10 @@ describe("sales server actions", () => {
           {
             productId: "product-1",
             quantity: 1,
-            unitPrice: 10,
           },
           {
             productId: "product-1",
             quantity: 1,
-            unitPrice: 10,
           },
         ],
         occurredOn: "2026-03-31",
@@ -210,6 +209,7 @@ describe("sales server actions", () => {
         costPrice: 50,
         id: "product-1",
         name: "Produto 1",
+        price: 90,
         stock: 5,
       },
     ]);
@@ -218,21 +218,22 @@ describe("sales server actions", () => {
 
     const results = await Promise.allSettled([
       createSaleAction({
+        feeAmount: 5,
+        freightAmount: 15,
         items: [
           {
             productId: "product-1",
             quantity: 3,
-            unitPrice: 90,
           },
         ],
         occurredOn: "2026-03-31",
+        paymentMethod: "card",
       }),
       createSaleAction({
         items: [
           {
             productId: "product-1",
             quantity: 3,
-            unitPrice: 90,
           },
         ],
         occurredOn: "2026-03-31",
@@ -253,5 +254,20 @@ describe("sales server actions", () => {
     expect(harness.productById.get("product-1")?.stock).toBe(2);
     expect(harness.salesLog).toHaveLength(1);
     expect(harness.saleItemsLog).toHaveLength(1);
+
+    const [createdSalePayload] = harness.salesLog;
+    const [createdSaleItemPayload] = harness.saleItemsLog;
+
+    expect(createdSalePayload).toMatchObject({
+      feeAmount: "5.00",
+      freightAmount: "15.00",
+      paymentMethod: "card",
+      totalAmount: "280.00",
+    });
+
+    expect(createdSaleItemPayload).toMatchObject({
+      lineTotal: "270.00",
+      unitPriceSnapshot: "90.00",
+    });
   });
 });

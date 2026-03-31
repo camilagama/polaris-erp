@@ -25,17 +25,25 @@ const saleItemSchema = z.object({
     .number()
     .int("Quantidade deve ser um numero inteiro.")
     .min(1, "Quantidade deve ser maior que zero."),
-  unitPrice: z.coerce.number().min(0, "Preco de venda invalido."),
 });
 
 const createSaleSchema = z
   .object({
     customerName: z.string().trim().max(80).optional(),
+    feeAmount: z.coerce
+      .number()
+      .min(0, "Taxa nao pode ser negativa.")
+      .default(0),
+    freightAmount: z.coerce
+      .number()
+      .min(0, "Frete nao pode ser negativo.")
+      .default(0),
     items: z
       .array(saleItemSchema)
       .min(1, "Adicione pelo menos um item na venda."),
     notes: z.string().trim().max(240).optional(),
     occurredOn: isoDateSchema,
+    paymentMethod: z.enum(["card", "pix"]).default("pix"),
   })
   .refine(
     (value) => {
@@ -53,6 +61,7 @@ interface LockedProductRow extends Record<string, unknown> {
   costPrice: string;
   id: string;
   name: string;
+  price: string;
   stock: number;
 }
 
@@ -86,6 +95,7 @@ const lockProductsForUpdate = async (
       name,
       stock,
       cost_price as "costPrice",
+      price,
       archived_at as "archivedAt"
     from products
     where id in (${clauses})
@@ -99,9 +109,12 @@ const lockProductsForUpdate = async (
 export interface SaleListItem {
   cancelledAt: Date | null;
   customerName: string | null;
+  feeAmount: string;
+  freightAmount: string;
   id: string;
   itemCount: number;
   occurredOn: string;
+  paymentMethod: "card" | "pix";
   status: "cancelled" | "completed";
   totalAmount: string;
 }
@@ -121,10 +134,13 @@ export interface SaleDetail {
   cancelledAt: Date | null;
   createdAt: Date;
   customerName: string | null;
+  feeAmount: string;
+  freightAmount: string;
   id: string;
   items: SaleDetailItem[];
   notes: string | null;
   occurredOn: string;
+  paymentMethod: "card" | "pix";
   status: "cancelled" | "completed";
   totalAmount: string;
 }
@@ -134,9 +150,12 @@ export async function getSalesAction(): Promise<SaleListItem[]> {
     .select({
       cancelledAt: sales.cancelledAt,
       customerName: sales.customerName,
+      feeAmount: sales.feeAmount,
+      freightAmount: sales.freightAmount,
       id: sales.id,
       itemCount: count(saleItems.id),
       occurredOn: sales.occurredOn,
+      paymentMethod: sales.paymentMethod,
       status: sales.status,
       totalAmount: sales.totalAmount,
     })
@@ -148,6 +167,7 @@ export async function getSalesAction(): Promise<SaleListItem[]> {
   return rows.map((row) => ({
     ...row,
     itemCount: Number(row.itemCount),
+    paymentMethod: row.paymentMethod as SaleListItem["paymentMethod"],
     status: row.status as SaleListItem["status"],
   }));
 }
@@ -184,19 +204,22 @@ export async function getSaleByIdAction(
       ...item,
       quantity: Number(item.quantity),
     })),
+    paymentMethod: sale.paymentMethod as SaleDetail["paymentMethod"],
     status: sale.status as SaleDetail["status"],
   };
 }
 
 export async function createSaleAction(data: {
   customerName?: string;
+  feeAmount?: number;
+  freightAmount?: number;
   items: Array<{
     productId: string;
     quantity: number;
-    unitPrice: number;
   }>;
   notes?: string;
   occurredOn: string;
+  paymentMethod?: "card" | "pix";
 }): Promise<string> {
   await requireActionSession();
   const parsed = createSaleSchema.parse(data);
@@ -239,19 +262,35 @@ export async function createSaleAction(data: {
           productNameSnapshot: product.name,
           quantity: item.quantity,
           unitCostSnapshot: Number(product.costPrice),
-          unitPriceSnapshot: item.unitPrice,
+          unitPriceSnapshot: Number(product.price),
         };
       })
     );
+
+    const finalTotalAmount =
+      Math.round(
+        (snapshot.totalAmount +
+          parsed.freightAmount -
+          parsed.feeAmount +
+          Number.EPSILON) *
+          100
+      ) / 100;
+
+    if (finalTotalAmount < 0) {
+      throw new Error("Total final da venda nao pode ser negativo.");
+    }
 
     const [createdSale] = await tx
       .insert(sales)
       .values({
         customerName: parsed.customerName || undefined,
+        feeAmount: parsed.feeAmount.toFixed(2),
+        freightAmount: parsed.freightAmount.toFixed(2),
         notes: parsed.notes || undefined,
         occurredOn: parsed.occurredOn,
+        paymentMethod: parsed.paymentMethod,
         status: "completed",
-        totalAmount: snapshot.totalAmount.toFixed(2),
+        totalAmount: finalTotalAmount.toFixed(2),
       })
       .returning({ id: sales.id });
 

@@ -12,6 +12,7 @@
 - Registrar entrada sempre pelo fluxo de reposicao.
 - Registrar baixa sempre pelo fluxo de baixa.
 - Registrar venda sempre pelo fluxo de `Vendas`.
+- Antes de concluir venda, confirmar meio de pagamento, frete e taxa.
 - Em erro de venda, usar `Cancelar venda` para estornar estoque.
 - Em baixas operacionais, detalhar o motivo em observacoes.
 - Usar data no formato ISO (`YYYY-MM-DD`) nos fluxos de estoque.

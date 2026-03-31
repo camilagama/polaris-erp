@@ -54,6 +54,16 @@ const getStatusVariant = (status: SaleListItem["status"]) => {
   return "secondary" as const;
 };
 
+const getPaymentMethodLabel = (
+  paymentMethod: SaleListItem["paymentMethod"]
+) => {
+  if (paymentMethod === "card") {
+    return "Cartao";
+  }
+
+  return "Pix";
+};
+
 export function SalesPanel({
   saleProducts,
   sales,
@@ -135,6 +145,7 @@ export function SalesPanel({
             <TableRow>
               <TableHead className="pl-4 sm:pl-6">Data</TableHead>
               <TableHead>Cliente</TableHead>
+              <TableHead>Pagamento</TableHead>
               <TableHead className="text-center">Itens</TableHead>
               <TableHead>Total</TableHead>
               <TableHead>Status</TableHead>
@@ -143,7 +154,7 @@ export function SalesPanel({
           <TableBody>
             {visibleSales.length === 0 ? (
               <TableRow>
-                <TableCell className="h-24 text-center" colSpan={5}>
+                <TableCell className="h-24 text-center" colSpan={6}>
                   Nenhuma venda encontrada.
                 </TableCell>
               </TableRow>
@@ -165,6 +176,9 @@ export function SalesPanel({
                     {formatDate(sale.occurredOn)}
                   </TableCell>
                   <TableCell>{sale.customerName || "Sem cliente"}</TableCell>
+                  <TableCell>
+                    {getPaymentMethodLabel(sale.paymentMethod)}
+                  </TableCell>
                   <TableCell className="text-center">
                     {sale.itemCount}
                   </TableCell>

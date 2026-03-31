@@ -60,6 +60,8 @@ Ainda nao implementado:
 - As baixas de estoque usam motivos simplificados (`adjustment` e `operational`) com detalhamento em observacoes.
 - Datas das actions de estoque devem estar no formato ISO (`YYYY-MM-DD`).
 - Vendas no MVP sao registradas como concluidas na hora, com baixa imediata de estoque.
+- O preco do item na venda e capturado automaticamente do produto no momento do registro (nao e editavel no formulario).
+- Venda registra meio de pagamento (`Pix` ou `Cartao`) e permite informar frete e taxa no total final.
 - Cancelamento de venda estorna automaticamente as quantidades para o estoque.
 - Venda nao possui exclusao fisica no MVP; o ajuste e feito por cancelamento.
 - Excluir um produto remove tambem vendas vinculadas a ele por decisao operacional atual.

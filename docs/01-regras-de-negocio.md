@@ -112,11 +112,13 @@ Regra de detalhamento:
 Evento de saida comercial com:
 
 - data da venda
+- meio de pagamento (`pix` ou `card`)
 - cliente opcional (texto livre)
 - 1 ou mais itens
 - quantidade inteira por item
-- preco unitario por item
-- total calculado por snapshot dos itens
+- preco unitario por item capturado automaticamente do produto no momento da venda
+- frete e taxa opcionais no fechamento
+- total final calculado no servidor (`subtotal dos itens + frete - taxa`)
 
 Regras do MVP:
 
@@ -125,6 +127,7 @@ Regras do MVP:
 - venda nao e excluida fisicamente
 - correcao operacional ocorre por cancelamento
 - cancelamento muda status para `cancelled` e estorna estoque
+- total final da venda nao pode ser negativo
 
 ## 6. Regras oficiais de estoque
 
@@ -161,8 +164,8 @@ A regra oficial atual foi simplificada para markup puro sobre custo medio:
 
 Observacao importante:
 
-- taxas e custos variaveis nao entram nesta formula nesta fase
-- quando necessario, essa camada sera reintroduzida no modulo de vendas/financeiro
+- taxas e frete nao entram na sugestao de preco de catalogo
+- no modulo de vendas, frete e taxa entram apenas no total final da venda
 
 ## 9. Regra de exclusao fisica
 

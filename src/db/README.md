@@ -51,6 +51,9 @@ bun run db:push
 - custo medio movel recalculado em entradas
 - baixa de estoque com motivos simplificados (`adjustment` e `operational`)
 - venda concluida no ato com baixa imediata de estoque
+- venda registra meio de pagamento (`pix` ou `card`)
+- total final da venda considera frete e taxa
+- preco do item na venda e snapshot do preco atual do produto
 - cancelamento de venda com estorno automatico
 - detalhes da baixa devem ir em `notes`
 - validacoes de integridade por constraints (estoque/custos/quantidades)

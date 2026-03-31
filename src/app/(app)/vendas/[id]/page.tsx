@@ -55,6 +55,14 @@ const getStatusVariant = (status: "cancelled" | "completed") => {
   return "secondary" as const;
 };
 
+const getPaymentMethodLabel = (paymentMethod: "card" | "pix") => {
+  if (paymentMethod === "card") {
+    return "Cartao";
+  }
+
+  return "Pix";
+};
+
 export default async function VendaDetalhePage(
   props: PageProps<"/vendas/[id]">
 ) {
@@ -64,6 +72,11 @@ export default async function VendaDetalhePage(
   if (!sale) {
     notFound();
   }
+
+  const itemSubtotal = sale.items.reduce(
+    (acc, item) => acc + Number(item.lineTotal),
+    0
+  );
 
   return (
     <div className="flex flex-col gap-6 p-4 pb-20 sm:p-6 sm:pb-6">
@@ -95,6 +108,8 @@ export default async function VendaDetalhePage(
               <span>{sale.customerName || "Sem cliente"}</span>
               <span className="text-muted-foreground">Status</span>
               <span>{getStatusLabel(sale.status)}</span>
+              <span className="text-muted-foreground">Pagamento</span>
+              <span>{getPaymentMethodLabel(sale.paymentMethod)}</span>
               <span className="text-muted-foreground">Cancelada em</span>
               <span>{formatDateTime(sale.cancelledAt)}</span>
               <span className="text-muted-foreground">Observacoes</span>
@@ -114,6 +129,24 @@ export default async function VendaDetalhePage(
               <div className="rounded-md border border-border/50 px-3 py-2">
                 <p className="text-muted-foreground">Itens</p>
                 <p className="font-medium text-sm">{sale.items.length}</p>
+              </div>
+              <div className="rounded-md border border-border/50 px-3 py-2">
+                <p className="text-muted-foreground">Subtotal dos itens</p>
+                <p className="font-medium text-sm">
+                  {formatCurrency(itemSubtotal)}
+                </p>
+              </div>
+              <div className="rounded-md border border-border/50 px-3 py-2">
+                <p className="text-muted-foreground">Frete</p>
+                <p className="font-medium text-sm">
+                  {formatCurrency(sale.freightAmount)}
+                </p>
+              </div>
+              <div className="rounded-md border border-border/50 px-3 py-2">
+                <p className="text-muted-foreground">Taxa</p>
+                <p className="font-medium text-sm">
+                  - {formatCurrency(sale.feeAmount)}
+                </p>
               </div>
               <div className="rounded-md border border-border/50 px-3 py-2">
                 <p className="text-muted-foreground">Total da venda</p>
