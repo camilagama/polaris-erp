@@ -8,6 +8,7 @@ import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ProductDetailActions } from "@/components/products/product-detail-actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -15,6 +16,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { listCategoriesWithUsage } from "@/features/catalog/server";
 import {
   getProductByIdAction,
   getProductStockEntriesByProductIdAction,
@@ -46,10 +48,11 @@ export default async function ProdutoDetalhePage(
   props: PageProps<"/produtos/[id]">
 ) {
   const { id } = await props.params;
-  const [product, stockEntries, writeOffs] = await Promise.all([
+  const [product, stockEntries, writeOffs, categories] = await Promise.all([
     getProductByIdAction(id),
     getProductStockEntriesByProductIdAction(id),
     getProductStockWriteOffsByProductIdAction(id),
+    listCategoriesWithUsage(),
   ]);
 
   if (!product) {
@@ -106,6 +109,14 @@ export default async function ProdutoDetalhePage(
           </Link>
         </Button>
       </div>
+
+      <ProductDetailActions
+        categories={categories.map((category) => ({
+          id: category.id,
+          name: category.name,
+        }))}
+        product={product}
+      />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.2fr_0.8fr]">
         <Card>

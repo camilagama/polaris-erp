@@ -1,0 +1,441 @@
+"use client";
+
+import {
+  Archive01Icon,
+  Delete02Icon,
+  Edit01Icon,
+  ListPlusIcon,
+  MinusSignCircleIcon,
+} from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { format } from "date-fns";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import { toast } from "sonner";
+import {
+  addProductStockAction,
+  archiveProductAction,
+  deleteProductAction,
+  type ProductListItem,
+  unarchiveProductAction,
+  updateProductAction,
+  writeOffProductStockAction,
+} from "@/app/(app)/produtos/actions";
+import { ProductDatePicker } from "@/components/products/product-date-picker";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+
+interface ProductCategoryOption {
+  id: string;
+  name: string;
+}
+
+export function ProductDetailActions({
+  categories,
+  product,
+}: {
+  categories: ProductCategoryOption[];
+  product: ProductListItem;
+}) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [editing, setEditing] = useState(false);
+  const [stocking, setStocking] = useState(false);
+  const [writingOff, setWritingOff] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [editName, setEditName] = useState(product.name);
+  const [editCategoryId, setEditCategoryId] = useState(product.categoryId);
+  const [editDescription, setEditDescription] = useState(
+    product.description ?? ""
+  );
+  const [stockQuantity, setStockQuantity] = useState("1");
+  const [stockedOn, setStockedOn] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [stockUnitCost, setStockUnitCost] = useState(product.costPrice ?? "0");
+  const [writeOffQuantity, setWriteOffQuantity] = useState("1");
+  const [writeOffDate, setWriteOffDate] = useState(
+    format(new Date(), "yyyy-MM-dd")
+  );
+  const [writeOffReason, setWriteOffReason] = useState<
+    "adjustment" | "damage" | "loss"
+  >("damage");
+  const [writeOffNotes, setWriteOffNotes] = useState("");
+
+  const refreshView = () => {
+    router.refresh();
+  };
+
+  const handleEditProduct = () => {
+    startTransition(async () => {
+      try {
+        await updateProductAction(product.id, {
+          categoryId: editCategoryId,
+          description: editDescription || undefined,
+          name: editName,
+        });
+        toast.success("Produto atualizado.");
+        setEditing(false);
+        refreshView();
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Nao foi possivel atualizar o produto."
+        );
+      }
+    });
+  };
+
+  const handleAddStock = () => {
+    startTransition(async () => {
+      try {
+        await addProductStockAction(product.id, {
+          quantity: Number(stockQuantity),
+          stockedOn,
+          unitCost: stockUnitCost,
+        });
+        toast.success("Estoque adicionado.");
+        setStocking(false);
+        refreshView();
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Nao foi possivel adicionar estoque."
+        );
+      }
+    });
+  };
+
+  const handleWriteOffStock = () => {
+    startTransition(async () => {
+      try {
+        await writeOffProductStockAction(product.id, {
+          happenedOn: writeOffDate,
+          notes: writeOffNotes || undefined,
+          quantity: Number(writeOffQuantity),
+          reason: writeOffReason,
+        });
+        toast.success("Baixa registrada.");
+        setWritingOff(false);
+        refreshView();
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Nao foi possivel registrar a baixa."
+        );
+      }
+    });
+  };
+
+  const handleArchiveToggle = () => {
+    startTransition(async () => {
+      try {
+        if (product.archivedAt) {
+          await unarchiveProductAction(product.id);
+          toast.success("Produto desarquivado.");
+        } else {
+          await archiveProductAction(product.id);
+          toast.success("Produto arquivado.");
+        }
+        refreshView();
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Nao foi possivel alterar o status do produto."
+        );
+      }
+    });
+  };
+
+  const handleDeleteProduct = () => {
+    startTransition(async () => {
+      try {
+        await deleteProductAction(product.id);
+        toast.success("Produto removido definitivamente.");
+        router.push("/produtos");
+        router.refresh();
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Nao foi possivel deletar o produto."
+        );
+      }
+    });
+  };
+
+  return (
+    <>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          onClick={() => setEditing(true)}
+          size="xs"
+          type="button"
+          variant="outline"
+        >
+          <HugeiconsIcon data-icon="inline-start" icon={Edit01Icon} />
+          Editar
+        </Button>
+        <Button
+          onClick={() => setStocking(true)}
+          size="xs"
+          type="button"
+          variant="outline"
+        >
+          <HugeiconsIcon data-icon="inline-start" icon={ListPlusIcon} />
+          Estoque
+        </Button>
+        <Button
+          onClick={() => setWritingOff(true)}
+          size="xs"
+          type="button"
+          variant="outline"
+        >
+          <HugeiconsIcon data-icon="inline-start" icon={MinusSignCircleIcon} />
+          Baixa
+        </Button>
+        <Button
+          onClick={handleArchiveToggle}
+          size="xs"
+          type="button"
+          variant="ghost"
+        >
+          <HugeiconsIcon data-icon="inline-start" icon={Archive01Icon} />
+          {product.archivedAt ? "Ativar" : "Arquivar"}
+        </Button>
+        <Button
+          onClick={() => setDeleting(true)}
+          size="xs"
+          type="button"
+          variant="destructive"
+        >
+          <HugeiconsIcon data-icon="inline-start" icon={Delete02Icon} />
+          Deletar
+        </Button>
+      </div>
+
+      <Dialog onOpenChange={setEditing} open={editing}>
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle>Editar produto</DialogTitle>
+            <DialogDescription>
+              Edite apenas nome, categoria e observacoes.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="detail-edit-name">Nome</Label>
+              <Input
+                id="detail-edit-name"
+                onChange={(event) => setEditName(event.target.value)}
+                value={editName}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="detail-edit-category">Categoria</Label>
+              <Select onValueChange={setEditCategoryId} value={editCategoryId}>
+                <SelectTrigger className="w-full" id="detail-edit-category">
+                  <SelectValue placeholder="Selecione uma categoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="detail-edit-description">Observacoes</Label>
+              <Textarea
+                className="min-h-24"
+                id="detail-edit-description"
+                onChange={(event) => setEditDescription(event.target.value)}
+                value={editDescription}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              disabled={pending || editName.trim().length === 0}
+              onClick={handleEditProduct}
+              type="button"
+            >
+              Salvar alteracoes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog onOpenChange={setStocking} open={stocking}>
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle>Adicionar estoque</DialogTitle>
+            <DialogDescription>
+              Informe a quantidade e o custo unitario desta nova entrada.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="detail-stock-quantity">Quantidade</Label>
+              <Input
+                id="detail-stock-quantity"
+                min="1"
+                onChange={(event) => setStockQuantity(event.target.value)}
+                type="number"
+                value={stockQuantity}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="detail-stock-cost">Custo unitario</Label>
+              <Input
+                id="detail-stock-cost"
+                min="0"
+                onChange={(event) => setStockUnitCost(event.target.value)}
+                step="0.01"
+                type="number"
+                value={stockUnitCost}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="detail-stock-date">Data do abastecimento</Label>
+              <ProductDatePicker
+                id="detail-stock-date"
+                onChange={setStockedOn}
+                value={stockedOn}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button disabled={pending} onClick={handleAddStock} type="button">
+              Confirmar entrada
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog onOpenChange={setWritingOff} open={writingOff}>
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle>Baixa de estoque</DialogTitle>
+            <DialogDescription>
+              Registre perda, avaria ou ajuste sem apagar o historico do
+              produto.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="detail-writeoff-quantity">Quantidade</Label>
+              <Input
+                id="detail-writeoff-quantity"
+                max={product.stock}
+                min="1"
+                onChange={(event) => setWriteOffQuantity(event.target.value)}
+                type="number"
+                value={writeOffQuantity}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="detail-writeoff-reason">Motivo</Label>
+              <Select
+                onValueChange={(value) =>
+                  setWriteOffReason(value as "adjustment" | "damage" | "loss")
+                }
+                value={writeOffReason}
+              >
+                <SelectTrigger className="w-full" id="detail-writeoff-reason">
+                  <SelectValue placeholder="Selecione um motivo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="damage">Avaria</SelectItem>
+                  <SelectItem value="loss">Perda</SelectItem>
+                  <SelectItem value="adjustment">Ajuste</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="detail-writeoff-date">Data da baixa</Label>
+              <ProductDatePicker
+                id="detail-writeoff-date"
+                onChange={setWriteOffDate}
+                value={writeOffDate}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="detail-writeoff-notes">Observacoes</Label>
+              <Textarea
+                className="min-h-20"
+                id="detail-writeoff-notes"
+                onChange={(event) => setWriteOffNotes(event.target.value)}
+                value={writeOffNotes}
+              />
+            </div>
+            <p className="text-muted-foreground text-xs">
+              Estoque atual: {product.stock} un.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button
+              disabled={pending || Number(writeOffQuantity) <= 0}
+              onClick={handleWriteOffStock}
+              type="button"
+              variant="destructive"
+            >
+              Confirmar baixa
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog onOpenChange={setDeleting} open={deleting}>
+        <DialogContent className="sm:max-w-[460px]">
+          <DialogHeader>
+            <DialogTitle>Deletar produto</DialogTitle>
+            <DialogDescription>
+              Esta acao e irreversivel. O produto sera apagado definitivamente,
+              junto com qualquer relacao registrada para ele, como entradas e
+              baixas de estoque. E como se ele nunca tivesse existido.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              onClick={() => setDeleting(false)}
+              type="button"
+              variant="ghost"
+            >
+              Cancelar
+            </Button>
+            <Button
+              disabled={pending}
+              onClick={handleDeleteProduct}
+              type="button"
+              variant="destructive"
+            >
+              Deletar definitivamente
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}

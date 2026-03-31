@@ -1,28 +1,14 @@
 "use client";
 
-import {
-  Archive01Icon,
-  Delete02Icon,
-  Edit01Icon,
-  ListPlusIcon,
-  Menu03Icon,
-  MinusSignCircleIcon,
-} from "@hugeicons/core-free-icons";
+import { Edit01Icon, Menu03Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { format } from "date-fns";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
-  addProductStockAction,
-  archiveProductAction,
-  deleteProductAction,
   type ProductListItem,
-  unarchiveProductAction,
   updateProductAction,
-  writeOffProductStockAction,
 } from "@/app/(app)/produtos/actions";
-import { ProductDatePicker } from "@/components/products/product-date-picker";
 import { RegisterProductDialog } from "@/components/products/register-product-dialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,7 +23,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -89,28 +74,9 @@ export function ProductsPanel({
   const [editingProduct, setEditingProduct] = useState<ProductListItem | null>(
     null
   );
-  const [stockProduct, setStockProduct] = useState<ProductListItem | null>(
-    null
-  );
-  const [deleteProduct, setDeleteProduct] = useState<ProductListItem | null>(
-    null
-  );
   const [editName, setEditName] = useState("");
   const [editCategoryId, setEditCategoryId] = useState("");
   const [editDescription, setEditDescription] = useState("");
-  const [stockQuantity, setStockQuantity] = useState("1");
-  const [stockedOn, setStockedOn] = useState(format(new Date(), "yyyy-MM-dd"));
-  const [stockUnitCost, setStockUnitCost] = useState("");
-  const [writeOffProduct, setWriteOffProduct] =
-    useState<ProductListItem | null>(null);
-  const [writeOffQuantity, setWriteOffQuantity] = useState("1");
-  const [writeOffDate, setWriteOffDate] = useState(
-    format(new Date(), "yyyy-MM-dd")
-  );
-  const [writeOffReason, setWriteOffReason] = useState<
-    "adjustment" | "damage" | "loss"
-  >("damage");
-  const [writeOffNotes, setWriteOffNotes] = useState("");
   const visibleProducts = products.filter((product) =>
     showArchived ? Boolean(product.archivedAt) : !product.archivedAt
   );
@@ -124,21 +90,6 @@ export function ProductsPanel({
     setEditName(product.name);
     setEditCategoryId(product.categoryId);
     setEditDescription(product.description ?? "");
-  };
-
-  const openStockDialog = (product: ProductListItem) => {
-    setStockProduct(product);
-    setStockQuantity("1");
-    setStockedOn(format(new Date(), "yyyy-MM-dd"));
-    setStockUnitCost(product.costPrice ?? "0");
-  };
-
-  const openWriteOffDialog = (product: ProductListItem) => {
-    setWriteOffProduct(product);
-    setWriteOffQuantity("1");
-    setWriteOffDate(format(new Date(), "yyyy-MM-dd"));
-    setWriteOffReason("damage");
-    setWriteOffNotes("");
   };
 
   const handleEditProduct = () => {
@@ -161,99 +112,6 @@ export function ProductsPanel({
           error instanceof Error
             ? error.message
             : "Nao foi possivel atualizar o produto."
-        );
-      }
-    });
-  };
-
-  const handleAddStock = () => {
-    if (!stockProduct) {
-      return;
-    }
-
-    startTransition(async () => {
-      try {
-        await addProductStockAction(stockProduct.id, {
-          quantity: Number(stockQuantity),
-          stockedOn,
-          unitCost: stockUnitCost,
-        });
-        toast.success("Estoque adicionado.");
-        setStockProduct(null);
-        refreshView();
-      } catch (error) {
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "Nao foi possivel adicionar estoque."
-        );
-      }
-    });
-  };
-
-  const handleArchiveToggle = (product: ProductListItem) => {
-    startTransition(async () => {
-      try {
-        if (product.archivedAt) {
-          await unarchiveProductAction(product.id);
-          toast.success("Produto desarquivado.");
-        } else {
-          await archiveProductAction(product.id);
-          toast.success("Produto arquivado.");
-        }
-        refreshView();
-      } catch (error) {
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "Nao foi possivel alterar o arquivo do produto."
-        );
-      }
-    });
-  };
-
-  const handleWriteOffStock = () => {
-    if (!writeOffProduct) {
-      return;
-    }
-
-    startTransition(async () => {
-      try {
-        await writeOffProductStockAction(writeOffProduct.id, {
-          happenedOn: writeOffDate,
-          notes: writeOffNotes || undefined,
-          quantity: Number(writeOffQuantity),
-          reason: writeOffReason,
-        });
-        toast.success("Baixa registrada.");
-        setWriteOffProduct(null);
-        refreshView();
-      } catch (error) {
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "Nao foi possivel registrar a baixa."
-        );
-      }
-    });
-  };
-
-  const handleDeleteProduct = () => {
-    if (!deleteProduct) {
-      return;
-    }
-
-    startTransition(async () => {
-      try {
-        await deleteProductAction(deleteProduct.id);
-        toast.success("Produto removido definitivamente.");
-        setDeleteProduct(null);
-        refreshView();
-      } catch (error) {
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "Nao foi possivel deletar o produto."
         );
       }
     });
@@ -337,46 +195,13 @@ export function ProductsPanel({
                           <HugeiconsIcon icon={Menu03Icon} strokeWidth={2} />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="min-w-36">
+                      <DropdownMenuContent align="end" className="min-w-28">
                         <DropdownMenuItem
                           onClick={(event) => event.stopPropagation()}
                           onSelect={() => openEditDialog(product)}
                         >
                           <HugeiconsIcon icon={Edit01Icon} strokeWidth={2} />
                           Editar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={(event) => event.stopPropagation()}
-                          onSelect={() => openStockDialog(product)}
-                        >
-                          <HugeiconsIcon icon={ListPlusIcon} strokeWidth={2} />
-                          Estoque
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={(event) => event.stopPropagation()}
-                          onSelect={() => openWriteOffDialog(product)}
-                        >
-                          <HugeiconsIcon
-                            icon={MinusSignCircleIcon}
-                            strokeWidth={2}
-                          />
-                          Baixa
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={(event) => event.stopPropagation()}
-                          onSelect={() => handleArchiveToggle(product)}
-                        >
-                          <HugeiconsIcon icon={Archive01Icon} strokeWidth={2} />
-                          {product.archivedAt ? "Ativar" : "Arquivar"}
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={(event) => event.stopPropagation()}
-                          onSelect={() => setDeleteProduct(product)}
-                          variant="destructive"
-                        >
-                          <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
-                          Deletar
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -444,177 +269,6 @@ export function ProductsPanel({
               type="button"
             >
               Salvar alteracoes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
-        onOpenChange={(open) => {
-          if (!open) {
-            setStockProduct(null);
-          }
-        }}
-        open={Boolean(stockProduct)}
-      >
-        <DialogContent className="sm:max-w-[420px]">
-          <DialogHeader>
-            <DialogTitle>Adicionar estoque</DialogTitle>
-            <DialogDescription>
-              Informe a quantidade e o custo unitario desta nova entrada.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="stock-quantity">Quantidade</Label>
-              <Input
-                id="stock-quantity"
-                min="1"
-                onChange={(event) => setStockQuantity(event.target.value)}
-                type="number"
-                value={stockQuantity}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="stock-unit-cost">Custo unitario</Label>
-              <Input
-                id="stock-unit-cost"
-                min="0"
-                onChange={(event) => setStockUnitCost(event.target.value)}
-                step="0.01"
-                type="number"
-                value={stockUnitCost}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="stock-date">Data do abastecimento</Label>
-              <ProductDatePicker
-                id="stock-date"
-                onChange={setStockedOn}
-                value={stockedOn}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button disabled={pending} onClick={handleAddStock} type="button">
-              Confirmar entrada
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
-        onOpenChange={(open) => {
-          if (!open) {
-            setWriteOffProduct(null);
-          }
-        }}
-        open={Boolean(writeOffProduct)}
-      >
-        <DialogContent className="sm:max-w-[420px]">
-          <DialogHeader>
-            <DialogTitle>Baixa de estoque</DialogTitle>
-            <DialogDescription>
-              Registre perda, avaria ou ajuste sem apagar o historico do
-              produto.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="write-off-quantity">Quantidade</Label>
-              <Input
-                id="write-off-quantity"
-                max={writeOffProduct?.stock ?? undefined}
-                min="1"
-                onChange={(event) => setWriteOffQuantity(event.target.value)}
-                type="number"
-                value={writeOffQuantity}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="write-off-reason">Motivo</Label>
-              <Select
-                onValueChange={(value) =>
-                  setWriteOffReason(value as "adjustment" | "damage" | "loss")
-                }
-                value={writeOffReason}
-              >
-                <SelectTrigger className="w-full" id="write-off-reason">
-                  <SelectValue placeholder="Selecione um motivo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="damage">Avaria</SelectItem>
-                  <SelectItem value="loss">Perda</SelectItem>
-                  <SelectItem value="adjustment">Ajuste</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="write-off-date">Data da baixa</Label>
-              <ProductDatePicker
-                id="write-off-date"
-                onChange={setWriteOffDate}
-                value={writeOffDate}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="write-off-notes">Observacoes</Label>
-              <Textarea
-                className="min-h-20"
-                id="write-off-notes"
-                onChange={(event) => setWriteOffNotes(event.target.value)}
-                value={writeOffNotes}
-              />
-            </div>
-            <p className="text-muted-foreground text-xs">
-              Estoque atual: {writeOffProduct?.stock ?? 0} un.
-            </p>
-          </div>
-          <DialogFooter>
-            <Button
-              disabled={pending || Number(writeOffQuantity) <= 0}
-              onClick={handleWriteOffStock}
-              type="button"
-              variant="destructive"
-            >
-              Confirmar baixa
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
-        onOpenChange={(open) => {
-          if (!open) {
-            setDeleteProduct(null);
-          }
-        }}
-        open={Boolean(deleteProduct)}
-      >
-        <DialogContent className="sm:max-w-[460px]">
-          <DialogHeader>
-            <DialogTitle>Deletar produto</DialogTitle>
-            <DialogDescription>
-              Esta acao e irreversivel. O produto sera apagado definitivamente,
-              junto com qualquer relacao registrada para ele, como entradas de
-              estoque. E como se ele nunca tivesse existido.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              onClick={() => setDeleteProduct(null)}
-              type="button"
-              variant="ghost"
-            >
-              Cancelar
-            </Button>
-            <Button
-              disabled={pending}
-              onClick={handleDeleteProduct}
-              type="button"
-              variant="destructive"
-            >
-              Deletar definitivamente
             </Button>
           </DialogFooter>
         </DialogContent>
