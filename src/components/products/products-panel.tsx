@@ -1,5 +1,13 @@
 "use client";
 
+import {
+  Archive01Icon,
+  Delete02Icon,
+  Edit01Icon,
+  ListPlusIcon,
+  Menu03Icon,
+} from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -58,17 +66,6 @@ const formatCurrency = (value: string | number | null) =>
     currency: "BRL",
     style: "currency",
   }).format(Number(value) || 0);
-
-const formatDateTime = (value: Date | string | null) => {
-  if (!value) {
-    return "Nao informado";
-  }
-
-  return new Intl.DateTimeFormat("pt-BR", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(new Date(value));
-};
 
 export function ProductsPanel({
   categories,
@@ -236,20 +233,12 @@ export function ProductsPanel({
         </div>
         <div className="flex items-center gap-2">
           <Button
-            onClick={() => setShowArchived(false)}
+            onClick={() => setShowArchived((current) => !current)}
             size="xs"
             type="button"
-            variant={showArchived ? "ghost" : "secondary"}
+            variant="ghost"
           >
-            Ativos
-          </Button>
-          <Button
-            onClick={() => setShowArchived(true)}
-            size="xs"
-            type="button"
-            variant={showArchived ? "secondary" : "ghost"}
-          >
-            Arquivados
+            {showArchived ? "Ver ativos" : "Ver arquivados"}
           </Button>
           <RegisterProductDialog categories={categories} settings={settings} />
         </div>
@@ -293,40 +282,53 @@ export function ProductsPanel({
                   <TableCell className="text-center font-semibold tabular-nums">
                     {product.stock}
                   </TableCell>
-                  <TableCell className="pr-4 text-right sm:pr-6">
+                  <TableCell
+                    className="pr-4 text-right sm:pr-6"
+                    onClick={(event) => event.stopPropagation()}
+                    onKeyDown={(event) => event.stopPropagation()}
+                  >
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
                           aria-label={`Acoes para ${product.name}`}
                           onClick={(event) => event.stopPropagation()}
+                          onPointerDown={(event) => event.stopPropagation()}
                           size="xs"
                           type="button"
                           variant="ghost"
                         >
-                          ...
+                          <HugeiconsIcon icon={Menu03Icon} strokeWidth={2} />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="min-w-36">
                         <DropdownMenuItem
+                          onClick={(event) => event.stopPropagation()}
                           onSelect={() => openEditDialog(product)}
                         >
+                          <HugeiconsIcon icon={Edit01Icon} strokeWidth={2} />
                           Editar
                         </DropdownMenuItem>
                         <DropdownMenuItem
+                          onClick={(event) => event.stopPropagation()}
                           onSelect={() => openStockDialog(product)}
                         >
-                          Adicionar estoque
+                          <HugeiconsIcon icon={ListPlusIcon} strokeWidth={2} />
+                          Estoque
                         </DropdownMenuItem>
                         <DropdownMenuItem
+                          onClick={(event) => event.stopPropagation()}
                           onSelect={() => handleArchiveToggle(product)}
                         >
-                          {product.archivedAt ? "Desarquivar" : "Arquivar"}
+                          <HugeiconsIcon icon={Archive01Icon} strokeWidth={2} />
+                          {product.archivedAt ? "Ativar" : "Arquivar"}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
+                          onClick={(event) => event.stopPropagation()}
                           onSelect={() => setDeleteProduct(product)}
                           variant="destructive"
                         >
+                          <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
                           Deletar
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -358,18 +360,15 @@ export function ProductsPanel({
             <div className="grid grid-cols-[96px_1fr] gap-x-3 gap-y-2 text-xs">
               <span className="text-muted-foreground">Categoria</span>
               <span>{detailsProduct.categoryName}</span>
-              <span className="text-muted-foreground">Preco</span>
-              <span>{formatCurrency(detailsProduct.price)}</span>
               <span className="text-muted-foreground">Custo</span>
               <span>{formatCurrency(detailsProduct.costPrice)}</span>
+              <span className="text-muted-foreground">Preco</span>
+              <span>{formatCurrency(detailsProduct.price)}</span>
+
               <span className="text-muted-foreground">Estoque</span>
               <span>{detailsProduct.stock}</span>
               <span className="text-muted-foreground">Status</span>
               <span>{detailsProduct.archivedAt ? "Arquivado" : "Ativo"}</span>
-              <span className="text-muted-foreground">Criado</span>
-              <span>{formatDateTime(detailsProduct.createdAt)}</span>
-              <span className="text-muted-foreground">Atualizado</span>
-              <span>{formatDateTime(detailsProduct.updatedAt)}</span>
               <span className="col-span-2 mt-2 border-border/50 border-t pt-2 text-muted-foreground">
                 Observacoes
               </span>
