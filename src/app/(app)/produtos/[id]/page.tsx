@@ -64,12 +64,18 @@ export default async function ProdutoDetalhePage(
     (sum, writeOff) => sum + Number(writeOff.quantity),
     0
   );
+  const totalWriteOffLoss = writeOffs.reduce(
+    (sum, writeOff) =>
+      sum + Number(writeOff.quantity) * Number(writeOff.unitCostSnapshot),
+    0
+  );
   const historyItems = [
     ...stockEntries.map((entry) => ({
       date: entry.stockedOn,
       id: entry.id,
       label: "Entrada",
       notes: null,
+      totalValue: Number(entry.quantity) * Number(entry.unitCost),
       quantityLabel: `+${entry.quantity} un.`,
       unitCost: entry.unitCost,
       variant: "entry" as const,
@@ -79,6 +85,7 @@ export default async function ProdutoDetalhePage(
       id: writeOff.id,
       label: getWriteOffLabel(writeOff.reason),
       notes: writeOff.notes,
+      totalValue: Number(writeOff.quantity) * Number(writeOff.unitCostSnapshot),
       quantityLabel: `-${writeOff.quantity} un.`,
       unitCost: writeOff.unitCostSnapshot,
       variant: "writeOff" as const,
@@ -157,6 +164,12 @@ export default async function ProdutoDetalhePage(
                 <p className="text-muted-foreground">Total baixado</p>
                 <p className="font-medium text-sm">{totalWriteOffs} un.</p>
               </div>
+              <div className="rounded-md border border-border/50 px-3 py-2">
+                <p className="text-muted-foreground">Prejuizo acumulado</p>
+                <p className="font-medium text-sm">
+                  {formatCurrency(totalWriteOffLoss)}
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -201,9 +214,16 @@ export default async function ProdutoDetalhePage(
                           </p>
                         ) : null}
                       </div>
-                      <p className="shrink-0 text-muted-foreground">
-                        {formatCurrency(item.unitCost)}
-                      </p>
+                      <div className="shrink-0 text-right text-muted-foreground">
+                        <p>{formatCurrency(item.unitCost)}</p>
+                        {item.variant === "writeOff" ? (
+                          <p className="text-destructive">
+                            Prej. {formatCurrency(item.totalValue)}
+                          </p>
+                        ) : (
+                          <p>{formatCurrency(item.totalValue)}</p>
+                        )}
+                      </div>
                     </div>
                   ))
                 )}
