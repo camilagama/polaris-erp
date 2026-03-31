@@ -2,29 +2,27 @@
 
 ## Inicio do dia
 
-- Confirmar acesso ao dashboard e verificar indicadores do periodo.
-- Revisar alertas de estoque critico.
-- Revisar produtos parados no dashboard.
-- Confirmar se os parametros em `Configuracoes` continuam corretos.
+- Confirmar acesso ao modulo `Produtos`.
+- Revisar rapidamente produtos ativos e arquivados.
+- Validar se os parametros em `Configuracoes` continuam corretos.
 
 ## Durante a operacao
 
-- Cadastrar produto novo antes de qualquer compra ou venda.
-- Registrar compra e marcar como `received` apenas quando a mercadoria chegar.
-- Fazer ajuste manual de estoque so quando houver diferenca fisica real.
-- Confirmar venda apenas depois de validar saldo disponivel.
-- Registrar recebimento em separado para manter caixa coerente.
-- Em cancelamento de venda, usar o fluxo que recompõe estoque explicitamente.
+- Cadastrar produto novo antes de movimentar estoque.
+- Registrar entrada sempre pelo fluxo de reposicao.
+- Registrar baixa sempre pelo fluxo de baixa.
+- Em baixas operacionais, detalhar o motivo em observacoes.
+- Usar data no formato ISO (`YYYY-MM-DD`) nos fluxos de estoque.
+- Em caso de erro operacional, preferir corrigir por nova movimentacao em vez de sobrescrever dados no banco.
 
 ## Fechamento do dia
 
-- Revisar vendas criadas no periodo.
-- Revisar recebimentos pendentes, parciais, refunds e chargebacks.
-- Conferir lucro bruto, lucro liquido e ticket medio no dashboard.
-- Validar se nao surgiram produtos com saldo critico inesperado.
+- Revisar historico de movimentacoes dos produtos alterados no dia.
+- Conferir se as baixas operacionais ficaram com observacoes claras.
+- Revisar itens arquivados e exclusoes definitivas realizadas no periodo.
 
 ## Regras de disciplina
 
-- Nao editar dado historico fora do fluxo previsto.
-- Nao usar planilha paralela para estoque ou caixa.
-- Qualquer divergencia deve virar ajuste ou recebimento, nunca sobrescrita manual no banco.
+- Nao editar historico diretamente no banco.
+- Nao usar planilha paralela para controle de estoque.
+- Usar exclusao fisica apenas quando realmente necessario.

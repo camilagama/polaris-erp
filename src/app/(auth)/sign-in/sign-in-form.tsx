@@ -58,12 +58,11 @@ export function SignInForm() {
             DG Imports
           </p>
           <h1 className="font-heading font-semibold text-3xl tracking-tight">
-            Gestao operacional para revenda com estoque e financeiro coerentes.
+            Gestao operacional para revenda com produtos e estoque confiaveis.
           </h1>
           <p className="max-w-2xl text-muted-foreground">
-            Esta base ja nasce preparada para custo medio movel, estoque
-            agregado, compras, vendas, recebimentos e visao separada de
-            resultado operacional e caixa.
+            A versao atual concentra autenticacao, catalogo, reposicao e baixa
+            de estoque com custo medio movel e configuracoes de markup.
           </p>
         </div>
 
@@ -74,12 +73,12 @@ export function SignInForm() {
               copy: "Saldo consolidado no produto e historico de movimentos sem edicao destrutiva.",
             },
             {
-              title: "Compras com custo medio",
-              copy: "Recebimento recalcula custo medio apenas quando uma entrada valida acontece.",
+              title: "Custo medio simplificado",
+              copy: "Reposicoes recalculam custo medio e baixas preservam rastreabilidade com observacoes.",
             },
             {
-              title: "Base pronta para vendas",
-              copy: "Snapshot de custo, recebimentos parciais e eventos financeiros previstos no schema.",
+              title: "Roadmap de vendas",
+              copy: "A proxima fase expande o fluxo atual para vendas e financeiro mantendo o mesmo modelo operacional.",
             },
           ].map((feature) => (
             <div

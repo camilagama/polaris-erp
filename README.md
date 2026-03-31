@@ -1,6 +1,6 @@
 # DG Imports
 
-Aplicacao interna em Next.js 16 para operacao de revenda, com autenticacao, catalogo de produtos e configuracoes operacionais centralizadas.
+Aplicacao interna em Next.js 16 para operacao de revenda, com autenticacao, modulo de produtos/estoque e configuracoes operacionais.
 
 ## Stack
 
@@ -30,7 +30,24 @@ Fluxos de dominio ja modelados:
 
 - `categories`: categorias de produto, incluindo a categoria protegida `Outros`
 - `system_settings`: configuracoes globais de markup minimo e ideal
-- `products`: catalogo com custo, preco de venda e estoque
+- `products`: catalogo com custo medio, preco de venda e estoque
+- `product_stock_entries`: entradas de estoque
+- `product_stock_write_offs`: baixas de estoque
+
+## Escopo atual
+
+Disponivel hoje:
+
+- autenticacao e area protegida
+- produtos
+- estoque (entrada e baixa)
+- configuracoes de catalogo e markup
+
+Ainda nao implementado:
+
+- modulo de vendas
+- modulo de recebimentos
+- dashboard financeiro consolidado
 
 ## Regras operacionais importantes
 
@@ -38,4 +55,6 @@ Fluxos de dominio ja modelados:
 - Todo produto precisa ter categoria.
 - O cadastro de produto usa as margens globais para sugerir preco minimo e ideal a partir do custo.
 - Preco abaixo do minimo gera alerta visual, mas continua permitido.
+- As baixas de estoque usam motivos simplificados (`adjustment` e `operational`) com detalhamento em observacoes.
+- Datas das actions de estoque devem estar no formato ISO (`YYYY-MM-DD`).
 

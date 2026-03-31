@@ -15,6 +15,18 @@ import {
   applyStockAddition,
   applyStockWriteOff,
 } from "@/features/products/stock";
+import { requireActionSession } from "@/lib/server-action-auth";
+
+const isoDateSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Data deve usar o formato ISO YYYY-MM-DD.")
+  .refine((value) => {
+    const parsed = new Date(`${value}T00:00:00Z`);
+    return (
+      !Number.isNaN(parsed.getTime()) &&
+      parsed.toISOString().slice(0, 10) === value
+    );
+  }, "Data invalida.");
 
 const createProductSchema = z.object({
   categoryId: z.string().min(1, "Categoria e obrigatoria."),
@@ -22,8 +34,11 @@ const createProductSchema = z.object({
   description: z.string().trim().optional(),
   name: z.string().trim().min(1, "Nome e obrigatorio."),
   price: z.coerce.number().min(0, "Preco invalido."),
-  purchasedOn: z.string().min(1, "Data de compra invalida."),
-  stock: z.coerce.number().int().min(0, "Estoque invalido."),
+  purchasedOn: isoDateSchema,
+  stock: z.coerce
+    .number()
+    .int("Estoque deve ser um numero inteiro.")
+    .min(0, "Estoque deve ser maior ou igual a zero."),
 });
 
 const updateProductSchema = z.object({
@@ -33,16 +48,22 @@ const updateProductSchema = z.object({
 });
 
 const stockAdditionSchema = z.object({
-  quantity: z.coerce.number().int().min(1, "Quantidade invalida."),
-  stockedOn: z.string().min(1, "Data de abastecimento invalida."),
+  quantity: z.coerce
+    .number()
+    .int("Quantidade deve ser um numero inteiro.")
+    .min(1, "Quantidade deve ser maior que zero."),
+  stockedOn: isoDateSchema,
   unitCost: z.coerce.number().min(0, "Custo invalido."),
 });
 
 const stockWriteOffSchema = z.object({
-  happenedOn: z.string().min(1, "Data da baixa invalida."),
+  happenedOn: isoDateSchema,
   notes: z.string().trim().max(240).optional(),
-  quantity: z.coerce.number().int().min(1, "Quantidade invalida."),
-  reason: z.enum(["adjustment", "damage", "loss"]),
+  quantity: z.coerce
+    .number()
+    .int("Quantidade deve ser um numero inteiro.")
+    .min(1, "Quantidade deve ser maior que zero."),
+  reason: z.enum(["adjustment", "operational"]),
 });
 
 const revalidateProducts = () => {
@@ -110,7 +131,7 @@ export interface ProductStockWriteOffItem {
   notes: string | null;
   productId: string;
   quantity: number;
-  reason: "adjustment" | "damage" | "loss";
+  reason: "adjustment" | "operational";
   unitCostSnapshot: string;
 }
 
@@ -241,6 +262,7 @@ export async function createProductAction(data: {
   purchasedOn: string;
   stock: number;
 }) {
+  await requireActionSession();
   const parsed = createProductSchema.parse(data);
   const category = await getProductCategoryById(parsed.categoryId);
 
@@ -283,6 +305,7 @@ export async function updateProductAction(
     name: string;
   }
 ) {
+  await requireActionSession();
   const parsed = updateProductSchema.parse(data);
   const category = await getProductCategoryById(parsed.categoryId);
 
@@ -310,6 +333,7 @@ export async function addProductStockAction(
     unitCost: string;
   }
 ) {
+  await requireActionSession();
   const parsed = stockAdditionSchema.parse(data);
 
   await db.transaction(async (tx) => {
@@ -347,9 +371,10 @@ export async function writeOffProductStockAction(
     happenedOn: string;
     notes?: string;
     quantity: number;
-    reason: "adjustment" | "damage" | "loss";
+    reason: "adjustment" | "operational";
   }
 ) {
+  await requireActionSession();
   const parsed = stockWriteOffSchema.parse(data);
 
   await db.transaction(async (tx) => {
@@ -380,6 +405,7 @@ export async function writeOffProductStockAction(
 }
 
 export async function archiveProductAction(id: string) {
+  await requireActionSession();
   await db
     .update(products)
     .set({
@@ -391,6 +417,7 @@ export async function archiveProductAction(id: string) {
 }
 
 export async function unarchiveProductAction(id: string) {
+  await requireActionSession();
   await db
     .update(products)
     .set({
@@ -402,6 +429,7 @@ export async function unarchiveProductAction(id: string) {
 }
 
 export async function deleteProductAction(id: string) {
+  await requireActionSession();
   await db.delete(products).where(eq(products.id, id));
   revalidateProducts();
 }

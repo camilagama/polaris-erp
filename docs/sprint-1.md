@@ -1,58 +1,44 @@
-# Sprint 1
+# Sprint 1 - Snapshot Atual (31/03/2026)
 
 ## Status Geral
 
 - [x] Fase 0, saneamento da base
 - [x] Fase 1, fundacao de plataforma
-- [x] Fase 2, remodelagem do banco
+- [x] Fase 2, remodelagem do banco para produtos/estoque
 - [x] Fase 3, produtos e estoque base
-- [x] Fase 4, compras e custo medio
-- [x] Fase 5, vendas operacionais
-- [x] Fase 6, recebimentos e eventos financeiros
-- [x] Fase 7, indicadores e configuracoes
-- [~] Fase 8, go-live operacional
-- [ ] Fase 9, extensoes da V1 depois do nucleo
+- [x] Fase 4, configuracoes de catalogo e markup
+- [~] Fase 5, polimento operacional
+- [ ] Fase 6, planejamento do modulo de vendas
 
-## O que ja foi entregue
+## Entregas confirmadas
 
-- [x] Shell `(app)` protegida, login por email/senha, Google Auth e Google One Tap
-- [x] Auth route do Better Auth em `/api/auth/[...all]`
-- [x] Proxy protegendo rotas privadas e redirecionando para `/sign-in`
-- [x] Schema novo do dominio com `products`, `purchases`, `inventory_movements`, `sales`, `sale_items`, `receipts` e `system_settings`
-- [x] Migrations aplicadas no Neon com `DATABASE_URL_DIRECT`
-- [x] Produtos como hub operacional com cadastro, preco, custo, estoque e historico no mesmo lugar
-- [x] Reposicao, correcao, perdas, avarias e devolucao embutidas em `Produtos`
-- [x] `Compras` removido da operacao diaria e redirecionado para `Produtos`
-- [x] Vendas multi-itens com snapshot de custo e bloqueio de estoque negativo
-- [x] Cancelamento de venda com recomposicao explicita de estoque
-- [x] `Recebimentos` removido da operacao diaria e absorvido por `Vendas`
-- [x] Dashboard simplificado com foco em vendido, lucro estimado, recebido, pendente e saude do catalogo
-- [x] Testes unitarios das regras matematicas base
-- [x] Build e lint limpos
+- [x] Shell `(app)` protegida com autenticacao
+- [x] Better Auth com email/senha, Google e One Tap
+- [x] Modulo `Produtos` com cadastro, edicao e status (ativo/arquivado)
+- [x] Fluxo de entrada de estoque com recalculo de custo medio
+- [x] Fluxo de baixa de estoque com motivo simplificado e observacoes
+- [x] Historico de movimentacoes no detalhe do produto
+- [x] Configuracoes de margem minima e ideal
+- [x] Busca por nome e categoria na listagem de produtos
+- [x] Validacao de data ISO na borda das server actions de estoque
+- [x] Testes unitarios de regras matematicas centrais
 
-## Criticos pendentes da Fase 8
+## Pontos em andamento
 
-- [x] Loading global do grupo `(app)`
-- [x] Error boundary do grupo `(app)`
-- [x] Seed inicial idempotente para parametros e usuario principal
-- [x] Checklist operacional inicial documentado
-- [x] Estados vazios especificos por modulo com orientacao operacional
-- [x] Revisao de UX mobile por tela
-- [ ] E2E de login, compra, venda, recebimento e dashboard
+- [~] Hardening de testes de integracao das actions
+- [~] Cobertura de cenarios concorrentes de estoque
+- [~] Revisao final de documentacao para estado real
 
-## Marcos de aceite
+## Pendencias para proxima fase
 
-- [x] Marco A: usuario entra, cadastra produto e ajusta estoque sem inconsistencias
-- [x] Marco B: reposicao dentro de `Produtos` aumenta saldo e recalcula custo medio corretamente
-- [x] Marco C: venda multi-itens bloqueia falta de estoque e grava snapshot de custo
-- [x] Marco D: pagamentos dentro da venda alteram o status e distinguem bruto de liquido
-- [x] Marco E: dashboard bate com dados transacionais e separa operacao de caixa
-- [~] Marco F: operacao consegue abandonar planilha para uso diario basico
+- [ ] Dashboard operacional consolidado (alem de placeholder)
+- [ ] E2E completo cobrindo fluxos principais
+- [ ] Definicao e planejamento detalhado do modulo de vendas
 
 ## Proximo passo ativo
 
-Concluir a Fase 8 com polimento operacional:
+Concluir polimento operacional do estoque:
 
-1. E2E cobrindo login, produto, reposicao, venda, pagamento e dashboard.
-2. Checklist de smoke test para go-live apos deploy.
-3. Revisao final com dados reais antes de fechar o Marco F.
+1. Finalizar bateria de testes de integracao e concorrencia.
+2. Executar smoke test com dados reais de operacao.
+3. Iniciar planejamento do modulo de vendas com base no estoque estabilizado.

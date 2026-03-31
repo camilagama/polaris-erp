@@ -64,6 +64,13 @@
       "when": 1774985400000,
       "tag": "20260331183000_inventory_integrity_hardening",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1774986600000,
+      "tag": "20260331195000_simplify_write_off_reasons",
+      "breakpoints": true
     }
   ]
 }

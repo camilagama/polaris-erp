@@ -1,111 +1,67 @@
 # Setup Neon + Drizzle ORM - dgimports
 
-## 📋 Configuração Inicial
+## Configuracao inicial
 
-### 1. Obter Connection String do Neon
+### 1. Connection string do Neon
 
-1. Acesse: https://console.neon.tech/app/projects/morning-forest-50221523
-2. Clique em "Connection string" no dashboard
-3. Copie a URL (deve parecer com: `postgresql://neondb_owner:...@...neon.tech/neondb?sslmode=require`)
-4. Cole em `.env.local`:
+1. Acesse o projeto no Neon.
+2. Copie a connection string com SSL.
+3. Salve no `.env.local`:
 
 ```bash
-DATABASE_URL="postgresql://neondb_owner:YOUR_PASSWORD@ep-young-water-a5e4e8a2-pool.sa-east-1.aws.neon.tech/neondb?sslmode=require"
+DATABASE_URL="postgresql://..."
+DATABASE_URL_DIRECT="postgresql://..."
 ```
 
-### 2. Gerar Migrações
+### 2. Fluxo de migracoes
 
 ```bash
-# Esta comando cria arquivos de migração baseado no schema
 bun run db:generate
-```
-
-### 3. Aplicar Migrações
-
-```bash
-# Opção 1: Push direto (recomendado para desenvolvimento)
-bun run db:push
-
-# Opção 2: Executar migrações geradas
 bun run db:migrate
 ```
 
-## 🗄️ Estrutura do Banco
-
-- **users**: Armazenar usuários do sistema
-- **imports**: Registros de importação de dados
-- **import_logs**: Logs detalhados de cada importação
-
-## 💻 Usando no App
-
-### Exemplo em Server Component (Next.js)
-
-```typescript
-import { db } from '@/db';
-import { users } from '@/db/schema';
-
-export default async function Page() {
-  const allUsers = await db.select().from(users);
-  return <div>{/* Render users */}</div>;
-}
-```
-
-### Exemplo em API Route
-
-```typescript
-// app/api/users/route.ts
-import { db } from '@/db';
-import { users } from '@/db/schema';
-
-export async function GET() {
-  const allUsers = await db.select().from(users);
-  return Response.json(allUsers);
-}
-
-export async function POST(req: Request) {
-  const { name, email } = await req.json();
-  
-  const newUser = await db
-    .insert(users)
-    .values({ name, email })
-    .returning();
-  
-  return Response.json(newUser);
-}
-```
-
-## 🛠️ Drizzle Kit Commands
+Em desenvolvimento, pode usar `db:push` quando necessario:
 
 ```bash
-# Ver schema em interface visual
+bun run db:push
+```
+
+## Estrutura atual do banco
+
+### Tabelas de autenticacao
+
+- `users`
+- `sessions`
+- `accounts`
+- `verifications`
+
+### Tabelas de dominio operacional
+
+- `categories`
+- `system_settings`
+- `products`
+- `product_stock_entries`
+- `product_stock_write_offs`
+
+## Regras principais do dominio atual
+
+- estoque agregado por produto
+- custo medio movel recalculado em entradas
+- baixa de estoque com motivos simplificados (`adjustment` e `operational`)
+- detalhes da baixa devem ir em `notes`
+- validacoes de integridade por constraints (estoque/custos/quantidades)
+
+## Comandos uteis
+
+```bash
 bun run db:studio
-
-# Gerar migrações (após mudanças no schema)
 bun run db:generate
-
-# Aplicar migrações via arquivo SQL
 bun run db:migrate
-
-# Push direto ao banco (dev only)
 bun run db:push
 ```
 
-## 📖 RepositóriosDrizzle Schema
+## Referencias
 
-Edite `src/db/schema.ts` para adicionar/modificar tabelas. Sempre rode `db:generate` após mudanças.
-
-## 🔒 Segurança
-
-- ✅ `.env.local` é ignorado no Git
-- ✅ Use variáveis de ambiente para secrets
-- ✅ Neon requer SSL (já configurado)
-
-## 📞 Próximos Passos
-
-1. Atualize `.env.local` com a connection string real
-2. Execute `bun run db:push` para criar as tabelas
-3. Comece a usar `db` no seu código!
-
----
-
-**Documentação**: https://orm.drizzle.team/ | https://neon.com/docs
+- schema principal: `src/db/schema.ts`
+- migracoes: `src/db/migrations/`
+- regras operacionais: `docs/01-regras-de-negocio.md`

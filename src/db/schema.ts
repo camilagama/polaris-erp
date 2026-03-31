@@ -96,8 +96,7 @@ export const systemSettings = pgTable("system_settings", {
 
 export const productWriteOffReasonEnum = pgEnum("product_write_off_reason", [
   "adjustment",
-  "damage",
-  "loss",
+  "operational",
 ]);
 
 export const products = pgTable(

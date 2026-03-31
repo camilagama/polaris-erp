@@ -21,16 +21,12 @@ export interface InventoryHistoryEntryInput {
 
 export interface InventoryWriteOffInput extends InventoryHistoryEntryInput {
   notes: string | null;
-  reason: "adjustment" | "damage" | "loss";
+  reason: "adjustment" | "operational";
 }
 
 const getWriteOffLabel = (reason: InventoryWriteOffInput["reason"]) => {
-  if (reason === "damage") {
-    return "Avaria";
-  }
-
-  if (reason === "loss") {
-    return "Perda";
+  if (reason === "operational") {
+    return "Operacional";
   }
 
   return "Ajuste";

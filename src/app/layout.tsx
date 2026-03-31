@@ -27,7 +27,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "DG Imports",
   description:
-    "Operacao web para revenda com produtos, compras, estoque, vendas e recebimentos.",
+    "Operacao web para revenda com autenticacao, produtos, estoque e configuracoes.",
 };
 
 export default function RootLayout({

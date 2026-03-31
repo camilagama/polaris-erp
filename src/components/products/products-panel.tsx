@@ -77,15 +77,40 @@ export function ProductsPanel({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [showArchived, setShowArchived] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [categoryFilterId, setCategoryFilterId] = useState("all");
   const [editingProduct, setEditingProduct] = useState<ProductListItem | null>(
     null
   );
   const [editName, setEditName] = useState("");
   const [editCategoryId, setEditCategoryId] = useState("");
   const [editDescription, setEditDescription] = useState("");
-  const visibleProducts = products.filter((product) =>
-    showArchived ? Boolean(product.archivedAt) : !product.archivedAt
-  );
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+  const visibleProducts = products.filter((product) => {
+    const matchesArchive = showArchived
+      ? Boolean(product.archivedAt)
+      : !product.archivedAt;
+
+    if (!matchesArchive) {
+      return false;
+    }
+
+    const matchesCategory =
+      categoryFilterId === "all" || product.categoryId === categoryFilterId;
+
+    if (!matchesCategory) {
+      return false;
+    }
+
+    if (normalizedSearch.length === 0) {
+      return true;
+    }
+
+    return (
+      product.name.toLowerCase().includes(normalizedSearch) ||
+      product.categoryName.toLowerCase().includes(normalizedSearch)
+    );
+  });
 
   const openEditDialog = (product: ProductListItem) => {
     setEditingProduct(product);
@@ -140,23 +165,52 @@ export function ProductsPanel({
 
   return (
     <div className="flex flex-col gap-6 p-4 pb-20 sm:p-6 sm:pb-6">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col gap-3">
         <div className="space-y-1">
           <h1 className="font-semibold text-2xl tracking-tight">Produtos</h1>
           <p className="text-muted-foreground text-xs">
             Toque na linha para ver o resumo do produto.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            onClick={() => setShowArchived((current) => !current)}
-            size="xs"
-            type="button"
-            variant="ghost"
-          >
-            {showArchived ? "Ver ativos" : "Ver arquivados"}
-          </Button>
-          <RegisterProductDialog categories={categories} settings={settings} />
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center">
+            <Input
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Buscar por nome ou categoria"
+              value={searchTerm}
+            />
+            <Select
+              onValueChange={setCategoryFilterId}
+              value={categoryFilterId}
+            >
+              <SelectTrigger className="w-full sm:w-52">
+                <SelectValue placeholder="Filtrar categoria" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas categorias</SelectItem>
+                {categories.map((category) => (
+                  <SelectItem key={category.id} value={category.id}>
+                    {category.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => setShowArchived((current) => !current)}
+              size="xs"
+              type="button"
+              variant="ghost"
+            >
+              {showArchived ? "Ver ativos" : "Ver arquivados"}
+            </Button>
+            <RegisterProductDialog
+              categories={categories}
+              settings={settings}
+            />
+          </div>
         </div>
       </div>
 
@@ -249,7 +303,7 @@ export function ProductsPanel({
         }}
         open={Boolean(editingProduct)}
       >
-        <DialogContent className="sm:max-w-[420px]">
+        <DialogContent className="sm:max-w-105">
           <DialogHeader>
             <DialogTitle>Editar produto</DialogTitle>
             <DialogDescription>

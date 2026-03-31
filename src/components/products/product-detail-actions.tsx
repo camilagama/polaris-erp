@@ -83,8 +83,8 @@ export function ProductDetailActions({
     format(new Date(), "yyyy-MM-dd")
   );
   const [writeOffReason, setWriteOffReason] = useState<
-    "adjustment" | "damage" | "loss"
-  >("damage");
+    "adjustment" | "operational"
+  >("operational");
   const [writeOffNotes, setWriteOffNotes] = useState("");
 
   const handleEditProduct = () => {
@@ -233,7 +233,7 @@ export function ProductDetailActions({
       </DropdownMenu>
 
       <Dialog onOpenChange={setEditing} open={editing}>
-        <DialogContent className="sm:max-w-[420px]">
+        <DialogContent className="sm:max-w-105">
           <DialogHeader>
             <DialogTitle>Editar produto</DialogTitle>
             <DialogDescription>
@@ -287,7 +287,7 @@ export function ProductDetailActions({
       </Dialog>
 
       <Dialog onOpenChange={setStocking} open={stocking}>
-        <DialogContent className="sm:max-w-[420px]">
+        <DialogContent className="sm:max-w-105">
           <DialogHeader>
             <DialogTitle>Adicionar estoque</DialogTitle>
             <DialogDescription>
@@ -301,6 +301,7 @@ export function ProductDetailActions({
                 id="detail-stock-quantity"
                 min="1"
                 onChange={(event) => setStockQuantity(event.target.value)}
+                step="1"
                 type="number"
                 value={stockQuantity}
               />
@@ -334,7 +335,7 @@ export function ProductDetailActions({
       </Dialog>
 
       <Dialog onOpenChange={setWritingOff} open={writingOff}>
-        <DialogContent className="sm:max-w-[420px]">
+        <DialogContent className="sm:max-w-105">
           <DialogHeader>
             <DialogTitle>Baixa de estoque</DialogTitle>
             <DialogDescription>
@@ -350,6 +351,7 @@ export function ProductDetailActions({
                 max={product.stock}
                 min="1"
                 onChange={(event) => setWriteOffQuantity(event.target.value)}
+                step="1"
                 type="number"
                 value={writeOffQuantity}
               />
@@ -358,7 +360,7 @@ export function ProductDetailActions({
               <Label htmlFor="detail-writeoff-reason">Motivo</Label>
               <Select
                 onValueChange={(value) =>
-                  setWriteOffReason(value as "adjustment" | "damage" | "loss")
+                  setWriteOffReason(value as "adjustment" | "operational")
                 }
                 value={writeOffReason}
               >
@@ -366,9 +368,8 @@ export function ProductDetailActions({
                   <SelectValue placeholder="Selecione um motivo" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="damage">Avaria</SelectItem>
-                  <SelectItem value="loss">Perda</SelectItem>
                   <SelectItem value="adjustment">Ajuste</SelectItem>
+                  <SelectItem value="operational">Operacional</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -407,7 +408,7 @@ export function ProductDetailActions({
       </Dialog>
 
       <Dialog onOpenChange={setDeleting} open={deleting}>
-        <DialogContent className="sm:max-w-[460px]">
+        <DialogContent className="sm:max-w-115">
           <DialogHeader>
             <DialogTitle>Deletar produto</DialogTitle>
             <DialogDescription>

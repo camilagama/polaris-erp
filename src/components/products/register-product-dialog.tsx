@@ -42,8 +42,17 @@ const productSchema = z.object({
   categoryId: z.string().min(1, "Categoria e obrigatoria"),
   costPrice: z.coerce.number().min(0, "Minimo 0"),
   price: z.coerce.number().min(0, "Minimo 0"),
-  purchasedOn: z.string().min(1, "Data invalida"),
-  stock: z.coerce.number().min(0, "Minimo 0"),
+  purchasedOn: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Use o formato ISO YYYY-MM-DD")
+    .refine((value) => {
+      const parsed = new Date(`${value}T00:00:00Z`);
+      return (
+        !Number.isNaN(parsed.getTime()) &&
+        parsed.toISOString().slice(0, 10) === value
+      );
+    }, "Data invalida"),
+  stock: z.coerce.number().int("Use um numero inteiro").min(0, "Minimo 0"),
 });
 
 const formatCurrency = (value: number) =>
@@ -136,7 +145,7 @@ export function RegisterProductDialog({
       <DialogTrigger asChild>
         <Button>Cadastrar Produto</Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[520px]">
+      <DialogContent className="sm:max-w-130">
         <DialogHeader>
           <DialogTitle>Novo Produto</DialogTitle>
           <DialogDescription>
@@ -295,6 +304,7 @@ export function RegisterProductDialog({
                         onChange={(event) =>
                           field.handleChange(Number(event.target.value))
                         }
+                        step="1"
                         type="number"
                         value={field.state.value}
                       />
