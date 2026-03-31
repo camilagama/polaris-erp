@@ -124,3 +124,20 @@ export const productStockEntries = pgTable("product_stock_entries", {
     .default("0"),
   ...timestamps,
 });
+
+export const productStockWriteOffs = pgTable("product_stock_write_offs", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  productId: text("product_id")
+    .notNull()
+    .references(() => products.id, { onDelete: "cascade" }),
+  happenedOn: date("happened_on").default(sql`CURRENT_DATE`).notNull(),
+  quantity: integer("quantity").notNull(),
+  reason: text("reason").notNull(),
+  notes: text("notes"),
+  unitCostSnapshot: decimal("unit_cost_snapshot", { precision: 12, scale: 2 })
+    .notNull()
+    .default("0"),
+  ...timestamps,
+});

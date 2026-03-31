@@ -4,7 +4,12 @@ import { asc, desc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/db";
-import { categories, productStockEntries, products } from "@/db/schema";
+import {
+  categories,
+  productStockEntries,
+  productStockWriteOffs,
+  products,
+} from "@/db/schema";
 import { getProductCategoryById } from "@/features/catalog/server";
 import { calculateWeightedCostPrice } from "@/features/products/stock";
 
@@ -28,6 +33,13 @@ const stockAdditionSchema = z.object({
   quantity: z.coerce.number().int().min(1, "Quantidade invalida."),
   stockedOn: z.string().min(1, "Data de abastecimento invalida."),
   unitCost: z.coerce.number().min(0, "Custo invalido."),
+});
+
+const stockWriteOffSchema = z.object({
+  happenedOn: z.string().min(1, "Data da baixa invalida."),
+  notes: z.string().trim().max(240).optional(),
+  quantity: z.coerce.number().int().min(1, "Quantidade invalida."),
+  reason: z.enum(["adjustment", "damage", "loss"]),
 });
 
 const revalidateProducts = () => {
@@ -54,6 +66,16 @@ export interface ProductStockEntryItem {
   quantity: number;
   stockedOn: string;
   unitCost: string;
+}
+
+export interface ProductStockWriteOffItem {
+  happenedOn: string;
+  id: string;
+  notes: string | null;
+  productId: string;
+  quantity: number;
+  reason: "adjustment" | "damage" | "loss";
+  unitCostSnapshot: string;
 }
 
 export async function getProductsAction(): Promise<ProductListItem[]> {
@@ -141,6 +163,33 @@ export async function getProductStockEntriesByProductIdAction(
   return entries.map((entry) => ({
     ...entry,
     quantity: Number(entry.quantity),
+  }));
+}
+
+export async function getProductStockWriteOffsByProductIdAction(
+  productId: string
+): Promise<ProductStockWriteOffItem[]> {
+  const writeOffs = await db
+    .select({
+      happenedOn: productStockWriteOffs.happenedOn,
+      id: productStockWriteOffs.id,
+      notes: productStockWriteOffs.notes,
+      productId: productStockWriteOffs.productId,
+      quantity: productStockWriteOffs.quantity,
+      reason: productStockWriteOffs.reason,
+      unitCostSnapshot: productStockWriteOffs.unitCostSnapshot,
+    })
+    .from(productStockWriteOffs)
+    .where(eq(productStockWriteOffs.productId, productId))
+    .orderBy(
+      desc(productStockWriteOffs.happenedOn),
+      desc(productStockWriteOffs.createdAt)
+    );
+
+  return writeOffs.map((writeOff) => ({
+    ...writeOff,
+    quantity: Number(writeOff.quantity),
+    reason: writeOff.reason as ProductStockWriteOffItem["reason"],
   }));
 }
 
@@ -252,6 +301,49 @@ export async function addProductStockAction(
         archivedAt: null,
         costPrice: nextCostPrice.toFixed(2),
         stock: Number(product.stock) + parsed.quantity,
+      })
+      .where(eq(products.id, id));
+  });
+
+  revalidateProducts();
+}
+
+export async function writeOffProductStockAction(
+  id: string,
+  data: {
+    happenedOn: string;
+    notes?: string;
+    quantity: number;
+    reason: "adjustment" | "damage" | "loss";
+  }
+) {
+  const parsed = stockWriteOffSchema.parse(data);
+  const product = await db.query.products.findFirst({
+    where: eq(products.id, id),
+  });
+
+  if (!product) {
+    throw new Error("Produto nao encontrado.");
+  }
+
+  if (Number(product.stock) < parsed.quantity) {
+    throw new Error("A baixa nao pode ser maior que o estoque atual.");
+  }
+
+  await db.transaction(async (tx) => {
+    await tx.insert(productStockWriteOffs).values({
+      happenedOn: parsed.happenedOn,
+      notes: parsed.notes || undefined,
+      productId: id,
+      quantity: parsed.quantity,
+      reason: parsed.reason,
+      unitCostSnapshot: product.costPrice,
+    });
+
+    await tx
+      .update(products)
+      .set({
+        stock: Number(product.stock) - parsed.quantity,
       })
       .where(eq(products.id, id));
   });

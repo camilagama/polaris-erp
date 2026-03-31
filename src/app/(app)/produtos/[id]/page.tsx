@@ -18,6 +18,7 @@ import {
 import {
   getProductByIdAction,
   getProductStockEntriesByProductIdAction,
+  getProductStockWriteOffsByProductIdAction,
 } from "../actions";
 
 const formatCurrency = (value: string | number | null) =>
@@ -29,13 +30,26 @@ const formatCurrency = (value: string | number | null) =>
 const formatDate = (value: string) =>
   format(parseISO(value), "dd/MM/yyyy", { locale: ptBR });
 
+const getWriteOffLabel = (reason: "adjustment" | "damage" | "loss") => {
+  if (reason === "damage") {
+    return "Avaria";
+  }
+
+  if (reason === "loss") {
+    return "Perda";
+  }
+
+  return "Ajuste";
+};
+
 export default async function ProdutoDetalhePage(
   props: PageProps<"/produtos/[id]">
 ) {
   const { id } = await props.params;
-  const [product, stockEntries] = await Promise.all([
+  const [product, stockEntries, writeOffs] = await Promise.all([
     getProductByIdAction(id),
     getProductStockEntriesByProductIdAction(id),
+    getProductStockWriteOffsByProductIdAction(id),
   ]);
 
   if (!product) {
@@ -48,6 +62,30 @@ export default async function ProdutoDetalhePage(
     (sum, entry) => sum + Number(entry.quantity),
     0
   );
+  const totalWriteOffs = writeOffs.reduce(
+    (sum, writeOff) => sum + Number(writeOff.quantity),
+    0
+  );
+  const historyItems = [
+    ...stockEntries.map((entry) => ({
+      date: entry.stockedOn,
+      id: entry.id,
+      label: "Entrada",
+      notes: null,
+      quantityLabel: `+${entry.quantity} un.`,
+      unitCost: entry.unitCost,
+      variant: "entry" as const,
+    })),
+    ...writeOffs.map((writeOff) => ({
+      date: writeOff.happenedOn,
+      id: writeOff.id,
+      label: getWriteOffLabel(writeOff.reason),
+      notes: writeOff.notes,
+      quantityLabel: `-${writeOff.quantity} un.`,
+      unitCost: writeOff.unitCostSnapshot,
+      variant: "writeOff" as const,
+    })),
+  ].sort((left, right) => right.date.localeCompare(left.date));
 
   return (
     <div className="flex flex-col gap-6 p-4 pb-20 sm:p-6 sm:pb-6">
@@ -116,6 +154,10 @@ export default async function ProdutoDetalhePage(
                 <p className="text-muted-foreground">Total abastecido</p>
                 <p className="font-medium text-sm">{totalEntries} un.</p>
               </div>
+              <div className="rounded-md border border-border/50 px-3 py-2">
+                <p className="text-muted-foreground">Total baixado</p>
+                <p className="font-medium text-sm">{totalWriteOffs} un.</p>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -133,30 +175,35 @@ export default async function ProdutoDetalhePage(
                 type="button"
                 variant="ghost"
               >
-                Movimentacoes de abastecimento
+                Movimentacoes de estoque
                 <HugeiconsIcon data-icon="inline-end" icon={ArrowDown01Icon} />
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent className="border-border/50 border-t px-3 py-3">
               <div className="flex flex-col gap-3">
-                {stockEntries.length === 0 ? (
+                {historyItems.length === 0 ? (
                   <p className="text-muted-foreground text-xs">
-                    Sem abastecimentos registrados.
+                    Sem movimentacoes registradas.
                   </p>
                 ) : (
-                  stockEntries.map((entry) => (
+                  historyItems.map((item) => (
                     <div
                       className="flex items-center justify-between gap-3 rounded-md border border-border/40 px-3 py-2 text-xs"
-                      key={entry.id}
+                      key={item.id}
                     >
                       <div className="min-w-0">
-                        <p className="font-medium">+{entry.quantity} un.</p>
+                        <p className="font-medium">{item.quantityLabel}</p>
                         <p className="text-muted-foreground">
-                          {formatDate(entry.stockedOn)}
+                          {item.label} em {formatDate(item.date)}
                         </p>
+                        {item.notes ? (
+                          <p className="mt-1 text-muted-foreground">
+                            {item.notes}
+                          </p>
+                        ) : null}
                       </div>
                       <p className="shrink-0 text-muted-foreground">
-                        {formatCurrency(entry.unitCost)}
+                        {formatCurrency(item.unitCost)}
                       </p>
                     </div>
                   ))

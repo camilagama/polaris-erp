@@ -50,6 +50,13 @@
       "when": 1774967400000,
       "tag": "20260331143000_product_inventory_dates",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1774978200000,
+      "tag": "20260331170000_product_stock_write_offs",
+      "breakpoints": true
     }
   ]
 }
