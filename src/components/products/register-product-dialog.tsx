@@ -150,7 +150,7 @@ export function RegisterProductDialog() {
                     onValueChange={field.handleChange}
                     value={field.state.value}
                   >
-                    <SelectTrigger id={field.name}>
+                    <SelectTrigger className="w-full" id={field.name}>
                       <SelectValue placeholder="Selecione uma categoria" />
                     </SelectTrigger>
                     <SelectContent>
