@@ -16,6 +16,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  getCatalogSettings,
+  listCategoriesWithUsage,
+} from "@/features/catalog/server";
 import { getProductsAction } from "./actions";
 
 function formatCurrency(value: string | null) {
@@ -26,13 +30,24 @@ function formatCurrency(value: string | null) {
 }
 
 export default async function ProdutosPage() {
-  const products = await getProductsAction();
+  const [products, categories, settings] = await Promise.all([
+    getProductsAction(),
+    listCategoriesWithUsage(),
+    getCatalogSettings(),
+  ]);
 
   return (
     <div className="flex flex-col gap-6 p-4 pb-20 sm:p-6 sm:pb-6">
       <div className="flex items-center justify-between">
         <h1 className="font-semibold text-2xl tracking-tight">Produtos</h1>
-        <RegisterProductDialog />
+        <RegisterProductDialog
+          categories={categories.map((category) => ({
+            id: category.id,
+            key: category.key,
+            name: category.name,
+          }))}
+          settings={settings}
+        />
       </div>
 
       <Card>

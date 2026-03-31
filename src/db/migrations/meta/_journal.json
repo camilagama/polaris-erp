@@ -29,6 +29,13 @@
       "when": 1774771942515,
       "tag": "20260329081222_fuzzy_gravity",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1774904400000,
+      "tag": "20260331090000_catalog_settings_and_protected_categories",
+      "breakpoints": true
     }
   ]
 }

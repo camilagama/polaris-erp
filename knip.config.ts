@@ -1,6 +1,10 @@
 import type { KnipConfig } from "knip";
 
 const config: KnipConfig = {
+  ignoreDependencies: ["@biomejs/biome", "tailwindcss"],
+  ignoreIssues: {
+    "src/components/ui/*": ["exports"],
+  },
   next: {
     entry: [
       "next.config.{js,ts,mjs}",

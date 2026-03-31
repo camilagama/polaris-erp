@@ -1,7 +1,8 @@
 "use client";
 
 import { useForm } from "@tanstack/react-form";
-import { useEffect, useState } from "react";
+import { type ChangeEvent, useState } from "react";
+import { toast } from "sonner";
 import { z } from "zod";
 import { createProductAction } from "@/app/(app)/produtos/actions";
 import { Button } from "@/components/ui/button";
@@ -30,63 +31,105 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { getCategoriesAction } from "./category-actions";
-import { ManageCategoriesDialog } from "./manage-categories-dialog";
+import { OTHERS_CATEGORY_KEY } from "@/features/catalog/constants";
+import { calculateSuggestedPrices } from "@/features/catalog/pricing";
 
 const productSchema = z.object({
-  name: z.string().min(1, "Nome é obrigatório"),
+  name: z.string().min(1, "Nome e obrigatorio"),
   description: z.string().optional().default(""),
-  categoryId: z.string().min(1, "Categoria é obrigatória"),
-  costPrice: z.coerce.number().min(0, "Mínimo 0"),
-  price: z.coerce.number().min(0, "Mínimo 0"),
-  stock: z.coerce.number().min(0, "Mínimo 0"),
+  categoryId: z.string().min(1, "Categoria e obrigatoria"),
+  costPrice: z.coerce.number().min(0, "Minimo 0"),
+  price: z.coerce.number().min(0, "Minimo 0"),
+  stock: z.coerce.number().min(0, "Minimo 0"),
 });
 
-export function RegisterProductDialog() {
-  const [open, setOpen] = useState(false);
-  const [categories, setCategories] = useState<{ id: string; name: string }[]>(
-    []
-  );
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat("pt-BR", {
+    currency: "BRL",
+    style: "currency",
+  }).format(value);
 
-  useEffect(() => {
-    async function load() {
-      const data = await getCategoriesAction();
-      setCategories(data);
-    }
-    if (open) {
-      load();
-    }
-  }, [open]);
+interface ProductCategoryOption {
+  id: string;
+  key: string;
+  name: string;
+}
+
+interface RegisterProductDialogProps {
+  categories: ProductCategoryOption[];
+  settings: {
+    idealMarkupPercent: number;
+    minimumMarkupPercent: number;
+  };
+}
+
+export function RegisterProductDialog({
+  categories,
+  settings,
+}: RegisterProductDialogProps) {
+  const [open, setOpen] = useState(false);
+  const defaultCategoryId =
+    categories.find((category) => category.key === OTHERS_CATEGORY_KEY)?.id ??
+    categories[0]?.id ??
+    "";
 
   const form = useForm({
     defaultValues: {
       name: "",
       description: "",
-      categoryId: "",
+      categoryId: defaultCategoryId,
       costPrice: 0,
       price: 0,
       stock: 0,
     },
     onSubmit: async ({ value }) => {
-      await createProductAction({
-        name: value.name,
-        description: value.description || undefined,
-        categoryId: value.categoryId,
-        costPrice: value.costPrice.toString(),
-        price: value.price.toString(),
-        stock: value.stock,
-      });
-      setOpen(false);
-      form.reset();
+      try {
+        await createProductAction({
+          name: value.name,
+          description: value.description || undefined,
+          categoryId: value.categoryId,
+          costPrice: value.costPrice.toString(),
+          price: value.price.toString(),
+          stock: value.stock,
+        });
+        toast.success("Produto cadastrado.");
+        setOpen(false);
+        form.reset();
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Nao foi possivel cadastrar o produto."
+        );
+      }
     },
   });
 
+  const resetForm = () => {
+    form.reset({
+      categoryId: defaultCategoryId,
+      costPrice: 0,
+      description: "",
+      name: "",
+      price: 0,
+      stock: 0,
+    });
+  };
+
   return (
-    <Dialog onOpenChange={setOpen} open={open}>
+    <Dialog
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen);
+        if (nextOpen) {
+          resetForm();
+        }
+      }}
+      open={open}
+    >
       <DialogTrigger asChild>
         <Button>Cadastrar Produto</Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[520px]">
         <DialogHeader>
           <DialogTitle>Novo Produto</DialogTitle>
           <DialogDescription>
@@ -94,9 +137,9 @@ export function RegisterProductDialog() {
           </DialogDescription>
         </DialogHeader>
         <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
+          onSubmit={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
             form.handleSubmit();
           }}
         >
@@ -105,8 +148,10 @@ export function RegisterProductDialog() {
               name="name"
               validators={{
                 onChange: ({ value }) => {
-                  const res = productSchema.shape.name.safeParse(value);
-                  return res.success ? undefined : res.error.issues[0].message;
+                  const result = productSchema.shape.name.safeParse(value);
+                  return result.success
+                    ? undefined
+                    : result.error.issues[0]?.message;
                 },
               }}
             >
@@ -117,12 +162,11 @@ export function RegisterProductDialog() {
                     id={field.name}
                     name={field.name}
                     onBlur={field.handleBlur}
-                    onChange={(e) => field.handleChange(e.target.value)}
+                    onChange={(event) => field.handleChange(event.target.value)}
                     placeholder="Ex: iPhone 16 Pro Max"
                     value={field.state.value}
                   />
-                  {field.state.meta.errors &&
-                  field.state.meta.errors.length > 0 ? (
+                  {field.state.meta.errors.length > 0 ? (
                     <em className="text-[11px] text-destructive">
                       {field.state.meta.errors.join(", ")}
                     </em>
@@ -135,17 +179,17 @@ export function RegisterProductDialog() {
               name="categoryId"
               validators={{
                 onChange: ({ value }) => {
-                  const res = productSchema.shape.categoryId.safeParse(value);
-                  return res.success ? undefined : res.error.issues[0].message;
+                  const result =
+                    productSchema.shape.categoryId.safeParse(value);
+                  return result.success
+                    ? undefined
+                    : result.error.issues[0]?.message;
                 },
               }}
             >
               {(field) => (
-                <div className="flex flex-col">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor={field.name}>Categoria</Label>
-                    <ManageCategoriesDialog />
-                  </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor={field.name}>Categoria</Label>
                   <Select
                     onValueChange={field.handleChange}
                     value={field.state.value}
@@ -154,15 +198,14 @@ export function RegisterProductDialog() {
                       <SelectValue placeholder="Selecione uma categoria" />
                     </SelectTrigger>
                     <SelectContent>
-                      {categories.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.id}>
-                          {cat.name}
+                      {categories.map((category) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  {field.state.meta.errors &&
-                  field.state.meta.errors.length > 0 ? (
+                  {field.state.meta.errors.length > 0 ? (
                     <em className="text-[11px] text-destructive">
                       {field.state.meta.errors.join(", ")}
                     </em>
@@ -174,14 +217,16 @@ export function RegisterProductDialog() {
             <form.Field name="description">
               {(field) => (
                 <div className="flex flex-col gap-1.5">
-                  <Label htmlFor={field.name}>Descrição</Label>
+                  <Label htmlFor={field.name}>Descricao</Label>
                   <InputGroup className="h-auto">
                     <InputGroupTextarea
                       id={field.name}
                       name={field.name}
                       onBlur={field.handleBlur}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      placeholder="Detalhes sobre versão, cor, etc..."
+                      onChange={(event) =>
+                        field.handleChange(event.target.value)
+                      }
+                      placeholder="Detalhes sobre versao, cor, etc..."
                       value={field.state.value}
                     />
                   </InputGroup>
@@ -189,35 +234,38 @@ export function RegisterProductDialog() {
               )}
             </form.Field>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <form.Field
                 name="costPrice"
                 validators={{
                   onChange: ({ value }) => {
-                    const res = productSchema.shape.costPrice.safeParse(value);
-                    return res.success
+                    const result =
+                      productSchema.shape.costPrice.safeParse(value);
+                    return result.success
                       ? undefined
-                      : res.error.issues[0].message;
+                      : result.error.issues[0]?.message;
                   },
                 }}
               >
                 {(field) => {
                   const handleChange = (
-                    e: React.ChangeEvent<HTMLInputElement>
+                    event: ChangeEvent<HTMLInputElement>
                   ) => {
-                    let val = e.target.value;
-                    if (val.includes(".")) {
-                      const [int, dec] = val.split(".");
-                      if (dec.length > 2) {
-                        val = `${int}.${dec.slice(0, 2)}`;
+                    let nextValue = event.target.value;
+
+                    if (nextValue.includes(".")) {
+                      const [integer, decimal] = nextValue.split(".");
+                      if (decimal.length > 2) {
+                        nextValue = `${integer}.${decimal.slice(0, 2)}`;
                       }
                     }
-                    field.handleChange(Number(val));
+
+                    field.handleChange(Number(nextValue));
                   };
 
                   return (
                     <div className="flex flex-col gap-1.5">
-                      <Label htmlFor={field.name}>Custo Unitário</Label>
+                      <Label htmlFor={field.name}>Custo Unitario</Label>
                       <InputGroup>
                         <InputGroupAddon>
                           <InputGroupText>R$</InputGroupText>
@@ -233,8 +281,7 @@ export function RegisterProductDialog() {
                           value={field.state.value}
                         />
                       </InputGroup>
-                      {field.state.meta.errors &&
-                      field.state.meta.errors.length > 0 ? (
+                      {field.state.meta.errors.length > 0 ? (
                         <em className="text-[11px] text-destructive">
                           {field.state.meta.errors.join(", ")}
                         </em>
@@ -248,30 +295,32 @@ export function RegisterProductDialog() {
                 name="price"
                 validators={{
                   onChange: ({ value }) => {
-                    const res = productSchema.shape.price.safeParse(value);
-                    return res.success
+                    const result = productSchema.shape.price.safeParse(value);
+                    return result.success
                       ? undefined
-                      : res.error.issues[0].message;
+                      : result.error.issues[0]?.message;
                   },
                 }}
               >
                 {(field) => {
                   const handleChange = (
-                    e: React.ChangeEvent<HTMLInputElement>
+                    event: ChangeEvent<HTMLInputElement>
                   ) => {
-                    let val = e.target.value;
-                    if (val.includes(".")) {
-                      const [int, dec] = val.split(".");
-                      if (dec.length > 2) {
-                        val = `${int}.${dec.slice(0, 2)}`;
+                    let nextValue = event.target.value;
+
+                    if (nextValue.includes(".")) {
+                      const [integer, decimal] = nextValue.split(".");
+                      if (decimal.length > 2) {
+                        nextValue = `${integer}.${decimal.slice(0, 2)}`;
                       }
                     }
-                    field.handleChange(Number(val));
+
+                    field.handleChange(Number(nextValue));
                   };
 
                   return (
                     <div className="flex flex-col gap-1.5">
-                      <Label htmlFor={field.name}>Preço de Venda</Label>
+                      <Label htmlFor={field.name}>Preco de Venda</Label>
                       <InputGroup>
                         <InputGroupAddon>
                           <InputGroupText>R$</InputGroupText>
@@ -287,8 +336,7 @@ export function RegisterProductDialog() {
                           value={field.state.value}
                         />
                       </InputGroup>
-                      {field.state.meta.errors &&
-                      field.state.meta.errors.length > 0 ? (
+                      {field.state.meta.errors.length > 0 ? (
                         <em className="text-[11px] text-destructive">
                           {field.state.meta.errors.join(", ")}
                         </em>
@@ -299,12 +347,94 @@ export function RegisterProductDialog() {
               </form.Field>
             </div>
 
+            <form.Subscribe
+              selector={(state) => [state.values.costPrice, state.values.price]}
+            >
+              {([costPrice, price]) => {
+                const suggestion = calculateSuggestedPrices({
+                  costPrice,
+                  currentPrice: price,
+                  idealMarkupPercent: settings.idealMarkupPercent,
+                  minimumMarkupPercent: settings.minimumMarkupPercent,
+                });
+
+                return (
+                  <div className="space-y-3 rounded-lg border border-border/60 bg-muted/20 p-3">
+                    <div className="space-y-1">
+                      <p className="font-medium text-sm">Sugestao de preco</p>
+                      <p className="text-muted-foreground text-xs">
+                        Baseado no custo informado e nas margens globais
+                        configuradas.
+                      </p>
+                    </div>
+
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <div className="rounded-md border border-border/60 bg-background px-3 py-2">
+                        <p className="text-[11px] text-muted-foreground uppercase tracking-[0.16em]">
+                          Preco minimo
+                        </p>
+                        <p className="font-medium text-sm">
+                          {formatCurrency(suggestion.minimumPrice)}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {settings.minimumMarkupPercent}% sobre o custo
+                        </p>
+                      </div>
+                      <div className="rounded-md border border-border/60 bg-background px-3 py-2">
+                        <p className="text-[11px] text-muted-foreground uppercase tracking-[0.16em]">
+                          Preco ideal
+                        </p>
+                        <p className="font-medium text-sm">
+                          {formatCurrency(suggestion.idealPrice)}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {settings.idealMarkupPercent}% sobre o custo
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        onClick={() =>
+                          form.setFieldValue("price", suggestion.minimumPrice)
+                        }
+                        size="sm"
+                        type="button"
+                        variant="outline"
+                      >
+                        Usar minimo
+                      </Button>
+                      <Button
+                        onClick={() =>
+                          form.setFieldValue("price", suggestion.idealPrice)
+                        }
+                        size="sm"
+                        type="button"
+                        variant="outline"
+                      >
+                        Usar ideal
+                      </Button>
+                    </div>
+
+                    {suggestion.isBelowMinimum ? (
+                      <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-destructive text-xs">
+                        O preco informado esta abaixo do minimo sugerido. O
+                        salvamento continua permitido.
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              }}
+            </form.Subscribe>
+
             <form.Field
               name="stock"
               validators={{
                 onChange: ({ value }) => {
-                  const res = productSchema.shape.stock.safeParse(value);
-                  return res.success ? undefined : res.error.issues[0].message;
+                  const result = productSchema.shape.stock.safeParse(value);
+                  return result.success
+                    ? undefined
+                    : result.error.issues[0]?.message;
                 },
               }}
             >
@@ -316,8 +446,8 @@ export function RegisterProductDialog() {
                       id={field.name}
                       name={field.name}
                       onBlur={field.handleBlur}
-                      onChange={(e) =>
-                        field.handleChange(Number(e.target.value))
+                      onChange={(event) =>
+                        field.handleChange(Number(event.target.value))
                       }
                       type="number"
                       value={field.state.value}
@@ -326,8 +456,7 @@ export function RegisterProductDialog() {
                       <InputGroupText>unidades</InputGroupText>
                     </InputGroupAddon>
                   </InputGroup>
-                  {field.state.meta.errors &&
-                  field.state.meta.errors.length > 0 ? (
+                  {field.state.meta.errors.length > 0 ? (
                     <em className="text-[11px] text-destructive">
                       {field.state.meta.errors.join(", ")}
                     </em>

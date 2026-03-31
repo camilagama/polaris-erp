@@ -65,8 +65,27 @@ export const categories = pgTable("categories", {
   id: text("id")
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
+  key: text("key").notNull().unique(),
   name: text("name").notNull().unique(),
   description: text("description"),
+  isSystem: boolean("is_system").default(false).notNull(),
+  ...timestamps,
+});
+
+export const systemSettings = pgTable("system_settings", {
+  id: text("id").primaryKey(),
+  minimumMarkupPercent: decimal("minimum_markup_percent", {
+    precision: 12,
+    scale: 2,
+  })
+    .notNull()
+    .default("0"),
+  idealMarkupPercent: decimal("ideal_markup_percent", {
+    precision: 12,
+    scale: 2,
+  })
+    .notNull()
+    .default("0"),
   ...timestamps,
 });
 
@@ -76,7 +95,9 @@ export const products = pgTable("products", {
     .$defaultFn(() => crypto.randomUUID()),
   name: text("name").notNull(),
   description: text("description"),
-  categoryId: text("category_id").references(() => categories.id),
+  categoryId: text("category_id")
+    .notNull()
+    .references(() => categories.id),
   costPrice: decimal("cost_price", { precision: 12, scale: 2 })
     .notNull()
     .default("0"),
