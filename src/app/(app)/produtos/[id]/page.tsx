@@ -23,6 +23,8 @@ import {
 const formatCurrency = (value: string | number | null) =>
   new Intl.NumberFormat("pt-BR", {
     currency: "BRL",
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 2,
     style: "currency",
   }).format(Number(value) || 0);
 

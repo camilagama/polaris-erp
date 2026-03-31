@@ -30,7 +30,7 @@ const saleItemSchema = z.object({
 const createSaleSchema = z
   .object({
     customerName: z.string().trim().max(80).optional(),
-    feeAmount: z.coerce
+    feePercentage: z.coerce
       .number()
       .min(0, "Taxa nao pode ser negativa.")
       .default(0),
@@ -211,7 +211,7 @@ export async function getSaleByIdAction(
 
 export async function createSaleAction(data: {
   customerName?: string;
-  feeAmount?: number;
+  feePercentage?: number;
   freightAmount?: number;
   items: Array<{
     productId: string;
@@ -267,14 +267,17 @@ export async function createSaleAction(data: {
       })
     );
 
-    const finalTotalAmount =
+    const baseAmount =
       Math.round(
-        (snapshot.totalAmount +
-          parsed.freightAmount -
-          parsed.feeAmount +
-          Number.EPSILON) *
-          100
+        (snapshot.totalAmount + parsed.freightAmount + Number.EPSILON) * 100
       ) / 100;
+    const calculatedFeeAmount =
+      Math.round(
+        (baseAmount * (parsed.feePercentage / 100) + Number.EPSILON) * 100
+      ) / 100;
+    const finalTotalAmount =
+      Math.round((baseAmount + calculatedFeeAmount + Number.EPSILON) * 100) /
+      100;
 
     if (finalTotalAmount < 0) {
       throw new Error("Total final da venda nao pode ser negativo.");
@@ -284,7 +287,7 @@ export async function createSaleAction(data: {
       .insert(sales)
       .values({
         customerName: parsed.customerName || undefined,
-        feeAmount: parsed.feeAmount.toFixed(2),
+        feeAmount: calculatedFeeAmount.toFixed(2),
         freightAmount: parsed.freightAmount.toFixed(2),
         notes: parsed.notes || undefined,
         occurredOn: parsed.occurredOn,

@@ -218,7 +218,7 @@ describe("sales server actions", () => {
 
     const results = await Promise.allSettled([
       createSaleAction({
-        feeAmount: 5,
+        feePercentage: 5,
         freightAmount: 15,
         items: [
           {
@@ -259,10 +259,10 @@ describe("sales server actions", () => {
     const [createdSaleItemPayload] = harness.saleItemsLog;
 
     expect(createdSalePayload).toMatchObject({
-      feeAmount: "5.00",
+      feeAmount: "14.25",
       freightAmount: "15.00",
       paymentMethod: "card",
-      totalAmount: "280.00",
+      totalAmount: "299.25",
     });
 
     expect(createdSaleItemPayload).toMatchObject({

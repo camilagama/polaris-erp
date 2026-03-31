@@ -15,6 +15,8 @@ import { getSaleByIdAction } from "../actions";
 const formatCurrency = (value: string | number | null) =>
   new Intl.NumberFormat("pt-BR", {
     currency: "BRL",
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 2,
     style: "currency",
   }).format(Number(value) || 0);
 
@@ -145,7 +147,7 @@ export default async function VendaDetalhePage(
               <div className="rounded-md border border-border/50 px-3 py-2">
                 <p className="text-muted-foreground">Taxa</p>
                 <p className="font-medium text-sm">
-                  - {formatCurrency(sale.feeAmount)}
+                  + {formatCurrency(sale.feeAmount)}
                 </p>
               </div>
               <div className="rounded-md border border-border/50 px-3 py-2">

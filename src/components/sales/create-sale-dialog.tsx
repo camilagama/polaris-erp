@@ -46,7 +46,15 @@ type PaymentMethod = "card" | "pix";
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("pt-BR", {
     currency: "BRL",
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 2,
     style: "currency",
+  }).format(value || 0);
+
+const formatPercent = (value: number) =>
+  new Intl.NumberFormat("pt-BR", {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 2,
   }).format(value || 0);
 
 const roundCurrency = (value: number) =>
@@ -72,7 +80,7 @@ export function CreateSaleDialog({
   const [customerName, setCustomerName] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("pix");
   const [freightAmount, setFreightAmount] = useState("0");
-  const [feeAmount, setFeeAmount] = useState("0");
+  const [feePercentage, setFeePercentage] = useState("0");
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<SaleRowDraft[]>([createSaleRow()]);
 
@@ -98,26 +106,34 @@ export function CreateSaleDialog({
   );
 
   const parsedFreightAmount = Number(freightAmount);
-  const parsedFeeAmount = Number(feeAmount);
+  const parsedFeePercentage = Number(feePercentage);
 
-  const totalAmount = useMemo(() => {
-    if (
-      !(
-        Number.isFinite(parsedFreightAmount) && Number.isFinite(parsedFeeAmount)
-      )
-    ) {
+  const baseAmount = useMemo(() => {
+    if (!Number.isFinite(parsedFreightAmount)) {
       return itemSubtotal;
     }
 
-    return roundCurrency(itemSubtotal + parsedFreightAmount - parsedFeeAmount);
-  }, [itemSubtotal, parsedFeeAmount, parsedFreightAmount]);
+    return roundCurrency(itemSubtotal + parsedFreightAmount);
+  }, [itemSubtotal, parsedFreightAmount]);
+
+  const calculatedFeeAmount = useMemo(() => {
+    if (!(Number.isFinite(parsedFeePercentage) && parsedFeePercentage >= 0)) {
+      return 0;
+    }
+
+    return roundCurrency(baseAmount * (parsedFeePercentage / 100));
+  }, [baseAmount, parsedFeePercentage]);
+
+  const totalAmount = useMemo(() => {
+    return roundCurrency(baseAmount + calculatedFeeAmount);
+  }, [baseAmount, calculatedFeeAmount]);
 
   const resetForm = () => {
     setOccurredOn(format(new Date(), "yyyy-MM-dd"));
     setCustomerName("");
     setPaymentMethod("pix");
     setFreightAmount("0");
-    setFeeAmount("0");
+    setFeePercentage("0");
     setNotes("");
     setItems([createSaleRow()]);
   };
@@ -166,13 +182,8 @@ export function CreateSaleDialog({
       return;
     }
 
-    if (!(Number.isFinite(parsedFeeAmount) && parsedFeeAmount >= 0)) {
-      toast.error("Taxa deve ser um numero maior ou igual a zero.");
-      return;
-    }
-
-    if (totalAmount < 0) {
-      toast.error("Total final da venda nao pode ser negativo.");
+    if (!(Number.isFinite(parsedFeePercentage) && parsedFeePercentage >= 0)) {
+      toast.error("Taxa deve ser um percentual maior ou igual a zero.");
       return;
     }
 
@@ -180,7 +191,7 @@ export function CreateSaleDialog({
       try {
         const saleId = await createSaleAction({
           customerName: customerName.trim() || undefined,
-          feeAmount: parsedFeeAmount,
+          feePercentage: parsedFeePercentage,
           freightAmount: parsedFreightAmount,
           items: payloadItems,
           notes: notes.trim() || undefined,
@@ -414,14 +425,14 @@ export function CreateSaleDialog({
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="sale-fee">Taxa</Label>
+              <Label htmlFor="sale-fee-percentage">Taxa (%)</Label>
               <Input
-                id="sale-fee"
+                id="sale-fee-percentage"
                 min="0"
-                onChange={(event) => setFeeAmount(event.target.value)}
+                onChange={(event) => setFeePercentage(event.target.value)}
                 step="0.01"
                 type="number"
-                value={feeAmount}
+                value={feePercentage}
               />
             </div>
           </div>
@@ -446,8 +457,10 @@ export function CreateSaleDialog({
               <span>{formatCurrency(parsedFreightAmount || 0)}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Taxa</span>
-              <span>- {formatCurrency(parsedFeeAmount || 0)}</span>
+              <span className="text-muted-foreground">
+                Taxa ({formatPercent(parsedFeePercentage)}%)
+              </span>
+              <span>+ {formatCurrency(calculatedFeeAmount)}</span>
             </div>
             <div className="flex items-center justify-between border-border/60 border-t pt-1.5">
               <strong>Total final</strong>
