@@ -1,12 +1,7 @@
-import {
-  ArrowDown01Icon,
-  ArrowLeft01Icon,
-  PackageIcon,
-} from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, PackageIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ProductDetailActions } from "@/components/products/product-detail-actions";
 import { Button } from "@/components/ui/button";
@@ -102,21 +97,14 @@ export default async function ProdutoDetalhePage(
             {product.name}
           </h1>
         </div>
-        <Button asChild size="xs" type="button" variant="ghost">
-          <Link href="/produtos">
-            <HugeiconsIcon data-icon="inline-start" icon={ArrowLeft01Icon} />
-            Voltar
-          </Link>
-        </Button>
+        <ProductDetailActions
+          categories={categories.map((category) => ({
+            id: category.id,
+            name: category.name,
+          }))}
+          product={product}
+        />
       </div>
-
-      <ProductDetailActions
-        categories={categories.map((category) => ({
-          id: category.id,
-          name: category.name,
-        }))}
-        product={product}
-      />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.2fr_0.8fr]">
         <Card>

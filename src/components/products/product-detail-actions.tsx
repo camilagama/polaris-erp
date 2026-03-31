@@ -2,13 +2,16 @@
 
 import {
   Archive01Icon,
+  ArrowLeft01Icon,
   Delete02Icon,
   Edit01Icon,
   ListPlusIcon,
+  Menu03Icon,
   MinusSignCircleIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { format } from "date-fns";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -31,6 +34,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -185,53 +195,51 @@ export function ProductDetailActions({
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          onClick={() => setEditing(true)}
-          size="xs"
-          type="button"
-          variant="outline"
-        >
-          <HugeiconsIcon data-icon="inline-start" icon={Edit01Icon} />
-          Editar
-        </Button>
-        <Button
-          onClick={() => setStocking(true)}
-          size="xs"
-          type="button"
-          variant="outline"
-        >
-          <HugeiconsIcon data-icon="inline-start" icon={ListPlusIcon} />
-          Estoque
-        </Button>
-        <Button
-          onClick={() => setWritingOff(true)}
-          size="xs"
-          type="button"
-          variant="outline"
-        >
-          <HugeiconsIcon data-icon="inline-start" icon={MinusSignCircleIcon} />
-          Baixa
-        </Button>
-        <Button
-          onClick={handleArchiveToggle}
-          size="xs"
-          type="button"
-          variant="ghost"
-        >
-          <HugeiconsIcon data-icon="inline-start" icon={Archive01Icon} />
-          {product.archivedAt ? "Ativar" : "Arquivar"}
-        </Button>
-        <Button
-          onClick={() => setDeleting(true)}
-          size="xs"
-          type="button"
-          variant="destructive"
-        >
-          <HugeiconsIcon data-icon="inline-start" icon={Delete02Icon} />
-          Deletar
-        </Button>
-      </div>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            aria-label={`Acoes para ${product.name}`}
+            size="xs"
+            type="button"
+            variant="ghost"
+          >
+            <HugeiconsIcon icon={Menu03Icon} strokeWidth={2} />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="min-w-36">
+          <DropdownMenuItem asChild>
+            <Link href="/produtos">
+              <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} />
+              Voltar
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onSelect={() => setEditing(true)}>
+            <HugeiconsIcon icon={Edit01Icon} strokeWidth={2} />
+            Editar
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => setStocking(true)}>
+            <HugeiconsIcon icon={ListPlusIcon} strokeWidth={2} />
+            Estoque
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => setWritingOff(true)}>
+            <HugeiconsIcon icon={MinusSignCircleIcon} strokeWidth={2} />
+            Baixa
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={handleArchiveToggle}>
+            <HugeiconsIcon icon={Archive01Icon} strokeWidth={2} />
+            {product.archivedAt ? "Ativar" : "Arquivar"}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onSelect={() => setDeleting(true)}
+            variant="destructive"
+          >
+            <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
+            Deletar
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       <Dialog onOpenChange={setEditing} open={editing}>
         <DialogContent className="sm:max-w-[420px]">

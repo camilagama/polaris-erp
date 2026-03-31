@@ -1,12 +1,18 @@
 "use client";
 
-import { Edit01Icon, Menu03Icon } from "@hugeicons/core-free-icons";
+import {
+  Archive01Icon,
+  Edit01Icon,
+  Menu03Icon,
+} from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
+  archiveProductAction,
   type ProductListItem,
+  unarchiveProductAction,
   updateProductAction,
 } from "@/app/(app)/produtos/actions";
 import { RegisterProductDialog } from "@/components/products/register-product-dialog";
@@ -117,6 +123,27 @@ export function ProductsPanel({
     });
   };
 
+  const handleArchiveToggle = (product: ProductListItem) => {
+    startTransition(async () => {
+      try {
+        if (product.archivedAt) {
+          await unarchiveProductAction(product.id);
+          toast.success("Produto desarquivado.");
+        } else {
+          await archiveProductAction(product.id);
+          toast.success("Produto arquivado.");
+        }
+        refreshView();
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Nao foi possivel alterar o status do produto."
+        );
+      }
+    });
+  };
+
   return (
     <div className="flex flex-col gap-6 p-4 pb-20 sm:p-6 sm:pb-6">
       <div className="flex items-center justify-between gap-3">
@@ -202,6 +229,13 @@ export function ProductsPanel({
                         >
                           <HugeiconsIcon icon={Edit01Icon} strokeWidth={2} />
                           Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={(event) => event.stopPropagation()}
+                          onSelect={() => handleArchiveToggle(product)}
+                        >
+                          <HugeiconsIcon icon={Archive01Icon} strokeWidth={2} />
+                          {product.archivedAt ? "Ativar" : "Arquivar"}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
