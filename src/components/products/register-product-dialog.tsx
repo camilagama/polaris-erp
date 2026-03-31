@@ -153,7 +153,7 @@ export function RegisterProductDialog({
             form.handleSubmit();
           }}
         >
-          <div className="flex flex-col gap-4 py-4">
+          <div className="flex flex-col gap-6 py-6">
             <form.Field
               name="name"
               validators={{
@@ -226,10 +226,11 @@ export function RegisterProductDialog({
               </form.Field>
 
               <form.Field
-                name="stock"
+                name="purchasedOn"
                 validators={{
                   onChange: ({ value }) => {
-                    const result = productSchema.shape.stock.safeParse(value);
+                    const result =
+                      productSchema.shape.purchasedOn.safeParse(value);
                     return result.success
                       ? undefined
                       : result.error.issues[0]?.message;
@@ -238,22 +239,12 @@ export function RegisterProductDialog({
               >
                 {(field) => (
                   <div className="flex flex-col gap-1.5">
-                    <Label htmlFor={field.name}>Estoque Inicial</Label>
-                    <InputGroup>
-                      <InputGroupInput
-                        id={field.name}
-                        name={field.name}
-                        onBlur={field.handleBlur}
-                        onChange={(event) =>
-                          field.handleChange(Number(event.target.value))
-                        }
-                        type="number"
-                        value={field.state.value}
-                      />
-                      <InputGroupAddon align="inline-end">
-                        <InputGroupText>unidades</InputGroupText>
-                      </InputGroupAddon>
-                    </InputGroup>
+                    <Label htmlFor={field.name}>Data da compra</Label>
+                    <ProductDatePicker
+                      id={field.name}
+                      onChange={field.handleChange}
+                      value={field.state.value}
+                    />
                     {field.state.meta.errors.length > 0 ? (
                       <em className="text-[11px] text-destructive">
                         {field.state.meta.errors.join(", ")}
@@ -286,11 +277,10 @@ export function RegisterProductDialog({
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <form.Field
-                name="purchasedOn"
+                name="stock"
                 validators={{
                   onChange: ({ value }) => {
-                    const result =
-                      productSchema.shape.purchasedOn.safeParse(value);
+                    const result = productSchema.shape.stock.safeParse(value);
                     return result.success
                       ? undefined
                       : result.error.issues[0]?.message;
@@ -299,12 +289,22 @@ export function RegisterProductDialog({
               >
                 {(field) => (
                   <div className="flex flex-col gap-1.5">
-                    <Label htmlFor={field.name}>Data da compra</Label>
-                    <ProductDatePicker
-                      id={field.name}
-                      onChange={field.handleChange}
-                      value={field.state.value}
-                    />
+                    <Label htmlFor={field.name}>Estoque Inicial</Label>
+                    <InputGroup>
+                      <InputGroupInput
+                        id={field.name}
+                        name={field.name}
+                        onBlur={field.handleBlur}
+                        onChange={(event) =>
+                          field.handleChange(Number(event.target.value))
+                        }
+                        type="number"
+                        value={field.state.value}
+                      />
+                      <InputGroupAddon align="inline-end">
+                        <InputGroupText>unidades</InputGroupText>
+                      </InputGroupAddon>
+                    </InputGroup>
                     {field.state.meta.errors.length > 0 ? (
                       <em className="text-[11px] text-destructive">
                         {field.state.meta.errors.join(", ")}
@@ -345,61 +345,6 @@ export function RegisterProductDialog({
                   return (
                     <div className="flex flex-col gap-1.5">
                       <Label htmlFor={field.name}>Custo Unitario</Label>
-                      <InputGroup>
-                        <InputGroupAddon>
-                          <InputGroupText>R$</InputGroupText>
-                        </InputGroupAddon>
-                        <InputGroupInput
-                          id={field.name}
-                          name={field.name}
-                          onBlur={field.handleBlur}
-                          onChange={handleChange}
-                          placeholder="0.00"
-                          step="0.01"
-                          type="number"
-                          value={field.state.value}
-                        />
-                      </InputGroup>
-                      {field.state.meta.errors.length > 0 ? (
-                        <em className="text-[11px] text-destructive">
-                          {field.state.meta.errors.join(", ")}
-                        </em>
-                      ) : null}
-                    </div>
-                  );
-                }}
-              </form.Field>
-
-              <form.Field
-                name="price"
-                validators={{
-                  onChange: ({ value }) => {
-                    const result = productSchema.shape.price.safeParse(value);
-                    return result.success
-                      ? undefined
-                      : result.error.issues[0]?.message;
-                  },
-                }}
-              >
-                {(field) => {
-                  const handleChange = (
-                    event: ChangeEvent<HTMLInputElement>
-                  ) => {
-                    let nextValue = event.target.value;
-
-                    if (nextValue.includes(".")) {
-                      const [integer, decimal] = nextValue.split(".");
-                      if (decimal.length > 2) {
-                        nextValue = `${integer}.${decimal.slice(0, 2)}`;
-                      }
-                    }
-
-                    field.handleChange(Number(nextValue));
-                  };
-
-                  return (
-                    <div className="flex flex-col gap-1.5">
-                      <Label htmlFor={field.name}>Preco de Venda</Label>
                       <InputGroup>
                         <InputGroupAddon>
                           <InputGroupText>R$</InputGroupText>
@@ -483,6 +428,59 @@ export function RegisterProductDialog({
                 );
               }}
             </form.Subscribe>
+
+            <form.Field
+              name="price"
+              validators={{
+                onChange: ({ value }) => {
+                  const result = productSchema.shape.price.safeParse(value);
+                  return result.success
+                    ? undefined
+                    : result.error.issues[0]?.message;
+                },
+              }}
+            >
+              {(field) => {
+                const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
+                  let nextValue = event.target.value;
+
+                  if (nextValue.includes(".")) {
+                    const [integer, decimal] = nextValue.split(".");
+                    if (decimal.length > 2) {
+                      nextValue = `${integer}.${decimal.slice(0, 2)}`;
+                    }
+                  }
+
+                  field.handleChange(Number(nextValue));
+                };
+
+                return (
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor={field.name}>Preco de Venda</Label>
+                    <InputGroup>
+                      <InputGroupAddon>
+                        <InputGroupText>R$</InputGroupText>
+                      </InputGroupAddon>
+                      <InputGroupInput
+                        id={field.name}
+                        name={field.name}
+                        onBlur={field.handleBlur}
+                        onChange={handleChange}
+                        placeholder="0.00"
+                        step="0.01"
+                        type="number"
+                        value={field.state.value}
+                      />
+                    </InputGroup>
+                    {field.state.meta.errors.length > 0 ? (
+                      <em className="text-[11px] text-destructive">
+                        {field.state.meta.errors.join(", ")}
+                      </em>
+                    ) : null}
+                  </div>
+                );
+              }}
+            </form.Field>
           </div>
           <DialogFooter>
             <form.Subscribe

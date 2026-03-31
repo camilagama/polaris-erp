@@ -4,6 +4,7 @@ import { Calendar01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -26,10 +27,11 @@ export function ProductDatePicker({
   onChange,
   value,
 }: ProductDatePickerProps) {
+  const [open, setOpen] = useState(false);
   const selectedDate = toDate(value);
 
   return (
-    <Popover>
+    <Popover onOpenChange={setOpen} open={open}>
       <PopoverTrigger asChild>
         <Button
           className={cn(
@@ -46,8 +48,9 @@ export function ProductDatePicker({
           })}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-auto p-0">
+      <PopoverContent align="start" className="w-auto p-1">
         <Calendar
+          className="rounded-lg bg-muted/5"
           locale={ptBR}
           mode="single"
           onSelect={(date) => {
@@ -56,6 +59,7 @@ export function ProductDatePicker({
             }
 
             onChange(format(date, "yyyy-MM-dd"));
+            setOpen(false);
           }}
           selected={selectedDate}
         />
