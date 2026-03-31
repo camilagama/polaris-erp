@@ -88,7 +88,6 @@ export function ProductDetailActions({
     "adjustment" | "operational"
   >("operational");
   const [writeOffNotes, setWriteOffNotes] = useState("");
-  const [deleteConfirmationName, setDeleteConfirmationName] = useState("");
 
   const handleEditProduct = () => {
     startTransition(async () => {
@@ -228,7 +227,6 @@ export function ProductDetailActions({
           <DropdownMenuItem
             onSelect={() => {
               setDeleting(true);
-              setDeleteConfirmationName("");
             }}
             variant="destructive"
           >
@@ -413,16 +411,7 @@ export function ProductDetailActions({
         </DialogContent>
       </Dialog>
 
-      <Dialog
-        onOpenChange={(open) => {
-          setDeleting(open);
-
-          if (!open) {
-            setDeleteConfirmationName("");
-          }
-        }}
-        open={deleting}
-      >
+      <Dialog onOpenChange={setDeleting} open={deleting}>
         <DialogContent className="sm:max-w-115">
           <DialogHeader>
             <DialogTitle>Deletar produto</DialogTitle>
@@ -444,19 +433,6 @@ export function ProductDetailActions({
                 Nenhuma venda vinculada encontrada para este produto.
               </p>
             )}
-            <div className="space-y-1.5">
-              <Label htmlFor="detail-delete-confirmation">
-                Digite exatamente o nome do produto para confirmar
-              </Label>
-              <Input
-                id="detail-delete-confirmation"
-                onChange={(event) =>
-                  setDeleteConfirmationName(event.target.value)
-                }
-                placeholder={product.name}
-                value={deleteConfirmationName}
-              />
-            </div>
           </div>
           <DialogFooter>
             <Button
@@ -467,9 +443,7 @@ export function ProductDetailActions({
               Cancelar
             </Button>
             <Button
-              disabled={
-                pending || deleteConfirmationName.trim() !== product.name
-              }
+              disabled={pending}
               onClick={handleDeleteProduct}
               type="button"
               variant="destructive"
