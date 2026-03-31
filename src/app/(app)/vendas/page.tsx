@@ -1,11 +1,13 @@
 import { getProductsAction } from "@/app/(app)/produtos/actions";
 import { SalesPanel } from "@/components/sales/sales-panel";
+import { getCatalogSettings } from "@/features/catalog/server";
 import { getSalesAction } from "./actions";
 
 export default async function VendasPage() {
-  const [sales, products] = await Promise.all([
+  const [sales, products, settings] = await Promise.all([
     getSalesAction(),
     getProductsAction(),
+    getCatalogSettings(),
   ]);
 
   const saleProducts = products
@@ -17,5 +19,11 @@ export default async function VendasPage() {
       stock: product.stock,
     }));
 
-  return <SalesPanel saleProducts={saleProducts} sales={sales} />;
+  return (
+    <SalesPanel
+      paymentFeeRules={settings.paymentFeeRules}
+      saleProducts={saleProducts}
+      sales={sales}
+    />
+  );
 }

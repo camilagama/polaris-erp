@@ -41,6 +41,12 @@ export async function deleteCategoryAction(id: string) {
 export async function saveCatalogSettingsAction(data: {
   idealMarkupPercent: number;
   minimumMarkupPercent: number;
+  paymentFeeRules: Array<{
+    code: string;
+    feePercent: number;
+    installments: number;
+    paymentMethod: "card" | "pix";
+  }>;
 }) {
   await requireActionSession();
   await saveCatalogSettings(data);

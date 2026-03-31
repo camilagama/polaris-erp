@@ -57,9 +57,12 @@ const getStatusVariant = (status: "cancelled" | "completed") => {
   return "secondary" as const;
 };
 
-const getPaymentMethodLabel = (paymentMethod: "card" | "pix") => {
+const getPaymentMethodLabel = (
+  paymentMethod: "card" | "pix",
+  paymentInstallments: number
+) => {
   if (paymentMethod === "card") {
-    return "Cartao";
+    return `${paymentInstallments}x`;
   }
 
   return "Pix";
@@ -111,7 +114,12 @@ export default async function VendaDetalhePage(
               <span className="text-muted-foreground">Status</span>
               <span>{getStatusLabel(sale.status)}</span>
               <span className="text-muted-foreground">Pagamento</span>
-              <span>{getPaymentMethodLabel(sale.paymentMethod)}</span>
+              <span>
+                {getPaymentMethodLabel(
+                  sale.paymentMethod,
+                  sale.paymentInstallments
+                )}
+              </span>
               <span className="text-muted-foreground">Cancelada em</span>
               <span>{formatDateTime(sale.cancelledAt)}</span>
               <span className="text-muted-foreground">Observacoes</span>
@@ -145,9 +153,21 @@ export default async function VendaDetalhePage(
                 </p>
               </div>
               <div className="rounded-md border border-border/50 px-3 py-2">
+                <p className="text-muted-foreground">Adicional</p>
+                <p className="font-medium text-sm">
+                  {formatCurrency(sale.additionalAmount)}
+                </p>
+              </div>
+              <div className="rounded-md border border-border/50 px-3 py-2">
+                <p className="text-muted-foreground">Desconto</p>
+                <p className="font-medium text-sm">
+                  - {formatCurrency(sale.discountAmount)}
+                </p>
+              </div>
+              <div className="rounded-md border border-border/50 px-3 py-2">
                 <p className="text-muted-foreground">Taxa</p>
                 <p className="font-medium text-sm">
-                  + {formatCurrency(sale.feeAmount)}
+                  + {formatCurrency(sale.feeAmount)} ({sale.paymentFeePercent}%)
                 </p>
               </div>
               <div className="rounded-md border border-border/50 px-3 py-2">

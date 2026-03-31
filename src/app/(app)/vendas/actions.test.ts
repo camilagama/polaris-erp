@@ -18,6 +18,9 @@ vi.mock("@/db", () => ({
       sales: {
         findFirst: vi.fn(),
       },
+      systemSettings: {
+        findFirst: vi.fn(),
+      },
     },
     select: vi.fn(),
     transaction: vi.fn(),
@@ -48,6 +51,11 @@ const resolveMocks = async () => {
 
   return {
     mockDb: dbModule.db as unknown as {
+      query: {
+        systemSettings: {
+          findFirst: MockFn;
+        };
+      };
       transaction: MockFn;
     },
     mockSession: sessionModule.getSession as MockFn,
@@ -149,12 +157,36 @@ describe("sales server actions", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
 
-    const { mockSession } = await resolveMocks();
+    const { mockDb, mockSession } = await resolveMocks();
 
     mockSession.mockResolvedValue({
       user: {
         id: "user-1",
       },
+    });
+
+    mockDb.query.systemSettings.findFirst.mockResolvedValue({
+      cardFeePercent: "5.00",
+      paymentFeeRules: [
+        {
+          code: "pix",
+          feePercent: 0,
+          installments: 0,
+          paymentMethod: "pix",
+        },
+        {
+          code: "1x",
+          feePercent: 5,
+          installments: 1,
+          paymentMethod: "card",
+        },
+        {
+          code: "3x",
+          feePercent: 8,
+          installments: 3,
+          paymentMethod: "card",
+        },
+      ],
     });
   });
 
@@ -173,6 +205,7 @@ describe("sales server actions", () => {
           },
         ],
         occurredOn: "2026-03-31",
+        paymentOptionCode: "pix",
       })
     ).rejects.toThrowError("Sessao invalida. Faca login novamente.");
 
@@ -195,6 +228,7 @@ describe("sales server actions", () => {
           },
         ],
         occurredOn: "2026-03-31",
+        paymentOptionCode: "pix",
       })
     ).rejects.toThrowError("Nao repita o mesmo produto na venda.");
   });
@@ -218,7 +252,8 @@ describe("sales server actions", () => {
 
     const results = await Promise.allSettled([
       createSaleAction({
-        feePercentage: 5,
+        additionalAmount: 10,
+        discountAmount: 20,
         freightAmount: 15,
         items: [
           {
@@ -227,7 +262,7 @@ describe("sales server actions", () => {
           },
         ],
         occurredOn: "2026-03-31",
-        paymentMethod: "card",
+        paymentOptionCode: "1x",
       }),
       createSaleAction({
         items: [
@@ -237,6 +272,7 @@ describe("sales server actions", () => {
           },
         ],
         occurredOn: "2026-03-31",
+        paymentOptionCode: "pix",
       }),
     ]);
 
@@ -259,15 +295,104 @@ describe("sales server actions", () => {
     const [createdSaleItemPayload] = harness.saleItemsLog;
 
     expect(createdSalePayload).toMatchObject({
-      feeAmount: "14.25",
+      additionalAmount: "10.00",
+      discountAmount: "20.00",
+      feeAmount: "13.75",
       freightAmount: "15.00",
+      paymentFeePercent: "5.00",
+      paymentInstallments: 1,
       paymentMethod: "card",
-      totalAmount: "299.25",
+      totalAmount: "288.75",
     });
 
     expect(createdSaleItemPayload).toMatchObject({
       lineTotal: "270.00",
       unitPriceSnapshot: "90.00",
+    });
+  });
+
+  it("does not apply card fee when payment method is pix", async () => {
+    const { createSaleAction } = await import("@/app/(app)/vendas/actions");
+    const { mockDb } = await resolveMocks();
+
+    const harness = createSalesHarness([
+      {
+        archivedAt: null,
+        costPrice: 50,
+        id: "product-1",
+        name: "Produto 1",
+        price: 90,
+        stock: 5,
+      },
+    ]);
+
+    mockDb.transaction.mockImplementation(harness.transaction as never);
+
+    await createSaleAction({
+      additionalAmount: 10,
+      discountAmount: 0,
+      items: [
+        {
+          productId: "product-1",
+          quantity: 1,
+        },
+      ],
+      occurredOn: "2026-03-31",
+      paymentOptionCode: "pix",
+    });
+
+    const [createdSalePayload] = harness.salesLog;
+
+    expect(createdSalePayload).toMatchObject({
+      additionalAmount: "10.00",
+      discountAmount: "0.00",
+      feeAmount: "0.00",
+      paymentFeePercent: "0.00",
+      paymentInstallments: 0,
+      paymentMethod: "pix",
+      totalAmount: "100.00",
+    });
+  });
+
+  it("applies configured fee for multi-installment card option", async () => {
+    const { createSaleAction } = await import("@/app/(app)/vendas/actions");
+    const { mockDb } = await resolveMocks();
+
+    const harness = createSalesHarness([
+      {
+        archivedAt: null,
+        costPrice: 30,
+        id: "product-1",
+        name: "Produto 1",
+        price: 100,
+        stock: 10,
+      },
+    ]);
+
+    mockDb.transaction.mockImplementation(harness.transaction as never);
+
+    await createSaleAction({
+      additionalAmount: 0,
+      discountAmount: 0,
+      freightAmount: 0,
+      items: [
+        {
+          productId: "product-1",
+          quantity: 2,
+        },
+      ],
+      occurredOn: "2026-03-31",
+      paymentOptionCode: "3x",
+    });
+
+    const [createdSalePayload] = harness.salesLog;
+
+    expect(createdSalePayload).toMatchObject({
+      feeAmount: "16.00",
+      paymentFeePercent: "8.00",
+      paymentInstallments: 3,
+      paymentMethod: "card",
+      totalAmount: "216.00",
     });
   });
 });

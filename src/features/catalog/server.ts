@@ -10,6 +10,12 @@ import {
   OTHERS_CATEGORY_NAME,
 } from "./constants";
 import { canDeleteCategory, canRenameCategory } from "./guards";
+import {
+  buildDefaultPaymentFeeRules,
+  normalizePaymentFeeRules,
+  ONE_TIME_CARD_RULE_CODE,
+  type PaymentFeeRule,
+} from "./payment-rules";
 
 const categorySchema = z.object({
   description: z.string().trim().max(240).optional(),
@@ -18,6 +24,18 @@ const categorySchema = z.object({
 
 const pricingSettingsSchema = z
   .object({
+    paymentFeeRules: z
+      .array(
+        z.object({
+          code: z.string().min(1),
+          feePercent: z.coerce
+            .number()
+            .min(0, "A taxa deve ser maior ou igual a zero."),
+          installments: z.coerce.number().int().min(0).max(12),
+          paymentMethod: z.enum(["card", "pix"]),
+        })
+      )
+      .min(1, "Configure pelo menos uma regra de pagamento."),
     idealMarkupPercent: z.coerce
       .number()
       .min(0, "A margem ideal deve ser maior ou igual a zero."),
@@ -64,6 +82,7 @@ export interface CatalogCategory {
 export interface CatalogSettings {
   idealMarkupPercent: number;
   minimumMarkupPercent: number;
+  paymentFeeRules: PaymentFeeRule[];
 }
 
 export const getCatalogSettings = async (): Promise<CatalogSettings> => {
@@ -72,15 +91,24 @@ export const getCatalogSettings = async (): Promise<CatalogSettings> => {
   });
 
   if (existing) {
+    const paymentFeeRules = normalizePaymentFeeRules(
+      existing.paymentFeeRules,
+      Number(existing.cardFeePercent)
+    );
+
     return {
       idealMarkupPercent: Number(existing.idealMarkupPercent),
       minimumMarkupPercent: Number(existing.minimumMarkupPercent),
+      paymentFeeRules,
     };
   }
+
+  const paymentFeeRules = buildDefaultPaymentFeeRules();
 
   const [created] = await db
     .insert(systemSettings)
     .values({
+      paymentFeeRules,
       id: GLOBAL_SETTINGS_ID,
     })
     .returning();
@@ -88,6 +116,10 @@ export const getCatalogSettings = async (): Promise<CatalogSettings> => {
   return {
     idealMarkupPercent: Number(created.idealMarkupPercent),
     minimumMarkupPercent: Number(created.minimumMarkupPercent),
+    paymentFeeRules: normalizePaymentFeeRules(
+      created.paymentFeeRules,
+      Number(created.cardFeePercent)
+    ),
   };
 };
 
@@ -171,18 +203,26 @@ export const deleteCategory = async (id: string) => {
 
 export const saveCatalogSettings = async (input: unknown) => {
   const parsed = pricingSettingsSchema.parse(input);
+  const paymentFeeRules = normalizePaymentFeeRules(parsed.paymentFeeRules);
+  const oneTimeCardFeePercent =
+    paymentFeeRules.find((rule) => rule.code === ONE_TIME_CARD_RULE_CODE)
+      ?.feePercent ?? 0;
 
   await db
     .insert(systemSettings)
     .values({
+      cardFeePercent: oneTimeCardFeePercent.toFixed(2),
       id: GLOBAL_SETTINGS_ID,
       idealMarkupPercent: parsed.idealMarkupPercent.toFixed(2),
       minimumMarkupPercent: parsed.minimumMarkupPercent.toFixed(2),
+      paymentFeeRules,
     })
     .onConflictDoUpdate({
       set: {
+        cardFeePercent: oneTimeCardFeePercent.toFixed(2),
         idealMarkupPercent: parsed.idealMarkupPercent.toFixed(2),
         minimumMarkupPercent: parsed.minimumMarkupPercent.toFixed(2),
+        paymentFeeRules,
         updatedAt: new Date(),
       },
       target: systemSettings.id,

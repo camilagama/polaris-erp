@@ -4,7 +4,12 @@ import { asc, count, desc, eq, sql } from "drizzle-orm";
 import { refresh, revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/db";
-import { products, saleItems, sales } from "@/db/schema";
+import { products, saleItems, sales, systemSettings } from "@/db/schema";
+import { GLOBAL_SETTINGS_ID } from "@/features/catalog/constants";
+import {
+  findPaymentRuleByCode,
+  normalizePaymentFeeRules,
+} from "@/features/catalog/payment-rules";
 import { buildSaleSnapshot } from "@/features/sales/calculations";
 import { requireActionSession } from "@/lib/server-action-auth";
 
@@ -29,10 +34,14 @@ const saleItemSchema = z.object({
 
 const createSaleSchema = z
   .object({
-    customerName: z.string().trim().max(80).optional(),
-    feePercentage: z.coerce
+    additionalAmount: z.coerce
       .number()
-      .min(0, "Taxa nao pode ser negativa.")
+      .min(0, "Adicional nao pode ser negativo.")
+      .default(0),
+    customerName: z.string().trim().max(80).optional(),
+    discountAmount: z.coerce
+      .number()
+      .min(0, "Desconto nao pode ser negativo.")
       .default(0),
     freightAmount: z.coerce
       .number()
@@ -43,7 +52,11 @@ const createSaleSchema = z
       .min(1, "Adicione pelo menos um item na venda."),
     notes: z.string().trim().max(240).optional(),
     occurredOn: isoDateSchema,
-    paymentMethod: z.enum(["card", "pix"]).default("pix"),
+    paymentOptionCode: z
+      .string()
+      .trim()
+      .min(1, "Metodo de pagamento invalido.")
+      .default("pix"),
   })
   .refine(
     (value) => {
@@ -69,6 +82,9 @@ interface LockedSaleRow extends Record<string, unknown> {
   id: string;
   status: "cancelled" | "completed";
 }
+
+const roundCurrency = (value: number) =>
+  Math.round((value + Number.EPSILON) * 100) / 100;
 
 const revalidateSalesViews = () => {
   revalidatePath("/vendas");
@@ -107,13 +123,17 @@ const lockProductsForUpdate = async (
 };
 
 export interface SaleListItem {
+  additionalAmount: string;
   cancelledAt: Date | null;
   customerName: string | null;
+  discountAmount: string;
   feeAmount: string;
   freightAmount: string;
   id: string;
   itemCount: number;
   occurredOn: string;
+  paymentFeePercent: string;
+  paymentInstallments: number;
   paymentMethod: "card" | "pix";
   status: "cancelled" | "completed";
   totalAmount: string;
@@ -131,15 +151,19 @@ export interface SaleDetailItem {
 }
 
 export interface SaleDetail {
+  additionalAmount: string;
   cancelledAt: Date | null;
   createdAt: Date;
   customerName: string | null;
+  discountAmount: string;
   feeAmount: string;
   freightAmount: string;
   id: string;
   items: SaleDetailItem[];
   notes: string | null;
   occurredOn: string;
+  paymentFeePercent: string;
+  paymentInstallments: number;
   paymentMethod: "card" | "pix";
   status: "cancelled" | "completed";
   totalAmount: string;
@@ -148,9 +172,13 @@ export interface SaleDetail {
 export async function getSalesAction(): Promise<SaleListItem[]> {
   const rows = await db
     .select({
+      additionalAmount: sales.additionalAmount,
       cancelledAt: sales.cancelledAt,
       customerName: sales.customerName,
+      discountAmount: sales.discountAmount,
       feeAmount: sales.feeAmount,
+      paymentFeePercent: sales.paymentFeePercent,
+      paymentInstallments: sales.paymentInstallments,
       freightAmount: sales.freightAmount,
       id: sales.id,
       itemCount: count(saleItems.id),
@@ -167,6 +195,7 @@ export async function getSalesAction(): Promise<SaleListItem[]> {
   return rows.map((row) => ({
     ...row,
     itemCount: Number(row.itemCount),
+    paymentInstallments: Number(row.paymentInstallments),
     paymentMethod: row.paymentMethod as SaleListItem["paymentMethod"],
     status: row.status as SaleListItem["status"],
   }));
@@ -204,14 +233,16 @@ export async function getSaleByIdAction(
       ...item,
       quantity: Number(item.quantity),
     })),
+    paymentInstallments: Number(sale.paymentInstallments),
     paymentMethod: sale.paymentMethod as SaleDetail["paymentMethod"],
     status: sale.status as SaleDetail["status"],
   };
 }
 
 export async function createSaleAction(data: {
+  additionalAmount?: number;
   customerName?: string;
-  feePercentage?: number;
+  discountAmount?: number;
   freightAmount?: number;
   items: Array<{
     productId: string;
@@ -219,10 +250,27 @@ export async function createSaleAction(data: {
   }>;
   notes?: string;
   occurredOn: string;
-  paymentMethod?: "card" | "pix";
+  paymentOptionCode: string;
 }): Promise<string> {
   await requireActionSession();
   const parsed = createSaleSchema.parse(data);
+  const rawCardFeeSetting = await db.query.systemSettings.findFirst({
+    where: eq(systemSettings.id, GLOBAL_SETTINGS_ID),
+  });
+  const paymentFeeRules = normalizePaymentFeeRules(
+    rawCardFeeSetting?.paymentFeeRules,
+    Number(rawCardFeeSetting?.cardFeePercent ?? 0)
+  );
+  const selectedPaymentRule = findPaymentRuleByCode(
+    paymentFeeRules,
+    parsed.paymentOptionCode
+  );
+
+  if (!selectedPaymentRule) {
+    throw new Error(
+      "Metodo de pagamento invalido para as configuracoes atuais."
+    );
+  }
 
   const createdSaleId = await db.transaction(async (tx) => {
     const productIds = parsed.items
@@ -267,31 +315,39 @@ export async function createSaleAction(data: {
       })
     );
 
-    const baseAmount =
-      Math.round(
-        (snapshot.totalAmount + parsed.freightAmount + Number.EPSILON) * 100
-      ) / 100;
-    const calculatedFeeAmount =
-      Math.round(
-        (baseAmount * (parsed.feePercentage / 100) + Number.EPSILON) * 100
-      ) / 100;
-    const finalTotalAmount =
-      Math.round((baseAmount + calculatedFeeAmount + Number.EPSILON) * 100) /
-      100;
+    const partialAmount = roundCurrency(
+      snapshot.totalAmount +
+        parsed.freightAmount +
+        parsed.additionalAmount -
+        parsed.discountAmount
+    );
 
-    if (finalTotalAmount < 0) {
-      throw new Error("Total final da venda nao pode ser negativo.");
+    if (partialAmount < 0) {
+      throw new Error(
+        "Desconto nao pode ser maior que o subtotal somado com frete e adicional."
+      );
     }
+
+    const calculatedFeeAmount =
+      partialAmount > 0
+        ? roundCurrency(partialAmount * (selectedPaymentRule.feePercent / 100))
+        : 0;
+
+    const finalTotalAmount = roundCurrency(partialAmount + calculatedFeeAmount);
 
     const [createdSale] = await tx
       .insert(sales)
       .values({
+        additionalAmount: parsed.additionalAmount.toFixed(2),
         customerName: parsed.customerName || undefined,
+        discountAmount: parsed.discountAmount.toFixed(2),
         feeAmount: calculatedFeeAmount.toFixed(2),
         freightAmount: parsed.freightAmount.toFixed(2),
         notes: parsed.notes || undefined,
         occurredOn: parsed.occurredOn,
-        paymentMethod: parsed.paymentMethod,
+        paymentFeePercent: selectedPaymentRule.feePercent.toFixed(2),
+        paymentInstallments: selectedPaymentRule.installments,
+        paymentMethod: selectedPaymentRule.paymentMethod,
         status: "completed",
         totalAmount: finalTotalAmount.toFixed(2),
       })

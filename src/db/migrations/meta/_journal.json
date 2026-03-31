@@ -85,6 +85,20 @@
       "when": 1774992600000,
       "tag": "20260331223000_add_sales_payment_freight_fee",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1775001300000,
+      "tag": "20260331235500_card_fee_and_sale_adjustments",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1775001600000,
+      "tag": "20260401000000_payment_fee_rules_and_installments",
+      "breakpoints": true
     }
   ]
 }

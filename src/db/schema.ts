@@ -6,6 +6,7 @@ import {
   decimal,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   text,
@@ -77,22 +78,56 @@ export const categories = pgTable("categories", {
   ...timestamps,
 });
 
-export const systemSettings = pgTable("system_settings", {
-  id: text("id").primaryKey(),
-  minimumMarkupPercent: decimal("minimum_markup_percent", {
-    precision: 12,
-    scale: 2,
-  })
-    .notNull()
-    .default("0"),
-  idealMarkupPercent: decimal("ideal_markup_percent", {
-    precision: 12,
-    scale: 2,
-  })
-    .notNull()
-    .default("0"),
-  ...timestamps,
-});
+export const systemSettings = pgTable(
+  "system_settings",
+  {
+    id: text("id").primaryKey(),
+    minimumMarkupPercent: decimal("minimum_markup_percent", {
+      precision: 12,
+      scale: 2,
+    })
+      .notNull()
+      .default("0"),
+    idealMarkupPercent: decimal("ideal_markup_percent", {
+      precision: 12,
+      scale: 2,
+    })
+      .notNull()
+      .default("0"),
+    cardFeePercent: decimal("card_fee_percent", {
+      precision: 12,
+      scale: 2,
+    })
+      .notNull()
+      .default("0"),
+    paymentFeeRules: jsonb("payment_fee_rules")
+      .$type<
+        Array<{
+          code: string;
+          feePercent: number;
+          installments: number;
+          paymentMethod: "card" | "pix";
+        }>
+      >()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    ...timestamps,
+  },
+  (table) => [
+    check(
+      "system_settings_minimum_markup_percent_non_negative",
+      sql`${table.minimumMarkupPercent} >= 0`
+    ),
+    check(
+      "system_settings_ideal_markup_percent_non_negative",
+      sql`${table.idealMarkupPercent} >= 0`
+    ),
+    check(
+      "system_settings_card_fee_percent_non_negative",
+      sql`${table.cardFeePercent} >= 0`
+    ),
+  ]
+);
 
 export const saleStatusEnum = pgEnum("sale_status", ["completed", "cancelled"]);
 export const salePaymentMethodEnum = pgEnum("sale_payment_method", [
@@ -211,9 +246,22 @@ export const sales = pgTable(
     paymentMethod: salePaymentMethodEnum("payment_method")
       .default("pix")
       .notNull(),
+    paymentInstallments: integer("payment_installments").default(0).notNull(),
+    paymentFeePercent: decimal("payment_fee_percent", {
+      precision: 12,
+      scale: 2,
+    })
+      .notNull()
+      .default("0"),
     customerName: text("customer_name"),
     notes: text("notes"),
     freightAmount: decimal("freight_amount", { precision: 12, scale: 2 })
+      .notNull()
+      .default("0"),
+    additionalAmount: decimal("additional_amount", { precision: 12, scale: 2 })
+      .notNull()
+      .default("0"),
+    discountAmount: decimal("discount_amount", { precision: 12, scale: 2 })
       .notNull()
       .default("0"),
     feeAmount: decimal("fee_amount", { precision: 12, scale: 2 })
@@ -229,6 +277,26 @@ export const sales = pgTable(
     check(
       "sales_freight_amount_non_negative",
       sql`${table.freightAmount} >= 0`
+    ),
+    check(
+      "sales_additional_amount_non_negative",
+      sql`${table.additionalAmount} >= 0`
+    ),
+    check(
+      "sales_discount_amount_non_negative",
+      sql`${table.discountAmount} >= 0`
+    ),
+    check(
+      "sales_payment_installments_non_negative",
+      sql`${table.paymentInstallments} >= 0`
+    ),
+    check(
+      "sales_payment_fee_percent_non_negative",
+      sql`${table.paymentFeePercent} >= 0`
+    ),
+    check(
+      "sales_payment_method_installments_valid",
+      sql`(${table.paymentMethod} = 'pix' and ${table.paymentInstallments} = 0) or (${table.paymentMethod} = 'card' and ${table.paymentInstallments} between 1 and 12)`
     ),
     check("sales_fee_amount_non_negative", sql`${table.feeAmount} >= 0`),
     check("sales_total_amount_non_negative", sql`${table.totalAmount} >= 0`),

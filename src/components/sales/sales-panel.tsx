@@ -24,6 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import type { PaymentFeeRule } from "@/features/catalog/payment-rules";
 
 const formatCurrency = (value: string | number | null) =>
   new Intl.NumberFormat("pt-BR", {
@@ -57,19 +58,22 @@ const getStatusVariant = (status: SaleListItem["status"]) => {
 };
 
 const getPaymentMethodLabel = (
-  paymentMethod: SaleListItem["paymentMethod"]
+  paymentMethod: SaleListItem["paymentMethod"],
+  paymentInstallments: number
 ) => {
   if (paymentMethod === "card") {
-    return "Cartao";
+    return `${paymentInstallments}x`;
   }
 
   return "Pix";
 };
 
 export function SalesPanel({
+  paymentFeeRules,
   saleProducts,
   sales,
 }: {
+  paymentFeeRules: PaymentFeeRule[];
   saleProducts: SaleProductOption[];
   sales: SaleListItem[];
 }) {
@@ -137,7 +141,10 @@ export function SalesPanel({
             </Select>
           </div>
 
-          <CreateSaleDialog products={saleProducts} />
+          <CreateSaleDialog
+            paymentFeeRules={paymentFeeRules}
+            products={saleProducts}
+          />
         </div>
       </div>
 
@@ -179,7 +186,10 @@ export function SalesPanel({
                   </TableCell>
                   <TableCell>{sale.customerName || "Sem cliente"}</TableCell>
                   <TableCell>
-                    {getPaymentMethodLabel(sale.paymentMethod)}
+                    {getPaymentMethodLabel(
+                      sale.paymentMethod,
+                      sale.paymentInstallments
+                    )}
                   </TableCell>
                   <TableCell className="text-center">
                     {sale.itemCount}

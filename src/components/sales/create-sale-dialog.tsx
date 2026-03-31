@@ -18,6 +18,12 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+  InputGroupText,
+} from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -27,6 +33,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  getPaymentRuleLabel,
+  type PaymentFeeRule,
+  sortPaymentFeeRules,
+} from "@/features/catalog/payment-rules";
 
 export interface SaleProductOption {
   id: string;
@@ -40,8 +51,6 @@ interface SaleRowDraft {
   productId: string;
   quantity: string;
 }
-
-type PaymentMethod = "card" | "pix";
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("pt-BR", {
@@ -67,8 +76,10 @@ const createSaleRow = (): SaleRowDraft => ({
 });
 
 export function CreateSaleDialog({
+  paymentFeeRules,
   products,
 }: {
+  paymentFeeRules: PaymentFeeRule[];
   products: SaleProductOption[];
 }) {
   const router = useRouter();
@@ -78,9 +89,16 @@ export function CreateSaleDialog({
     format(new Date(), "yyyy-MM-dd")
   );
   const [customerName, setCustomerName] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("pix");
+  const normalizedPaymentFeeRules = useMemo(
+    () => sortPaymentFeeRules(paymentFeeRules),
+    [paymentFeeRules]
+  );
+  const [paymentOptionCode, setPaymentOptionCode] = useState<string>(
+    normalizedPaymentFeeRules[0]?.code ?? "pix"
+  );
+  const [additionalAmount, setAdditionalAmount] = useState("0");
+  const [discountAmount, setDiscountAmount] = useState("0");
   const [freightAmount, setFreightAmount] = useState("0");
-  const [feePercentage, setFeePercentage] = useState("0");
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<SaleRowDraft[]>([createSaleRow()]);
 
@@ -106,23 +124,44 @@ export function CreateSaleDialog({
   );
 
   const parsedFreightAmount = Number(freightAmount);
-  const parsedFeePercentage = Number(feePercentage);
+  const parsedAdditionalAmount = Number(additionalAmount);
+  const parsedDiscountAmount = Number(discountAmount);
+  const selectedPaymentRule =
+    normalizedPaymentFeeRules.find((rule) => rule.code === paymentOptionCode) ??
+    normalizedPaymentFeeRules[0];
+  const selectedFeePercent = selectedPaymentRule?.feePercent ?? 0;
 
   const baseAmount = useMemo(() => {
-    if (!Number.isFinite(parsedFreightAmount)) {
+    if (
+      !(
+        Number.isFinite(parsedFreightAmount) &&
+        Number.isFinite(parsedAdditionalAmount) &&
+        Number.isFinite(parsedDiscountAmount)
+      )
+    ) {
       return itemSubtotal;
     }
 
-    return roundCurrency(itemSubtotal + parsedFreightAmount);
-  }, [itemSubtotal, parsedFreightAmount]);
+    return roundCurrency(
+      itemSubtotal +
+        parsedFreightAmount +
+        parsedAdditionalAmount -
+        parsedDiscountAmount
+    );
+  }, [
+    itemSubtotal,
+    parsedAdditionalAmount,
+    parsedDiscountAmount,
+    parsedFreightAmount,
+  ]);
 
   const calculatedFeeAmount = useMemo(() => {
-    if (!(Number.isFinite(parsedFeePercentage) && parsedFeePercentage >= 0)) {
+    if (baseAmount <= 0) {
       return 0;
     }
 
-    return roundCurrency(baseAmount * (parsedFeePercentage / 100));
-  }, [baseAmount, parsedFeePercentage]);
+    return roundCurrency(baseAmount * (selectedFeePercent / 100));
+  }, [baseAmount, selectedFeePercent]);
 
   const totalAmount = useMemo(() => {
     return roundCurrency(baseAmount + calculatedFeeAmount);
@@ -131,9 +170,10 @@ export function CreateSaleDialog({
   const resetForm = () => {
     setOccurredOn(format(new Date(), "yyyy-MM-dd"));
     setCustomerName("");
-    setPaymentMethod("pix");
+    setPaymentOptionCode(normalizedPaymentFeeRules[0]?.code ?? "pix");
+    setAdditionalAmount("0");
+    setDiscountAmount("0");
     setFreightAmount("0");
-    setFeePercentage("0");
     setNotes("");
     setItems([createSaleRow()]);
   };
@@ -182,21 +222,36 @@ export function CreateSaleDialog({
       return;
     }
 
-    if (!(Number.isFinite(parsedFeePercentage) && parsedFeePercentage >= 0)) {
-      toast.error("Taxa deve ser um percentual maior ou igual a zero.");
+    if (
+      !(Number.isFinite(parsedAdditionalAmount) && parsedAdditionalAmount >= 0)
+    ) {
+      toast.error("Adicional deve ser um numero maior ou igual a zero.");
+      return;
+    }
+
+    if (!(Number.isFinite(parsedDiscountAmount) && parsedDiscountAmount >= 0)) {
+      toast.error("Desconto deve ser um numero maior ou igual a zero.");
+      return;
+    }
+
+    if (baseAmount < 0) {
+      toast.error(
+        "Desconto nao pode ser maior que subtotal somado com frete e adicional."
+      );
       return;
     }
 
     startTransition(async () => {
       try {
         const saleId = await createSaleAction({
+          additionalAmount: parsedAdditionalAmount,
           customerName: customerName.trim() || undefined,
-          feePercentage: parsedFeePercentage,
+          discountAmount: parsedDiscountAmount,
           freightAmount: parsedFreightAmount,
           items: payloadItems,
           notes: notes.trim() || undefined,
           occurredOn,
-          paymentMethod,
+          paymentOptionCode,
         });
 
         toast.success("Venda registrada.");
@@ -249,17 +304,18 @@ export function CreateSaleDialog({
             <div className="space-y-1.5">
               <Label htmlFor="sale-payment-method">Pagamento</Label>
               <Select
-                onValueChange={(value) =>
-                  setPaymentMethod(value as PaymentMethod)
-                }
-                value={paymentMethod}
+                onValueChange={setPaymentOptionCode}
+                value={paymentOptionCode}
               >
                 <SelectTrigger className="w-full" id="sale-payment-method">
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="pix">Pix</SelectItem>
-                  <SelectItem value="card">Cartao</SelectItem>
+                  {normalizedPaymentFeeRules.map((rule) => (
+                    <SelectItem key={rule.code} value={rule.code}>
+                      {getPaymentRuleLabel(rule)}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -412,28 +468,54 @@ export function CreateSaleDialog({
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-3">
             <div className="space-y-1.5">
               <Label htmlFor="sale-freight">Frete</Label>
-              <Input
-                id="sale-freight"
-                min="0"
-                onChange={(event) => setFreightAmount(event.target.value)}
-                step="0.01"
-                type="number"
-                value={freightAmount}
-              />
+              <InputGroup>
+                <InputGroupAddon>
+                  <InputGroupText>R$</InputGroupText>
+                </InputGroupAddon>
+                <InputGroupInput
+                  id="sale-freight"
+                  min="0"
+                  onChange={(event) => setFreightAmount(event.target.value)}
+                  step="0.01"
+                  type="number"
+                  value={freightAmount}
+                />
+              </InputGroup>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="sale-fee-percentage">Taxa (%)</Label>
-              <Input
-                id="sale-fee-percentage"
-                min="0"
-                onChange={(event) => setFeePercentage(event.target.value)}
-                step="0.01"
-                type="number"
-                value={feePercentage}
-              />
+              <Label htmlFor="sale-additional">Adicional</Label>
+              <InputGroup>
+                <InputGroupAddon>
+                  <InputGroupText>R$</InputGroupText>
+                </InputGroupAddon>
+                <InputGroupInput
+                  id="sale-additional"
+                  min="0"
+                  onChange={(event) => setAdditionalAmount(event.target.value)}
+                  step="0.01"
+                  type="number"
+                  value={additionalAmount}
+                />
+              </InputGroup>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="sale-discount">Desconto</Label>
+              <InputGroup>
+                <InputGroupAddon>
+                  <InputGroupText>R$</InputGroupText>
+                </InputGroupAddon>
+                <InputGroupInput
+                  id="sale-discount"
+                  min="0"
+                  onChange={(event) => setDiscountAmount(event.target.value)}
+                  step="0.01"
+                  type="number"
+                  value={discountAmount}
+                />
+              </InputGroup>
             </div>
           </div>
 
@@ -457,8 +539,16 @@ export function CreateSaleDialog({
               <span>{formatCurrency(parsedFreightAmount || 0)}</span>
             </div>
             <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Adicional</span>
+              <span>{formatCurrency(parsedAdditionalAmount || 0)}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Desconto</span>
+              <span>- {formatCurrency(parsedDiscountAmount || 0)}</span>
+            </div>
+            <div className="flex items-center justify-between">
               <span className="text-muted-foreground">
-                Taxa ({formatPercent(parsedFeePercentage)}%)
+                Taxa de pagamento ({formatPercent(selectedFeePercent)}%)
               </span>
               <span>+ {formatCurrency(calculatedFeeAmount)}</span>
             </div>
