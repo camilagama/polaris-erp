@@ -103,5 +103,20 @@ export const products = pgTable("products", {
     .default("0"),
   price: decimal("price", { precision: 12, scale: 2 }).notNull().default("0"),
   stock: integer("stock").default(0).notNull(),
+  archivedAt: timestamp("archived_at"),
+  ...timestamps,
+});
+
+export const productStockEntries = pgTable("product_stock_entries", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  productId: text("product_id")
+    .notNull()
+    .references(() => products.id, { onDelete: "cascade" }),
+  quantity: integer("quantity").notNull(),
+  unitCost: decimal("unit_cost", { precision: 12, scale: 2 })
+    .notNull()
+    .default("0"),
   ...timestamps,
 });
