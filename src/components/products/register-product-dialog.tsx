@@ -1,11 +1,13 @@
 "use client";
 
 import { useForm } from "@tanstack/react-form";
+import { format } from "date-fns";
 import { useRouter } from "next/navigation";
 import { type ChangeEvent, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { createProductAction } from "@/app/(app)/produtos/actions";
+import { ProductDatePicker } from "@/components/products/product-date-picker";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -41,6 +43,7 @@ const productSchema = z.object({
   categoryId: z.string().min(1, "Categoria e obrigatoria"),
   costPrice: z.coerce.number().min(0, "Minimo 0"),
   price: z.coerce.number().min(0, "Minimo 0"),
+  purchasedOn: z.string().min(1, "Data invalida"),
   stock: z.coerce.number().min(0, "Minimo 0"),
 });
 
@@ -70,6 +73,7 @@ export function RegisterProductDialog({
 }: RegisterProductDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const today = format(new Date(), "yyyy-MM-dd");
   const defaultCategoryId =
     categories.find((category) => category.key === OTHERS_CATEGORY_KEY)?.id ??
     categories[0]?.id ??
@@ -82,6 +86,7 @@ export function RegisterProductDialog({
       categoryId: defaultCategoryId,
       costPrice: 0,
       price: 0,
+      purchasedOn: today,
       stock: 0,
     },
     onSubmit: async ({ value }) => {
@@ -92,6 +97,7 @@ export function RegisterProductDialog({
           categoryId: value.categoryId,
           costPrice: value.costPrice.toString(),
           price: value.price.toString(),
+          purchasedOn: value.purchasedOn,
           stock: value.stock,
         });
         toast.success("Produto cadastrado.");
@@ -115,6 +121,7 @@ export function RegisterProductDialog({
       description: "",
       name: "",
       price: 0,
+      purchasedOn: today,
       stock: 0,
     });
   };
@@ -278,6 +285,35 @@ export function RegisterProductDialog({
             </form.Field>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <form.Field
+                name="purchasedOn"
+                validators={{
+                  onChange: ({ value }) => {
+                    const result =
+                      productSchema.shape.purchasedOn.safeParse(value);
+                    return result.success
+                      ? undefined
+                      : result.error.issues[0]?.message;
+                  },
+                }}
+              >
+                {(field) => (
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor={field.name}>Data da compra</Label>
+                    <ProductDatePicker
+                      id={field.name}
+                      onChange={field.handleChange}
+                      value={field.state.value}
+                    />
+                    {field.state.meta.errors.length > 0 ? (
+                      <em className="text-[11px] text-destructive">
+                        {field.state.meta.errors.join(", ")}
+                      </em>
+                    ) : null}
+                  </div>
+                )}
+              </form.Field>
+
               <form.Field
                 name="costPrice"
                 validators={{

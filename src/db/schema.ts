@@ -1,5 +1,7 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
+  date,
   decimal,
   integer,
   pgTable,
@@ -95,6 +97,7 @@ export const products = pgTable("products", {
     .$defaultFn(() => crypto.randomUUID()),
   name: text("name").notNull(),
   description: text("description"),
+  purchasedOn: date("purchased_on").default(sql`CURRENT_DATE`).notNull(),
   categoryId: text("category_id")
     .notNull()
     .references(() => categories.id),
@@ -114,6 +117,7 @@ export const productStockEntries = pgTable("product_stock_entries", {
   productId: text("product_id")
     .notNull()
     .references(() => products.id, { onDelete: "cascade" }),
+  stockedOn: date("stocked_on").default(sql`CURRENT_DATE`).notNull(),
   quantity: integer("quantity").notNull(),
   unitCost: decimal("unit_cost", { precision: 12, scale: 2 })
     .notNull()

@@ -3,13 +3,14 @@ import {
   getCatalogSettings,
   listCategoriesWithUsage,
 } from "@/features/catalog/server";
-import { getProductsAction } from "./actions";
+import { getProductStockEntriesAction, getProductsAction } from "./actions";
 
 export default async function ProdutosPage() {
-  const [products, categories, settings] = await Promise.all([
+  const [products, categories, settings, stockEntries] = await Promise.all([
     getProductsAction(),
     listCategoriesWithUsage(),
     getCatalogSettings(),
+    getProductStockEntriesAction(),
   ]);
 
   return (
@@ -21,6 +22,7 @@ export default async function ProdutosPage() {
       }))}
       products={products}
       settings={settings}
+      stockEntries={stockEntries}
     />
   );
 }

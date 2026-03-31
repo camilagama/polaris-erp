@@ -43,6 +43,13 @@
       "when": 1774956600000,
       "tag": "20260331113000_product_archive_and_stock_entries",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1774967400000,
+      "tag": "20260331143000_product_inventory_dates",
+      "breakpoints": true
     }
   ]
 }

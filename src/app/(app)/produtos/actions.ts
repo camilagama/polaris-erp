@@ -14,6 +14,7 @@ const createProductSchema = z.object({
   description: z.string().trim().optional(),
   name: z.string().trim().min(1, "Nome e obrigatorio."),
   price: z.coerce.number().min(0, "Preco invalido."),
+  purchasedOn: z.string().min(1, "Data de compra invalida."),
   stock: z.coerce.number().int().min(0, "Estoque invalido."),
 });
 
@@ -25,6 +26,7 @@ const updateProductSchema = z.object({
 
 const stockAdditionSchema = z.object({
   quantity: z.coerce.number().int().min(1, "Quantidade invalida."),
+  stockedOn: z.string().min(1, "Data de abastecimento invalida."),
   unitCost: z.coerce.number().min(0, "Custo invalido."),
 });
 
@@ -38,13 +40,20 @@ export interface ProductListItem {
   categoryId: string;
   categoryName: string;
   costPrice: string;
-  createdAt: Date;
   description: string | null;
   id: string;
   name: string;
   price: string;
+  purchasedOn: string;
   stock: number;
-  updatedAt: Date;
+}
+
+export interface ProductStockEntryItem {
+  id: string;
+  productId: string;
+  quantity: number;
+  stockedOn: string;
+  unitCost: string;
 }
 
 export async function getProductsAction(): Promise<ProductListItem[]> {
@@ -54,17 +63,39 @@ export async function getProductsAction(): Promise<ProductListItem[]> {
       categoryId: products.categoryId,
       categoryName: categories.name,
       costPrice: products.costPrice,
-      createdAt: products.createdAt,
       description: products.description,
       id: products.id,
       name: products.name,
       price: products.price,
+      purchasedOn: products.purchasedOn,
       stock: products.stock,
-      updatedAt: products.updatedAt,
     })
     .from(products)
     .innerJoin(categories, eq(products.categoryId, categories.id))
     .orderBy(asc(products.name));
+}
+
+export async function getProductStockEntriesAction(): Promise<
+  ProductStockEntryItem[]
+> {
+  const entries = await db
+    .select({
+      id: productStockEntries.id,
+      productId: productStockEntries.productId,
+      quantity: productStockEntries.quantity,
+      stockedOn: productStockEntries.stockedOn,
+      unitCost: productStockEntries.unitCost,
+    })
+    .from(productStockEntries)
+    .orderBy(
+      asc(productStockEntries.stockedOn),
+      asc(productStockEntries.createdAt)
+    );
+
+  return entries.map((entry) => ({
+    ...entry,
+    quantity: Number(entry.quantity),
+  }));
 }
 
 export async function createProductAction(data: {
@@ -73,6 +104,7 @@ export async function createProductAction(data: {
   description?: string;
   name: string;
   price: string;
+  purchasedOn: string;
   stock: number;
 }) {
   const parsed = createProductSchema.parse(data);
@@ -91,6 +123,7 @@ export async function createProductAction(data: {
         description: parsed.description || undefined,
         name: parsed.name,
         price: parsed.price.toFixed(2),
+        purchasedOn: parsed.purchasedOn,
         stock: parsed.stock,
       })
       .returning();
@@ -99,6 +132,7 @@ export async function createProductAction(data: {
       await tx.insert(productStockEntries).values({
         productId: product.id,
         quantity: parsed.stock,
+        stockedOn: parsed.purchasedOn,
         unitCost: parsed.costPrice.toFixed(2),
       });
     }
@@ -138,6 +172,7 @@ export async function addProductStockAction(
   id: string,
   data: {
     quantity: number;
+    stockedOn: string;
     unitCost: string;
   }
 ) {
@@ -161,6 +196,7 @@ export async function addProductStockAction(
     await tx.insert(productStockEntries).values({
       productId: id,
       quantity: parsed.quantity,
+      stockedOn: parsed.stockedOn,
       unitCost: parsed.unitCost.toFixed(2),
     });
 
