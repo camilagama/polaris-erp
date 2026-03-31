@@ -460,13 +460,31 @@ export function CreateSaleDialog({
                             </Label>
                             <Input
                               className="h-7 bg-background"
+                              max={selectedProduct?.stock}
                               min="1"
-                              onChange={(event) =>
-                                updateItem(item.id, (currentItem) => ({
-                                  ...currentItem,
-                                  quantity: event.target.value,
-                                }))
-                              }
+                              onChange={(event) => {
+                                const val = event.target.value;
+                                const numVal = Number.parseInt(val, 10);
+
+                                if (
+                                  selectedProduct &&
+                                  !Number.isNaN(numVal) &&
+                                  numVal > selectedProduct.stock
+                                ) {
+                                  toast.error(
+                                    `Estoque insuficiente. Máximo disponível: ${selectedProduct.stock} unidades.`
+                                  );
+                                  updateItem(item.id, (currentItem) => ({
+                                    ...currentItem,
+                                    quantity: String(selectedProduct.stock),
+                                  }));
+                                } else {
+                                  updateItem(item.id, (currentItem) => ({
+                                    ...currentItem,
+                                    quantity: val,
+                                  }));
+                                }
+                              }}
                               step="1"
                               type="number"
                               value={item.quantity}
