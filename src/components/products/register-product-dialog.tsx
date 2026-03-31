@@ -175,44 +175,84 @@ export function RegisterProductDialog({
               )}
             </form.Field>
 
-            <form.Field
-              name="categoryId"
-              validators={{
-                onChange: ({ value }) => {
-                  const result =
-                    productSchema.shape.categoryId.safeParse(value);
-                  return result.success
-                    ? undefined
-                    : result.error.issues[0]?.message;
-                },
-              }}
-            >
-              {(field) => (
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor={field.name}>Categoria</Label>
-                  <Select
-                    onValueChange={field.handleChange}
-                    value={field.state.value}
-                  >
-                    <SelectTrigger className="w-full" id={field.name}>
-                      <SelectValue placeholder="Selecione uma categoria" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {field.state.meta.errors.length > 0 ? (
-                    <em className="text-[11px] text-destructive">
-                      {field.state.meta.errors.join(", ")}
-                    </em>
-                  ) : null}
-                </div>
-              )}
-            </form.Field>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <form.Field
+                name="categoryId"
+                validators={{
+                  onChange: ({ value }) => {
+                    const result =
+                      productSchema.shape.categoryId.safeParse(value);
+                    return result.success
+                      ? undefined
+                      : result.error.issues[0]?.message;
+                  },
+                }}
+              >
+                {(field) => (
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor={field.name}>Categoria</Label>
+                    <Select
+                      onValueChange={field.handleChange}
+                      value={field.state.value}
+                    >
+                      <SelectTrigger className="w-full" id={field.name}>
+                        <SelectValue placeholder="Selecione uma categoria" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map((category) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {field.state.meta.errors.length > 0 ? (
+                      <em className="text-[11px] text-destructive">
+                        {field.state.meta.errors.join(", ")}
+                      </em>
+                    ) : null}
+                  </div>
+                )}
+              </form.Field>
+
+              <form.Field
+                name="stock"
+                validators={{
+                  onChange: ({ value }) => {
+                    const result = productSchema.shape.stock.safeParse(value);
+                    return result.success
+                      ? undefined
+                      : result.error.issues[0]?.message;
+                  },
+                }}
+              >
+                {(field) => (
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor={field.name}>Estoque Inicial</Label>
+                    <InputGroup>
+                      <InputGroupInput
+                        id={field.name}
+                        name={field.name}
+                        onBlur={field.handleBlur}
+                        onChange={(event) =>
+                          field.handleChange(Number(event.target.value))
+                        }
+                        type="number"
+                        value={field.state.value}
+                      />
+                      <InputGroupAddon align="inline-end">
+                        <InputGroupText>unidades</InputGroupText>
+                      </InputGroupAddon>
+                    </InputGroup>
+                    {field.state.meta.errors.length > 0 ? (
+                      <em className="text-[11px] text-destructive">
+                        {field.state.meta.errors.join(", ")}
+                      </em>
+                    ) : null}
+                  </div>
+                )}
+              </form.Field>
+            </div>
 
             <form.Field name="description">
               {(field) => (
@@ -404,44 +444,6 @@ export function RegisterProductDialog({
                 );
               }}
             </form.Subscribe>
-
-            <form.Field
-              name="stock"
-              validators={{
-                onChange: ({ value }) => {
-                  const result = productSchema.shape.stock.safeParse(value);
-                  return result.success
-                    ? undefined
-                    : result.error.issues[0]?.message;
-                },
-              }}
-            >
-              {(field) => (
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor={field.name}>Estoque Inicial</Label>
-                  <InputGroup>
-                    <InputGroupInput
-                      id={field.name}
-                      name={field.name}
-                      onBlur={field.handleBlur}
-                      onChange={(event) =>
-                        field.handleChange(Number(event.target.value))
-                      }
-                      type="number"
-                      value={field.state.value}
-                    />
-                    <InputGroupAddon align="inline-end">
-                      <InputGroupText>unidades</InputGroupText>
-                    </InputGroupAddon>
-                  </InputGroup>
-                  {field.state.meta.errors.length > 0 ? (
-                    <em className="text-[11px] text-destructive">
-                      {field.state.meta.errors.join(", ")}
-                    </em>
-                  ) : null}
-                </div>
-              )}
-            </form.Field>
           </div>
           <DialogFooter>
             <form.Subscribe
