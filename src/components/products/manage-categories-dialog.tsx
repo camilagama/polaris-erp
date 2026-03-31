@@ -180,9 +180,9 @@ export function ManageCategoriesDialog() {
   return (
     <Dialog onOpenChange={(open) => open && loadCategories()}>
       <DialogTrigger asChild>
-        <Button className="h-8 w-8 rounded-full" size="icon" variant="ghost">
+        <Button className="h-6 w-6 rounded-full" size="icon" variant="ghost">
           <HugeiconsIcon
-            className="h-4.5 w-4.5 text-muted-foreground hover:text-foreground"
+            className="h-5 w-5 text-muted-foreground hover:text-foreground"
             icon={Settings02Icon}
           />
         </Button>
