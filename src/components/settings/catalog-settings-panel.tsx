@@ -223,7 +223,7 @@ export function CatalogSettingsPanel({
                       <Button
                         disabled={pending || editingName.trim().length === 0}
                         onClick={() => handleUpdateCategory(category.id)}
-                        size="icon-xs"
+                        size="icon-sm"
                         type="button"
                       >
                         <HugeiconsIcon icon={Tick01Icon} />
@@ -233,7 +233,7 @@ export function CatalogSettingsPanel({
                           setEditingId(null);
                           setEditingName("");
                         }}
-                        size="icon-xs"
+                        size="icon-sm"
                         type="button"
                         variant="ghost"
                       >
@@ -255,7 +255,7 @@ export function CatalogSettingsPanel({
                             setEditingId(category.id);
                             setEditingName(category.name);
                           }}
-                          size="icon-xs"
+                          size="icon-sm"
                           title={
                             renameAllowed
                               ? "Editar categoria"
@@ -269,7 +269,7 @@ export function CatalogSettingsPanel({
                         <Button
                           disabled={!deleteAllowed || pending}
                           onClick={() => handleDeleteCategory(category.id)}
-                          size="icon-xs"
+                          size="icon-sm"
                           title={deleteTitle}
                           type="button"
                           variant="ghost"
