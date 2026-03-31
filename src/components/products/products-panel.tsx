@@ -2,35 +2,27 @@
 
 import {
   Archive01Icon,
-  ArrowDown01Icon,
   Delete02Icon,
   Edit01Icon,
   ListPlusIcon,
   Menu03Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { format, parseISO } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { format } from "date-fns";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
   addProductStockAction,
   archiveProductAction,
   deleteProductAction,
   type ProductListItem,
-  type ProductStockEntryItem,
   unarchiveProductAction,
   updateProductAction,
 } from "@/app/(app)/produtos/actions";
 import { ProductDatePicker } from "@/components/products/product-date-picker";
 import { RegisterProductDialog } from "@/components/products/register-product-dialog";
 import { Button } from "@/components/ui/button";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import {
   Dialog,
   DialogContent,
@@ -81,7 +73,6 @@ export function ProductsPanel({
   categories,
   products,
   settings,
-  stockEntries,
 }: {
   categories: ProductCategoryOption[];
   products: ProductListItem[];
@@ -89,14 +80,10 @@ export function ProductsPanel({
     idealMarkupPercent: number;
     minimumMarkupPercent: number;
   };
-  stockEntries: ProductStockEntryItem[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [showArchived, setShowArchived] = useState(false);
-  const [detailsProduct, setDetailsProduct] = useState<ProductListItem | null>(
-    null
-  );
   const [editingProduct, setEditingProduct] = useState<ProductListItem | null>(
     null
   );
@@ -112,28 +99,13 @@ export function ProductsPanel({
   const [stockQuantity, setStockQuantity] = useState("1");
   const [stockedOn, setStockedOn] = useState(format(new Date(), "yyyy-MM-dd"));
   const [stockUnitCost, setStockUnitCost] = useState("");
-
-  const visibleProducts = useMemo(
-    () =>
-      products.filter((product) =>
-        showArchived ? Boolean(product.archivedAt) : !product.archivedAt
-      ),
-    [products, showArchived]
+  const visibleProducts = products.filter((product) =>
+    showArchived ? Boolean(product.archivedAt) : !product.archivedAt
   );
 
   const refreshView = () => {
     router.refresh();
   };
-
-  const selectedStockEntries = useMemo(() => {
-    if (!detailsProduct) {
-      return [];
-    }
-
-    return stockEntries
-      .filter((entry) => entry.productId === detailsProduct.id)
-      .sort((left, right) => right.stockedOn.localeCompare(left.stockedOn));
-  }, [detailsProduct, stockEntries]);
 
   const openEditDialog = (product: ProductListItem) => {
     setEditingProduct(product);
@@ -208,9 +180,6 @@ export function ProductsPanel({
         } else {
           await archiveProductAction(product.id);
           toast.success("Produto arquivado.");
-          if (detailsProduct?.id === product.id) {
-            setDetailsProduct(null);
-          }
         }
         refreshView();
       } catch (error) {
@@ -233,9 +202,6 @@ export function ProductsPanel({
         await deleteProductAction(deleteProduct.id);
         toast.success("Produto removido definitivamente.");
         setDeleteProduct(null);
-        if (detailsProduct?.id === deleteProduct.id) {
-          setDetailsProduct(null);
-        }
         refreshView();
       } catch (error) {
         toast.error(
@@ -291,11 +257,11 @@ export function ProductsPanel({
                 <TableRow
                   className="cursor-pointer"
                   key={product.id}
-                  onClick={() => setDetailsProduct(product)}
+                  onClick={() => router.push(`/produtos/${product.id}`)}
                   onKeyDown={(event) => {
                     if (event.key === "Enter" || event.key === " ") {
                       event.preventDefault();
-                      setDetailsProduct(product);
+                      router.push(`/produtos/${product.id}`);
                     }
                   }}
                   tabIndex={0}
@@ -365,93 +331,6 @@ export function ProductsPanel({
           </TableBody>
         </Table>
       </div>
-
-      <Dialog
-        onOpenChange={(open) => {
-          if (!open) {
-            setDetailsProduct(null);
-          }
-        }}
-        open={Boolean(detailsProduct)}
-      >
-        <DialogContent className="sm:max-w-[460px]">
-          <DialogHeader>
-            <DialogTitle>{detailsProduct?.name}</DialogTitle>
-            <DialogDescription>
-              Resumo do produto selecionado.
-            </DialogDescription>
-          </DialogHeader>
-          {detailsProduct ? (
-            <div className="grid grid-cols-[96px_1fr] gap-x-3 gap-y-2 text-xs">
-              <span className="text-muted-foreground">Categoria</span>
-              <span>{detailsProduct.categoryName}</span>
-              <span className="text-muted-foreground">Custo</span>
-              <span>{formatCurrency(detailsProduct.costPrice)}</span>
-              <span className="text-muted-foreground">Preco</span>
-              <span>{formatCurrency(detailsProduct.price)}</span>
-              <span className="text-muted-foreground">Compra</span>
-              <span>
-                {format(parseISO(detailsProduct.purchasedOn), "dd/MM/yyyy", {
-                  locale: ptBR,
-                })}
-              </span>
-              <span className="text-muted-foreground">Estoque</span>
-              <span>{detailsProduct.stock}</span>
-              <span className="text-muted-foreground">Status</span>
-              <span>{detailsProduct.archivedAt ? "Arquivado" : "Ativo"}</span>
-              <span className="col-span-2 mt-2 border-border/50 border-t pt-2 text-muted-foreground">
-                Observacoes
-              </span>
-              <p className="col-span-2 text-xs/relaxed">
-                {detailsProduct.description?.trim() || "Sem observacoes."}
-              </p>
-              <Collapsible className="col-span-2 mt-2 rounded-md border border-border/50">
-                <CollapsibleTrigger asChild>
-                  <Button
-                    className="w-full justify-between rounded-md px-3"
-                    type="button"
-                    variant="ghost"
-                  >
-                    Historico
-                    <HugeiconsIcon
-                      data-icon="inline-end"
-                      icon={ArrowDown01Icon}
-                    />
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="border-border/50 border-t px-3 py-2">
-                  <div className="flex flex-col gap-2">
-                    {selectedStockEntries.length === 0 ? (
-                      <p className="text-muted-foreground text-xs">
-                        Sem abastecimentos registrados.
-                      </p>
-                    ) : (
-                      selectedStockEntries.map((entry) => (
-                        <div
-                          className="flex items-center justify-between gap-3 text-xs"
-                          key={entry.id}
-                        >
-                          <div className="min-w-0">
-                            <p className="font-medium">+{entry.quantity} un.</p>
-                            <p className="text-muted-foreground">
-                              {format(parseISO(entry.stockedOn), "dd/MM/yyyy", {
-                                locale: ptBR,
-                              })}
-                            </p>
-                          </div>
-                          <p className="shrink-0 text-muted-foreground">
-                            {formatCurrency(entry.unitCost)}
-                          </p>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
-            </div>
-          ) : null}
-        </DialogContent>
-      </Dialog>
 
       <Dialog
         onOpenChange={(open) => {

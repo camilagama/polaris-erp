@@ -1,6 +1,6 @@
 "use server";
 
-import { asc, eq } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/db";
@@ -75,6 +75,28 @@ export async function getProductsAction(): Promise<ProductListItem[]> {
     .orderBy(asc(products.name));
 }
 
+export async function getProductByIdAction(
+  id: string
+): Promise<ProductListItem | undefined> {
+  return await db
+    .select({
+      archivedAt: products.archivedAt,
+      categoryId: products.categoryId,
+      categoryName: categories.name,
+      costPrice: products.costPrice,
+      description: products.description,
+      id: products.id,
+      name: products.name,
+      price: products.price,
+      purchasedOn: products.purchasedOn,
+      stock: products.stock,
+    })
+    .from(products)
+    .innerJoin(categories, eq(products.categoryId, categories.id))
+    .where(eq(products.id, id))
+    .then((rows) => rows[0]);
+}
+
 export async function getProductStockEntriesAction(): Promise<
   ProductStockEntryItem[]
 > {
@@ -90,6 +112,30 @@ export async function getProductStockEntriesAction(): Promise<
     .orderBy(
       asc(productStockEntries.stockedOn),
       asc(productStockEntries.createdAt)
+    );
+
+  return entries.map((entry) => ({
+    ...entry,
+    quantity: Number(entry.quantity),
+  }));
+}
+
+export async function getProductStockEntriesByProductIdAction(
+  productId: string
+): Promise<ProductStockEntryItem[]> {
+  const entries = await db
+    .select({
+      id: productStockEntries.id,
+      productId: productStockEntries.productId,
+      quantity: productStockEntries.quantity,
+      stockedOn: productStockEntries.stockedOn,
+      unitCost: productStockEntries.unitCost,
+    })
+    .from(productStockEntries)
+    .where(eq(productStockEntries.productId, productId))
+    .orderBy(
+      desc(productStockEntries.stockedOn),
+      desc(productStockEntries.createdAt)
     );
 
   return entries.map((entry) => ({
