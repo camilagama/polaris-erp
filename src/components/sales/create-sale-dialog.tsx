@@ -12,7 +12,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -282,292 +281,391 @@ export function CreateSaleDialog({
       <DialogTrigger asChild>
         <Button type="button">Nova venda</Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-150">
-        <DialogHeader>
-          <DialogTitle>Registrar venda</DialogTitle>
-          <DialogDescription>
-            Venda concluida na hora com baixa imediata de estoque.
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden p-0 sm:max-w-5xl">
+        <div className="border-border/40 border-b px-6 py-4">
+          <DialogHeader>
+            <DialogTitle className="text-lg">Registrar nova venda</DialogTitle>
+            <DialogDescription>
+              Venda concluída na hora com baixa imediata de estoque.
+            </DialogDescription>
+          </DialogHeader>
+        </div>
 
-        <div className="flex flex-col gap-4">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="sale-date">Data</Label>
-              <Input
-                id="sale-date"
-                onChange={(event) => setOccurredOn(event.target.value)}
-                type="date"
-                value={occurredOn}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="sale-payment-method">Pagamento</Label>
-              <Select
-                onValueChange={setPaymentOptionCode}
-                value={paymentOptionCode}
-              >
-                <SelectTrigger className="w-full" id="sale-payment-method">
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  {normalizedPaymentFeeRules.map((rule) => (
-                    <SelectItem key={rule.code} value={rule.code}>
-                      {getPaymentRuleLabel(rule)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="sale-customer">Cliente (opcional)</Label>
-              <Input
-                id="sale-customer"
-                onChange={(event) => setCustomerName(event.target.value)}
-                placeholder="Nome do cliente"
-                value={customerName}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <p className="font-medium text-xs uppercase tracking-[0.14em]">
-                Itens
-              </p>
-              <Button
-                onClick={() =>
-                  setItems((currentItems) => [...currentItems, createSaleRow()])
-                }
-                size="xs"
-                type="button"
-                variant="outline"
-              >
-                <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
-                Adicionar item
-              </Button>
-            </div>
-
-            <div className="rounded-md border border-border/60">
-              <div className="hidden grid-cols-[1.5fr_0.7fr_0.8fr_0.7fr_40px] gap-2 border-border/60 border-b px-3 py-2 text-[11px] text-muted-foreground uppercase tracking-[0.12em] sm:grid">
-                <span>Produto</span>
-                <span>Qtd.</span>
-                <span>Preco</span>
-                <span className="text-right">Subtotal</span>
-                <span />
-              </div>
-
-              <div className="flex flex-col gap-2 p-2">
-                {items.map((item) => {
-                  const selectedProduct = products.find(
-                    (product) => product.id === item.productId
-                  );
-                  const quantity = Number(item.quantity);
-                  const unitPrice = selectedProduct
-                    ? Number(selectedProduct.price)
-                    : 0;
-                  const lineTotal =
-                    Number.isFinite(quantity) && Number.isFinite(unitPrice)
-                      ? quantity * unitPrice
-                      : 0;
-
-                  const selectedByOthers = new Set(
-                    items
-                      .filter((otherItem) => otherItem.id !== item.id)
-                      .map((otherItem) => otherItem.productId)
-                      .filter(Boolean)
-                  );
-
-                  const availableProducts = products.filter(
-                    (product) =>
-                      product.id === item.productId ||
-                      !selectedByOthers.has(product.id)
-                  );
-
-                  return (
-                    <div
-                      className="grid gap-2 rounded-md border border-border/40 p-2 sm:grid-cols-[1.5fr_0.7fr_0.8fr_0.7fr_40px]"
-                      key={item.id}
+        <div className="flex-1 overflow-y-auto p-4">
+          <div className="grid gap-10 lg:grid-cols-[1fr_340px]">
+            {/* Left Column */}
+            <div className="flex flex-col gap-6">
+              {/* Seção 1: Informações Gerais */}
+              <div className="space-y-4">
+                <h3 className="font-medium text-foreground/80 text-sm">
+                  Informações gerais
+                </h3>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label
+                      className="text-muted-foreground text-xs"
+                      htmlFor="sale-date"
                     >
-                      <div className="space-y-1">
-                        <Label className="text-[11px] sm:hidden">Produto</Label>
-                        <Select
-                          onValueChange={(value) => {
-                            updateItem(item.id, (currentItem) => ({
-                              ...currentItem,
-                              productId: value,
-                            }));
-                          }}
-                          value={item.productId}
+                      Data da venda
+                    </Label>
+                    <Input
+                      id="sale-date"
+                      onChange={(event) => setOccurredOn(event.target.value)}
+                      type="date"
+                      value={occurredOn}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label
+                      className="text-muted-foreground text-xs"
+                      htmlFor="sale-payment-method"
+                    >
+                      Método de pagamento
+                    </Label>
+                    <Select
+                      onValueChange={setPaymentOptionCode}
+                      value={paymentOptionCode}
+                    >
+                      <SelectTrigger
+                        className="w-full"
+                        id="sale-payment-method"
+                      >
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {normalizedPaymentFeeRules.map((rule) => (
+                          <SelectItem key={rule.code} value={rule.code}>
+                            {getPaymentRuleLabel(rule)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label
+                      className="text-muted-foreground text-xs"
+                      htmlFor="sale-customer"
+                    >
+                      Nome do cliente (opcional)
+                    </Label>
+                    <Input
+                      id="sale-customer"
+                      onChange={(event) => setCustomerName(event.target.value)}
+                      placeholder="Ex: João Silva"
+                      value={customerName}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="h-px w-full bg-border/40" />
+
+              {/* Seção 2: Itens da Venda */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-medium text-foreground/80 text-sm">
+                    Produtos da venda
+                  </h3>
+                  <Button
+                    className="h-7 text-xs"
+                    onClick={() =>
+                      setItems((current) => [...current, createSaleRow()])
+                    }
+                    size="xs"
+                    type="button"
+                    variant="secondary"
+                  >
+                    <HugeiconsIcon
+                      className="mr-1.5 size-3.5"
+                      icon={Add01Icon}
+                      strokeWidth={2}
+                    />
+                    Adicionar produto
+                  </Button>
+                </div>
+
+                <div className="rounded-md border border-border/60">
+                  <div className="hidden grid-cols-[1fr_80px_100px_100px_40px] gap-3 border-border/60 border-b px-3 py-2 font-medium text-[11px] text-muted-foreground uppercase tracking-wider sm:grid">
+                    <span>Produto</span>
+                    <span>Qtd.</span>
+                    <span className="text-right">V. Unit.</span>
+                    <span className="text-right">Total</span>
+                    <span />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5 p-1.5">
+                    {items.map((item) => {
+                      const selectedProduct = products.find(
+                        (product) => product.id === item.productId
+                      );
+                      const quantity = Number(item.quantity);
+                      const unitPrice = selectedProduct
+                        ? Number(selectedProduct.price)
+                        : 0;
+                      const lineTotal =
+                        Number.isFinite(quantity) && Number.isFinite(unitPrice)
+                          ? quantity * unitPrice
+                          : 0;
+
+                      const selectedByOthers = new Set(
+                        items
+                          .filter((otherItem) => otherItem.id !== item.id)
+                          .map((otherItem) => otherItem.productId)
+                          .filter(Boolean)
+                      );
+
+                      const availableProducts = products.filter(
+                        (product) =>
+                          product.id === item.productId ||
+                          !selectedByOthers.has(product.id)
+                      );
+
+                      return (
+                        <div
+                          className="grid items-center gap-3 rounded-md p-1.5 transition-colors hover:bg-muted/30 sm:grid-cols-[1fr_80px_100px_100px_40px]"
+                          key={item.id}
                         >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Selecione" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {availableProducts.map((product) => (
-                              <SelectItem key={product.id} value={product.id}>
-                                {product.name} ({product.stock} un.)
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {selectedProduct ? (
-                          <p className="text-[11px] text-muted-foreground">
-                            Estoque disponivel: {selectedProduct.stock} un.
-                          </p>
-                        ) : null}
-                      </div>
+                          <div className="space-y-1">
+                            <Label className="text-[11px] text-muted-foreground sm:hidden">
+                              Produto
+                            </Label>
+                            <Select
+                              onValueChange={(value) => {
+                                updateItem(item.id, (currentItem) => ({
+                                  ...currentItem,
+                                  productId: value,
+                                }));
+                              }}
+                              value={item.productId}
+                            >
+                              <SelectTrigger className="h-8 w-full">
+                                <SelectValue placeholder="Selecione um produto" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {availableProducts.map((product) => (
+                                  <SelectItem
+                                    key={product.id}
+                                    value={product.id}
+                                  >
+                                    {product.name} ({product.stock} un.)
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
 
-                      <div className="space-y-1">
-                        <Label className="text-[11px] sm:hidden">Qtd.</Label>
-                        <Input
-                          min="1"
-                          onChange={(event) =>
-                            updateItem(item.id, (currentItem) => ({
-                              ...currentItem,
-                              quantity: event.target.value,
-                            }))
-                          }
-                          step="1"
-                          type="number"
-                          value={item.quantity}
-                        />
-                      </div>
+                          <div className="space-y-1">
+                            <Label className="text-[11px] text-muted-foreground sm:hidden">
+                              Qtd.
+                            </Label>
+                            <Input
+                              className="h-7 bg-background"
+                              min="1"
+                              onChange={(event) =>
+                                updateItem(item.id, (currentItem) => ({
+                                  ...currentItem,
+                                  quantity: event.target.value,
+                                }))
+                              }
+                              step="1"
+                              type="number"
+                              value={item.quantity}
+                            />
+                          </div>
 
-                      <div className="space-y-1">
-                        <Label className="text-[11px] sm:hidden">Preco</Label>
-                        <div className="flex h-7 items-center rounded-md border border-border/50 px-2 text-xs">
-                          {formatCurrency(unitPrice)}
+                          <div className="space-y-1">
+                            <Label className="text-[11px] text-muted-foreground sm:hidden">
+                              V. Unit.
+                            </Label>
+                            <div className="flex h-7 items-center text-foreground/80 text-xs sm:justify-end">
+                              {formatCurrency(unitPrice)}
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <Label className="text-[11px] text-muted-foreground sm:hidden">
+                              Total
+                            </Label>
+                            <div className="flex h-7 items-center font-medium text-xs sm:justify-end">
+                              {formatCurrency(lineTotal)}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-end sm:justify-center">
+                            <Button
+                              aria-label="Remover item"
+                              className={`h-8 w-8 text-muted-foreground hover:text-destructive ${
+                                items.length <= 1 ? "invisible" : ""
+                              }`}
+                              disabled={items.length <= 1}
+                              onClick={() => removeItem(item.id)}
+                              size="icon"
+                              type="button"
+                              variant="ghost"
+                            >
+                              <HugeiconsIcon
+                                className="size-4"
+                                icon={Delete02Icon}
+                                strokeWidth={2.5}
+                              />
+                            </Button>
+                          </div>
                         </div>
-                      </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
 
-                      <div className="space-y-1">
-                        <Label className="text-[11px] sm:hidden">
-                          Subtotal
-                        </Label>
-                        <div className="flex h-7 items-center justify-end rounded-md border border-border/50 px-2 text-xs">
-                          {formatCurrency(lineTotal)}
-                        </div>
-                      </div>
+              <div className="h-px w-full bg-border/40" />
 
-                      <div className="flex items-start justify-end sm:items-center">
-                        <Button
-                          aria-label="Remover item"
-                          onClick={() => removeItem(item.id)}
-                          size="icon-xs"
-                          type="button"
-                          variant="ghost"
-                        >
-                          <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
+              {/* Seção 3: Observações */}
+              <div className="space-y-1.5">
+                <Label
+                  className="text-muted-foreground text-xs"
+                  htmlFor="sale-notes"
+                >
+                  Observações internas (opcional)
+                </Label>
+                <Textarea
+                  className="min-h-24 resize-none text-sm"
+                  id="sale-notes"
+                  onChange={(event) => setNotes(event.target.value)}
+                  placeholder="Instruções adicionais, informações de entrega..."
+                  value={notes}
+                />
               </div>
             </div>
-          </div>
 
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="sale-freight">Frete</Label>
-              <InputGroup>
-                <InputGroupAddon>
-                  <InputGroupText>R$</InputGroupText>
-                </InputGroupAddon>
-                <InputGroupInput
-                  id="sale-freight"
-                  min="0"
-                  onChange={(event) => setFreightAmount(event.target.value)}
-                  step="0.01"
-                  type="number"
-                  value={freightAmount}
-                />
-              </InputGroup>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="sale-additional">Adicional</Label>
-              <InputGroup>
-                <InputGroupAddon>
-                  <InputGroupText>R$</InputGroupText>
-                </InputGroupAddon>
-                <InputGroupInput
-                  id="sale-additional"
-                  min="0"
-                  onChange={(event) => setAdditionalAmount(event.target.value)}
-                  step="0.01"
-                  type="number"
-                  value={additionalAmount}
-                />
-              </InputGroup>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="sale-discount">Desconto</Label>
-              <InputGroup>
-                <InputGroupAddon>
-                  <InputGroupText>R$</InputGroupText>
-                </InputGroupAddon>
-                <InputGroupInput
-                  id="sale-discount"
-                  min="0"
-                  onChange={(event) => setDiscountAmount(event.target.value)}
-                  step="0.01"
-                  type="number"
-                  value={discountAmount}
-                />
-              </InputGroup>
-            </div>
-          </div>
+            {/* Right Column: Resumo Financeiro */}
+            <div>
+              <div className="sticky top-0 flex flex-col gap-5 rounded-2xl border border-border/50 bg-muted/20 p-5">
+                <h3 className="font-semibold text-foreground/90 text-sm">
+                  Resumo financeiro
+                </h3>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="sale-notes">Observacoes (opcional)</Label>
-            <Textarea
-              className="min-h-20"
-              id="sale-notes"
-              onChange={(event) => setNotes(event.target.value)}
-              value={notes}
-            />
-          </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-medium text-muted-foreground">
+                    Subtotal dos itens
+                  </span>
+                  <span className="font-medium">
+                    {formatCurrency(itemSubtotal)}
+                  </span>
+                </div>
 
-          <div className="space-y-1 rounded-md border border-border/60 px-3 py-2 text-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Subtotal dos itens</span>
-              <span>{formatCurrency(itemSubtotal)}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Frete</span>
-              <span>{formatCurrency(parsedFreightAmount || 0)}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Adicional</span>
-              <span>{formatCurrency(parsedAdditionalAmount || 0)}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Desconto</span>
-              <span>- {formatCurrency(parsedDiscountAmount || 0)}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">
-                Taxa de pagamento ({formatPercent(selectedFeePercent)}%)
-              </span>
-              <span>+ {formatCurrency(calculatedFeeAmount)}</span>
-            </div>
-            <div className="flex items-center justify-between border-border/60 border-t pt-1.5">
-              <strong>Total final</strong>
-              <strong>{formatCurrency(totalAmount)}</strong>
+                <div className="-mx-5 my-0.5 h-px bg-border/40" />
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-4">
+                    <Label
+                      className="font-normal text-muted-foreground text-xs"
+                      htmlFor="sale-freight"
+                    >
+                      Frete (+)
+                    </Label>
+                    <InputGroup className="h-8 w-32">
+                      <InputGroupAddon>
+                        <InputGroupText className="text-xs">R$</InputGroupText>
+                      </InputGroupAddon>
+                      <InputGroupInput
+                        className="h-8 text-right text-sm placeholder:text-muted-foreground/50"
+                        id="sale-freight"
+                        min="0"
+                        onChange={(event) =>
+                          setFreightAmount(event.target.value)
+                        }
+                        step="0.01"
+                        type="number"
+                        value={freightAmount}
+                      />
+                    </InputGroup>
+                  </div>
+                  <div className="flex items-center justify-between gap-4">
+                    <Label
+                      className="font-normal text-muted-foreground text-xs"
+                      htmlFor="sale-additional"
+                    >
+                      Adicional (+)
+                    </Label>
+                    <InputGroup className="h-8 w-32">
+                      <InputGroupAddon>
+                        <InputGroupText className="text-xs">R$</InputGroupText>
+                      </InputGroupAddon>
+                      <InputGroupInput
+                        className="h-8 text-right text-sm placeholder:text-muted-foreground/50"
+                        id="sale-additional"
+                        min="0"
+                        onChange={(event) =>
+                          setAdditionalAmount(event.target.value)
+                        }
+                        step="0.01"
+                        type="number"
+                        value={additionalAmount}
+                      />
+                    </InputGroup>
+                  </div>
+                  <div className="flex items-center justify-between gap-4">
+                    <Label
+                      className="font-normal text-muted-foreground text-xs"
+                      htmlFor="sale-discount"
+                    >
+                      Desconto (-)
+                    </Label>
+                    <InputGroup className="h-8 w-32">
+                      <InputGroupAddon>
+                        <InputGroupText className="text-xs">R$</InputGroupText>
+                      </InputGroupAddon>
+                      <InputGroupInput
+                        className="h-8 text-right text-sm placeholder:text-muted-foreground/50"
+                        id="sale-discount"
+                        min="0"
+                        onChange={(event) =>
+                          setDiscountAmount(event.target.value)
+                        }
+                        step="0.01"
+                        type="number"
+                        value={discountAmount}
+                      />
+                    </InputGroup>
+                  </div>
+                </div>
+
+                <div className="-mx-5 my-0.5 h-px bg-border/40" />
+
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-medium text-muted-foreground">
+                    Taxa ({formatPercent(selectedFeePercent)}%)
+                  </span>
+                  <span className="font-medium text-destructive/80">
+                    + {formatCurrency(calculatedFeeAmount)}
+                  </span>
+                </div>
+
+                <div className="mt-1 flex items-center justify-between rounded-md border border-border px-2 py-2">
+                  <strong className="font-bold text-muted-foreground">
+                    Total Final
+                  </strong>
+                  <strong className="text-xl tracking-tight">
+                    {formatCurrency(totalAmount)}
+                  </strong>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        <DialogFooter>
+        <div className="flex items-center justify-end gap-3 border-border/40 border-t bg-muted/5 px-6 py-4">
+          <Button onClick={() => setOpen(false)} type="button" variant="ghost">
+            Cancelar
+          </Button>
           <Button
             disabled={pending || products.length === 0}
             onClick={handleSubmit}
             type="button"
           >
-            {pending ? "Salvando..." : "Registrar venda"}
+            {pending ? "Registrando..." : "Confirmar Venda"}
           </Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );
