@@ -1,9 +1,12 @@
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   date,
   decimal,
+  index,
   integer,
+  pgEnum,
   pgTable,
   text,
   timestamp,
@@ -91,53 +94,103 @@ export const systemSettings = pgTable("system_settings", {
   ...timestamps,
 });
 
-export const products = pgTable("products", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  name: text("name").notNull(),
-  description: text("description"),
-  purchasedOn: date("purchased_on").default(sql`CURRENT_DATE`).notNull(),
-  categoryId: text("category_id")
-    .notNull()
-    .references(() => categories.id),
-  costPrice: decimal("cost_price", { precision: 12, scale: 2 })
-    .notNull()
-    .default("0"),
-  price: decimal("price", { precision: 12, scale: 2 }).notNull().default("0"),
-  stock: integer("stock").default(0).notNull(),
-  archivedAt: timestamp("archived_at"),
-  ...timestamps,
-});
+export const productWriteOffReasonEnum = pgEnum("product_write_off_reason", [
+  "adjustment",
+  "damage",
+  "loss",
+]);
 
-export const productStockEntries = pgTable("product_stock_entries", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  productId: text("product_id")
-    .notNull()
-    .references(() => products.id, { onDelete: "cascade" }),
-  stockedOn: date("stocked_on").default(sql`CURRENT_DATE`).notNull(),
-  quantity: integer("quantity").notNull(),
-  unitCost: decimal("unit_cost", { precision: 12, scale: 2 })
-    .notNull()
-    .default("0"),
-  ...timestamps,
-});
+export const products = pgTable(
+  "products",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    name: text("name").notNull(),
+    description: text("description"),
+    purchasedOn: date("purchased_on").default(sql`CURRENT_DATE`).notNull(),
+    categoryId: text("category_id")
+      .notNull()
+      .references(() => categories.id),
+    costPrice: decimal("cost_price", { precision: 12, scale: 2 })
+      .notNull()
+      .default("0"),
+    price: decimal("price", { precision: 12, scale: 2 }).notNull().default("0"),
+    stock: integer("stock").default(0).notNull(),
+    archivedAt: timestamp("archived_at"),
+    ...timestamps,
+  },
+  (table) => [
+    check("products_cost_price_non_negative", sql`${table.costPrice} >= 0`),
+    check("products_price_non_negative", sql`${table.price} >= 0`),
+    check("products_stock_non_negative", sql`${table.stock} >= 0`),
+    index("products_archived_at_idx").on(table.archivedAt),
+    index("products_category_id_idx").on(table.categoryId),
+  ]
+);
 
-export const productStockWriteOffs = pgTable("product_stock_write_offs", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  productId: text("product_id")
-    .notNull()
-    .references(() => products.id, { onDelete: "cascade" }),
-  happenedOn: date("happened_on").default(sql`CURRENT_DATE`).notNull(),
-  quantity: integer("quantity").notNull(),
-  reason: text("reason").notNull(),
-  notes: text("notes"),
-  unitCostSnapshot: decimal("unit_cost_snapshot", { precision: 12, scale: 2 })
-    .notNull()
-    .default("0"),
-  ...timestamps,
-});
+export const productStockEntries = pgTable(
+  "product_stock_entries",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    productId: text("product_id")
+      .notNull()
+      .references(() => products.id, { onDelete: "cascade" }),
+    stockedOn: date("stocked_on").default(sql`CURRENT_DATE`).notNull(),
+    quantity: integer("quantity").notNull(),
+    unitCost: decimal("unit_cost", { precision: 12, scale: 2 })
+      .notNull()
+      .default("0"),
+    ...timestamps,
+  },
+  (table) => [
+    check(
+      "product_stock_entries_quantity_positive",
+      sql`${table.quantity} > 0`
+    ),
+    check(
+      "product_stock_entries_unit_cost_non_negative",
+      sql`${table.unitCost} >= 0`
+    ),
+    index("product_stock_entries_product_stocked_on_idx").on(
+      table.productId,
+      table.stockedOn
+    ),
+  ]
+);
+
+export const productStockWriteOffs = pgTable(
+  "product_stock_write_offs",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    productId: text("product_id")
+      .notNull()
+      .references(() => products.id, { onDelete: "cascade" }),
+    happenedOn: date("happened_on").default(sql`CURRENT_DATE`).notNull(),
+    quantity: integer("quantity").notNull(),
+    reason: productWriteOffReasonEnum("reason").notNull(),
+    notes: text("notes"),
+    unitCostSnapshot: decimal("unit_cost_snapshot", { precision: 12, scale: 2 })
+      .notNull()
+      .default("0"),
+    ...timestamps,
+  },
+  (table) => [
+    check(
+      "product_stock_write_offs_quantity_positive",
+      sql`${table.quantity} > 0`
+    ),
+    check(
+      "product_stock_write_offs_unit_cost_snapshot_non_negative",
+      sql`${table.unitCostSnapshot} >= 0`
+    ),
+    index("product_stock_write_offs_product_happened_on_idx").on(
+      table.productId,
+      table.happenedOn
+    ),
+  ]
+);

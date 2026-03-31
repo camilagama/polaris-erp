@@ -1,7 +1,7 @@
 "use server";
 
-import { asc, desc, eq } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
+import { asc, desc, eq, sql } from "drizzle-orm";
+import { refresh, revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/db";
 import {
@@ -11,7 +11,10 @@ import {
   products,
 } from "@/db/schema";
 import { getProductCategoryById } from "@/features/catalog/server";
-import { calculateWeightedCostPrice } from "@/features/products/stock";
+import {
+  applyStockAddition,
+  applyStockWriteOff,
+} from "@/features/products/stock";
 
 const createProductSchema = z.object({
   categoryId: z.string().min(1, "Categoria e obrigatoria."),
@@ -45,6 +48,37 @@ const stockWriteOffSchema = z.object({
 const revalidateProducts = () => {
   revalidatePath("/produtos");
   revalidatePath("/configuracoes");
+  refresh();
+};
+
+interface LockedProductRow extends Record<string, unknown> {
+  archivedAt: Date | null;
+  costPrice: string;
+  id: string;
+  stock: number;
+}
+
+const lockProductForUpdate = async (
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  id: string
+): Promise<LockedProductRow> => {
+  const result = await tx.execute<LockedProductRow>(sql`
+    select
+      id,
+      cost_price as "costPrice",
+      stock,
+      archived_at as "archivedAt"
+    from products
+    where id = ${id}
+    for update
+  `);
+  const product = result.rows[0];
+
+  if (!product) {
+    throw new Error("Produto nao encontrado.");
+  }
+
+  return product;
 };
 
 export interface ProductListItem {
@@ -61,6 +95,7 @@ export interface ProductListItem {
 }
 
 export interface ProductStockEntryItem {
+  createdAt: Date;
   id: string;
   productId: string;
   quantity: number;
@@ -69,6 +104,7 @@ export interface ProductStockEntryItem {
 }
 
 export interface ProductStockWriteOffItem {
+  createdAt: Date;
   happenedOn: string;
   id: string;
   notes: string | null;
@@ -124,6 +160,7 @@ export async function getProductStockEntriesAction(): Promise<
 > {
   const entries = await db
     .select({
+      createdAt: productStockEntries.createdAt,
       id: productStockEntries.id,
       productId: productStockEntries.productId,
       quantity: productStockEntries.quantity,
@@ -147,6 +184,7 @@ export async function getProductStockEntriesByProductIdAction(
 ): Promise<ProductStockEntryItem[]> {
   const entries = await db
     .select({
+      createdAt: productStockEntries.createdAt,
       id: productStockEntries.id,
       productId: productStockEntries.productId,
       quantity: productStockEntries.quantity,
@@ -171,6 +209,7 @@ export async function getProductStockWriteOffsByProductIdAction(
 ): Promise<ProductStockWriteOffItem[]> {
   const writeOffs = await db
     .select({
+      createdAt: productStockWriteOffs.createdAt,
       happenedOn: productStockWriteOffs.happenedOn,
       id: productStockWriteOffs.id,
       notes: productStockWriteOffs.notes,
@@ -272,22 +311,16 @@ export async function addProductStockAction(
   }
 ) {
   const parsed = stockAdditionSchema.parse(data);
-  const product = await db.query.products.findFirst({
-    where: eq(products.id, id),
-  });
-
-  if (!product) {
-    throw new Error("Produto nao encontrado.");
-  }
-
-  const nextCostPrice = calculateWeightedCostPrice({
-    currentCostPrice: Number(product.costPrice),
-    currentStock: Number(product.stock),
-    incomingQuantity: parsed.quantity,
-    incomingUnitCost: parsed.unitCost,
-  });
 
   await db.transaction(async (tx) => {
+    const product = await lockProductForUpdate(tx, id);
+    const nextSnapshot = applyStockAddition({
+      currentCostPrice: Number(product.costPrice),
+      currentStock: product.stock,
+      incomingQuantity: parsed.quantity,
+      incomingUnitCost: parsed.unitCost,
+    });
+
     await tx.insert(productStockEntries).values({
       productId: id,
       quantity: parsed.quantity,
@@ -299,8 +332,8 @@ export async function addProductStockAction(
       .update(products)
       .set({
         archivedAt: null,
-        costPrice: nextCostPrice.toFixed(2),
-        stock: Number(product.stock) + parsed.quantity,
+        costPrice: nextSnapshot.nextCostPrice.toFixed(2),
+        stock: nextSnapshot.nextStock,
       })
       .where(eq(products.id, id));
   });
@@ -318,19 +351,14 @@ export async function writeOffProductStockAction(
   }
 ) {
   const parsed = stockWriteOffSchema.parse(data);
-  const product = await db.query.products.findFirst({
-    where: eq(products.id, id),
-  });
-
-  if (!product) {
-    throw new Error("Produto nao encontrado.");
-  }
-
-  if (Number(product.stock) < parsed.quantity) {
-    throw new Error("A baixa nao pode ser maior que o estoque atual.");
-  }
 
   await db.transaction(async (tx) => {
+    const product = await lockProductForUpdate(tx, id);
+    const nextSnapshot = applyStockWriteOff({
+      currentStock: product.stock,
+      quantity: parsed.quantity,
+    });
+
     await tx.insert(productStockWriteOffs).values({
       happenedOn: parsed.happenedOn,
       notes: parsed.notes || undefined,
@@ -343,7 +371,7 @@ export async function writeOffProductStockAction(
     await tx
       .update(products)
       .set({
-        stock: Number(product.stock) - parsed.quantity,
+        stock: nextSnapshot.nextStock,
       })
       .where(eq(products.id, id));
   });

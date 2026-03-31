@@ -57,6 +57,13 @@
       "when": 1774978200000,
       "tag": "20260331170000_product_stock_write_offs",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1774985400000,
+      "tag": "20260331183000_inventory_integrity_hardening",
+      "breakpoints": true
     }
   ]
 }

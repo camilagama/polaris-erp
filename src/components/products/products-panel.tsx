@@ -87,10 +87,6 @@ export function ProductsPanel({
     showArchived ? Boolean(product.archivedAt) : !product.archivedAt
   );
 
-  const refreshView = () => {
-    router.refresh();
-  };
-
   const openEditDialog = (product: ProductListItem) => {
     setEditingProduct(product);
     setEditName(product.name);
@@ -112,7 +108,6 @@ export function ProductsPanel({
         });
         toast.success("Produto atualizado.");
         setEditingProduct(null);
-        refreshView();
       } catch (error) {
         toast.error(
           error instanceof Error
@@ -133,7 +128,6 @@ export function ProductsPanel({
           await archiveProductAction(product.id);
           toast.success("Produto arquivado.");
         }
-        refreshView();
       } catch (error) {
         toast.error(
           error instanceof Error

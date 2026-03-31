@@ -2,7 +2,6 @@
 
 import { useForm } from "@tanstack/react-form";
 import { format } from "date-fns";
-import { useRouter } from "next/navigation";
 import { type ChangeEvent, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -71,7 +70,6 @@ export function RegisterProductDialog({
   categories,
   settings,
 }: RegisterProductDialogProps) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const today = format(new Date(), "yyyy-MM-dd");
   const defaultCategoryId =
@@ -103,7 +101,6 @@ export function RegisterProductDialog({
         toast.success("Produto cadastrado.");
         setOpen(false);
         form.reset();
-        router.refresh();
       } catch (error) {
         toast.error(
           error instanceof Error

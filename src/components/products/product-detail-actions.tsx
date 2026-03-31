@@ -87,10 +87,6 @@ export function ProductDetailActions({
   >("damage");
   const [writeOffNotes, setWriteOffNotes] = useState("");
 
-  const refreshView = () => {
-    router.refresh();
-  };
-
   const handleEditProduct = () => {
     startTransition(async () => {
       try {
@@ -101,7 +97,6 @@ export function ProductDetailActions({
         });
         toast.success("Produto atualizado.");
         setEditing(false);
-        refreshView();
       } catch (error) {
         toast.error(
           error instanceof Error
@@ -122,7 +117,6 @@ export function ProductDetailActions({
         });
         toast.success("Estoque adicionado.");
         setStocking(false);
-        refreshView();
       } catch (error) {
         toast.error(
           error instanceof Error
@@ -144,7 +138,6 @@ export function ProductDetailActions({
         });
         toast.success("Baixa registrada.");
         setWritingOff(false);
-        refreshView();
       } catch (error) {
         toast.error(
           error instanceof Error
@@ -165,7 +158,6 @@ export function ProductDetailActions({
           await archiveProductAction(product.id);
           toast.success("Produto arquivado.");
         }
-        refreshView();
       } catch (error) {
         toast.error(
           error instanceof Error
@@ -182,7 +174,6 @@ export function ProductDetailActions({
         await deleteProductAction(product.id);
         toast.success("Produto removido definitivamente.");
         router.push("/produtos");
-        router.refresh();
       } catch (error) {
         toast.error(
           error instanceof Error

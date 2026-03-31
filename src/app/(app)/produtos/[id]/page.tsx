@@ -12,6 +12,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { listCategoriesWithUsage } from "@/features/catalog/server";
+import { buildProductInventorySummary } from "@/features/products/history";
 import {
   getProductByIdAction,
   getProductStockEntriesByProductIdAction,
@@ -26,18 +27,6 @@ const formatCurrency = (value: string | number | null) =>
 
 const formatDate = (value: string) =>
   format(parseISO(value), "dd/MM/yyyy", { locale: ptBR });
-
-const getWriteOffLabel = (reason: "adjustment" | "damage" | "loss") => {
-  if (reason === "damage") {
-    return "Avaria";
-  }
-
-  if (reason === "loss") {
-    return "Perda";
-  }
-
-  return "Ajuste";
-};
 
 export default async function ProdutoDetalhePage(
   props: PageProps<"/produtos/[id]">
@@ -55,42 +44,26 @@ export default async function ProdutoDetalhePage(
   }
 
   const averageCost = Number(product.costPrice);
-  const totalCost = averageCost * Number(product.stock);
-  const totalEntries = stockEntries.reduce(
-    (sum, entry) => sum + Number(entry.quantity),
-    0
-  );
-  const totalWriteOffs = writeOffs.reduce(
-    (sum, writeOff) => sum + Number(writeOff.quantity),
-    0
-  );
-  const totalWriteOffLoss = writeOffs.reduce(
-    (sum, writeOff) =>
-      sum + Number(writeOff.quantity) * Number(writeOff.unitCostSnapshot),
-    0
-  );
-  const historyItems = [
-    ...stockEntries.map((entry) => ({
+  const inventorySummary = buildProductInventorySummary({
+    averageCost,
+    currentStock: product.stock,
+    entries: stockEntries.map((entry) => ({
+      createdAt: entry.createdAt.toISOString(),
       date: entry.stockedOn,
       id: entry.id,
-      label: "Entrada",
-      notes: null,
-      totalValue: Number(entry.quantity) * Number(entry.unitCost),
-      quantityLabel: `+${entry.quantity} un.`,
-      unitCost: entry.unitCost,
-      variant: "entry" as const,
+      quantity: entry.quantity,
+      unitCost: Number(entry.unitCost),
     })),
-    ...writeOffs.map((writeOff) => ({
+    writeOffs: writeOffs.map((writeOff) => ({
+      createdAt: writeOff.createdAt.toISOString(),
       date: writeOff.happenedOn,
       id: writeOff.id,
-      label: getWriteOffLabel(writeOff.reason),
       notes: writeOff.notes,
-      totalValue: Number(writeOff.quantity) * Number(writeOff.unitCostSnapshot),
-      quantityLabel: `-${writeOff.quantity} un.`,
-      unitCost: writeOff.unitCostSnapshot,
-      variant: "writeOff" as const,
+      quantity: writeOff.quantity,
+      reason: writeOff.reason,
+      unitCost: Number(writeOff.unitCostSnapshot),
     })),
-  ].sort((left, right) => right.date.localeCompare(left.date));
+  });
 
   return (
     <div className="flex flex-col gap-6 p-4 pb-20 sm:p-6 sm:pb-6">
@@ -153,21 +126,25 @@ export default async function ProdutoDetalhePage(
               <div className="rounded-md border border-border/50 px-3 py-2">
                 <p className="text-muted-foreground">Custo total em estoque</p>
                 <p className="font-medium text-sm">
-                  {formatCurrency(totalCost)}
+                  {formatCurrency(inventorySummary.totalCost)}
                 </p>
               </div>
               <div className="rounded-md border border-border/50 px-3 py-2">
                 <p className="text-muted-foreground">Total abastecido</p>
-                <p className="font-medium text-sm">{totalEntries} un.</p>
+                <p className="font-medium text-sm">
+                  {inventorySummary.totalEntries} un.
+                </p>
               </div>
               <div className="rounded-md border border-border/50 px-3 py-2">
                 <p className="text-muted-foreground">Total baixado</p>
-                <p className="font-medium text-sm">{totalWriteOffs} un.</p>
+                <p className="font-medium text-sm">
+                  {inventorySummary.totalWriteOffs} un.
+                </p>
               </div>
               <div className="rounded-md border border-border/50 px-3 py-2">
                 <p className="text-muted-foreground">Prejuizo acumulado</p>
                 <p className="font-medium text-sm">
-                  {formatCurrency(totalWriteOffLoss)}
+                  {formatCurrency(inventorySummary.totalWriteOffLoss)}
                 </p>
               </div>
             </div>
@@ -193,12 +170,12 @@ export default async function ProdutoDetalhePage(
             </CollapsibleTrigger>
             <CollapsibleContent className="border-border/50 border-t px-3 py-3">
               <div className="flex flex-col gap-3">
-                {historyItems.length === 0 ? (
+                {inventorySummary.historyItems.length === 0 ? (
                   <p className="text-muted-foreground text-xs">
                     Sem movimentacoes registradas.
                   </p>
                 ) : (
-                  historyItems.map((item) => (
+                  inventorySummary.historyItems.map((item) => (
                     <div
                       className="flex items-center justify-between gap-3 rounded-md border border-border/40 px-3 py-2 text-xs"
                       key={item.id}
