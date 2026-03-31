@@ -148,7 +148,7 @@ export function CatalogSettingsPanel({
   };
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+    <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
       <Card>
         <CardHeader>
           <CardTitle>Categorias</CardTitle>
@@ -157,9 +157,9 @@ export function CatalogSettingsPanel({
             protegida e sempre permanece disponivel.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3">
           <div className="flex items-end gap-2">
-            <div className="flex-1 space-y-1.5">
+            <div className="flex-1 space-y-1">
               <Label htmlFor="new-category-name">Nova categoria</Label>
               <Input
                 id="new-category-name"
@@ -183,23 +183,34 @@ export function CatalogSettingsPanel({
             </Button>
           </div>
 
-          <div className="space-y-2 rounded-lg border border-border/60 bg-muted/20 p-2">
+          <div className="rounded-lg border border-border/60 bg-muted/10">
             {categories.map((category) => {
               const deleteAllowed = canDeleteCategory(
                 category,
                 category.productCount
               );
               const renameAllowed = canRenameCategory(category);
+              const statusLabel = category.isSystem
+                ? "fixa"
+                : `${category.productCount} prod.`;
+              let deleteTitle = "Remover categoria";
+
+              if (!deleteAllowed) {
+                deleteTitle = category.isSystem
+                  ? "Categoria protegida pelo sistema."
+                  : "Remocao bloqueada enquanto houver produtos vinculados.";
+              }
 
               return (
                 <div
-                  className="rounded-md border border-border/40 bg-background/80 p-3"
+                  className="flex min-h-10 items-center justify-between gap-3 border-border/50 border-b px-3 py-2 last:border-b-0"
                   key={category.id}
                 >
                   {editingId === category.id ? (
-                    <div className="flex items-center gap-2">
+                    <div className="flex w-full items-center gap-2">
                       <Input
                         autoFocus
+                        className="h-6"
                         onChange={(event) => setEditingName(event.target.value)}
                         onKeyDown={(event) => {
                           if (event.key === "Enter") {
@@ -212,7 +223,7 @@ export function CatalogSettingsPanel({
                       <Button
                         disabled={pending || editingName.trim().length === 0}
                         onClick={() => handleUpdateCategory(category.id)}
-                        size="icon-sm"
+                        size="icon-xs"
                         type="button"
                       >
                         <HugeiconsIcon icon={Tick01Icon} />
@@ -222,7 +233,7 @@ export function CatalogSettingsPanel({
                           setEditingId(null);
                           setEditingName("");
                         }}
-                        size="icon-sm"
+                        size="icon-xs"
                         type="button"
                         variant="ghost"
                       >
@@ -230,28 +241,26 @@ export function CatalogSettingsPanel({
                       </Button>
                     </div>
                   ) : (
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="space-y-1">
+                    <div className="flex w-full items-center justify-between gap-3">
+                      <div className="min-w-0">
                         <p className="font-medium text-sm">{category.name}</p>
-                        <p className="text-muted-foreground text-xs">
-                          {category.productCount} produto(s) vinculado(s)
-                          {category.isSystem ? " | categoria protegida" : ""}
+                        <p className="text-[11px] text-muted-foreground">
+                          {statusLabel}
                         </p>
-                        {deleteAllowed || category.isSystem ? null : (
-                          <p className="text-[11px] text-muted-foreground">
-                            Remocao bloqueada enquanto houver produtos nesta
-                            categoria.
-                          </p>
-                        )}
                       </div>
-                      <div className="flex items-center gap-1">
+                      <div className="flex shrink-0 items-center gap-0.5">
                         <Button
                           disabled={!renameAllowed || pending}
                           onClick={() => {
                             setEditingId(category.id);
                             setEditingName(category.name);
                           }}
-                          size="icon-sm"
+                          size="icon-xs"
+                          title={
+                            renameAllowed
+                              ? "Editar categoria"
+                              : "Categoria protegida pelo sistema."
+                          }
                           type="button"
                           variant="ghost"
                         >
@@ -260,7 +269,8 @@ export function CatalogSettingsPanel({
                         <Button
                           disabled={!deleteAllowed || pending}
                           onClick={() => handleDeleteCategory(category.id)}
-                          size="icon-sm"
+                          size="icon-xs"
+                          title={deleteTitle}
                           type="button"
                           variant="ghost"
                         >
@@ -284,9 +294,9 @@ export function CatalogSettingsPanel({
             ideal no cadastro de produtos.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3">
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <Label htmlFor="minimum-markup-percent">Margem minima (%)</Label>
               <Input
                 id="minimum-markup-percent"
@@ -299,7 +309,7 @@ export function CatalogSettingsPanel({
                 value={minimumMarkupPercent}
               />
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <Label htmlFor="ideal-markup-percent">Margem ideal (%)</Label>
               <Input
                 id="ideal-markup-percent"

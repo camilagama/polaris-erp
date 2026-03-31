@@ -359,68 +359,46 @@ export function RegisterProductDialog({
                 });
 
                 return (
-                  <div className="space-y-3 rounded-lg border border-border/60 bg-muted/20 p-3">
-                    <div className="space-y-1">
-                      <p className="font-medium text-sm">Sugestao de preco</p>
-                      <p className="text-muted-foreground text-xs">
-                        Baseado no custo informado e nas margens globais
-                        configuradas.
-                      </p>
-                    </div>
-
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      <div className="rounded-md border border-border/60 bg-background px-3 py-2">
+                  <div className="rounded-md border border-border/50 bg-muted/10 px-3 py-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
                         <p className="text-[11px] text-muted-foreground uppercase tracking-[0.16em]">
-                          Preco minimo
+                          Guia de preco
                         </p>
-                        <p className="font-medium text-sm">
-                          {formatCurrency(suggestion.minimumPrice)}
-                        </p>
-                        <p className="text-[11px] text-muted-foreground">
-                          {settings.minimumMarkupPercent}% sobre o custo
-                        </p>
-                      </div>
-                      <div className="rounded-md border border-border/60 bg-background px-3 py-2">
-                        <p className="text-[11px] text-muted-foreground uppercase tracking-[0.16em]">
-                          Preco ideal
-                        </p>
-                        <p className="font-medium text-sm">
+                        <p className="truncate text-muted-foreground text-xs">
+                          Min. {formatCurrency(suggestion.minimumPrice)} | Ideal{" "}
                           {formatCurrency(suggestion.idealPrice)}
                         </p>
-                        <p className="text-[11px] text-muted-foreground">
-                          {settings.idealMarkupPercent}% sobre o custo
-                        </p>
                       </div>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        onClick={() =>
-                          form.setFieldValue("price", suggestion.minimumPrice)
-                        }
-                        size="sm"
-                        type="button"
-                        variant="outline"
-                      >
-                        Usar minimo
-                      </Button>
-                      <Button
-                        onClick={() =>
-                          form.setFieldValue("price", suggestion.idealPrice)
-                        }
-                        size="sm"
-                        type="button"
-                        variant="outline"
-                      >
-                        Usar ideal
-                      </Button>
+                      <div className="flex shrink-0 items-center gap-1">
+                        <Button
+                          onClick={() =>
+                            form.setFieldValue("price", suggestion.minimumPrice)
+                          }
+                          size="xs"
+                          type="button"
+                          variant="outline"
+                        >
+                          Min
+                        </Button>
+                        <Button
+                          onClick={() =>
+                            form.setFieldValue("price", suggestion.idealPrice)
+                          }
+                          size="xs"
+                          type="button"
+                          variant="outline"
+                        >
+                          Ideal
+                        </Button>
+                      </div>
                     </div>
 
                     {suggestion.isBelowMinimum ? (
-                      <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-destructive text-xs">
-                        O preco informado esta abaixo do minimo sugerido. O
-                        salvamento continua permitido.
-                      </div>
+                      <p className="mt-2 text-[11px] text-destructive">
+                        Preco abaixo do minimo sugerido. O salvamento continua
+                        permitido.
+                      </p>
                     ) : null}
                   </div>
                 );
