@@ -54,6 +54,9 @@ export default async function VendaDetalhePage(
     (acc, item) => acc + Number(item.lineTotal),
     0
   );
+  const saleTitle = sale.customerName
+    ? `Venda para ${sale.customerName}`
+    : "Detalhes da venda";
 
   return (
     <div className="flex flex-col gap-6 p-4 pb-20 sm:p-6 sm:pb-6">
@@ -62,7 +65,10 @@ export default async function VendaDetalhePage(
           <p className="text-muted-foreground text-xs uppercase tracking-[0.14em]">
             Venda
           </p>
-          <h1 className="font-semibold text-2xl tracking-tight">{sale.id}</h1>
+          <h1 className="font-semibold text-2xl tracking-tight">{saleTitle}</h1>
+          <p className="text-muted-foreground text-sm">
+            {formatDate(sale.occurredOn)}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant={getStatusVariant(sale.status)}>

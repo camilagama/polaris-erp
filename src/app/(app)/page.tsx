@@ -154,7 +154,7 @@ export default async function DashboardPage() {
                       {sale.customerName || "Sem cliente"}
                     </p>
                     <p className="font-mono text-[11px] text-muted-foreground">
-                      {sale.id} - {sale.occurredOn}
+                      {sale.occurredOn}
                     </p>
                   </div>
                   <strong className="font-mono text-sm">

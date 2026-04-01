@@ -108,7 +108,7 @@ export function SalesPanel({
           <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center">
             <Input
               onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Buscar por cliente ou codigo da venda"
+              placeholder="Buscar por cliente"
               value={searchTerm}
             />
             <Select
@@ -159,7 +159,7 @@ export function SalesPanel({
                       {sale.customerName || "Sem cliente"}
                     </Link>
                     <p className="mt-1 truncate text-muted-foreground text-xs">
-                      {sale.id}
+                      {formatDate(sale.occurredOn)}
                     </p>
                   </div>
                   <Badge variant={getStatusVariant(sale.status)}>
@@ -207,7 +207,7 @@ export function SalesPanel({
 
           <div className="hidden rounded-lg border border-border/60 bg-card md:block">
             <Table>
-              <TableHeader className="bg-background">
+              <TableHeader>
                 <TableRow>
                   <TableHead className="pl-4 sm:pl-6">Venda</TableHead>
                   <TableHead>Data</TableHead>
@@ -232,7 +232,7 @@ export function SalesPanel({
                           {sale.customerName || "Sem cliente"}
                         </Link>
                         <span className="text-muted-foreground text-xs">
-                          {sale.id}
+                          {formatDate(sale.occurredOn)}
                         </span>
                       </div>
                     </TableCell>
