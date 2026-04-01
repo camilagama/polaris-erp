@@ -3,7 +3,7 @@
 import { Add01Icon, Delete02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { createSaleAction } from "@/app/(app)/vendas/actions";
 import { Button } from "@/components/ui/button";
@@ -72,10 +72,7 @@ export function CreateSaleDialog({
   const [pending, startTransition] = useTransition();
   const [occurredOn, setOccurredOn] = useState(() => formatDateInputValue());
   const [customerName, setCustomerName] = useState("");
-  const normalizedPaymentFeeRules = useMemo(
-    () => sortPaymentFeeRules(paymentFeeRules),
-    [paymentFeeRules]
-  );
+  const normalizedPaymentFeeRules = sortPaymentFeeRules(paymentFeeRules);
   const [paymentOptionCode, setPaymentOptionCode] = useState<string>(
     normalizedPaymentFeeRules[0]?.code ?? "pix"
   );
@@ -85,26 +82,18 @@ export function CreateSaleDialog({
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<SaleRowDraft[]>([createSaleRow()]);
 
-  const productById = useMemo(
-    () => new Map(products.map((product) => [product.id, product])),
-    [products]
-  );
+  const productById = new Map(products.map((product) => [product.id, product]));
+  const itemSubtotal = items.reduce((acc, item) => {
+    const quantity = Number(item.quantity);
+    const selectedProduct = productById.get(item.productId);
+    const unitPrice = selectedProduct ? Number(selectedProduct.price) : 0;
 
-  const itemSubtotal = useMemo(
-    () =>
-      items.reduce((acc, item) => {
-        const quantity = Number(item.quantity);
-        const selectedProduct = productById.get(item.productId);
-        const unitPrice = selectedProduct ? Number(selectedProduct.price) : 0;
+    if (!(Number.isFinite(quantity) && Number.isFinite(unitPrice))) {
+      return acc;
+    }
 
-        if (!(Number.isFinite(quantity) && Number.isFinite(unitPrice))) {
-          return acc;
-        }
-
-        return acc + quantity * unitPrice;
-      }, 0),
-    [items, productById]
-  );
+    return acc + quantity * unitPrice;
+  }, 0);
 
   const parsedFreightAmount = Number(freightAmount);
   const parsedAdditionalAmount = Number(additionalAmount);
@@ -114,42 +103,22 @@ export function CreateSaleDialog({
     normalizedPaymentFeeRules[0];
   const selectedFeePercent = selectedPaymentRule?.feePercent ?? 0;
 
-  const baseAmount = useMemo(() => {
-    if (
-      !(
-        Number.isFinite(parsedFreightAmount) &&
-        Number.isFinite(parsedAdditionalAmount) &&
-        Number.isFinite(parsedDiscountAmount)
-      )
-    ) {
-      return itemSubtotal;
-    }
-
-    return roundCurrency(
-      itemSubtotal +
-        parsedFreightAmount +
-        parsedAdditionalAmount -
-        parsedDiscountAmount
-    );
-  }, [
-    itemSubtotal,
-    parsedAdditionalAmount,
-    parsedDiscountAmount,
-    parsedFreightAmount,
-  ]);
-
-  const calculatedFeeAmount = useMemo(() => {
-    if (baseAmount <= 0) {
-      return 0;
-    }
-
-    return roundCurrency(baseAmount * (selectedFeePercent / 100));
-  }, [baseAmount, selectedFeePercent]);
-
-  const totalAmount = useMemo(
-    () => roundCurrency(baseAmount + calculatedFeeAmount),
-    [baseAmount, calculatedFeeAmount]
-  );
+  const baseAmount =
+    Number.isFinite(parsedFreightAmount) &&
+    Number.isFinite(parsedAdditionalAmount) &&
+    Number.isFinite(parsedDiscountAmount)
+      ? roundCurrency(
+          itemSubtotal +
+            parsedFreightAmount +
+            parsedAdditionalAmount -
+            parsedDiscountAmount
+        )
+      : itemSubtotal;
+  const calculatedFeeAmount =
+    baseAmount <= 0
+      ? 0
+      : roundCurrency(baseAmount * (selectedFeePercent / 100));
+  const totalAmount = roundCurrency(baseAmount + calculatedFeeAmount);
 
   const resetForm = () => {
     setOccurredOn(formatDateInputValue());
@@ -249,7 +218,7 @@ export function CreateSaleDialog({
       <DialogTrigger asChild>
         <Button type="button">Nova venda</Button>
       </DialogTrigger>
-      <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden p-0 sm:max-w-5xl">
+      <DialogContent className="flex h-[100svh] max-h-[100svh] w-screen max-w-none flex-col overflow-hidden rounded-none p-0 sm:h-auto sm:max-h-[90vh] sm:max-w-5xl sm:rounded-3xl">
         <div className="border-border/40 border-b px-6 py-4">
           <DialogHeader>
             <DialogTitle className="text-lg">Registrar nova venda</DialogTitle>
@@ -518,7 +487,7 @@ export function CreateSaleDialog({
               </div>
             </div>
 
-            <div>
+            <div className="pb-4 lg:pb-0">
               <div className="sticky top-0 flex flex-col gap-5 rounded-2xl border border-border/50 bg-muted/20 p-5">
                 <h3 className="font-semibold text-foreground/90 text-sm">
                   Resumo financeiro
@@ -638,17 +607,29 @@ export function CreateSaleDialog({
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-3 border-border/40 border-t bg-muted/5 px-6 py-4">
-          <Button onClick={() => setOpen(false)} type="button" variant="ghost">
-            Cancelar
-          </Button>
-          <Button
-            disabled={pending || products.length === 0}
-            onClick={handleSubmit}
-            type="button"
-          >
-            {pending ? "Registrando..." : "Confirmar venda"}
-          </Button>
+        <div className="flex flex-col gap-3 border-border/40 border-t bg-background/95 px-4 py-4 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-muted/20 px-3 py-2 sm:min-w-56">
+            <span className="text-muted-foreground text-sm">Total final</span>
+            <strong className="font-semibold text-lg tabular-nums">
+              {formatCurrency(totalAmount)}
+            </strong>
+          </div>
+          <div className="flex items-center justify-end gap-3">
+            <Button
+              onClick={() => setOpen(false)}
+              type="button"
+              variant="ghost"
+            >
+              Cancelar
+            </Button>
+            <Button
+              disabled={pending || products.length === 0}
+              onClick={handleSubmit}
+              type="button"
+            >
+              {pending ? "Registrando..." : "Confirmar venda"}
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

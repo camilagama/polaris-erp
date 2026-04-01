@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 export default function GlobalError({
@@ -27,7 +28,7 @@ export default function GlobalError({
               Tentar novamente
             </Button>
             <Button asChild type="button" variant="outline">
-              <a href="/sign-in">Ir para login</a>
+              <Link href="/sign-in">Ir para login</Link>
             </Button>
           </div>
         </div>

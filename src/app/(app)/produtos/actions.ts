@@ -233,16 +233,33 @@ export async function unarchiveProductAction(id: string) {
   revalidateProducts();
 }
 
-export async function deleteProductAction(id: string) {
+export async function deleteProductAction(id: string, confirmationName = "") {
   await requireActionSession();
 
   await db.transaction(async (tx) => {
+    const [product] = await tx
+      .select({
+        name: products.name,
+      })
+      .from(products)
+      .where(eq(products.id, id));
+
+    if (!product) {
+      throw new Error("Produto nao encontrado.");
+    }
+
     const relatedSales = await tx
       .selectDistinct({ saleId: saleItems.saleId })
       .from(saleItems)
       .where(eq(saleItems.productId, id));
 
     if (relatedSales.length > 0) {
+      if (confirmationName.trim() !== product.name) {
+        throw new Error(
+          `Digite exatamente "${product.name}" para confirmar a exclusao com vendas vinculadas.`
+        );
+      }
+
       await tx.delete(sales).where(
         inArray(
           sales.id,

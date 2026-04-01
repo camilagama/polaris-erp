@@ -10,9 +10,9 @@ export default defineConfig({
     trace: "on-first-retry",
   },
   webServer: {
-    command: "bun run dev -- --port 3001",
+    command: "bun run build && bun x next start --port 3001",
     port: 3001,
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
+    reuseExistingServer: false,
+    timeout: 180_000,
   },
 });

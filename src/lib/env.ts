@@ -6,10 +6,10 @@ const serverEnvSchema = z.object({
   DATABASE_URL_DIRECT: z.string().min(1).optional(),
   BETTER_AUTH_SECRET: z.string().min(1),
   BETTER_AUTH_URL: z.string().url(),
-  GOOGLE_CLIENT_ID: z.string().min(1),
-  GOOGLE_CLIENT_SECRET: z.string().min(1),
+  GOOGLE_CLIENT_ID: z.string().min(1).optional(),
+  GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
   NEXT_PUBLIC_APP_URL: z.string().url(),
-  NEXT_PUBLIC_GOOGLE_CLIENT_ID: z.string().min(1),
+  NEXT_PUBLIC_GOOGLE_CLIENT_ID: z.string().min(1).optional(),
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),

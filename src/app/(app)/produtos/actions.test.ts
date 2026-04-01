@@ -45,6 +45,7 @@ interface InventoryHarness {
 
 interface ProductDeletionHarness {
   deletedSales: string[];
+  productName: string;
   state: {
     deletedProduct: boolean;
   };
@@ -148,7 +149,8 @@ const createInventoryHarness = (initialState: {
 };
 
 const createProductDeletionHarness = (
-  linkedSaleIds: string[]
+  linkedSaleIds: string[],
+  productName = "Produto de teste"
 ): ProductDeletionHarness => {
   const deletedSales: string[] = [];
   const state = {
@@ -172,6 +174,15 @@ const createProductDeletionHarness = (
           throw new Error("Tabela de delete nao suportada no teste.");
         },
       }),
+      select: () => ({
+        from: () => ({
+          where: async () => [
+            {
+              name: productName,
+            },
+          ],
+        }),
+      }),
       selectDistinct: () => ({
         from: () => ({
           where: async () =>
@@ -187,6 +198,7 @@ const createProductDeletionHarness = (
 
   return {
     deletedSales,
+    productName,
     state,
     transaction,
   };
@@ -294,6 +306,24 @@ describe("product server actions", () => {
     expect(harness.writeOffLog).toHaveLength(1);
   });
 
+  it("requires typed confirmation before deleting a product with linked sales", async () => {
+    const { deleteProductAction } = await import(
+      "@/app/(app)/produtos/actions"
+    );
+    const { mockDb } = await resolveMocks();
+
+    const harness = createProductDeletionHarness(["sale-1", "sale-2"]);
+
+    mockDb.transaction.mockImplementation(harness.transaction as never);
+
+    await expect(deleteProductAction("product-1")).rejects.toThrowError(
+      `Digite exatamente "${harness.productName}" para confirmar a exclusao com vendas vinculadas.`
+    );
+
+    expect(harness.deletedSales).toEqual([]);
+    expect(harness.state.deletedProduct).toBe(false);
+  });
+
   it("deletes linked sales before permanently deleting a product", async () => {
     const { deleteProductAction } = await import(
       "@/app/(app)/produtos/actions"
@@ -304,7 +334,7 @@ describe("product server actions", () => {
 
     mockDb.transaction.mockImplementation(harness.transaction as never);
 
-    await deleteProductAction("product-1");
+    await deleteProductAction("product-1", harness.productName);
 
     expect(harness.deletedSales).toEqual(["sale-1", "sale-2"]);
     expect(harness.state.deletedProduct).toBe(true);

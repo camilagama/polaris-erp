@@ -23,6 +23,7 @@ import {
   writeOffProductStockAction,
 } from "@/app/(app)/produtos/actions";
 import { ProductDatePicker } from "@/components/products/product-date-picker";
+import { ProductEditFields } from "@/components/products/product-edit-fields";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -98,6 +99,7 @@ export function ProductDetailActions({
     "adjustment" | "operational"
   >("operational");
   const [writeOffNotes, setWriteOffNotes] = useState("");
+  const [deleteConfirmationText, setDeleteConfirmationText] = useState("");
 
   const handleEditProduct = () => {
     startTransition(async () => {
@@ -180,22 +182,6 @@ export function ProductDetailActions({
     });
   };
 
-  const handleDeleteProduct = () => {
-    startTransition(async () => {
-      try {
-        await deleteProductAction(product.id);
-        toast.success("Produto removido definitivamente.");
-        setDeleting(false);
-        router.push("/produtos");
-      } catch (error) {
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "Nao foi possivel deletar o produto."
-        );
-      }
-    });
-  };
   const deleteActionLabel = (() => {
     if (pending) {
       return "Deletando...";
@@ -266,40 +252,15 @@ export function ProductDetailActions({
               Edite apenas nome, categoria e observacoes.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="detail-edit-name">Nome</Label>
-              <Input
-                id="detail-edit-name"
-                onChange={(event) => setEditName(event.target.value)}
-                value={editName}
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="detail-edit-category">Categoria</Label>
-              <Select onValueChange={setEditCategoryId} value={editCategoryId}>
-                <SelectTrigger className="w-full" id="detail-edit-category">
-                  <SelectValue placeholder="Selecione uma categoria" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="detail-edit-description">Observacoes</Label>
-              <Textarea
-                className="min-h-24"
-                id="detail-edit-description"
-                onChange={(event) => setEditDescription(event.target.value)}
-                value={editDescription}
-              />
-            </div>
-          </div>
+          <ProductEditFields
+            categories={categories}
+            categoryId={editCategoryId}
+            description={editDescription}
+            name={editName}
+            onCategoryIdChange={setEditCategoryId}
+            onDescriptionChange={setEditDescription}
+            onNameChange={setEditName}
+          />
           <DialogFooter>
             <Button
               disabled={pending || editName.trim().length === 0}
@@ -433,22 +394,47 @@ export function ProductDetailActions({
         </DialogContent>
       </Dialog>
 
-      <AlertDialog onOpenChange={setDeleting} open={deleting}>
+      <AlertDialog
+        onOpenChange={(open) => {
+          setDeleting(open);
+
+          if (!open) {
+            setDeleteConfirmationText("");
+          }
+        }}
+        open={deleting}
+      >
         <AlertDialogContent className="sm:max-w-115">
           <AlertDialogHeader>
             <AlertDialogTitle>Deletar produto</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acao e irreversivel. O produto sera apagado em definitivo,
-              junto com entradas, baixas e qualquer vinculo operacional
-              associado a ele.
+              Esta acao e irreversivel. O produto{" "}
+              <strong>{product.name}</strong> sera apagado em definitivo, junto
+              com entradas, baixas e qualquer vinculo operacional associado a
+              ele.
             </AlertDialogDescription>
           </AlertDialogHeader>
           {linkedSalesCount > 0 ? (
-            <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-destructive text-xs">
-              Este produto esta vinculado a {linkedSalesCount} venda
-              {linkedSalesCount > 1 ? "s" : ""}. Ao confirmar, essas vendas e
-              seus itens tambem serao removidos.
-            </p>
+            <div className="flex flex-col gap-3 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-3">
+              <p className="text-destructive text-xs">
+                Este produto esta vinculado a {linkedSalesCount} venda
+                {linkedSalesCount > 1 ? "s" : ""}. Ao confirmar, essas vendas e
+                seus itens tambem serao removidos.
+              </p>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="delete-product-confirmation">
+                  Digite o nome do produto para confirmar
+                </Label>
+                <Input
+                  id="delete-product-confirmation"
+                  onChange={(event) =>
+                    setDeleteConfirmationText(event.target.value)
+                  }
+                  placeholder={product.name}
+                  value={deleteConfirmationText}
+                />
+              </div>
+            </div>
           ) : (
             <p className="text-muted-foreground text-xs">
               Nenhuma venda vinculada encontrada para este produto.
@@ -457,10 +443,31 @@ export function ProductDetailActions({
           <AlertDialogFooter>
             <AlertDialogCancel disabled={pending}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              disabled={pending}
+              disabled={
+                pending ||
+                (linkedSalesCount > 0 &&
+                  deleteConfirmationText.trim() !== product.name)
+              }
               onClick={(event) => {
                 event.preventDefault();
-                handleDeleteProduct();
+                startTransition(async () => {
+                  try {
+                    await deleteProductAction(
+                      product.id,
+                      deleteConfirmationText
+                    );
+                    toast.success("Produto removido definitivamente.");
+                    setDeleting(false);
+                    setDeleteConfirmationText("");
+                    router.push("/produtos");
+                  } catch (error) {
+                    toast.error(
+                      error instanceof Error
+                        ? error.message
+                        : "Nao foi possivel deletar o produto."
+                    );
+                  }
+                });
               }}
               variant="destructive"
             >

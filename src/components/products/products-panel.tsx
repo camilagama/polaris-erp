@@ -14,6 +14,7 @@ import {
   unarchiveProductAction,
   updateProductAction,
 } from "@/app/(app)/produtos/actions";
+import { ProductEditFields } from "@/components/products/product-edit-fields";
 import { RegisterProductDialog } from "@/components/products/register-product-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -32,7 +33,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -49,7 +49,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Textarea } from "@/components/ui/textarea";
 import type { ProductListItem } from "@/features/products/contracts";
 import { formatCurrency } from "@/lib/formatters";
 
@@ -410,40 +409,15 @@ export function ProductsPanel({
               Atualize nome, categoria e observacoes operacionais.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="edit-product-name">Nome</Label>
-              <Input
-                id="edit-product-name"
-                onChange={(event) => setEditName(event.target.value)}
-                value={editName}
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="edit-product-category">Categoria</Label>
-              <Select onValueChange={setEditCategoryId} value={editCategoryId}>
-                <SelectTrigger className="w-full" id="edit-product-category">
-                  <SelectValue placeholder="Selecione uma categoria" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="edit-product-description">Observacoes</Label>
-              <Textarea
-                className="min-h-24"
-                id="edit-product-description"
-                onChange={(event) => setEditDescription(event.target.value)}
-                value={editDescription}
-              />
-            </div>
-          </div>
+          <ProductEditFields
+            categories={categories}
+            categoryId={editCategoryId}
+            description={editDescription}
+            name={editName}
+            onCategoryIdChange={setEditCategoryId}
+            onDescriptionChange={setEditDescription}
+            onNameChange={setEditName}
+          />
           <DialogFooter>
             <Button
               disabled={pending || editName.trim().length === 0}

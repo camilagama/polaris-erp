@@ -7,7 +7,7 @@ import {
   Tick01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { useMemo, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
   createCategoryAction,
@@ -75,42 +75,30 @@ export function CatalogSettingsPanel({
     sortPaymentFeeRules(settings.paymentFeeRules)
   );
 
-  const availableInstallments = useMemo(
-    () => getAvailableCardInstallments(paymentFeeRules),
-    [paymentFeeRules]
-  );
+  const availableInstallments = getAvailableCardInstallments(paymentFeeRules);
   const [installmentsToAdd, setInstallmentsToAdd] = useState<string>(
     availableInstallments[0] ? String(availableInstallments[0]) : ""
   );
 
-  const pricingHint = useMemo(() => {
-    const pixRule = paymentFeeRules.find(
-      (rule) => rule.paymentMethod === "pix"
-    );
-    const oneTimeRule = paymentFeeRules.find((rule) => rule.code === "1x");
-    const minimum = Number(minimumMarkupPercent) || 0;
-    const ideal = Number(idealMarkupPercent) || 0;
-
-    if (minimum === 0 && ideal === 0) {
-      return "Configure as margens para ativar as sugestoes de preco no cadastro de produtos.";
-    }
-
-    const pixFee = pixRule?.feePercent ?? 0;
-    const oneTimeFee = oneTimeRule?.feePercent ?? 0;
-    const extraConditions = paymentFeeRules.filter(
-      (rule) => rule.paymentMethod === "card" && rule.installments >= 2
-    ).length;
-
-    return `Margem minima ${formatPercent(minimum)}% e ideal ${formatPercent(
-      ideal
-    )}% aplicadas sobre o custo do produto. Taxas de venda: Pix ${formatPercent(
-      pixFee
-    )}% e 1x ${formatPercent(oneTimeFee)}%${
-      extraConditions > 0
-        ? `, com ${extraConditions} condicao(oes) adicional(is)`
-        : ""
-    }.`;
-  }, [idealMarkupPercent, minimumMarkupPercent, paymentFeeRules]);
+  const pixRule = paymentFeeRules.find((rule) => rule.paymentMethod === "pix");
+  const oneTimeRule = paymentFeeRules.find((rule) => rule.code === "1x");
+  const minimum = Number(minimumMarkupPercent) || 0;
+  const ideal = Number(idealMarkupPercent) || 0;
+  const extraConditions = paymentFeeRules.filter(
+    (rule) => rule.paymentMethod === "card" && rule.installments >= 2
+  ).length;
+  const pricingHint =
+    minimum === 0 && ideal === 0
+      ? "Configure as margens para ativar as sugestoes de preco no cadastro de produtos."
+      : `Margem minima ${formatPercent(minimum)}% e ideal ${formatPercent(
+          ideal
+        )}% aplicadas sobre o custo do produto. Taxas de venda: Pix ${formatPercent(
+          pixRule?.feePercent ?? 0
+        )}% e 1x ${formatPercent(oneTimeRule?.feePercent ?? 0)}%${
+          extraConditions > 0
+            ? `, com ${extraConditions} condicao(oes) adicional(is)`
+            : ""
+        }.`;
 
   const handlePaymentFeeRuleChange = (code: string, rawValue: string) => {
     const parsedValue = Number(rawValue);

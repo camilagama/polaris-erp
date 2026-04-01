@@ -54,6 +54,24 @@ Ainda nao implementado:
 - modulo de recebimentos
 - dashboard financeiro consolidado
 
+## Arquitetura de autenticacao
+
+- `proxy.ts` atua como barreira otimista de borda para rotas protegidas e publicas.
+- `requireSession()` protege layouts e paginas server-side.
+- `requireActionSession()` protege todas as Server Actions mutantes.
+- O app assume `proxy` para UX e redirecionamento rapido, mas a autorizacao real sempre acontece novamente na camada server.
+
+## Notas operacionais
+
+- Login com email/senha permanece o caminho principal em qualquer ambiente.
+- Google One Tap e SSO social dependem de origem autorizada pelo Google; em localhost o app reduz comportamento automatico para evitar prompts invalidos.
+- Exclusao de produto continua destrutiva por decisao operacional, mas requer confirmacao forte quando houver vendas vinculadas.
+
+## Testes E2E
+
+- O Playwright deve rodar contra um servidor previsivel e isolado na porta `3001`.
+- A suite cobre redirecionamento publico/protegido, login, produtos, vendas, configuracoes basicas e `not-found`.
+
 ## Regras operacionais importantes
 
 - A categoria `Outros` e fixa, protegida e nao pode ser removida.

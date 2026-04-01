@@ -42,14 +42,13 @@ export default function RootLayout({
         "antialiased",
         geistSans.variable,
         geistMono.variable,
-        "font-mono",
         jetbrainsMono.variable,
         geistHeading.variable
       )}
       lang="pt-BR"
       suppressHydrationWarning
     >
-      <body className="flex min-h-full flex-col">
+      <body className="flex min-h-full flex-col font-sans">
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"

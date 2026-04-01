@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
   CreateSaleDialog,
   type SaleProductOption,
@@ -70,29 +70,26 @@ export function SalesPanel({
     "all" | SaleListItem["status"]
   >("all");
 
-  const visibleSales = useMemo(() => {
-    const normalizedSearch = searchTerm.trim().toLowerCase();
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+  const visibleSales = sales.filter((sale) => {
+    const matchesStatus =
+      statusFilter === "all" || sale.status === statusFilter;
 
-    return sales.filter((sale) => {
-      const matchesStatus =
-        statusFilter === "all" || sale.status === statusFilter;
+    if (!matchesStatus) {
+      return false;
+    }
 
-      if (!matchesStatus) {
-        return false;
-      }
+    if (normalizedSearch.length === 0) {
+      return true;
+    }
 
-      if (normalizedSearch.length === 0) {
-        return true;
-      }
+    const customerName = sale.customerName?.toLowerCase() || "";
 
-      const customerName = sale.customerName?.toLowerCase() || "";
-
-      return (
-        customerName.includes(normalizedSearch) ||
-        sale.id.includes(normalizedSearch)
-      );
-    });
-  }, [sales, searchTerm, statusFilter]);
+    return (
+      customerName.includes(normalizedSearch) ||
+      sale.id.includes(normalizedSearch)
+    );
+  });
 
   return (
     <div className="flex flex-col gap-6 p-4 pb-20 sm:p-6 sm:pb-6">
