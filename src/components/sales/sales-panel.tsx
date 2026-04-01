@@ -153,14 +153,12 @@ export function SalesPanel({
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <Link
-                      className="font-medium text-sm hover:underline"
+                      className="block truncate font-medium text-sm hover:underline"
                       href={`/vendas/${sale.id}`}
+                      title={sale.customerName || "Sem cliente"}
                     >
                       {sale.customerName || "Sem cliente"}
                     </Link>
-                    <p className="mt-1 truncate text-muted-foreground text-xs">
-                      {formatDate(sale.occurredOn)}
-                    </p>
                   </div>
                   <Badge variant={getStatusVariant(sale.status)}>
                     {getStatusLabel(sale.status)}
@@ -223,18 +221,14 @@ export function SalesPanel({
               <TableBody>
                 {visibleSales.map((sale) => (
                   <TableRow key={sale.id}>
-                    <TableCell className="pl-4 sm:pl-6">
-                      <div className="flex flex-col gap-1">
-                        <Link
-                          className="font-medium hover:underline"
-                          href={`/vendas/${sale.id}`}
-                        >
-                          {sale.customerName || "Sem cliente"}
-                        </Link>
-                        <span className="text-muted-foreground text-xs">
-                          {formatDate(sale.occurredOn)}
-                        </span>
-                      </div>
+                    <TableCell className="max-w-[200px] pl-4 sm:pl-6">
+                      <Link
+                        className="block truncate font-medium hover:underline"
+                        href={`/vendas/${sale.id}`}
+                        title={sale.customerName || "Sem cliente"}
+                      >
+                        {sale.customerName || "Sem cliente"}
+                      </Link>
                     </TableCell>
                     <TableCell>{formatDate(sale.occurredOn)}</TableCell>
                     <TableCell>

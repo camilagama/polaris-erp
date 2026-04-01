@@ -178,8 +178,13 @@ export default async function VendaDetalhePage(
               <TableBody>
                 {sale.items.map((item) => (
                   <TableRow key={item.id}>
-                    <TableCell className="pl-4 font-medium">
-                      {item.productNameSnapshot}
+                    <TableCell className="max-w-[250px] pl-4 font-medium">
+                      <span
+                        className="block truncate"
+                        title={item.productNameSnapshot}
+                      >
+                        {item.productNameSnapshot}
+                      </span>
                     </TableCell>
                     <TableCell className="text-center">
                       {item.quantity}

@@ -284,12 +284,16 @@ export function ProductsPanel({
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <Link
-                        className="truncate font-medium text-sm hover:underline"
+                        className="block truncate font-medium text-sm hover:underline"
                         href={`/produtos/${product.id}`}
+                        title={product.name}
                       >
                         {product.name}
                       </Link>
-                      <p className="mt-1 text-muted-foreground text-xs">
+                      <p
+                        className="mt-1 truncate text-muted-foreground text-xs"
+                        title={product.categoryName}
+                      >
                         {product.categoryName}
                       </p>
                     </div>
@@ -339,9 +343,9 @@ export function ProductsPanel({
               <TableHeader>
                 <TableRow>
                   <TableHead className="pl-4 sm:pl-6">Produto</TableHead>
+                  <TableHead>Categoria</TableHead>
                   <TableHead>Preco</TableHead>
                   <TableHead className="text-center">Estoque</TableHead>
-                  <TableHead>Status</TableHead>
                   <TableHead className="pr-4 text-right sm:pr-6">
                     Acoes
                   </TableHead>
@@ -349,29 +353,28 @@ export function ProductsPanel({
               </TableHeader>
               <TableBody>
                 {visibleProducts.map((product) => {
-                  const status = getProductStatus(product);
-
                   return (
                     <TableRow key={product.id}>
-                      <TableCell className="pl-4 sm:pl-6">
-                        <div className="flex flex-col gap-1">
-                          <Link
-                            className="font-medium hover:underline"
-                            href={`/produtos/${product.id}`}
-                          >
-                            {product.name}
-                          </Link>
-                          <span className="text-muted-foreground text-xs">
-                            {product.categoryName}
-                          </span>
-                        </div>
+                      <TableCell className="max-w-[200px] pl-4 sm:pl-6">
+                        <Link
+                          className="block truncate font-medium hover:underline"
+                          href={`/produtos/${product.id}`}
+                          title={product.name}
+                        >
+                          {product.name}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="max-w-[150px]">
+                        <span
+                          className="block truncate text-muted-foreground text-sm"
+                          title={product.categoryName}
+                        >
+                          {product.categoryName}
+                        </span>
                       </TableCell>
                       <TableCell>{formatCurrency(product.price)}</TableCell>
                       <TableCell className="text-center font-semibold tabular-nums">
                         {product.stock}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={status.variant}>{status.label}</Badge>
                       </TableCell>
                       <TableCell className="pr-4 sm:pr-6">
                         <div className="flex items-center justify-end gap-2">
