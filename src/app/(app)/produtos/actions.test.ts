@@ -3,6 +3,7 @@ import {
   productStockEntries,
   productStockWriteOffs,
   products,
+  sales,
 } from "@/db/schema";
 
 vi.mock("server-only", () => ({}));
@@ -40,6 +41,14 @@ interface InventoryHarness {
   };
   transaction: <T>(callback: (tx: unknown) => Promise<T>) => Promise<T>;
   writeOffLog: Record<string, unknown>[];
+}
+
+interface ProductDeletionHarness {
+  deletedSales: string[];
+  state: {
+    deletedProduct: boolean;
+  };
+  transaction: <T>(callback: (tx: unknown) => Promise<T>) => Promise<T>;
 }
 
 type MockFn = ReturnType<typeof vi.fn>;
@@ -135,6 +144,51 @@ const createInventoryHarness = (initialState: {
     state,
     transaction,
     writeOffLog,
+  };
+};
+
+const createProductDeletionHarness = (
+  linkedSaleIds: string[]
+): ProductDeletionHarness => {
+  const deletedSales: string[] = [];
+  const state = {
+    deletedProduct: false,
+  };
+
+  const transaction = async <T>(callback: (tx: unknown) => Promise<T>) => {
+    const tx = {
+      delete: (table: unknown) => ({
+        where: (_whereExpression: unknown) => {
+          if (table === sales) {
+            deletedSales.push(...linkedSaleIds);
+            return Promise.resolve([]);
+          }
+
+          if (table === products) {
+            state.deletedProduct = true;
+            return Promise.resolve([]);
+          }
+
+          throw new Error("Tabela de delete nao suportada no teste.");
+        },
+      }),
+      selectDistinct: () => ({
+        from: () => ({
+          where: async () =>
+            linkedSaleIds.map((saleId) => ({
+              saleId,
+            })),
+        }),
+      }),
+    };
+
+    return await callback(tx);
+  };
+
+  return {
+    deletedSales,
+    state,
+    transaction,
   };
 };
 
@@ -238,5 +292,21 @@ describe("product server actions", () => {
 
     expect(harness.state.stock).toBe(2);
     expect(harness.writeOffLog).toHaveLength(1);
+  });
+
+  it("deletes linked sales before permanently deleting a product", async () => {
+    const { deleteProductAction } = await import(
+      "@/app/(app)/produtos/actions"
+    );
+    const { mockDb } = await resolveMocks();
+
+    const harness = createProductDeletionHarness(["sale-1", "sale-2"]);
+
+    mockDb.transaction.mockImplementation(harness.transaction as never);
+
+    await deleteProductAction("product-1");
+
+    expect(harness.deletedSales).toEqual(["sale-1", "sale-2"]);
+    expect(harness.state.deletedProduct).toBe(true);
   });
 });

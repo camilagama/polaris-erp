@@ -1,12 +1,18 @@
-import { getProductsAction } from "@/app/(app)/produtos/actions";
+import type { Metadata } from "next";
 import { SalesPanel } from "@/components/sales/sales-panel";
 import { getCatalogSettings } from "@/features/catalog/server";
-import { getSalesAction } from "./actions";
+import { getProductsQuery } from "../produtos/queries";
+import { getSalesQuery } from "./queries";
+
+export const metadata: Metadata = {
+  title: "Vendas | DG Imports",
+  description: "Registro, consulta e cancelamento de vendas do DG Imports.",
+};
 
 export default async function VendasPage() {
   const [sales, products, settings] = await Promise.all([
-    getSalesAction(),
-    getProductsAction(),
+    getSalesQuery(),
+    getProductsQuery(),
     getCatalogSettings(),
   ]);
 

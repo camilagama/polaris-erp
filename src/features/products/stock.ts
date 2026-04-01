@@ -1,7 +1,8 @@
-const roundCurrency = (value: number) =>
-  Math.round((value + Number.EPSILON) * 100) / 100;
-
-const normalizeNonNegative = (value: number) => Math.max(0, value);
+import {
+  normalizeMoney,
+  normalizeNonNegativeNumber,
+  roundCurrency,
+} from "@/lib/domain/currency";
 
 export const calculateWeightedCostPrice = ({
   currentCostPrice,
@@ -14,18 +15,19 @@ export const calculateWeightedCostPrice = ({
   incomingQuantity: number;
   incomingUnitCost: number;
 }) => {
-  const normalizedCurrentStock = normalizeNonNegative(currentStock);
-  const normalizedIncomingQuantity = normalizeNonNegative(incomingQuantity);
+  const normalizedCurrentStock = normalizeNonNegativeNumber(currentStock);
+  const normalizedIncomingQuantity =
+    normalizeNonNegativeNumber(incomingQuantity);
 
   if (normalizedIncomingQuantity === 0) {
-    return roundCurrency(normalizeNonNegative(currentCostPrice));
+    return normalizeMoney(currentCostPrice);
   }
 
   const totalStock = normalizedCurrentStock + normalizedIncomingQuantity;
   const currentTotalCost =
-    normalizeNonNegative(currentCostPrice) * normalizedCurrentStock;
+    normalizeNonNegativeNumber(currentCostPrice) * normalizedCurrentStock;
   const incomingTotalCost =
-    normalizeNonNegative(incomingUnitCost) * normalizedIncomingQuantity;
+    normalizeNonNegativeNumber(incomingUnitCost) * normalizedIncomingQuantity;
 
   return roundCurrency((currentTotalCost + incomingTotalCost) / totalStock);
 };
@@ -41,8 +43,9 @@ export const applyStockAddition = ({
   incomingQuantity: number;
   incomingUnitCost: number;
 }) => {
-  const normalizedCurrentStock = normalizeNonNegative(currentStock);
-  const normalizedIncomingQuantity = normalizeNonNegative(incomingQuantity);
+  const normalizedCurrentStock = normalizeNonNegativeNumber(currentStock);
+  const normalizedIncomingQuantity =
+    normalizeNonNegativeNumber(incomingQuantity);
 
   return {
     nextCostPrice: calculateWeightedCostPrice({
@@ -62,8 +65,8 @@ export const applyStockWriteOff = ({
   currentStock: number;
   quantity: number;
 }) => {
-  const normalizedCurrentStock = normalizeNonNegative(currentStock);
-  const normalizedQuantity = normalizeNonNegative(quantity);
+  const normalizedCurrentStock = normalizeNonNegativeNumber(currentStock);
+  const normalizedQuantity = normalizeNonNegativeNumber(quantity);
 
   if (normalizedQuantity > normalizedCurrentStock) {
     throw new Error("A baixa nao pode ser maior que o estoque atual.");

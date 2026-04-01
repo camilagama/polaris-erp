@@ -6,16 +6,16 @@ import {
   Menu03Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
   archiveProductAction,
-  type ProductListItem,
   unarchiveProductAction,
   updateProductAction,
 } from "@/app/(app)/produtos/actions";
 import { RegisterProductDialog } from "@/components/products/register-product-dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -40,6 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import {
   Table,
   TableBody,
@@ -49,6 +50,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import type { ProductListItem } from "@/features/products/contracts";
+import { formatCurrency } from "@/lib/formatters";
 
 interface ProductCategoryOption {
   id: string;
@@ -56,13 +59,54 @@ interface ProductCategoryOption {
   name: string;
 }
 
-const formatCurrency = (value: string | number | null) =>
-  new Intl.NumberFormat("pt-BR", {
-    currency: "BRL",
-    maximumFractionDigits: 2,
-    minimumFractionDigits: 2,
-    style: "currency",
-  }).format(Number(value) || 0);
+const getProductStatus = (product: ProductListItem) =>
+  product.archivedAt
+    ? {
+        label: "Arquivado",
+        variant: "outline" as const,
+      }
+    : {
+        label: "Ativo",
+        variant: "secondary" as const,
+      };
+
+function ProductRowActions({
+  onArchiveToggle,
+  onEdit,
+  product,
+}: {
+  onArchiveToggle: (product: ProductListItem) => void;
+  onEdit: (product: ProductListItem) => void;
+  product: ProductListItem;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          aria-label={`Acoes para ${product.name}`}
+          size="xs"
+          type="button"
+          variant="ghost"
+        >
+          <HugeiconsIcon icon={Menu03Icon} strokeWidth={2} />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="min-w-36">
+        <DropdownMenuItem asChild>
+          <Link href={`/produtos/${product.id}`}>Abrir detalhe</Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => onEdit(product)}>
+          <HugeiconsIcon icon={Edit01Icon} strokeWidth={2} />
+          Editar
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => onArchiveToggle(product)}>
+          <HugeiconsIcon icon={Archive01Icon} strokeWidth={2} />
+          {product.archivedAt ? "Ativar" : "Arquivar"}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
 
 export function ProductsPanel({
   categories,
@@ -76,7 +120,6 @@ export function ProductsPanel({
     minimumMarkupPercent: number;
   };
 }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [showArchived, setShowArchived] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -87,6 +130,7 @@ export function ProductsPanel({
   const [editName, setEditName] = useState("");
   const [editCategoryId, setEditCategoryId] = useState("");
   const [editDescription, setEditDescription] = useState("");
+
   const normalizedSearch = searchTerm.trim().toLowerCase();
   const visibleProducts = products.filter((product) => {
     const matchesArchive = showArchived
@@ -168,12 +212,16 @@ export function ProductsPanel({
   return (
     <div className="flex flex-col gap-6 p-4 pb-20 sm:p-6 sm:pb-6">
       <div className="flex flex-col gap-3">
-        <div className="space-y-1">
-          <h1 className="font-semibold text-2xl tracking-tight">Produtos</h1>
-          <p className="text-muted-foreground text-xs">
-            Toque na linha para ver o resumo do produto.
+        <div className="flex flex-col gap-1">
+          <h1 className="font-heading font-semibold text-2xl tracking-tight">
+            Produtos
+          </h1>
+          <p className="max-w-2xl text-muted-foreground text-sm">
+            Abra o detalhe para ver historico, custo medio e movimentacoes. A
+            listagem concentra filtro rapido, status e acoes operacionais.
           </p>
         </div>
+
         <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center">
             <Input
@@ -216,86 +264,136 @@ export function ProductsPanel({
         </div>
       </div>
 
-      <div className="rounded-lg border border-border/60 bg-card">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="pl-4 sm:pl-6">Nome</TableHead>
-              <TableHead>Preco</TableHead>
-              <TableHead className="text-center">Estoque</TableHead>
-              <TableHead className="pr-4 text-right sm:pr-6">Acoes</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {visibleProducts.length === 0 ? (
-              <TableRow>
-                <TableCell className="h-24 text-center" colSpan={4}>
-                  Nenhum produto encontrado.
-                </TableCell>
-              </TableRow>
-            ) : (
-              visibleProducts.map((product) => (
-                <TableRow
-                  className="cursor-pointer"
+      {visibleProducts.length === 0 ? (
+        <div className="rounded-xl border border-border/60 bg-card px-4 py-10 text-center">
+          <p className="font-medium">Nenhum produto encontrado.</p>
+          <p className="mt-2 text-muted-foreground text-sm">
+            Ajuste os filtros ou cadastre um novo item para continuar.
+          </p>
+        </div>
+      ) : (
+        <>
+          <div className="grid gap-3 md:hidden">
+            {visibleProducts.map((product) => {
+              const status = getProductStatus(product);
+
+              return (
+                <article
+                  className="rounded-xl border border-border/60 bg-card p-4"
                   key={product.id}
-                  onClick={() => router.push(`/produtos/${product.id}`)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      router.push(`/produtos/${product.id}`);
-                    }
-                  }}
-                  tabIndex={0}
                 >
-                  <TableCell className="pl-4 font-medium sm:pl-6">
-                    {product.name}
-                  </TableCell>
-                  <TableCell>{formatCurrency(product.price)}</TableCell>
-                  <TableCell className="text-center font-semibold tabular-nums">
-                    {product.stock}
-                  </TableCell>
-                  <TableCell
-                    className="pr-4 text-right sm:pr-6"
-                    onClick={(event) => event.stopPropagation()}
-                    onKeyDown={(event) => event.stopPropagation()}
-                  >
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          aria-label={`Acoes para ${product.name}`}
-                          onClick={(event) => event.stopPropagation()}
-                          onPointerDown={(event) => event.stopPropagation()}
-                          size="xs"
-                          type="button"
-                          variant="ghost"
-                        >
-                          <HugeiconsIcon icon={Menu03Icon} strokeWidth={2} />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="min-w-28">
-                        <DropdownMenuItem
-                          onClick={(event) => event.stopPropagation()}
-                          onSelect={() => openEditDialog(product)}
-                        >
-                          <HugeiconsIcon icon={Edit01Icon} strokeWidth={2} />
-                          Editar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={(event) => event.stopPropagation()}
-                          onSelect={() => handleArchiveToggle(product)}
-                        >
-                          <HugeiconsIcon icon={Archive01Icon} strokeWidth={2} />
-                          {product.archivedAt ? "Ativar" : "Arquivar"}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <Link
+                        className="truncate font-medium text-sm hover:underline"
+                        href={`/produtos/${product.id}`}
+                      >
+                        {product.name}
+                      </Link>
+                      <p className="mt-1 text-muted-foreground text-xs">
+                        {product.categoryName}
+                      </p>
+                    </div>
+                    <Badge variant={status.variant}>{status.label}</Badge>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-2 gap-3">
+                    <div className="rounded-lg border border-border/50 px-3 py-2">
+                      <p className="text-[11px] text-muted-foreground uppercase tracking-[0.16em]">
+                        Preco
+                      </p>
+                      <p className="mt-1 font-medium text-sm">
+                        {formatCurrency(product.price)}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border border-border/50 px-3 py-2">
+                      <p className="text-[11px] text-muted-foreground uppercase tracking-[0.16em]">
+                        Estoque
+                      </p>
+                      <p className="mt-1 font-medium text-sm">
+                        {product.stock} un.
+                      </p>
+                    </div>
+                  </div>
+
+                  <Separator className="my-4" />
+
+                  <div className="flex items-center justify-between gap-3">
+                    <Button asChild size="xs" variant="outline">
+                      <Link href={`/produtos/${product.id}`}>
+                        Abrir detalhe
+                      </Link>
+                    </Button>
+                    <ProductRowActions
+                      onArchiveToggle={handleArchiveToggle}
+                      onEdit={openEditDialog}
+                      product={product}
+                    />
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+
+          <div className="hidden rounded-lg border border-border/60 bg-card md:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="pl-4 sm:pl-6">Produto</TableHead>
+                  <TableHead>Preco</TableHead>
+                  <TableHead className="text-center">Estoque</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="pr-4 text-right sm:pr-6">
+                    Acoes
+                  </TableHead>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              </TableHeader>
+              <TableBody>
+                {visibleProducts.map((product) => {
+                  const status = getProductStatus(product);
+
+                  return (
+                    <TableRow key={product.id}>
+                      <TableCell className="pl-4 sm:pl-6">
+                        <div className="flex flex-col gap-1">
+                          <Link
+                            className="font-medium hover:underline"
+                            href={`/produtos/${product.id}`}
+                          >
+                            {product.name}
+                          </Link>
+                          <span className="text-muted-foreground text-xs">
+                            {product.categoryName}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{formatCurrency(product.price)}</TableCell>
+                      <TableCell className="text-center font-semibold tabular-nums">
+                        {product.stock}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={status.variant}>{status.label}</Badge>
+                      </TableCell>
+                      <TableCell className="pr-4 sm:pr-6">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button asChild size="xs" variant="outline">
+                            <Link href={`/produtos/${product.id}`}>Abrir</Link>
+                          </Button>
+                          <ProductRowActions
+                            onArchiveToggle={handleArchiveToggle}
+                            onEdit={openEditDialog}
+                            product={product}
+                          />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        </>
+      )}
 
       <Dialog
         onOpenChange={(open) => {
@@ -309,11 +407,11 @@ export function ProductsPanel({
           <DialogHeader>
             <DialogTitle>Editar produto</DialogTitle>
             <DialogDescription>
-              Edite apenas nome, categoria e observacoes.
+              Atualize nome, categoria e observacoes operacionais.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-1.5">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1.5">
               <Label htmlFor="edit-product-name">Nome</Label>
               <Input
                 id="edit-product-name"
@@ -321,7 +419,7 @@ export function ProductsPanel({
                 value={editName}
               />
             </div>
-            <div className="space-y-1.5">
+            <div className="flex flex-col gap-1.5">
               <Label htmlFor="edit-product-category">Categoria</Label>
               <Select onValueChange={setEditCategoryId} value={editCategoryId}>
                 <SelectTrigger className="w-full" id="edit-product-category">
@@ -336,7 +434,7 @@ export function ProductsPanel({
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1.5">
+            <div className="flex flex-col gap-1.5">
               <Label htmlFor="edit-product-description">Observacoes</Label>
               <Textarea
                 className="min-h-24"

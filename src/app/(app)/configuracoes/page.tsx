@@ -1,8 +1,14 @@
+import type { Metadata } from "next";
 import { CatalogSettingsPanel } from "@/components/settings/catalog-settings-panel";
 import {
   getCatalogSettings,
   listCategoriesWithUsage,
 } from "@/features/catalog/server";
+
+export const metadata: Metadata = {
+  title: "Configuracoes | DG Imports",
+  description: "Categorias, markup e taxas operacionais do DG Imports.",
+};
 
 export default async function ConfiguracoesPage() {
   const [categories, settings] = await Promise.all([

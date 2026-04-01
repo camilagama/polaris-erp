@@ -2,7 +2,6 @@
 
 import { Add01Icon, Delete02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { format } from "date-fns";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -37,6 +36,10 @@ import {
   type PaymentFeeRule,
   sortPaymentFeeRules,
 } from "@/features/catalog/payment-rules";
+import { createSaleSchema } from "@/features/sales/schema";
+import { roundCurrency } from "@/lib/domain/currency";
+import { formatDateInputValue } from "@/lib/domain/date";
+import { formatCurrency, formatPercent } from "@/lib/formatters";
 
 export interface SaleProductOption {
   id: string;
@@ -50,23 +53,6 @@ interface SaleRowDraft {
   productId: string;
   quantity: string;
 }
-
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat("pt-BR", {
-    currency: "BRL",
-    maximumFractionDigits: 2,
-    minimumFractionDigits: 2,
-    style: "currency",
-  }).format(value || 0);
-
-const formatPercent = (value: number) =>
-  new Intl.NumberFormat("pt-BR", {
-    maximumFractionDigits: 2,
-    minimumFractionDigits: 2,
-  }).format(value || 0);
-
-const roundCurrency = (value: number) =>
-  Math.round((value + Number.EPSILON) * 100) / 100;
 
 const createSaleRow = (): SaleRowDraft => ({
   id: crypto.randomUUID(),
@@ -84,9 +70,7 @@ export function CreateSaleDialog({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
-  const [occurredOn, setOccurredOn] = useState(
-    format(new Date(), "yyyy-MM-dd")
-  );
+  const [occurredOn, setOccurredOn] = useState(() => formatDateInputValue());
   const [customerName, setCustomerName] = useState("");
   const normalizedPaymentFeeRules = useMemo(
     () => sortPaymentFeeRules(paymentFeeRules),
@@ -162,12 +146,13 @@ export function CreateSaleDialog({
     return roundCurrency(baseAmount * (selectedFeePercent / 100));
   }, [baseAmount, selectedFeePercent]);
 
-  const totalAmount = useMemo(() => {
-    return roundCurrency(baseAmount + calculatedFeeAmount);
-  }, [baseAmount, calculatedFeeAmount]);
+  const totalAmount = useMemo(
+    () => roundCurrency(baseAmount + calculatedFeeAmount),
+    [baseAmount, calculatedFeeAmount]
+  );
 
   const resetForm = () => {
-    setOccurredOn(format(new Date(), "yyyy-MM-dd"));
+    setOccurredOn(formatDateInputValue());
     setCustomerName("");
     setPaymentOptionCode(normalizedPaymentFeeRules[0]?.code ?? "pix");
     setAdditionalAmount("0");
@@ -209,27 +194,19 @@ export function CreateSaleDialog({
       return;
     }
 
-    for (const item of payloadItems) {
-      if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
-        toast.error("Quantidade deve ser um numero inteiro maior que zero.");
-        return;
-      }
-    }
+    const parsedPayload = createSaleSchema.safeParse({
+      additionalAmount: parsedAdditionalAmount,
+      customerName,
+      discountAmount: parsedDiscountAmount,
+      freightAmount: parsedFreightAmount,
+      items: payloadItems,
+      notes,
+      occurredOn,
+      paymentOptionCode,
+    });
 
-    if (!(Number.isFinite(parsedFreightAmount) && parsedFreightAmount >= 0)) {
-      toast.error("Frete deve ser um numero maior ou igual a zero.");
-      return;
-    }
-
-    if (
-      !(Number.isFinite(parsedAdditionalAmount) && parsedAdditionalAmount >= 0)
-    ) {
-      toast.error("Adicional deve ser um numero maior ou igual a zero.");
-      return;
-    }
-
-    if (!(Number.isFinite(parsedDiscountAmount) && parsedDiscountAmount >= 0)) {
-      toast.error("Desconto deve ser um numero maior ou igual a zero.");
+    if (!parsedPayload.success) {
+      toast.error(parsedPayload.error.issues[0]?.message ?? "Revise a venda.");
       return;
     }
 
@@ -242,16 +219,7 @@ export function CreateSaleDialog({
 
     startTransition(async () => {
       try {
-        const saleId = await createSaleAction({
-          additionalAmount: parsedAdditionalAmount,
-          customerName: customerName.trim() || undefined,
-          discountAmount: parsedDiscountAmount,
-          freightAmount: parsedFreightAmount,
-          items: payloadItems,
-          notes: notes.trim() || undefined,
-          occurredOn,
-          paymentOptionCode,
-        });
+        const saleId = await createSaleAction(parsedPayload.data);
 
         toast.success("Venda registrada.");
         setOpen(false);
@@ -286,22 +254,20 @@ export function CreateSaleDialog({
           <DialogHeader>
             <DialogTitle className="text-lg">Registrar nova venda</DialogTitle>
             <DialogDescription>
-              Venda concluída na hora com baixa imediata de estoque.
+              Venda concluida na hora com baixa imediata de estoque.
             </DialogDescription>
           </DialogHeader>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4">
           <div className="grid gap-10 lg:grid-cols-[1fr_340px]">
-            {/* Left Column */}
             <div className="flex flex-col gap-6">
-              {/* Seção 1: Informações Gerais */}
-              <div className="space-y-4">
+              <div className="flex flex-col gap-4">
                 <h3 className="font-medium text-foreground/80 text-sm">
-                  Informações gerais
+                  Informacoes gerais
                 </h3>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-1.5">
+                  <div className="flex flex-col gap-1.5">
                     <Label
                       className="text-muted-foreground text-xs"
                       htmlFor="sale-date"
@@ -315,12 +281,12 @@ export function CreateSaleDialog({
                       value={occurredOn}
                     />
                   </div>
-                  <div className="space-y-1.5">
+                  <div className="flex flex-col gap-1.5">
                     <Label
                       className="text-muted-foreground text-xs"
                       htmlFor="sale-payment-method"
                     >
-                      Método de pagamento
+                      Metodo de pagamento
                     </Label>
                     <Select
                       onValueChange={setPaymentOptionCode}
@@ -341,7 +307,7 @@ export function CreateSaleDialog({
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-1.5 sm:col-span-2">
+                  <div className="flex flex-col gap-1.5 sm:col-span-2">
                     <Label
                       className="text-muted-foreground text-xs"
                       htmlFor="sale-customer"
@@ -351,7 +317,7 @@ export function CreateSaleDialog({
                     <Input
                       id="sale-customer"
                       onChange={(event) => setCustomerName(event.target.value)}
-                      placeholder="Ex: João Silva"
+                      placeholder="Ex: Joao Silva"
                       value={customerName}
                     />
                   </div>
@@ -360,8 +326,7 @@ export function CreateSaleDialog({
 
               <div className="h-px w-full bg-border/40" />
 
-              {/* Seção 2: Itens da Venda */}
-              <div className="space-y-4">
+              <div className="flex flex-col gap-4">
                 <div className="flex items-center justify-between">
                   <h3 className="font-medium text-foreground/80 text-sm">
                     Produtos da venda
@@ -395,9 +360,7 @@ export function CreateSaleDialog({
 
                   <div className="flex flex-col gap-1.5 p-1.5">
                     {items.map((item) => {
-                      const selectedProduct = products.find(
-                        (product) => product.id === item.productId
-                      );
+                      const selectedProduct = productById.get(item.productId);
                       const quantity = Number(item.quantity);
                       const unitPrice = selectedProduct
                         ? Number(selectedProduct.price)
@@ -425,7 +388,7 @@ export function CreateSaleDialog({
                           className="grid items-center gap-3 rounded-md p-1.5 transition-colors hover:bg-muted/30 sm:grid-cols-[1fr_80px_100px_100px_40px]"
                           key={item.id}
                         >
-                          <div className="space-y-1">
+                          <div className="flex flex-col gap-1">
                             <Label className="text-[11px] text-muted-foreground sm:hidden">
                               Produto
                             </Label>
@@ -454,7 +417,7 @@ export function CreateSaleDialog({
                             </Select>
                           </div>
 
-                          <div className="space-y-1">
+                          <div className="flex flex-col gap-1">
                             <Label className="text-[11px] text-muted-foreground sm:hidden">
                               Qtd.
                             </Label>
@@ -463,27 +426,28 @@ export function CreateSaleDialog({
                               max={selectedProduct?.stock}
                               min="1"
                               onChange={(event) => {
-                                const val = event.target.value;
-                                const numVal = Number.parseInt(val, 10);
+                                const value = event.target.value;
+                                const parsedValue = Number.parseInt(value, 10);
 
                                 if (
                                   selectedProduct &&
-                                  !Number.isNaN(numVal) &&
-                                  numVal > selectedProduct.stock
+                                  !Number.isNaN(parsedValue) &&
+                                  parsedValue > selectedProduct.stock
                                 ) {
                                   toast.error(
-                                    `Estoque insuficiente. Máximo disponível: ${selectedProduct.stock} unidades.`
+                                    `Estoque insuficiente. Maximo disponivel: ${selectedProduct.stock} unidades.`
                                   );
                                   updateItem(item.id, (currentItem) => ({
                                     ...currentItem,
                                     quantity: String(selectedProduct.stock),
                                   }));
-                                } else {
-                                  updateItem(item.id, (currentItem) => ({
-                                    ...currentItem,
-                                    quantity: val,
-                                  }));
+                                  return;
                                 }
+
+                                updateItem(item.id, (currentItem) => ({
+                                  ...currentItem,
+                                  quantity: value,
+                                }));
                               }}
                               step="1"
                               type="number"
@@ -491,7 +455,7 @@ export function CreateSaleDialog({
                             />
                           </div>
 
-                          <div className="space-y-1">
+                          <div className="flex flex-col gap-1">
                             <Label className="text-[11px] text-muted-foreground sm:hidden">
                               V. Unit.
                             </Label>
@@ -500,7 +464,7 @@ export function CreateSaleDialog({
                             </div>
                           </div>
 
-                          <div className="space-y-1">
+                          <div className="flex flex-col gap-1">
                             <Label className="text-[11px] text-muted-foreground sm:hidden">
                               Total
                             </Label>
@@ -537,25 +501,23 @@ export function CreateSaleDialog({
 
               <div className="h-px w-full bg-border/40" />
 
-              {/* Seção 3: Observações */}
-              <div className="space-y-1.5">
+              <div className="flex flex-col gap-1.5">
                 <Label
                   className="text-muted-foreground text-xs"
                   htmlFor="sale-notes"
                 >
-                  Observações internas (opcional)
+                  Observacoes internas (opcional)
                 </Label>
                 <Textarea
                   className="min-h-24 resize-none text-sm"
                   id="sale-notes"
                   onChange={(event) => setNotes(event.target.value)}
-                  placeholder="Instruções adicionais, informações de entrega..."
+                  placeholder="Instrucoes adicionais, informacoes de entrega..."
                   value={notes}
                 />
               </div>
             </div>
 
-            {/* Right Column: Resumo Financeiro */}
             <div>
               <div className="sticky top-0 flex flex-col gap-5 rounded-2xl border border-border/50 bg-muted/20 p-5">
                 <h3 className="font-semibold text-foreground/90 text-sm">
@@ -573,7 +535,7 @@ export function CreateSaleDialog({
 
                 <div className="-mx-5 my-0.5 h-px bg-border/40" />
 
-                <div className="space-y-3">
+                <div className="flex flex-col gap-3">
                   <div className="flex items-center justify-between gap-4">
                     <Label
                       className="font-normal text-muted-foreground text-xs"
@@ -652,7 +614,11 @@ export function CreateSaleDialog({
 
                 <div className="flex items-center justify-between text-sm">
                   <span className="font-medium text-muted-foreground">
-                    Taxa ({formatPercent(selectedFeePercent)}%)
+                    Taxa (
+                    {formatPercent(selectedFeePercent, {
+                      minimumFractionDigits: 2,
+                    })}
+                    %)
                   </span>
                   <span className="font-medium text-destructive/80">
                     + {formatCurrency(calculatedFeeAmount)}
@@ -661,7 +627,7 @@ export function CreateSaleDialog({
 
                 <div className="mt-1 flex items-center justify-between rounded-md border border-border px-2 py-2">
                   <strong className="font-bold text-muted-foreground">
-                    Total Final
+                    Total final
                   </strong>
                   <strong className="text-xl tracking-tight">
                     {formatCurrency(totalAmount)}
@@ -681,7 +647,7 @@ export function CreateSaleDialog({
             onClick={handleSubmit}
             type="button"
           >
-            {pending ? "Registrando..." : "Confirmar Venda"}
+            {pending ? "Registrando..." : "Confirmar venda"}
           </Button>
         </div>
       </DialogContent>

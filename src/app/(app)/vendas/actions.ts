@@ -1,8 +1,7 @@
 "use server";
 
-import { asc, count, desc, eq, sql } from "drizzle-orm";
-import { refresh, revalidatePath } from "next/cache";
-import { z } from "zod";
+import { eq, sql } from "drizzle-orm";
+import { refresh } from "next/cache";
 import { db } from "@/db";
 import { products, saleItems, sales, systemSettings } from "@/db/schema";
 import { GLOBAL_SETTINGS_ID } from "@/features/catalog/constants";
@@ -11,63 +10,9 @@ import {
   normalizePaymentFeeRules,
 } from "@/features/catalog/payment-rules";
 import { buildSaleSnapshot } from "@/features/sales/calculations";
+import { createSaleSchema } from "@/features/sales/schema";
+import { roundCurrency, toCurrencyString } from "@/lib/domain/currency";
 import { requireActionSession } from "@/lib/server-action-auth";
-
-const isoDateSchema = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, "Data deve usar o formato ISO YYYY-MM-DD.")
-  .refine((value) => {
-    const parsed = new Date(`${value}T00:00:00Z`);
-    return (
-      !Number.isNaN(parsed.getTime()) &&
-      parsed.toISOString().slice(0, 10) === value
-    );
-  }, "Data invalida.");
-
-const saleItemSchema = z.object({
-  productId: z.string().min(1, "Produto invalido."),
-  quantity: z.coerce
-    .number()
-    .int("Quantidade deve ser um numero inteiro.")
-    .min(1, "Quantidade deve ser maior que zero."),
-});
-
-const createSaleSchema = z
-  .object({
-    additionalAmount: z.coerce
-      .number()
-      .min(0, "Adicional nao pode ser negativo.")
-      .default(0),
-    customerName: z.string().trim().max(80).optional(),
-    discountAmount: z.coerce
-      .number()
-      .min(0, "Desconto nao pode ser negativo.")
-      .default(0),
-    freightAmount: z.coerce
-      .number()
-      .min(0, "Frete nao pode ser negativo.")
-      .default(0),
-    items: z
-      .array(saleItemSchema)
-      .min(1, "Adicione pelo menos um item na venda."),
-    notes: z.string().trim().max(240).optional(),
-    occurredOn: isoDateSchema,
-    paymentOptionCode: z
-      .string()
-      .trim()
-      .min(1, "Metodo de pagamento invalido.")
-      .default("pix"),
-  })
-  .refine(
-    (value) => {
-      const uniqueProducts = new Set(value.items.map((item) => item.productId));
-      return uniqueProducts.size === value.items.length;
-    },
-    {
-      message: "Nao repita o mesmo produto na venda.",
-      path: ["items"],
-    }
-  );
 
 interface LockedProductRow extends Record<string, unknown> {
   archivedAt: Date | null;
@@ -83,12 +28,7 @@ interface LockedSaleRow extends Record<string, unknown> {
   status: "cancelled" | "completed";
 }
 
-const roundCurrency = (value: number) =>
-  Math.round((value + Number.EPSILON) * 100) / 100;
-
 const revalidateSalesViews = () => {
-  revalidatePath("/vendas");
-  revalidatePath("/produtos");
   refresh();
 };
 
@@ -121,123 +61,6 @@ const lockProductsForUpdate = async (
 
   return result.rows;
 };
-
-export interface SaleListItem {
-  additionalAmount: string;
-  cancelledAt: Date | null;
-  customerName: string | null;
-  discountAmount: string;
-  feeAmount: string;
-  freightAmount: string;
-  id: string;
-  itemCount: number;
-  occurredOn: string;
-  paymentFeePercent: string;
-  paymentInstallments: number;
-  paymentMethod: "card" | "pix";
-  status: "cancelled" | "completed";
-  totalAmount: string;
-}
-
-export interface SaleDetailItem {
-  createdAt: Date;
-  id: string;
-  lineTotal: string;
-  productId: string;
-  productNameSnapshot: string;
-  quantity: number;
-  unitCostSnapshot: string;
-  unitPriceSnapshot: string;
-}
-
-export interface SaleDetail {
-  additionalAmount: string;
-  cancelledAt: Date | null;
-  createdAt: Date;
-  customerName: string | null;
-  discountAmount: string;
-  feeAmount: string;
-  freightAmount: string;
-  id: string;
-  items: SaleDetailItem[];
-  notes: string | null;
-  occurredOn: string;
-  paymentFeePercent: string;
-  paymentInstallments: number;
-  paymentMethod: "card" | "pix";
-  status: "cancelled" | "completed";
-  totalAmount: string;
-}
-
-export async function getSalesAction(): Promise<SaleListItem[]> {
-  const rows = await db
-    .select({
-      additionalAmount: sales.additionalAmount,
-      cancelledAt: sales.cancelledAt,
-      customerName: sales.customerName,
-      discountAmount: sales.discountAmount,
-      feeAmount: sales.feeAmount,
-      paymentFeePercent: sales.paymentFeePercent,
-      paymentInstallments: sales.paymentInstallments,
-      freightAmount: sales.freightAmount,
-      id: sales.id,
-      itemCount: count(saleItems.id),
-      occurredOn: sales.occurredOn,
-      paymentMethod: sales.paymentMethod,
-      status: sales.status,
-      totalAmount: sales.totalAmount,
-    })
-    .from(sales)
-    .leftJoin(saleItems, eq(saleItems.saleId, sales.id))
-    .groupBy(sales.id)
-    .orderBy(desc(sales.occurredOn), desc(sales.createdAt));
-
-  return rows.map((row) => ({
-    ...row,
-    itemCount: Number(row.itemCount),
-    paymentInstallments: Number(row.paymentInstallments),
-    paymentMethod: row.paymentMethod as SaleListItem["paymentMethod"],
-    status: row.status as SaleListItem["status"],
-  }));
-}
-
-export async function getSaleByIdAction(
-  id: string
-): Promise<SaleDetail | undefined> {
-  const sale = await db.query.sales.findFirst({
-    where: eq(sales.id, id),
-  });
-
-  if (!sale) {
-    return undefined;
-  }
-
-  const items = await db
-    .select({
-      createdAt: saleItems.createdAt,
-      id: saleItems.id,
-      lineTotal: saleItems.lineTotal,
-      productId: saleItems.productId,
-      productNameSnapshot: saleItems.productNameSnapshot,
-      quantity: saleItems.quantity,
-      unitCostSnapshot: saleItems.unitCostSnapshot,
-      unitPriceSnapshot: saleItems.unitPriceSnapshot,
-    })
-    .from(saleItems)
-    .where(eq(saleItems.saleId, id))
-    .orderBy(asc(saleItems.createdAt));
-
-  return {
-    ...sale,
-    items: items.map((item) => ({
-      ...item,
-      quantity: Number(item.quantity),
-    })),
-    paymentInstallments: Number(sale.paymentInstallments),
-    paymentMethod: sale.paymentMethod as SaleDetail["paymentMethod"],
-    status: sale.status as SaleDetail["status"],
-  };
-}
 
 export async function createSaleAction(data: {
   additionalAmount?: number;
@@ -338,30 +161,30 @@ export async function createSaleAction(data: {
     const [createdSale] = await tx
       .insert(sales)
       .values({
-        additionalAmount: parsed.additionalAmount.toFixed(2),
+        additionalAmount: toCurrencyString(parsed.additionalAmount),
         customerName: parsed.customerName || undefined,
-        discountAmount: parsed.discountAmount.toFixed(2),
-        feeAmount: calculatedFeeAmount.toFixed(2),
-        freightAmount: parsed.freightAmount.toFixed(2),
+        discountAmount: toCurrencyString(parsed.discountAmount),
+        feeAmount: toCurrencyString(calculatedFeeAmount),
+        freightAmount: toCurrencyString(parsed.freightAmount),
         notes: parsed.notes || undefined,
         occurredOn: parsed.occurredOn,
-        paymentFeePercent: selectedPaymentRule.feePercent.toFixed(2),
+        paymentFeePercent: toCurrencyString(selectedPaymentRule.feePercent),
         paymentInstallments: selectedPaymentRule.installments,
         paymentMethod: selectedPaymentRule.paymentMethod,
         status: "completed",
-        totalAmount: finalTotalAmount.toFixed(2),
+        totalAmount: toCurrencyString(finalTotalAmount),
       })
       .returning({ id: sales.id });
 
     await tx.insert(saleItems).values(
       snapshot.items.map((item) => ({
-        lineTotal: item.lineTotal.toFixed(2),
+        lineTotal: toCurrencyString(item.lineTotal),
         productId: item.productId,
         productNameSnapshot: item.productNameSnapshot,
         quantity: item.quantity,
         saleId: createdSale.id,
-        unitCostSnapshot: item.unitCostSnapshot.toFixed(2),
-        unitPriceSnapshot: item.unitPriceSnapshot.toFixed(2),
+        unitCostSnapshot: toCurrencyString(item.unitCostSnapshot),
+        unitPriceSnapshot: toCurrencyString(item.unitPriceSnapshot),
       }))
     );
 

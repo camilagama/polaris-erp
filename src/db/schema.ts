@@ -11,6 +11,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 export const timestamps = {
@@ -300,6 +301,10 @@ export const sales = pgTable(
     ),
     check("sales_fee_amount_non_negative", sql`${table.feeAmount} >= 0`),
     check("sales_total_amount_non_negative", sql`${table.totalAmount} >= 0`),
+    check(
+      "sales_status_cancelled_at_consistent",
+      sql`(${table.status} = 'completed' and ${table.cancelledAt} is null) or (${table.status} = 'cancelled' and ${table.cancelledAt} is not null)`
+    ),
     index("sales_occurred_on_idx").on(table.occurredOn),
     index("sales_payment_method_idx").on(table.paymentMethod),
     index("sales_status_idx").on(table.status),
@@ -353,5 +358,9 @@ export const saleItems = pgTable(
     check("sale_items_line_total_non_negative", sql`${table.lineTotal} >= 0`),
     index("sale_items_sale_id_idx").on(table.saleId),
     index("sale_items_product_id_idx").on(table.productId),
+    uniqueIndex("sale_items_sale_product_unique_idx").on(
+      table.saleId,
+      table.productId
+    ),
   ]
 );

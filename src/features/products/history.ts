@@ -11,7 +11,7 @@ const byNewestDate = <T extends { createdAt?: string; date: string }>(
   return (right.createdAt ?? "").localeCompare(left.createdAt ?? "");
 };
 
-export interface InventoryHistoryEntryInput {
+interface InventoryHistoryEntryInput {
   createdAt?: string;
   date: string;
   id: string;
@@ -19,12 +19,12 @@ export interface InventoryHistoryEntryInput {
   unitCost: number;
 }
 
-export interface InventoryWriteOffInput extends InventoryHistoryEntryInput {
+interface InventoryWriteOffInput extends InventoryHistoryEntryInput {
   notes: string | null;
   reason: "adjustment" | "operational";
 }
 
-export interface InventorySaleInput extends InventoryHistoryEntryInput {
+interface InventorySaleInput extends InventoryHistoryEntryInput {
   cancelledAt: string | null;
   saleId: string;
   status: "cancelled" | "completed";

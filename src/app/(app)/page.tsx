@@ -1,3 +1,10 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Dashboard | DG Imports",
+  description: "Painel inicial da operacao protegida do DG Imports.",
+};
+
 export default function DashboardPage() {
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-center">
@@ -8,8 +15,8 @@ export default function DashboardPage() {
         Dashboard
       </h1>
       <p className="max-w-sm text-muted-foreground text-sm">
-        O painel operacional será construído aqui. Por enquanto, acesse os
-        módulos pelo menu lateral.
+        O painel operacional sera construido aqui. Por enquanto, acesse os
+        modulos pelo menu lateral.
       </p>
     </div>
   );

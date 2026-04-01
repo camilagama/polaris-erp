@@ -10,7 +10,6 @@ import {
   MinusSignCircleIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { format } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -19,12 +18,21 @@ import {
   addProductStockAction,
   archiveProductAction,
   deleteProductAction,
-  type ProductListItem,
   unarchiveProductAction,
   updateProductAction,
   writeOffProductStockAction,
 } from "@/app/(app)/produtos/actions";
 import { ProductDatePicker } from "@/components/products/product-date-picker";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -51,6 +59,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import type { ProductListItem } from "@/features/products/contracts";
+import { formatDateInputValue } from "@/lib/domain/date";
 
 interface ProductCategoryOption {
   id: string;
@@ -78,11 +88,11 @@ export function ProductDetailActions({
     product.description ?? ""
   );
   const [stockQuantity, setStockQuantity] = useState("1");
-  const [stockedOn, setStockedOn] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [stockedOn, setStockedOn] = useState(() => formatDateInputValue());
   const [stockUnitCost, setStockUnitCost] = useState(product.costPrice ?? "0");
   const [writeOffQuantity, setWriteOffQuantity] = useState("1");
-  const [writeOffDate, setWriteOffDate] = useState(
-    format(new Date(), "yyyy-MM-dd")
+  const [writeOffDate, setWriteOffDate] = useState(() =>
+    formatDateInputValue()
   );
   const [writeOffReason, setWriteOffReason] = useState<
     "adjustment" | "operational"
@@ -175,6 +185,7 @@ export function ProductDetailActions({
       try {
         await deleteProductAction(product.id);
         toast.success("Produto removido definitivamente.");
+        setDeleting(false);
         router.push("/produtos");
       } catch (error) {
         toast.error(
@@ -185,6 +196,17 @@ export function ProductDetailActions({
       }
     });
   };
+  const deleteActionLabel = (() => {
+    if (pending) {
+      return "Deletando...";
+    }
+
+    if (linkedSalesCount > 0) {
+      return "Deletar produto e vendas";
+    }
+
+    return "Deletar definitivamente";
+  })();
 
   return (
     <>
@@ -244,8 +266,8 @@ export function ProductDetailActions({
               Edite apenas nome, categoria e observacoes.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-1.5">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1.5">
               <Label htmlFor="detail-edit-name">Nome</Label>
               <Input
                 id="detail-edit-name"
@@ -253,7 +275,7 @@ export function ProductDetailActions({
                 value={editName}
               />
             </div>
-            <div className="space-y-1.5">
+            <div className="flex flex-col gap-1.5">
               <Label htmlFor="detail-edit-category">Categoria</Label>
               <Select onValueChange={setEditCategoryId} value={editCategoryId}>
                 <SelectTrigger className="w-full" id="detail-edit-category">
@@ -268,7 +290,7 @@ export function ProductDetailActions({
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1.5">
+            <div className="flex flex-col gap-1.5">
               <Label htmlFor="detail-edit-description">Observacoes</Label>
               <Textarea
                 className="min-h-24"
@@ -298,8 +320,8 @@ export function ProductDetailActions({
               Informe a quantidade e o custo unitario desta nova entrada.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-1.5">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1.5">
               <Label htmlFor="detail-stock-quantity">Quantidade</Label>
               <Input
                 id="detail-stock-quantity"
@@ -310,7 +332,7 @@ export function ProductDetailActions({
                 value={stockQuantity}
               />
             </div>
-            <div className="space-y-1.5">
+            <div className="flex flex-col gap-1.5">
               <Label htmlFor="detail-stock-cost">Custo unitario</Label>
               <Input
                 id="detail-stock-cost"
@@ -321,7 +343,7 @@ export function ProductDetailActions({
                 value={stockUnitCost}
               />
             </div>
-            <div className="space-y-1.5">
+            <div className="flex flex-col gap-1.5">
               <Label htmlFor="detail-stock-date">Data do abastecimento</Label>
               <ProductDatePicker
                 id="detail-stock-date"
@@ -347,8 +369,8 @@ export function ProductDetailActions({
               produto.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-1.5">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1.5">
               <Label htmlFor="detail-writeoff-quantity">Quantidade</Label>
               <Input
                 id="detail-writeoff-quantity"
@@ -360,7 +382,7 @@ export function ProductDetailActions({
                 value={writeOffQuantity}
               />
             </div>
-            <div className="space-y-1.5">
+            <div className="flex flex-col gap-1.5">
               <Label htmlFor="detail-writeoff-reason">Motivo</Label>
               <Select
                 onValueChange={(value) =>
@@ -377,7 +399,7 @@ export function ProductDetailActions({
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1.5">
+            <div className="flex flex-col gap-1.5">
               <Label htmlFor="detail-writeoff-date">Data da baixa</Label>
               <ProductDatePicker
                 id="detail-writeoff-date"
@@ -385,7 +407,7 @@ export function ProductDetailActions({
                 value={writeOffDate}
               />
             </div>
-            <div className="space-y-1.5">
+            <div className="flex flex-col gap-1.5">
               <Label htmlFor="detail-writeoff-notes">Observacoes</Label>
               <Textarea
                 className="min-h-20"
@@ -411,50 +433,42 @@ export function ProductDetailActions({
         </DialogContent>
       </Dialog>
 
-      <Dialog onOpenChange={setDeleting} open={deleting}>
-        <DialogContent className="sm:max-w-115">
-          <DialogHeader>
-            <DialogTitle>Deletar produto</DialogTitle>
-            <DialogDescription>
-              Esta acao e irreversivel. O produto sera apagado definitivamente,
-              junto com qualquer relacao registrada para ele, como entradas e
-              baixas de estoque.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            {linkedSalesCount > 0 ? (
-              <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-destructive text-xs">
-                Este produto esta vinculado a {linkedSalesCount} venda
-                {linkedSalesCount > 1 ? "s" : ""}. Ao deletar, essas vendas e
-                seus itens tambem serao removidos.
-              </p>
-            ) : (
-              <p className="text-muted-foreground text-xs">
-                Nenhuma venda vinculada encontrada para este produto.
-              </p>
-            )}
-          </div>
-          <DialogFooter>
-            <Button
-              onClick={() => setDeleting(false)}
-              type="button"
-              variant="ghost"
-            >
-              Cancelar
-            </Button>
-            <Button
+      <AlertDialog onOpenChange={setDeleting} open={deleting}>
+        <AlertDialogContent className="sm:max-w-115">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Deletar produto</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acao e irreversivel. O produto sera apagado em definitivo,
+              junto com entradas, baixas e qualquer vinculo operacional
+              associado a ele.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {linkedSalesCount > 0 ? (
+            <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-destructive text-xs">
+              Este produto esta vinculado a {linkedSalesCount} venda
+              {linkedSalesCount > 1 ? "s" : ""}. Ao confirmar, essas vendas e
+              seus itens tambem serao removidos.
+            </p>
+          ) : (
+            <p className="text-muted-foreground text-xs">
+              Nenhuma venda vinculada encontrada para este produto.
+            </p>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={pending}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
               disabled={pending}
-              onClick={handleDeleteProduct}
-              type="button"
+              onClick={(event) => {
+                event.preventDefault();
+                handleDeleteProduct();
+              }}
               variant="destructive"
             >
-              {linkedSalesCount > 0
-                ? "Deletar produto e vendas"
-                : "Deletar definitivamente"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              {deleteActionLabel}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

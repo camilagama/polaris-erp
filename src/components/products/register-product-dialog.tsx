@@ -1,10 +1,8 @@
 "use client";
 
 import { useForm } from "@tanstack/react-form";
-import { format } from "date-fns";
 import { type ChangeEvent, useState } from "react";
 import { toast } from "sonner";
-import { z } from "zod";
 import { createProductAction } from "@/app/(app)/produtos/actions";
 import { ProductDatePicker } from "@/components/products/product-date-picker";
 import { Button } from "@/components/ui/button";
@@ -35,33 +33,9 @@ import {
 } from "@/components/ui/select";
 import { OTHERS_CATEGORY_KEY } from "@/features/catalog/constants";
 import { calculateSuggestedPrices } from "@/features/catalog/pricing";
-
-const productSchema = z.object({
-  name: z.string().min(1, "Nome e obrigatorio"),
-  description: z.string().optional().default(""),
-  categoryId: z.string().min(1, "Categoria e obrigatoria"),
-  costPrice: z.coerce.number().min(0, "Minimo 0"),
-  price: z.coerce.number().min(0, "Minimo 0"),
-  purchasedOn: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Use o formato ISO YYYY-MM-DD")
-    .refine((value) => {
-      const parsed = new Date(`${value}T00:00:00Z`);
-      return (
-        !Number.isNaN(parsed.getTime()) &&
-        parsed.toISOString().slice(0, 10) === value
-      );
-    }, "Data invalida"),
-  stock: z.coerce.number().int("Use um numero inteiro").min(0, "Minimo 0"),
-});
-
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat("pt-BR", {
-    currency: "BRL",
-    maximumFractionDigits: 2,
-    minimumFractionDigits: 2,
-    style: "currency",
-  }).format(value || 0);
+import { createProductSchema as productSchema } from "@/features/products/schema";
+import { formatDateInputValue } from "@/lib/domain/date";
+import { formatCurrency } from "@/lib/formatters";
 
 interface ProductCategoryOption {
   id: string;
@@ -82,7 +56,7 @@ export function RegisterProductDialog({
   settings,
 }: RegisterProductDialogProps) {
   const [open, setOpen] = useState(false);
-  const today = format(new Date(), "yyyy-MM-dd");
+  const today = formatDateInputValue();
   const defaultCategoryId =
     categories.find((category) => category.key === OTHERS_CATEGORY_KEY)?.id ??
     categories[0]?.id ??

@@ -21,14 +21,13 @@ export function proxy(request: NextRequest) {
 }
 
 export const proxyConfig = {
+  // Proxy remains an optimistic edge barrier only.
+  // Route-level auth is still enforced in layouts and server actions.
   matcher: [
     "/",
     "/sign-in",
     "/produtos/:path*",
-    "/compras/:path*",
-    "/estoque/:path*",
     "/vendas/:path*",
-    "/recebimentos/:path*",
     "/configuracoes/:path*",
   ],
 };

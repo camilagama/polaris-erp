@@ -1,3 +1,9 @@
+import {
+  normalizeMoney,
+  normalizeNonNegativeNumber,
+  roundCurrency,
+} from "@/lib/domain/currency";
+
 interface PricingSettingsInput {
   idealMarkupPercent: number;
   minimumMarkupPercent: number;
@@ -11,11 +17,7 @@ interface PricingSuggestion extends PricingSettingsInput {
   minimumPrice: number;
 }
 
-const roundCurrency = (value: number) =>
-  Math.round((value + Number.EPSILON) * 100) / 100;
-
-const normalizePercent = (value: number) => Math.max(0, value);
-const normalizeMoney = (value: number) => Math.max(0, value);
+const normalizePercent = (value: number) => normalizeNonNegativeNumber(value);
 
 export const calculateSuggestedPrices = ({
   costPrice,

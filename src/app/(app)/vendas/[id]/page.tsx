@@ -10,36 +10,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { getSaleByIdAction } from "../actions";
-
-const formatCurrency = (value: string | number | null) =>
-  new Intl.NumberFormat("pt-BR", {
-    currency: "BRL",
-    maximumFractionDigits: 2,
-    minimumFractionDigits: 2,
-    style: "currency",
-  }).format(Number(value) || 0);
-
-const formatDate = (value: string) =>
-  new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(new Date(`${value}T00:00:00Z`));
-
-const formatDateTime = (value: Date | null) => {
-  if (!value) {
-    return "-";
-  }
-
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(value);
-};
+import { formatCurrency, formatDate, formatDateTime } from "@/lib/formatters";
+import { getSaleByIdQuery } from "../queries";
 
 const getStatusLabel = (status: "cancelled" | "completed") => {
   if (status === "cancelled") {
@@ -72,7 +44,7 @@ export default async function VendaDetalhePage(
   props: PageProps<"/vendas/[id]">
 ) {
   const { id } = await props.params;
-  const sale = await getSaleByIdAction(id);
+  const sale = await getSaleByIdQuery(id);
 
   if (!sale) {
     notFound();

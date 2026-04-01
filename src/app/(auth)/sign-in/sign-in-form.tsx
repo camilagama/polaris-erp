@@ -61,8 +61,9 @@ export function SignInForm() {
             Gestao operacional para revenda com produtos e estoque confiaveis.
           </h1>
           <p className="max-w-2xl text-muted-foreground">
-            A versao atual concentra autenticacao, catalogo, reposicao e baixa
-            de estoque com custo medio movel e configuracoes de markup.
+            A versao atual concentra autenticacao, catalogo, estoque, vendas e
+            configuracoes operacionais com custo medio movel e taxas
+            parametrizadas.
           </p>
         </div>
 
@@ -77,8 +78,8 @@ export function SignInForm() {
               copy: "Reposicoes recalculam custo medio e baixas preservam rastreabilidade com observacoes.",
             },
             {
-              title: "Roadmap de vendas",
-              copy: "A proxima fase expande o fluxo atual para vendas e financeiro mantendo o mesmo modelo operacional.",
+              title: "Vendas operacionais",
+              copy: "O fluxo atual registra venda concluida, aplica taxa por pagamento e permite cancelamento com estorno.",
             },
           ].map((feature) => (
             <div

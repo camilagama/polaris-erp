@@ -1,7 +1,5 @@
 import { ArrowDown01Icon, PackageIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { format, parseISO } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { notFound } from "next/navigation";
 import { ProductDetailActions } from "@/components/products/product-detail-actions";
 import { Button } from "@/components/ui/button";
@@ -13,23 +11,13 @@ import {
 } from "@/components/ui/collapsible";
 import { listCategoriesWithUsage } from "@/features/catalog/server";
 import { buildProductInventorySummary } from "@/features/products/history";
+import { formatCurrency, formatDate } from "@/lib/formatters";
 import {
-  getProductByIdAction,
-  getProductSalesByProductIdAction,
-  getProductStockEntriesByProductIdAction,
-  getProductStockWriteOffsByProductIdAction,
-} from "../actions";
-
-const formatCurrency = (value: string | number | null) =>
-  new Intl.NumberFormat("pt-BR", {
-    currency: "BRL",
-    maximumFractionDigits: 2,
-    minimumFractionDigits: 2,
-    style: "currency",
-  }).format(Number(value) || 0);
-
-const formatDate = (value: string) =>
-  format(parseISO(value), "dd/MM/yyyy", { locale: ptBR });
+  getProductByIdQuery,
+  getProductSalesByProductIdQuery,
+  getProductStockEntriesByProductIdQuery,
+  getProductStockWriteOffsByProductIdQuery,
+} from "../queries";
 
 export default async function ProdutoDetalhePage(
   props: PageProps<"/produtos/[id]">
@@ -37,10 +25,10 @@ export default async function ProdutoDetalhePage(
   const { id } = await props.params;
   const [product, stockEntries, writeOffs, sales, categories] =
     await Promise.all([
-      getProductByIdAction(id),
-      getProductStockEntriesByProductIdAction(id),
-      getProductStockWriteOffsByProductIdAction(id),
-      getProductSalesByProductIdAction(id),
+      getProductByIdQuery(id),
+      getProductStockEntriesByProductIdQuery(id),
+      getProductStockWriteOffsByProductIdQuery(id),
+      getProductSalesByProductIdQuery(id),
       listCategoriesWithUsage(),
     ]);
 

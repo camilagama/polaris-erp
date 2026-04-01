@@ -45,6 +45,15 @@ interface SalesHarness {
   transaction: <T>(callback: (tx: unknown) => Promise<T>) => Promise<T>;
 }
 
+interface CancelSaleHarness {
+  productById: Map<string, ProductState>;
+  state: {
+    cancelledAt: Date | null;
+    saleStatus: "cancelled" | "completed";
+  };
+  transaction: <T>(callback: (tx: unknown) => Promise<T>) => Promise<T>;
+}
+
 const resolveMocks = async () => {
   const sessionModule = await import("@/lib/session");
   const dbModule = await import("@/db");
@@ -149,6 +158,114 @@ const createSalesHarness = (productsState: ProductState[]): SalesHarness => {
     productById,
     saleItemsLog,
     salesLog,
+    transaction,
+  };
+};
+
+const createCancelSaleHarness = (params: {
+  items: Array<{
+    productId: string;
+    quantity: number;
+  }>;
+  productsState: ProductState[];
+  saleStatus?: "cancelled" | "completed";
+}): CancelSaleHarness => {
+  const productById = new Map(
+    params.productsState.map((product) => [product.id, { ...product }])
+  );
+  const state = {
+    cancelledAt: null as Date | null,
+    saleStatus: params.saleStatus ?? "completed",
+  };
+  let executeCallCount = 0;
+  let productUpdateCount = 0;
+
+  const transaction = async <T>(callback: (tx: unknown) => Promise<T>) => {
+    const tx = {
+      execute: () => {
+        executeCallCount += 1;
+
+        if (executeCallCount === 1) {
+          return Promise.resolve({
+            rows: [
+              {
+                id: "sale-1",
+                status: state.saleStatus,
+              },
+            ],
+          });
+        }
+
+        return Promise.resolve({
+          rows: [...productById.values()]
+            .sort((left, right) => left.id.localeCompare(right.id))
+            .map((product) => ({
+              archivedAt: product.archivedAt,
+              costPrice: product.costPrice.toFixed(2),
+              id: product.id,
+              name: product.name,
+              price: product.price.toFixed(2),
+              stock: product.stock,
+            })),
+        });
+      },
+      select: () => ({
+        from: () => ({
+          where: async () =>
+            params.items.map((item) => ({
+              productId: item.productId,
+              quantity: item.quantity,
+            })),
+        }),
+      }),
+      update: (table: unknown) => ({
+        set: (payload: Record<string, unknown>) => ({
+          where: (_whereExpression: unknown) => {
+            if (table === products) {
+              const productId = params.items[productUpdateCount]?.productId;
+
+              if (!productId) {
+                throw new Error(
+                  "Produto nao encontrado no teste de cancelamento."
+                );
+              }
+
+              const product = productById.get(productId);
+
+              if (!product) {
+                throw new Error("Estado de produto nao encontrado no teste.");
+              }
+
+              if (typeof payload.stock !== "number") {
+                throw new Error("Cancelamento deve atualizar o estoque.");
+              }
+
+              product.stock = payload.stock;
+              productUpdateCount += 1;
+              return Promise.resolve([]);
+            }
+
+            if (table === sales) {
+              state.saleStatus = payload.status as "cancelled" | "completed";
+              state.cancelledAt =
+                payload.cancelledAt instanceof Date
+                  ? payload.cancelledAt
+                  : null;
+              return Promise.resolve([]);
+            }
+
+            throw new Error("Tabela de update nao suportada no teste.");
+          },
+        }),
+      }),
+    };
+
+    return await callback(tx);
+  };
+
+  return {
+    productById,
+    state,
     transaction,
   };
 };
@@ -394,5 +511,37 @@ describe("sales server actions", () => {
       paymentMethod: "card",
       totalAmount: "216.00",
     });
+  });
+
+  it("cancels a sale and restores stock", async () => {
+    const { cancelSaleAction } = await import("@/app/(app)/vendas/actions");
+    const { mockDb } = await resolveMocks();
+
+    const harness = createCancelSaleHarness({
+      items: [
+        {
+          productId: "product-1",
+          quantity: 2,
+        },
+      ],
+      productsState: [
+        {
+          archivedAt: null,
+          costPrice: 50,
+          id: "product-1",
+          name: "Produto 1",
+          price: 90,
+          stock: 3,
+        },
+      ],
+    });
+
+    mockDb.transaction.mockImplementation(harness.transaction as never);
+
+    await cancelSaleAction("sale-1");
+
+    expect(harness.productById.get("product-1")?.stock).toBe(5);
+    expect(harness.state.saleStatus).toBe("cancelled");
+    expect(harness.state.cancelledAt).toBeInstanceOf(Date);
   });
 });

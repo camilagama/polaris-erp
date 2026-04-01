@@ -1,9 +1,9 @@
-const roundCurrency = (value: number) =>
-  Math.round((value + Number.EPSILON) * 100) / 100;
+import {
+  normalizeNonNegativeNumber,
+  roundCurrency,
+} from "@/lib/domain/currency";
 
-const normalizeNonNegative = (value: number) => Math.max(0, value);
-
-export interface SaleDraftItem {
+interface SaleDraftItem {
   productId: string;
   productNameSnapshot: string;
   quantity: number;
@@ -11,11 +11,11 @@ export interface SaleDraftItem {
   unitPriceSnapshot: number;
 }
 
-export interface SaleSnapshotItem extends SaleDraftItem {
+interface SaleSnapshotItem extends SaleDraftItem {
   lineTotal: number;
 }
 
-export interface SaleSnapshotResult {
+interface SaleSnapshotResult {
   items: SaleSnapshotItem[];
   totalAmount: number;
 }
@@ -41,17 +41,17 @@ export const buildSaleSnapshot = (
     }
 
     const lineTotal = roundCurrency(
-      item.quantity * normalizeNonNegative(item.unitPriceSnapshot)
+      item.quantity * normalizeNonNegativeNumber(item.unitPriceSnapshot)
     );
 
     return {
       ...item,
       lineTotal,
       unitCostSnapshot: roundCurrency(
-        normalizeNonNegative(item.unitCostSnapshot)
+        normalizeNonNegativeNumber(item.unitCostSnapshot)
       ),
       unitPriceSnapshot: roundCurrency(
-        normalizeNonNegative(item.unitPriceSnapshot)
+        normalizeNonNegativeNumber(item.unitPriceSnapshot)
       ),
     };
   });

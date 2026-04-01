@@ -1,6 +1,10 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { refresh } from "next/cache";
+import type {
+  CatalogSettingsInput,
+  CategoryInput,
+} from "@/features/catalog/schema";
 import {
   createCategory,
   deleteCategory,
@@ -10,23 +14,16 @@ import {
 import { requireActionSession } from "@/lib/server-action-auth";
 
 const revalidateCatalogViews = () => {
-  revalidatePath("/configuracoes");
-  revalidatePath("/produtos");
+  refresh();
 };
 
-export async function createCategoryAction(data: {
-  description?: string;
-  name: string;
-}) {
+export async function createCategoryAction(data: CategoryInput) {
   await requireActionSession();
   await createCategory(data);
   revalidateCatalogViews();
 }
 
-export async function updateCategoryAction(
-  id: string,
-  data: { description?: string; name: string }
-) {
+export async function updateCategoryAction(id: string, data: CategoryInput) {
   await requireActionSession();
   await updateCategory(id, data);
   revalidateCatalogViews();
@@ -38,16 +35,7 @@ export async function deleteCategoryAction(id: string) {
   revalidateCatalogViews();
 }
 
-export async function saveCatalogSettingsAction(data: {
-  idealMarkupPercent: number;
-  minimumMarkupPercent: number;
-  paymentFeeRules: Array<{
-    code: string;
-    feePercent: number;
-    installments: number;
-    paymentMethod: "card" | "pix";
-  }>;
-}) {
+export async function saveCatalogSettingsAction(data: CatalogSettingsInput) {
   await requireActionSession();
   await saveCatalogSettings(data);
   revalidateCatalogViews();

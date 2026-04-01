@@ -1,3 +1,5 @@
+import { normalizeMoney } from "@/lib/domain/currency";
+
 export type PaymentRuleMethod = "card" | "pix";
 
 export interface PaymentFeeRule {
@@ -11,11 +13,7 @@ export const MAX_CARD_INSTALLMENTS = 12;
 export const PIX_RULE_CODE = "pix";
 export const ONE_TIME_CARD_RULE_CODE = "1x";
 
-const roundToTwo = (value: number) =>
-  Math.round((value + Number.EPSILON) * 100) / 100;
-
-const normalizeFeePercent = (value: number) =>
-  roundToTwo(Math.max(0, Number.isFinite(value) ? value : 0));
+const normalizeFeePercent = (value: number) => normalizeMoney(value);
 
 const normalizeInstallments = (value: number) => {
   if (!Number.isInteger(value)) {

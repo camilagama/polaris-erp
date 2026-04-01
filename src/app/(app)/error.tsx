@@ -1,19 +1,14 @@
 "use client";
 
-import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 
 export default function AppError({
-  error,
+  error: _error,
   reset,
 }: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  useEffect(() => {
-    console.error(error);
-  }, [error]);
-
   return (
     <div className="mx-auto flex min-h-[60svh] max-w-2xl items-center justify-center">
       <div className="w-full rounded-3xl border border-border/60 bg-card p-8 shadow-sm">

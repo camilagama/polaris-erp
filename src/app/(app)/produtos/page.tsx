@@ -1,13 +1,19 @@
+import type { Metadata } from "next";
 import { ProductsPanel } from "@/components/products/products-panel";
 import {
   getCatalogSettings,
   listCategoriesWithUsage,
 } from "@/features/catalog/server";
-import { getProductsAction } from "./actions";
+import { getProductsQuery } from "./queries";
+
+export const metadata: Metadata = {
+  title: "Produtos | DG Imports",
+  description: "Catalogo, estoque atual e operacoes de produto do DG Imports.",
+};
 
 export default async function ProdutosPage() {
   const [products, categories, settings] = await Promise.all([
-    getProductsAction(),
+    getProductsQuery(),
     listCategoriesWithUsage(),
     getCatalogSettings(),
   ]);

@@ -1,25 +1,26 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { cancelSaleAction, type SaleDetail } from "@/app/(app)/vendas/actions";
-import { Button } from "@/components/ui/button";
+import { cancelSaleAction } from "@/app/(app)/vendas/actions";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import type { SaleDetail } from "@/features/sales/contracts";
 
 export function SaleDetailActions({
   sale,
 }: {
   sale: Pick<SaleDetail, "id" | "status">;
 }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [confirmingCancel, setConfirmingCancel] = useState(false);
 
@@ -29,7 +30,6 @@ export function SaleDetailActions({
         await cancelSaleAction(sale.id);
         toast.success("Venda cancelada com estorno de estoque.");
         setConfirmingCancel(false);
-        router.refresh();
       } catch (error) {
         toast.error(
           error instanceof Error
@@ -59,37 +59,30 @@ export function SaleDetailActions({
         Cancelar venda
       </Button>
 
-      <Dialog
-        onOpenChange={(open) => setConfirmingCancel(open)}
-        open={confirmingCancel}
-      >
-        <DialogContent className="sm:max-w-115">
-          <DialogHeader>
-            <DialogTitle>Cancelar venda</DialogTitle>
-            <DialogDescription>
+      <AlertDialog onOpenChange={setConfirmingCancel} open={confirmingCancel}>
+        <AlertDialogContent className="sm:max-w-115">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancelar venda</AlertDialogTitle>
+            <AlertDialogDescription>
               O cancelamento estorna automaticamente as quantidades para o
-              estoque.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              onClick={() => setConfirmingCancel(false)}
-              type="button"
-              variant="ghost"
-            >
-              Voltar
-            </Button>
-            <Button
+              estoque e preserva o historico financeiro da operacao.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={pending}>Voltar</AlertDialogCancel>
+            <AlertDialogAction
               disabled={pending}
-              onClick={handleCancelSale}
-              type="button"
+              onClick={(event) => {
+                event.preventDefault();
+                handleCancelSale();
+              }}
               variant="destructive"
             >
               {pending ? "Cancelando..." : "Confirmar cancelamento"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

@@ -99,6 +99,13 @@
       "when": 1775001600000,
       "tag": "20260401000000_payment_fee_rules_and_installments",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1775049745862,
+      "tag": "20260401132225_nice_the_liberteens",
+      "breakpoints": true
     }
   ]
 }

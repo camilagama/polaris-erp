@@ -7,7 +7,6 @@ import {
   Tick01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
@@ -53,12 +52,7 @@ import type {
   CatalogCategory,
   CatalogSettings,
 } from "@/features/catalog/server";
-
-const formatPercent = (value: number) =>
-  new Intl.NumberFormat("pt-BR", {
-    maximumFractionDigits: 2,
-    minimumFractionDigits: 0,
-  }).format(value);
+import { formatPercent } from "@/lib/formatters";
 
 export function CatalogSettingsPanel({
   categories,
@@ -67,7 +61,6 @@ export function CatalogSettingsPanel({
   categories: CatalogCategory[];
   settings: CatalogSettings;
 }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [newCategoryName, setNewCategoryName] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -118,10 +111,6 @@ export function CatalogSettingsPanel({
         : ""
     }.`;
   }, [idealMarkupPercent, minimumMarkupPercent, paymentFeeRules]);
-
-  const refreshView = () => {
-    router.refresh();
-  };
 
   const handlePaymentFeeRuleChange = (code: string, rawValue: string) => {
     const parsedValue = Number(rawValue);
@@ -198,7 +187,6 @@ export function CatalogSettingsPanel({
         await createCategoryAction({ name: newCategoryName });
         setNewCategoryName("");
         toast.success("Categoria criada.");
-        refreshView();
       } catch (error) {
         toast.error(
           error instanceof Error
@@ -216,7 +204,6 @@ export function CatalogSettingsPanel({
         setEditingId(null);
         setEditingName("");
         toast.success("Categoria atualizada.");
-        refreshView();
       } catch (error) {
         toast.error(
           error instanceof Error
@@ -232,7 +219,6 @@ export function CatalogSettingsPanel({
       try {
         await deleteCategoryAction(id);
         toast.success("Categoria removida.");
-        refreshView();
       } catch (error) {
         toast.error(
           error instanceof Error
@@ -264,7 +250,6 @@ export function CatalogSettingsPanel({
           paymentFeeRules,
         });
         toast.success("Configuracoes salvas.");
-        refreshView();
       } catch (error) {
         toast.error(
           error instanceof Error
