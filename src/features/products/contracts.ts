@@ -12,6 +12,7 @@ export interface ProductListItem {
   categoryId: string;
   categoryName: string;
   costPrice: string;
+  createdAt: Date;
   description: string | null;
   id: string;
   image: ProductImageAsset | null;

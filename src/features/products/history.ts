@@ -1,7 +1,16 @@
-const byNewestDate = <T extends { createdAt?: string; date: string }>(
+const byNewestDate = <
+  T extends { createdAt?: string; date: string; sortPriority?: number },
+>(
   left: T,
   right: T
 ) => {
+  const priorityComparison =
+    (left.sortPriority ?? 0) - (right.sortPriority ?? 0);
+
+  if (priorityComparison !== 0) {
+    return priorityComparison;
+  }
+
   const dateComparison = right.date.localeCompare(left.date);
 
   if (dateComparison !== 0) {
@@ -15,6 +24,7 @@ interface InventoryHistoryEntryInput {
   createdAt?: string;
   date: string;
   id: string;
+  isInitial?: boolean;
   quantity: number;
   unitCost: number;
 }
@@ -66,8 +76,9 @@ export const buildProductInventorySummary = ({
       createdAt: entry.createdAt,
       date: entry.date,
       id: entry.id,
-      label: "Entrada",
+      label: entry.isInitial ? "Cadastro" : "Entrada",
       notes: null,
+      sortPriority: entry.isInitial ? 1 : 0,
       totalValue: entry.quantity * entry.unitCost,
       quantityLabel: `+${entry.quantity} un.`,
       unitCost: entry.unitCost,

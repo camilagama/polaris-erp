@@ -48,6 +48,19 @@ export default async function ProdutoDetalhePage(
   }
 
   const averageCost = Number(product.costPrice);
+  const initialEntryId =
+    stockEntries
+      .filter(
+        (entry) =>
+          entry.stockedOn === product.purchasedOn &&
+          Math.abs(entry.createdAt.getTime() - product.createdAt.getTime()) <=
+            60_000
+      )
+      .sort(
+        (left, right) =>
+          Math.abs(left.createdAt.getTime() - product.createdAt.getTime()) -
+          Math.abs(right.createdAt.getTime() - product.createdAt.getTime())
+      )[0]?.id ?? null;
   const inventorySummary = buildProductInventorySummary({
     averageCost,
     currentStock: product.stock,
@@ -55,6 +68,7 @@ export default async function ProdutoDetalhePage(
       createdAt: entry.createdAt.toISOString(),
       date: entry.stockedOn,
       id: entry.id,
+      isInitial: entry.id === initialEntryId,
       quantity: entry.quantity,
       unitCost: Number(entry.unitCost),
     })),

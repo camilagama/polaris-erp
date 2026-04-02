@@ -11,6 +11,7 @@ describe("buildProductInventorySummary", () => {
           createdAt: "2026-03-31T10:00:00.000Z",
           date: "2026-03-30",
           id: "entry-1",
+          isInitial: true,
           quantity: 3,
           unitCost: 10,
         },
@@ -71,9 +72,10 @@ describe("buildProductInventorySummary", () => {
         createdAt: "2026-03-31T10:00:00.000Z",
         date: "2026-03-30",
         id: "entry-1",
-        label: "Entrada",
+        label: "Cadastro",
         notes: null,
         quantityLabel: "+3 un.",
+        sortPriority: 1,
         totalValue: 30,
         unitCost: 10,
         variant: "entry",
@@ -90,6 +92,7 @@ describe("buildProductInventorySummary", () => {
           createdAt: "2026-03-31T09:00:00.000Z",
           date: "2026-03-31",
           id: "entry-1",
+          isInitial: true,
           quantity: 1,
           unitCost: 10,
         },
@@ -110,6 +113,35 @@ describe("buildProductInventorySummary", () => {
 
     expect(summary.historyItems[0]?.id).toBe("writeoff-1");
     expect(summary.historyItems[1]?.id).toBe("entry-1");
+  });
+
+  it("keeps the initial registration as the oldest movement even when dates would move it", () => {
+    const summary = buildProductInventorySummary({
+      averageCost: 10,
+      currentStock: 3,
+      entries: [
+        {
+          createdAt: "2026-03-31T09:00:00.000Z",
+          date: "2026-04-01",
+          id: "entry-initial",
+          isInitial: true,
+          quantity: 2,
+          unitCost: 10,
+        },
+        {
+          createdAt: "2026-04-02T09:00:00.000Z",
+          date: "2026-03-01",
+          id: "entry-backfilled",
+          quantity: 1,
+          unitCost: 10,
+        },
+      ],
+      sales: [],
+      writeOffs: [],
+    });
+
+    expect(summary.historyItems.at(-1)?.id).toBe("entry-initial");
+    expect(summary.historyItems.at(-1)?.label).toBe("Cadastro");
   });
 
   it("adds stock reversal entry when a sale is cancelled", () => {
