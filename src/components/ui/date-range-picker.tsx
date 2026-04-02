@@ -77,14 +77,6 @@ export function DateRangePicker({
   }, [appliedRange, value.preset]);
 
   const draftRangeIsComplete = Boolean(draftRange?.from && draftRange.to);
-  const draftRangeLabel =
-    draftRange?.from && draftRange.to
-      ? `${format(draftRange.from, "dd/MM/yyyy", {
-          locale: ptBR,
-        })} ate ${format(draftRange.to, "dd/MM/yyyy", {
-          locale: ptBR,
-        })}`
-      : "Selecione a data inicial e final.";
 
   return (
     <Popover
@@ -120,7 +112,7 @@ export function DateRangePicker({
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-auto p-0">
-        <div className="grid gap-0 sm:grid-cols-[168px_1fr]">
+        <div className="grid gap-0 sm:grid-cols-[130px_1fr]">
           {presets.length > 0 ? (
             <div className="flex flex-col gap-2 border-border/60 border-b bg-muted/10 p-3 sm:border-r sm:border-b-0">
               <p className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
@@ -168,9 +160,7 @@ export function DateRangePicker({
               selected={draftRange}
             />
 
-            <div className="flex flex-col gap-3 border-border/60 border-t px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-muted-foreground text-xs">{draftRangeLabel}</p>
-
+            <div className="flex flex-col gap-3 border-border/60 border-t px-3 py-3 sm:flex-row sm:items-center sm:justify-end">
               <div className="flex items-center gap-2">
                 <Button
                   onClick={() => {

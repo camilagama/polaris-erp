@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { DashboardDateRangeFilter } from "@/components/dashboard/dashboard-date-range-filter";
 import { InventoryCategoriesChart } from "@/components/dashboard/inventory-categories-chart";
 import { RevenueResultChart } from "@/components/dashboard/revenue-result-chart";
 import { TopProductsChart } from "@/components/dashboard/top-products-chart";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -83,38 +81,17 @@ export default async function DashboardPage(props: PageProps<"/">) {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-1.5">
           <p className="font-semibold text-[11px] text-primary uppercase tracking-[0.18em]">
             Dashboard
           </p>
           <h1 className="font-heading font-semibold text-2xl tracking-tight">
             Visao geral
           </h1>
-          <p className="text-muted-foreground text-sm">{selectedRange.label}</p>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <Button asChild size="sm">
-            <Link href="/vendas">Nova venda</Link>
-          </Button>
-          <Button asChild size="sm" variant="outline">
-            <Link href="/produtos">Produtos</Link>
-          </Button>
-          <Button asChild size="sm" variant="secondary">
-            <Link href="/configuracoes">Configuracoes</Link>
-          </Button>
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-3 rounded-xl border border-border/70 bg-card px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-1">
-          <p className="font-medium text-[11px] text-muted-foreground uppercase tracking-[0.14em]">
-            Periodo
-          </p>
-          <p className="text-sm">Filtre os indicadores exibidos.</p>
-        </div>
-        <div className="sm:min-w-72 sm:justify-end">
+        <div className="flex flex-wrap gap-2 sm:min-w-72 sm:justify-end">
           <DashboardDateRangeFilter
             from={selectedRange.from}
             preset={selectedRange.preset}
