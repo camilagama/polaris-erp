@@ -33,13 +33,29 @@ describe("buildProductAnalytics", () => {
           stock: 4,
         },
       ],
-      purchases: [],
+      purchases: [
+        {
+          occurredOn: "2026-03-01",
+          quantity: 3,
+          unitCost: 100,
+        },
+        {
+          occurredOn: "2026-03-05",
+          quantity: 2,
+          unitCost: 20,
+        },
+        {
+          occurredOn: "2026-03-10",
+          quantity: 4,
+          unitCost: 999,
+        },
+      ],
       sales: [],
       today: "2026-04-30",
     });
 
     expect(analytics.totalUnitsInStock).toBe(5);
-    expect(analytics.totalInventoryInvestment).toBe(340);
+    expect(analytics.totalInventoryInvestment).toBe(4336);
     expect(analytics.totalActiveProductsInStock).toBe(2);
     expect(analytics.inventoryByCategory).toEqual([
       {

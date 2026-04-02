@@ -440,7 +440,7 @@ export function ProductsPanel({
                 {formatCurrency(analytics.totalInventoryInvestment)}
               </strong>
               <CardDescription className="mt-1 text-[11px]">
-                Custo total do estoque atual.
+                Soma historica de todas as compras de estoque.
               </CardDescription>
             </CardContent>
           </Card>

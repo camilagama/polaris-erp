@@ -215,8 +215,13 @@ export const buildProductAnalytics = ({
   today?: string;
 }): ProductAnalytics => {
   let totalUnitsInStock = 0;
-  let totalInventoryInvestment = 0;
   let totalActiveProductsInStock = 0;
+  const totalInventoryInvestment = roundCurrency(
+    purchases.reduce(
+      (sum, purchase) => sum + purchase.quantity * purchase.unitCost,
+      0
+    )
+  );
 
   for (const product of inventory) {
     if (product.archivedAt) {
@@ -224,9 +229,6 @@ export const buildProductAnalytics = ({
     }
 
     totalUnitsInStock += product.stock;
-    totalInventoryInvestment = roundCurrency(
-      totalInventoryInvestment + product.stock * product.costPrice
-    );
 
     if (product.stock > 0) {
       totalActiveProductsInStock += 1;

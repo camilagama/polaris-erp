@@ -27,44 +27,37 @@ export const getProductAnalytics = async ({
   const recentFromDate = new Date(`${today}T00:00:00`);
   recentFromDate.setDate(recentFromDate.getDate() - 29);
   const recentFrom = formatDateInputValue(recentFromDate);
-  const [inventoryRows, recentPurchaseRows, recentSalesRows] =
-    await Promise.all([
-      db
-        .select({
-          archivedAt: products.archivedAt,
-          categoryName: categories.name,
-          costPrice: products.costPrice,
-          stock: products.stock,
-        })
-        .from(products)
-        .innerJoin(categories, eq(products.categoryId, categories.id))
-        .orderBy(asc(products.name)),
-      db
-        .select({
-          occurredOn: productStockEntries.stockedOn,
-          quantity: productStockEntries.quantity,
-          unitCost: productStockEntries.unitCost,
-        })
-        .from(productStockEntries)
-        .where(
-          and(
-            gte(productStockEntries.stockedOn, recentFrom),
-            lte(productStockEntries.stockedOn, today)
-          )
-        ),
-      db
-        .select({
-          lineTotal: saleItems.lineTotal,
-          occurredOn: sales.occurredOn,
-          quantity: saleItems.quantity,
-          status: sales.status,
-        })
-        .from(saleItems)
-        .innerJoin(sales, eq(saleItems.saleId, sales.id))
-        .where(
-          and(gte(sales.occurredOn, recentFrom), lte(sales.occurredOn, today))
-        ),
-    ]);
+  const [inventoryRows, allPurchaseRows, recentSalesRows] = await Promise.all([
+    db
+      .select({
+        archivedAt: products.archivedAt,
+        categoryName: categories.name,
+        costPrice: products.costPrice,
+        stock: products.stock,
+      })
+      .from(products)
+      .innerJoin(categories, eq(products.categoryId, categories.id))
+      .orderBy(asc(products.name)),
+    db
+      .select({
+        occurredOn: productStockEntries.stockedOn,
+        quantity: productStockEntries.quantity,
+        unitCost: productStockEntries.unitCost,
+      })
+      .from(productStockEntries),
+    db
+      .select({
+        lineTotal: saleItems.lineTotal,
+        occurredOn: sales.occurredOn,
+        quantity: saleItems.quantity,
+        status: sales.status,
+      })
+      .from(saleItems)
+      .innerJoin(sales, eq(saleItems.saleId, sales.id))
+      .where(
+        and(gte(sales.occurredOn, recentFrom), lte(sales.occurredOn, today))
+      ),
+  ]);
 
   return buildProductAnalytics({
     inventory: inventoryRows.map((row) => ({
@@ -73,7 +66,7 @@ export const getProductAnalytics = async ({
       costPrice: Number(row.costPrice),
       stock: row.stock,
     })),
-    purchases: recentPurchaseRows.map((row) => ({
+    purchases: allPurchaseRows.map((row) => ({
       occurredOn: row.occurredOn,
       quantity: Number(row.quantity),
       unitCost: Number(row.unitCost),
