@@ -12,6 +12,12 @@ import {
 } from "@/db/schema";
 import { getProductCategoryById } from "@/features/catalog/server";
 import {
+  type StagedProductImageInput,
+  stagedProductImageSchema,
+} from "@/features/products/image-schema";
+import { deleteProductImageVersion } from "@/features/products/image-storage";
+import { storeProductImageFromStage } from "@/features/products/image-workflow";
+import {
   createProductSchema,
   stockAdditionSchema,
   stockWriteOffSchema,
@@ -27,6 +33,14 @@ import { requireActionSession } from "@/lib/server-action-auth";
 const revalidateProducts = () => {
   refresh();
 };
+
+const emptyProductImagePayload = {
+  imageBlurDataUrl: null,
+  imageHeight: null,
+  imageUploadedAt: null,
+  imageVersion: null,
+  imageWidth: null,
+} as const;
 
 interface LockedProductRow extends Record<string, unknown> {
   archivedAt: Date | null;
@@ -58,6 +72,22 @@ const lockProductForUpdate = async (
   return product;
 };
 
+const getProductImageState = async (id: string) => {
+  const [product] = await db
+    .select({
+      id: products.id,
+      imageVersion: products.imageVersion,
+    })
+    .from(products)
+    .where(eq(products.id, id));
+
+  if (!product) {
+    throw new Error("Produto nao encontrado.");
+  }
+
+  return product;
+};
+
 export async function createProductAction(data: {
   categoryId: string;
   costPrice: string;
@@ -65,39 +95,66 @@ export async function createProductAction(data: {
   name: string;
   price: string;
   purchasedOn: string;
+  stagedImage?: StagedProductImageInput;
   stock: number;
 }) {
   await requireActionSession();
   const parsed = createProductSchema.parse(data);
+  const stagedImage = data.stagedImage
+    ? stagedProductImageSchema.parse(data.stagedImage)
+    : null;
   const category = await getProductCategoryById(parsed.categoryId);
 
   if (!category) {
     throw new Error("Selecione uma categoria valida.");
   }
 
-  await db.transaction(async (tx) => {
-    const [product] = await tx
-      .insert(products)
-      .values({
+  const productId = crypto.randomUUID();
+  const storedImage = stagedImage
+    ? await storeProductImageFromStage({
+        productId,
+        stagedImage,
+        version: 1,
+      })
+    : null;
+
+  try {
+    await db.transaction(async (tx) => {
+      await tx.insert(products).values({
         categoryId: parsed.categoryId,
         costPrice: toCurrencyString(parsed.costPrice),
         description: parsed.description || undefined,
+        id: productId,
+        imageBlurDataUrl: storedImage?.blurDataURL,
+        imageHeight: storedImage?.height,
+        imageUploadedAt: storedImage ? new Date() : null,
+        imageVersion: storedImage?.version,
+        imageWidth: storedImage?.width,
         name: parsed.name,
         price: toCurrencyString(parsed.price),
         purchasedOn: parsed.purchasedOn,
         stock: parsed.stock,
-      })
-      .returning();
-
-    if (parsed.stock > 0) {
-      await tx.insert(productStockEntries).values({
-        productId: product.id,
-        quantity: parsed.stock,
-        stockedOn: parsed.purchasedOn,
-        unitCost: toCurrencyString(parsed.costPrice),
       });
+
+      if (parsed.stock > 0) {
+        await tx.insert(productStockEntries).values({
+          productId,
+          quantity: parsed.stock,
+          stockedOn: parsed.purchasedOn,
+          unitCost: toCurrencyString(parsed.costPrice),
+        });
+      }
+    });
+  } catch (error) {
+    if (storedImage) {
+      await deleteProductImageVersion({
+        productId,
+        version: storedImage.version,
+      }).catch(() => undefined);
     }
-  });
+
+    throw error;
+  }
 
   revalidateProducts();
 }
@@ -126,6 +183,69 @@ export async function updateProductAction(
       name: parsed.name,
     })
     .where(eq(products.id, id));
+
+  revalidateProducts();
+}
+
+export async function replaceProductImageAction(
+  id: string,
+  stagedImageInput: StagedProductImageInput
+) {
+  await requireActionSession();
+  const stagedImage = stagedProductImageSchema.parse(stagedImageInput);
+  const product = await getProductImageState(id);
+  const nextVersion = (product.imageVersion ?? 0) + 1;
+  const storedImage = await storeProductImageFromStage({
+    productId: id,
+    stagedImage,
+    version: nextVersion,
+  });
+
+  try {
+    await db
+      .update(products)
+      .set({
+        imageBlurDataUrl: storedImage.blurDataURL,
+        imageHeight: storedImage.height,
+        imageUploadedAt: new Date(),
+        imageVersion: storedImage.version,
+        imageWidth: storedImage.width,
+      })
+      .where(eq(products.id, id));
+  } catch (error) {
+    await deleteProductImageVersion({
+      productId: id,
+      version: storedImage.version,
+    }).catch(() => undefined);
+
+    throw error;
+  }
+
+  if (product.imageVersion !== null) {
+    await deleteProductImageVersion({
+      productId: id,
+      version: product.imageVersion,
+    }).catch(() => undefined);
+  }
+
+  revalidateProducts();
+}
+
+export async function removeProductImageAction(id: string) {
+  await requireActionSession();
+  const product = await getProductImageState(id);
+
+  await db
+    .update(products)
+    .set(emptyProductImagePayload)
+    .where(eq(products.id, id));
+
+  if (product.imageVersion !== null) {
+    await deleteProductImageVersion({
+      productId: id,
+      version: product.imageVersion,
+    }).catch(() => undefined);
+  }
 
   revalidateProducts();
 }
@@ -235,10 +355,12 @@ export async function unarchiveProductAction(id: string) {
 
 export async function deleteProductAction(id: string, confirmationName = "") {
   await requireActionSession();
+  let deletedImageVersion: number | null = null;
 
   await db.transaction(async (tx) => {
     const [product] = await tx
       .select({
+        imageVersion: products.imageVersion,
         name: products.name,
       })
       .from(products)
@@ -269,7 +391,15 @@ export async function deleteProductAction(id: string, confirmationName = "") {
     }
 
     await tx.delete(products).where(eq(products.id, id));
+    deletedImageVersion = product.imageVersion;
   });
+
+  if (deletedImageVersion !== null) {
+    await deleteProductImageVersion({
+      productId: id,
+      version: deletedImageVersion,
+    }).catch(() => undefined);
+  }
 
   revalidateProducts();
 }

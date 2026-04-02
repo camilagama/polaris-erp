@@ -5,6 +5,8 @@ import { type ChangeEvent, useState } from "react";
 import { toast } from "sonner";
 import { createProductAction } from "@/app/(app)/produtos/actions";
 import { ProductDatePicker } from "@/components/products/product-date-picker";
+import { ProductImageInput } from "@/components/products/product-image-input";
+import { uploadProductImageToStaging } from "@/components/products/product-image-upload";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -56,6 +58,8 @@ export function RegisterProductDialog({
   settings,
 }: RegisterProductDialogProps) {
   const [open, setOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [submitLabel, setSubmitLabel] = useState("Salvar Produto");
   const today = formatDateInputValue();
   const defaultCategoryId =
     categories.find((category) => category.key === OTHERS_CATEGORY_KEY)?.id ??
@@ -74,6 +78,14 @@ export function RegisterProductDialog({
     },
     onSubmit: async ({ value }) => {
       try {
+        const stagedImage = selectedImage
+          ? await (async () => {
+              setSubmitLabel("Enviando imagem...");
+              return await uploadProductImageToStaging(selectedImage);
+            })()
+          : undefined;
+
+        setSubmitLabel("Salvando produto...");
         await createProductAction({
           name: value.name,
           description: value.description || undefined,
@@ -81,17 +93,21 @@ export function RegisterProductDialog({
           costPrice: value.costPrice.toString(),
           price: value.price.toString(),
           purchasedOn: value.purchasedOn,
+          stagedImage,
           stock: value.stock,
         });
         toast.success("Produto cadastrado.");
         setOpen(false);
         form.reset();
+        setSelectedImage(null);
       } catch (error) {
         toast.error(
           error instanceof Error
             ? error.message
             : "Nao foi possivel cadastrar o produto."
         );
+      } finally {
+        setSubmitLabel("Salvar Produto");
       }
     },
   });
@@ -106,6 +122,8 @@ export function RegisterProductDialog({
       purchasedOn: today,
       stock: 0,
     });
+    setSelectedImage(null);
+    setSubmitLabel("Salvar Produto");
   };
 
   return (
@@ -256,6 +274,13 @@ export function RegisterProductDialog({
                 </div>
               )}
             </form.Field>
+
+            <ProductImageInput
+              description="Opcional. Aceita JPG, PNG ou WebP com ate 10 MB."
+              id="register-product-image"
+              label="Imagem do produto"
+              onFileChange={setSelectedImage}
+            />
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <form.Field
@@ -471,7 +496,7 @@ export function RegisterProductDialog({
             >
               {([canSubmit, isSubmitting]) => (
                 <Button className="w-full" disabled={!canSubmit} type="submit">
-                  {isSubmitting ? "Salvando..." : "Salvar Produto"}
+                  {isSubmitting ? submitLabel : "Salvar Produto"}
                 </Button>
               )}
             </form.Subscribe>

@@ -6,6 +6,7 @@ import {
   Menu03Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import Image from "next/image";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -80,6 +81,31 @@ const getProductStatus = (product: ProductListItem) =>
         label: "Ativo",
         variant: "secondary" as const,
       };
+
+function ProductTableThumbnail({ product }: { product: ProductListItem }) {
+  if (!product.image) {
+    return (
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-muted/20 text-[10px] text-muted-foreground uppercase tracking-[0.14em]">
+        Sem
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg border border-border/60 bg-muted/20">
+      <Image
+        alt={`Miniatura de ${product.name}`}
+        blurDataURL={product.image.blurDataURL}
+        className="object-contain"
+        fill
+        placeholder="blur"
+        sizes="44px"
+        src={product.image.tableUrl}
+        unoptimized
+      />
+    </div>
+  );
+}
 
 function ProductRowActions({
   onArchiveToggle,
@@ -296,20 +322,23 @@ export function ProductsPanel({
                   key={product.id}
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <Link
-                        className="block truncate font-medium text-sm hover:underline"
-                        href={`/produtos/${product.id}`}
-                        title={product.name}
-                      >
-                        {product.name}
-                      </Link>
-                      <p
-                        className="mt-1 truncate text-muted-foreground text-xs"
-                        title={product.categoryName}
-                      >
-                        {product.categoryName}
-                      </p>
+                    <div className="flex min-w-0 items-start gap-3">
+                      <ProductTableThumbnail product={product} />
+                      <div className="min-w-0">
+                        <Link
+                          className="block truncate font-medium text-sm hover:underline"
+                          href={`/produtos/${product.id}`}
+                          title={product.name}
+                        >
+                          {product.name}
+                        </Link>
+                        <p
+                          className="mt-1 truncate text-muted-foreground text-xs"
+                          title={product.categoryName}
+                        >
+                          {product.categoryName}
+                        </p>
+                      </div>
                     </div>
                     <Badge variant={status.variant}>{status.label}</Badge>
                   </div>
@@ -370,13 +399,16 @@ export function ProductsPanel({
                   return (
                     <TableRow key={product.id}>
                       <TableCell className="max-w-[200px] pl-4 sm:pl-6">
-                        <Link
-                          className="block truncate font-medium hover:underline"
-                          href={`/produtos/${product.id}`}
-                          title={product.name}
-                        >
-                          {product.name}
-                        </Link>
+                        <div className="flex items-center gap-3">
+                          <ProductTableThumbnail product={product} />
+                          <Link
+                            className="block truncate font-medium hover:underline"
+                            href={`/produtos/${product.id}`}
+                            title={product.name}
+                          >
+                            {product.name}
+                          </Link>
+                        </div>
                       </TableCell>
                       <TableCell className="max-w-[150px]">
                         <span

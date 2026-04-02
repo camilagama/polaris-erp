@@ -158,6 +158,11 @@ export const products = pgTable(
       .default("0"),
     price: decimal("price", { precision: 12, scale: 2 }).notNull().default("0"),
     stock: integer("stock").default(0).notNull(),
+    imageVersion: integer("image_version"),
+    imageWidth: integer("image_width"),
+    imageHeight: integer("image_height"),
+    imageBlurDataUrl: text("image_blur_data_url"),
+    imageUploadedAt: timestamp("image_uploaded_at"),
     archivedAt: timestamp("archived_at"),
     ...timestamps,
   },
@@ -165,6 +170,18 @@ export const products = pgTable(
     check("products_cost_price_non_negative", sql`${table.costPrice} >= 0`),
     check("products_price_non_negative", sql`${table.price} >= 0`),
     check("products_stock_non_negative", sql`${table.stock} >= 0`),
+    check(
+      "products_image_version_positive",
+      sql`${table.imageVersion} is null or ${table.imageVersion} > 0`
+    ),
+    check(
+      "products_image_width_positive",
+      sql`${table.imageWidth} is null or ${table.imageWidth} > 0`
+    ),
+    check(
+      "products_image_height_positive",
+      sql`${table.imageHeight} is null or ${table.imageHeight} > 0`
+    ),
     index("products_archived_at_idx").on(table.archivedAt),
     index("products_category_id_idx").on(table.categoryId),
   ]

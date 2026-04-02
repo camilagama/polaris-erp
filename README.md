@@ -66,6 +66,7 @@ Ainda nao implementado:
 - Login com email/senha permanece o caminho principal em qualquer ambiente.
 - Google One Tap e SSO social dependem de origem autorizada pelo Google; em localhost o app reduz comportamento automatico para evitar prompts invalidos.
 - Exclusao de produto continua destrutiva por decisao operacional, mas requer confirmacao forte quando houver vendas vinculadas.
+- O fluxo de imagem de produto usa Cloudflare R2 com upload temporario em staging e duas variantes finais (`detail` e `table`). Veja `docs/product-images-r2.md`.
 
 ## Testes E2E
 

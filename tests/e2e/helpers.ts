@@ -60,7 +60,7 @@ export const login = async (page: Page) => {
 
   await expect(
     page.getByRole("heading", {
-      name: "Indicadores essenciais da operacao",
+      name: "Visao geral",
     })
   ).toBeVisible();
 };

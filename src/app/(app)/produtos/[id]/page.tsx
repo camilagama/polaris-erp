@@ -2,6 +2,7 @@ import { ArrowDown01Icon, PackageIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { notFound } from "next/navigation";
 import { ProductDetailActions } from "@/components/products/product-detail-actions";
+import { ProductImageManager } from "@/components/products/product-image-manager";
 import { ProductUnitsSoldChart } from "@/components/products/product-sales-chart";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -162,6 +163,19 @@ export default async function ProdutoDetalhePage(
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Imagem</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ProductImageManager
+            image={product.image}
+            productId={product.id}
+            productName={product.name}
+          />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

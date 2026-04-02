@@ -41,7 +41,9 @@ test("signs in with a prepared E2E account and lands on the dashboard", async ({
   await login(page);
 
   await expect(page).toHaveURL(rootRouteRegex);
-  await expect(page.getByText("Periodo do dashboard")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Visao geral" })
+  ).toBeVisible();
 });
 
 test("renders the global not-found screen for unknown routes", async ({

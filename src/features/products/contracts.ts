@@ -1,3 +1,12 @@
+export interface ProductImageAsset {
+  blurDataURL: string;
+  detailUrl: string;
+  height: number;
+  tableUrl: string;
+  version: number;
+  width: number;
+}
+
 export interface ProductListItem {
   archivedAt: Date | null;
   categoryId: string;
@@ -5,6 +14,7 @@ export interface ProductListItem {
   costPrice: string;
   description: string | null;
   id: string;
+  image: ProductImageAsset | null;
   name: string;
   price: string;
   purchasedOn: string;

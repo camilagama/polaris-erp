@@ -16,6 +16,14 @@ vi.mock("@/features/catalog/server", () => ({
   getProductCategoryById: vi.fn(),
 }));
 
+vi.mock("@/features/products/image-storage", () => ({
+  deleteProductImageVersion: vi.fn(),
+}));
+
+vi.mock("@/features/products/image-workflow", () => ({
+  storeProductImageFromStage: vi.fn(),
+}));
+
 vi.mock("next/cache", () => ({
   refresh: vi.fn(),
   revalidatePath: vi.fn(),
@@ -58,13 +66,23 @@ const resolveMocks = async () => {
   const sessionModule = await import("@/lib/session");
   const catalogModule = await import("@/features/catalog/server");
   const dbModule = await import("@/db");
+  const imageStorageModule = await import("@/features/products/image-storage");
+  const imageWorkflowModule = await import(
+    "@/features/products/image-workflow"
+  );
 
   return {
+    mockDeleteProductImageVersion:
+      imageStorageModule.deleteProductImageVersion as MockFn,
     mockDb: dbModule.db as unknown as {
+      select: MockFn;
       transaction: MockFn;
+      update: MockFn;
     },
     mockGetProductCategoryById: catalogModule.getProductCategoryById as MockFn,
     mockSession: sessionModule.getSession as MockFn,
+    mockStoreProductImageFromStage:
+      imageWorkflowModule.storeProductImageFromStage as MockFn,
   };
 };
 
@@ -208,7 +226,12 @@ describe("product server actions", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
 
-    const { mockGetProductCategoryById, mockSession } = await resolveMocks();
+    const {
+      mockDeleteProductImageVersion,
+      mockGetProductCategoryById,
+      mockSession,
+      mockStoreProductImageFromStage,
+    } = await resolveMocks();
 
     mockSession.mockResolvedValue({
       user: {
@@ -218,6 +241,14 @@ describe("product server actions", () => {
 
     mockGetProductCategoryById.mockResolvedValue({
       id: "category-1",
+    });
+
+    mockDeleteProductImageVersion.mockResolvedValue(undefined);
+    mockStoreProductImageFromStage.mockResolvedValue({
+      blurDataURL: "data:image/webp;base64,abc",
+      height: 900,
+      version: 1,
+      width: 1200,
     });
   });
 
@@ -304,6 +335,92 @@ describe("product server actions", () => {
 
     expect(harness.state.stock).toBe(2);
     expect(harness.writeOffLog).toHaveLength(1);
+  });
+
+  it("creates a product with processed image metadata when a staged image is provided", async () => {
+    const { createProductAction } = await import(
+      "@/app/(app)/produtos/actions"
+    );
+    const { mockDb, mockStoreProductImageFromStage } = await resolveMocks();
+    const insertLog: Record<string, unknown>[] = [];
+
+    mockDb.transaction.mockImplementation(
+      async (callback: (tx: unknown) => Promise<void>) => {
+        await callback({
+          insert: (table: unknown) => ({
+            values: (payload: Record<string, unknown>) => {
+              insertLog.push({ payload, table });
+              return Promise.resolve([]);
+            },
+          }),
+        });
+      }
+    );
+
+    await createProductAction({
+      categoryId: "category-1",
+      costPrice: "10",
+      name: "Produto com imagem",
+      price: "20",
+      purchasedOn: "2026-03-31",
+      stagedImage: {
+        contentType: "image/png",
+        objectKey: "staging/user-1/image-1",
+        size: 128,
+      },
+      stock: 1,
+    });
+
+    expect(mockStoreProductImageFromStage).toHaveBeenCalledTimes(1);
+    expect(insertLog[0]?.payload).toMatchObject({
+      imageBlurDataUrl: "data:image/webp;base64,abc",
+      imageHeight: 900,
+      imageVersion: 1,
+      imageWidth: 1200,
+      name: "Produto com imagem",
+    });
+  });
+
+  it("removes the current product image and clears image metadata", async () => {
+    const { removeProductImageAction } = await import(
+      "@/app/(app)/produtos/actions"
+    );
+    const { mockDb, mockDeleteProductImageVersion } = await resolveMocks();
+    const updatePayloads: Record<string, unknown>[] = [];
+
+    mockDb.select.mockReturnValue({
+      from: () => ({
+        where: async () => [
+          {
+            id: "product-1",
+            imageVersion: 3,
+          },
+        ],
+      }),
+    });
+
+    mockDb.update.mockReturnValue({
+      set: (payload: Record<string, unknown>) => ({
+        where: () => {
+          updatePayloads.push(payload);
+          return Promise.resolve([]);
+        },
+      }),
+    });
+
+    await removeProductImageAction("product-1");
+
+    expect(updatePayloads[0]).toMatchObject({
+      imageBlurDataUrl: null,
+      imageHeight: null,
+      imageUploadedAt: null,
+      imageVersion: null,
+      imageWidth: null,
+    });
+    expect(mockDeleteProductImageVersion).toHaveBeenCalledWith({
+      productId: "product-1",
+      version: 3,
+    });
   });
 
   it("requires typed confirmation before deleting a product with linked sales", async () => {

@@ -14,9 +14,36 @@ import type {
   ProductStockEntryItem,
   ProductStockWriteOffItem,
 } from "@/features/products/contracts";
+import { buildProductImageUrl } from "@/features/products/image-urls";
+
+const mapProductImage = (row: {
+  id: string;
+  imageBlurDataUrl: string | null;
+  imageHeight: number | null;
+  imageVersion: number | null;
+  imageWidth: number | null;
+}) => {
+  if (
+    row.imageVersion === null ||
+    row.imageWidth === null ||
+    row.imageHeight === null ||
+    row.imageBlurDataUrl === null
+  ) {
+    return null;
+  }
+
+  return {
+    blurDataURL: row.imageBlurDataUrl,
+    detailUrl: buildProductImageUrl(row.id, row.imageVersion, "detail"),
+    height: row.imageHeight,
+    tableUrl: buildProductImageUrl(row.id, row.imageVersion, "table"),
+    version: row.imageVersion,
+    width: row.imageWidth,
+  };
+};
 
 export async function getProductsQuery(): Promise<ProductListItem[]> {
-  return await db
+  const rows = await db
     .select({
       archivedAt: products.archivedAt,
       categoryId: products.categoryId,
@@ -24,6 +51,10 @@ export async function getProductsQuery(): Promise<ProductListItem[]> {
       costPrice: products.costPrice,
       description: products.description,
       id: products.id,
+      imageBlurDataUrl: products.imageBlurDataUrl,
+      imageHeight: products.imageHeight,
+      imageVersion: products.imageVersion,
+      imageWidth: products.imageWidth,
       name: products.name,
       price: products.price,
       purchasedOn: products.purchasedOn,
@@ -32,12 +63,26 @@ export async function getProductsQuery(): Promise<ProductListItem[]> {
     .from(products)
     .innerJoin(categories, eq(products.categoryId, categories.id))
     .orderBy(asc(products.name));
+
+  return rows.map((row) => ({
+    archivedAt: row.archivedAt,
+    categoryId: row.categoryId,
+    categoryName: row.categoryName,
+    costPrice: row.costPrice,
+    description: row.description,
+    id: row.id,
+    image: mapProductImage(row),
+    name: row.name,
+    price: row.price,
+    purchasedOn: row.purchasedOn,
+    stock: row.stock,
+  }));
 }
 
 export async function getProductByIdQuery(
   id: string
 ): Promise<ProductListItem | undefined> {
-  return await db
+  const row = await db
     .select({
       archivedAt: products.archivedAt,
       categoryId: products.categoryId,
@@ -45,6 +90,10 @@ export async function getProductByIdQuery(
       costPrice: products.costPrice,
       description: products.description,
       id: products.id,
+      imageBlurDataUrl: products.imageBlurDataUrl,
+      imageHeight: products.imageHeight,
+      imageVersion: products.imageVersion,
+      imageWidth: products.imageWidth,
       name: products.name,
       price: products.price,
       purchasedOn: products.purchasedOn,
@@ -54,6 +103,24 @@ export async function getProductByIdQuery(
     .innerJoin(categories, eq(products.categoryId, categories.id))
     .where(eq(products.id, id))
     .then((rows) => rows[0]);
+
+  if (!row) {
+    return undefined;
+  }
+
+  return {
+    archivedAt: row.archivedAt,
+    categoryId: row.categoryId,
+    categoryName: row.categoryName,
+    costPrice: row.costPrice,
+    description: row.description,
+    id: row.id,
+    image: mapProductImage(row),
+    name: row.name,
+    price: row.price,
+    purchasedOn: row.purchasedOn,
+    stock: row.stock,
+  };
 }
 
 export async function getProductStockEntriesByProductIdQuery(
