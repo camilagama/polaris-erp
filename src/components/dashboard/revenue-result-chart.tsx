@@ -20,23 +20,23 @@ import type { DashboardMonthlyComparisonPoint } from "@/features/dashboard/contr
 import { formatCompactCurrency, formatCurrency } from "@/lib/formatters";
 
 const chartConfig = {
-  result: {
+  costs: {
     color: "var(--chart-2)",
-    label: "Resultado",
+    label: "Custos",
   },
-  revenue: {
+  sold: {
     color: "var(--chart-1)",
-    label: "Faturamento",
+    label: "Total vendido",
   },
 } satisfies ChartConfig;
 
 const getSeriesLabel = (name: number | string | undefined) => {
-  if (name === "revenue") {
-    return chartConfig.revenue.label;
+  if (name === "sold") {
+    return chartConfig.sold.label;
   }
 
-  if (name === "result") {
-    return chartConfig.result.label;
+  if (name === "costs") {
+    return chartConfig.costs.label;
   }
 
   return String(name);
@@ -47,13 +47,12 @@ export function RevenueResultChart({
 }: {
   data: DashboardMonthlyComparisonPoint[];
 }) {
-  const hasData = data.some((point) => point.revenue > 0 || point.result !== 0);
+  const hasData = data.some((point) => point.sold > 0 || point.costs > 0);
 
   if (!hasData) {
     return (
       <div className="flex h-56 items-center justify-center rounded-2xl border border-border/70 border-dashed bg-muted/10 px-4 text-center text-muted-foreground text-sm">
-        Sem vendas concluidas nos ultimos 6 meses para comparar faturamento e
-        resultado.
+        Sem vendas concluidas nos ultimos 6 meses para comparar vendas e custos.
       </div>
     );
   }
@@ -93,8 +92,8 @@ export function RevenueResultChart({
           }
         />
         <ChartLegend content={<ChartLegendContent />} />
-        <Bar dataKey="revenue" fill="var(--color-revenue)" radius={6} />
-        <Bar dataKey="result" fill="var(--color-result)" radius={6} />
+        <Bar dataKey="sold" fill="var(--color-sold)" radius={6} />
+        <Bar dataKey="costs" fill="var(--color-costs)" radius={6} />
       </BarChart>
     </ChartContainer>
   );

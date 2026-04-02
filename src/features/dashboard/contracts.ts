@@ -1,10 +1,11 @@
 export type DashboardResultStatus = "breakEven" | "loss" | "profit";
 
 export interface DashboardMonthlyComparisonPoint {
+  costs: number;
   monthKey: string;
   monthLabel: string;
   result: number;
-  revenue: number;
+  sold: number;
 }
 
 export interface DashboardTopProduct {
@@ -19,23 +20,15 @@ export interface DashboardInventoryCategory {
   inventoryValue: number;
 }
 
-export interface DashboardRestockAlert {
-  id: string;
-  name: string;
-  severity: "critical" | "low";
-  stock: number;
-}
-
 export interface DashboardMetrics {
-  criticalStockCount: number;
   inventoryByCategory: DashboardInventoryCategory[];
   monthlyComparison: DashboardMonthlyComparisonPoint[];
-  monthlyRestockInvestment: number;
+  monthlyCosts: number;
   monthlyResult: number;
-  monthlyRevenue: number;
+  monthlySalesCount: number;
+  monthlySold: number;
   referenceMonthKey: string;
   referenceMonthLabel: string;
-  restockAlerts: DashboardRestockAlert[];
   resultStatus: DashboardResultStatus;
   topProducts: DashboardTopProduct[];
 }

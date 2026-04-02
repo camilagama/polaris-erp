@@ -7,7 +7,6 @@ describe("buildDashboardMetrics", () => {
   it("ignores cancelled sales in revenue, result and ranking", () => {
     const metrics = buildDashboardMetrics({
       inventory: [],
-      products: [],
       referenceDate,
       saleItems: [
         {
@@ -31,21 +30,26 @@ describe("buildDashboardMetrics", () => {
       ],
       sales: [
         {
+          feeAmount: 10,
+          freightAmount: 10,
           occurredOn: "2026-04-10",
           status: "completed",
           totalAmount: 120,
         },
         {
+          feeAmount: 20,
+          freightAmount: 20,
           occurredOn: "2026-04-11",
           status: "cancelled",
           totalAmount: 240,
         },
       ],
-      stockEntries: [],
     });
 
-    expect(metrics.monthlyRevenue).toBe(120);
-    expect(metrics.monthlyResult).toBe(60);
+    expect(metrics.monthlySold).toBe(120);
+    expect(metrics.monthlyCosts).toBe(80);
+    expect(metrics.monthlyResult).toBe(40);
+    expect(metrics.monthlySalesCount).toBe(1);
     expect(metrics.topProducts).toEqual([
       {
         id: "product-1",
@@ -56,10 +60,9 @@ describe("buildDashboardMetrics", () => {
     ]);
   });
 
-  it("uses snapshot cost to calculate the monthly result", () => {
+  it("uses snapshot cost plus redirected costs to calculate the monthly result", () => {
     const metrics = buildDashboardMetrics({
       inventory: [],
-      products: [],
       referenceDate,
       saleItems: [
         {
@@ -74,39 +77,57 @@ describe("buildDashboardMetrics", () => {
       ],
       sales: [
         {
+          feeAmount: 10,
+          freightAmount: 20,
           occurredOn: "2026-04-10",
           status: "completed",
           totalAmount: 210,
         },
       ],
-      stockEntries: [],
     });
 
-    expect(metrics.monthlyResult).toBe(150);
+    expect(metrics.monthlySold).toBe(210);
+    expect(metrics.monthlyCosts).toBe(90);
+    expect(metrics.monthlyResult).toBe(120);
   });
 
-  it("uses only stock entries from the reference month for restock investment", () => {
+  it("calculates monthly sales count with sold and costs", () => {
     const metrics = buildDashboardMetrics({
       inventory: [],
-      products: [],
       referenceDate,
-      saleItems: [],
-      sales: [],
-      stockEntries: [
+      saleItems: [
         {
-          quantity: 2,
-          stockedOn: "2026-04-02",
-          unitCost: 50,
+          lineTotal: 60,
+          occurredOn: "2026-04-02",
+          productId: "product-1",
+          productName: "Produto A",
+          quantity: 1,
+          status: "completed",
+          unitCostSnapshot: 20,
+        },
+      ],
+      sales: [
+        {
+          feeAmount: 5,
+          freightAmount: 15,
+          occurredOn: "2026-04-02",
+          status: "completed",
+          totalAmount: 100,
         },
         {
-          quantity: 1,
-          stockedOn: "2026-03-30",
-          unitCost: 999,
+          feeAmount: 10,
+          freightAmount: 10,
+          occurredOn: "2026-04-12",
+          status: "completed",
+          totalAmount: 140,
         },
       ],
     });
 
-    expect(metrics.monthlyRestockInvestment).toBe(100);
+    expect(metrics.monthlySalesCount).toBe(2);
+    expect(metrics.monthlySold).toBe(240);
+    expect(metrics.monthlyCosts).toBe(60);
+    expect(metrics.monthlyResult).toBe(180);
   });
 
   it("groups overflow categories into Outros", () => {
@@ -119,11 +140,9 @@ describe("buildDashboardMetrics", () => {
         { categoryName: "Fones", inventoryValue: 600 },
         { categoryName: "Acessorios", inventoryValue: 500 },
       ],
-      products: [],
       referenceDate,
       saleItems: [],
       sales: [],
-      stockEntries: [],
     });
 
     expect(metrics.inventoryByCategory).toEqual([
@@ -142,11 +161,9 @@ describe("buildDashboardMetrics", () => {
         { categoryName: "Celulares", inventoryValue: 1000 },
         { categoryName: "Fones", inventoryValue: 600 },
       ],
-      products: [],
       referenceDate,
       saleItems: [],
       sales: [],
-      stockEntries: [],
     });
 
     expect(metrics.inventoryByCategory).toEqual([
@@ -155,44 +172,19 @@ describe("buildDashboardMetrics", () => {
     ]);
   });
 
-  it("returns empty-friendly structures and prioritizes critical stock alerts", () => {
+  it("returns empty-friendly structures", () => {
     const metrics = buildDashboardMetrics({
       inventory: [],
-      products: [
-        { archivedAt: null, id: "product-1", name: "Produto Zerado", stock: 0 },
-        { archivedAt: null, id: "product-2", name: "Produto Baixo", stock: 2 },
-        {
-          archivedAt: new Date("2026-04-01T00:00:00.000Z"),
-          id: "product-3",
-          name: "Arquivado",
-          stock: 0,
-        },
-      ],
       referenceDate,
       saleItems: [],
       sales: [],
-      stockEntries: [],
     });
 
-    expect(metrics.monthlyRevenue).toBe(0);
+    expect(metrics.monthlySold).toBe(0);
+    expect(metrics.monthlyCosts).toBe(0);
     expect(metrics.monthlyResult).toBe(0);
-    expect(metrics.monthlyRestockInvestment).toBe(0);
-    expect(metrics.criticalStockCount).toBe(1);
+    expect(metrics.monthlySalesCount).toBe(0);
     expect(metrics.topProducts).toEqual([]);
     expect(metrics.inventoryByCategory).toEqual([]);
-    expect(metrics.restockAlerts).toEqual([
-      {
-        id: "product-1",
-        name: "Produto Zerado",
-        severity: "critical",
-        stock: 0,
-      },
-      {
-        id: "product-2",
-        name: "Produto Baixo",
-        severity: "low",
-        stock: 2,
-      },
-    ]);
   });
 });

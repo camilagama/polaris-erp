@@ -41,7 +41,7 @@ test("signs in with a prepared E2E account and lands on the dashboard", async ({
   await login(page);
 
   await expect(page).toHaveURL(rootRouteRegex);
-  await expect(page.getByText("Reposicao prioritaria")).toBeVisible();
+  await expect(page.getByText("Resumo rapido do mes")).toBeVisible();
 });
 
 test("renders the global not-found screen for unknown routes", async ({

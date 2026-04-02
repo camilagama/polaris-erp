@@ -26,45 +26,51 @@ export default async function DashboardPage() {
     label: string;
     variant: "destructive" | "outline" | "secondary";
   };
+  let resultLabel = "Resultado do mes";
+  let resultSummary = "Vendas e custos ficaram equilibrados.";
 
   if (metrics.resultStatus === "profit") {
     resultBadge = {
       label: "Lucro",
       variant: "secondary",
     };
+    resultLabel = "Lucro do mes";
+    resultSummary = "As vendas ficaram acima dos custos.";
   } else if (metrics.resultStatus === "loss") {
     resultBadge = {
       label: "Prejuizo",
       variant: "destructive",
     };
+    resultLabel = "Prejuizo do mes";
+    resultSummary = "Os custos ficaram acima das vendas.";
   } else {
     resultBadge = {
-      label: "Empate",
+      label: "Empatado",
       variant: "outline",
     };
   }
 
   const summaryCards = [
     {
-      label: "Faturamento do mes",
+      label: "Total vendido",
       note: metrics.referenceMonthLabel,
-      value: formatCurrency(metrics.monthlyRevenue),
+      value: formatCurrency(metrics.monthlySold),
     },
     {
       badge: resultBadge,
-      label: "Resultado das vendas",
-      note: `Fechamento de ${metrics.referenceMonthLabel}`,
+      label: resultLabel,
+      note: `Venda menos custos em ${metrics.referenceMonthLabel}`,
       value: formatCurrency(metrics.monthlyResult),
     },
     {
-      label: "Investimento em reposicao",
-      note: `Entradas de ${metrics.referenceMonthLabel}`,
-      value: formatCurrency(metrics.monthlyRestockInvestment),
+      label: "Custos do mes",
+      note: `Produtos, frete e taxas em ${metrics.referenceMonthLabel}`,
+      value: formatCurrency(metrics.monthlyCosts),
     },
     {
-      label: "Estoque critico",
-      note: "Produtos ativos sem estoque",
-      value: `${metrics.criticalStockCount}`,
+      label: "Vendas concluidas",
+      note: `Total de vendas em ${metrics.referenceMonthLabel}`,
+      value: `${metrics.monthlySalesCount}`,
     },
   ];
 
@@ -79,9 +85,9 @@ export default async function DashboardPage() {
             Indicadores essenciais da operacao
           </h1>
           <p className="max-w-3xl text-muted-foreground text-sm leading-6">
-            O dashboard concentra apenas o necessario para o cliente final:
-            faturamento e resultado do mes, investimento em reposicao, estoque
-            critico e a distribuicao atual dos produtos.
+            O painel mostra apenas o que mais ajuda na leitura rapida do
+            negocio: quanto foi cobrado nas vendas, quanto saiu em custos, qual
+            foi o resultado final e quais produtos mais giraram.
           </p>
         </div>
 
@@ -126,10 +132,10 @@ export default async function DashboardPage() {
       <div className="grid gap-4 xl:grid-cols-[1.35fr_0.95fr]">
         <Card>
           <CardHeader className="gap-2">
-            <CardTitle className="text-lg">Faturamento x resultado</CardTitle>
+            <CardTitle className="text-lg">Vendas e custos por mes</CardTitle>
             <CardDescription>
-              Comparativo dos ultimos 6 meses para acompanhar receita e
-              fechamento operacional.
+              Compare o total cobrado nas vendas com o total que saiu em custos
+              em cada mes.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -166,43 +172,36 @@ export default async function DashboardPage() {
 
       <Card>
         <CardHeader className="gap-2">
-          <CardTitle className="text-lg">Reposicao prioritaria</CardTitle>
+          <CardTitle className="text-lg">Resumo rapido do mes</CardTitle>
           <CardDescription>
-            Produtos ativos com estoque zerado ou ate 2 unidades restantes.
+            Leitura simples para o usuario final entender o momento atual do
+            negocio.
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          {metrics.restockAlerts.length === 0 ? (
-            <p className="text-muted-foreground text-sm">
-              Nenhum produto exige reposicao imediata neste momento.
+        <CardContent className="grid gap-3 md:grid-cols-3">
+          <div className="rounded-2xl border border-border/60 bg-muted/10 px-4 py-4">
+            <p className="text-muted-foreground text-xs uppercase tracking-[0.14em]">
+              Situacao do mes
             </p>
-          ) : (
-            metrics.restockAlerts.map((product) => (
-              <Link
-                className="flex items-center justify-between gap-3 rounded-2xl border border-border/60 bg-muted/10 px-3 py-3 transition-colors hover:bg-muted/20"
-                href={`/produtos/${product.id}`}
-                key={product.id}
-              >
-                <div className="min-w-0">
-                  <p className="truncate font-medium text-sm">{product.name}</p>
-                  <p className="font-mono text-[11px] text-muted-foreground">
-                    {product.stock === 0
-                      ? "Sem estoque"
-                      : `${product.stock} unidade(s) restantes`}
-                  </p>
-                </div>
-                <Badge
-                  variant={
-                    product.severity === "critical" ? "destructive" : "outline"
-                  }
-                >
-                  {product.severity === "critical"
-                    ? "Reposicao imediata"
-                    : "Estoque baixo"}
-                </Badge>
-              </Link>
-            ))
-          )}
+            <p className="mt-2 font-semibold text-base">{resultSummary}</p>
+          </div>
+          <div className="rounded-2xl border border-border/60 bg-muted/10 px-4 py-4">
+            <p className="text-muted-foreground text-xs uppercase tracking-[0.14em]">
+              Produto em destaque
+            </p>
+            <p className="mt-2 font-semibold text-base">
+              {metrics.topProducts[0]?.name ?? "Ainda sem destaque no mes."}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-border/60 bg-muted/10 px-4 py-4">
+            <p className="text-muted-foreground text-xs uppercase tracking-[0.14em]">
+              Categoria com maior valor
+            </p>
+            <p className="mt-2 font-semibold text-base">
+              {metrics.inventoryByCategory[0]?.categoryName ??
+                "Sem estoque distribuido."}
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>

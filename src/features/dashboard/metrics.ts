@@ -1,7 +1,6 @@
 import type {
   DashboardInventoryCategory,
   DashboardMetrics,
-  DashboardRestockAlert,
   DashboardResultStatus,
   DashboardTopProduct,
 } from "@/features/dashboard/contracts";
@@ -10,7 +9,6 @@ import { formatDateInputValue } from "@/lib/domain/date";
 
 const RECENT_MONTHS_COUNT = 6;
 const MAX_CATEGORY_SLICES = 5;
-const MAX_RESTOCK_ALERTS = 5;
 
 const MONTH_LABELS = [
   "jan",
@@ -28,6 +26,8 @@ const MONTH_LABELS = [
 ] as const;
 
 export interface DashboardSaleRecord {
+  feeAmount: number;
+  freightAmount: number;
   occurredOn: string;
   status: "cancelled" | "completed";
   totalAmount: number;
@@ -43,22 +43,9 @@ export interface DashboardSaleItemRecord {
   unitCostSnapshot: number;
 }
 
-export interface DashboardStockEntryRecord {
-  quantity: number;
-  stockedOn: string;
-  unitCost: number;
-}
-
 export interface DashboardInventoryRecord {
   categoryName: string;
   inventoryValue: number;
-}
-
-export interface DashboardProductRecord {
-  archivedAt: Date | null;
-  id: string;
-  name: string;
-  stock: number;
 }
 
 export interface DashboardDateRange {
@@ -72,11 +59,9 @@ export interface DashboardDateRange {
 
 interface BuildDashboardMetricsInput {
   inventory: DashboardInventoryRecord[];
-  products: DashboardProductRecord[];
   referenceDate?: Date;
   saleItems: DashboardSaleItemRecord[];
   sales: DashboardSaleRecord[];
-  stockEntries: DashboardStockEntryRecord[];
 }
 
 const buildMonthKey = (year: number, monthIndex: number) =>
@@ -205,25 +190,6 @@ const buildInventoryByCategory = (
   ];
 };
 
-const buildRestockAlerts = (
-  products: DashboardProductRecord[]
-): DashboardRestockAlert[] =>
-  products
-    .filter((product) => !product.archivedAt && product.stock <= 2)
-    .sort(
-      (left, right) =>
-        Number(left.stock > 0) - Number(right.stock > 0) ||
-        left.stock - right.stock ||
-        left.name.localeCompare(right.name, "pt-BR")
-    )
-    .slice(0, MAX_RESTOCK_ALERTS)
-    .map((product) => ({
-      id: product.id,
-      name: product.name,
-      severity: product.stock === 0 ? "critical" : "low",
-      stock: product.stock,
-    }));
-
 const buildTopProducts = ({
   currentMonthStart,
   nextMonthStart,
@@ -280,11 +246,9 @@ const buildTopProducts = ({
 
 export const buildDashboardMetrics = ({
   inventory,
-  products,
   referenceDate = new Date(),
   saleItems,
   sales,
-  stockEntries,
 }: BuildDashboardMetricsInput): DashboardMetrics => {
   const {
     comparisonStart,
@@ -295,8 +259,9 @@ export const buildDashboardMetrics = ({
     recentMonthKeys,
   } = getDashboardDateRange(referenceDate);
 
-  const revenueByMonth = new Map<string, number>();
+  const soldByMonth = new Map<string, number>();
   const costByMonth = new Map<string, number>();
+  const salesCountByMonth = new Map<string, number>();
 
   for (const sale of sales) {
     if (sale.status !== "completed") {
@@ -314,11 +279,18 @@ export const buildDashboardMetrics = ({
     }
 
     const monthKey = sale.occurredOn.slice(0, 7);
-    const currentRevenue = revenueByMonth.get(monthKey) ?? 0;
-    revenueByMonth.set(
+    const currentSold = soldByMonth.get(monthKey) ?? 0;
+    const currentSalesCount = salesCountByMonth.get(monthKey) ?? 0;
+    const soldAmount = sale.totalAmount;
+
+    soldByMonth.set(monthKey, roundCurrency(currentSold + soldAmount));
+    costByMonth.set(
       monthKey,
-      roundCurrency(currentRevenue + sale.totalAmount)
+      roundCurrency(
+        (costByMonth.get(monthKey) ?? 0) + sale.freightAmount + sale.feeAmount
+      )
     );
+    salesCountByMonth.set(monthKey, currentSalesCount + 1);
   }
 
   for (const item of saleItems) {
@@ -344,48 +316,33 @@ export const buildDashboardMetrics = ({
   }
 
   const monthlyComparison = recentMonthKeys.map((monthKey) => {
-    const revenue = revenueByMonth.get(monthKey) ?? 0;
-    const result = roundCurrency(revenue - (costByMonth.get(monthKey) ?? 0));
+    const sold = soldByMonth.get(monthKey) ?? 0;
+    const costs = costByMonth.get(monthKey) ?? 0;
+    const result = roundCurrency(sold - costs);
 
     return {
+      costs,
       monthKey,
       monthLabel: buildMonthLabel(monthKey),
-      revenue,
       result,
+      sold,
     };
   });
 
   const currentMonthMetrics =
     monthlyComparison.find((point) => point.monthKey === currentMonthKey) ??
     null;
-  const monthlyRestockInvestment = roundCurrency(
-    stockEntries.reduce((acc, entry) => {
-      if (
-        !isDateInRange({
-          date: entry.stockedOn,
-          endExclusive: nextMonthStart,
-          startInclusive: currentMonthStart,
-        })
-      ) {
-        return acc;
-      }
-
-      return acc + entry.quantity * entry.unitCost;
-    }, 0)
-  );
+  const monthlySalesCount = salesCountByMonth.get(currentMonthKey) ?? 0;
 
   return {
-    criticalStockCount: products.filter(
-      (product) => !product.archivedAt && product.stock === 0
-    ).length,
     inventoryByCategory: buildInventoryByCategory(inventory),
     monthlyComparison,
-    monthlyRestockInvestment,
+    monthlyCosts: currentMonthMetrics?.costs ?? 0,
     monthlyResult: currentMonthMetrics?.result ?? 0,
-    monthlyRevenue: currentMonthMetrics?.revenue ?? 0,
+    monthlySold: currentMonthMetrics?.sold ?? 0,
+    monthlySalesCount,
     referenceMonthKey: currentMonthKey,
     referenceMonthLabel: currentMonthLabel,
-    restockAlerts: buildRestockAlerts(products),
     resultStatus: getResultStatus(currentMonthMetrics?.result ?? 0),
     topProducts: buildTopProducts({
       currentMonthStart,
