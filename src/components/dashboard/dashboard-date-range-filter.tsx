@@ -8,29 +8,56 @@ import {
   type DateRangePresetOption,
   dashboardDatePresetOptions,
   getDashboardPresetDateRange,
+  getDashboardPresetDateRangeWithBounds,
 } from "@/features/dashboard/date-range";
+import { getSalesPresetDateRange } from "@/features/sales/date-range";
 
 interface DashboardDateRangeFilterProps {
+  bounds?: {
+    from: string;
+    to: string;
+  };
   from: string;
   preset: string | null;
   presets?: readonly DateRangePresetOption<string>[];
-  resolvePresetRange?: (presetValue: string) => { from: string; to: string };
   to: string;
+  variant?: "dashboard" | "sales";
 }
 
 export function DashboardDateRangeFilter({
+  bounds,
   from,
   preset,
   presets = dashboardDatePresetOptions,
-  resolvePresetRange = (presetValue) =>
-    getDashboardPresetDateRange(
-      presetValue as Parameters<typeof getDashboardPresetDateRange>[0]
-    ),
   to,
+  variant = "dashboard",
 }: DashboardDateRangeFilterProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const resolvePresetRange = (presetValue: string) => {
+    if (variant === "sales" && bounds) {
+      return getSalesPresetDateRange({
+        bounds,
+        preset: presetValue as Parameters<
+          typeof getSalesPresetDateRange
+        >[0]["preset"],
+      });
+    }
+
+    if (bounds) {
+      return getDashboardPresetDateRangeWithBounds({
+        bounds,
+        preset: presetValue as Parameters<
+          typeof getDashboardPresetDateRangeWithBounds
+        >[0]["preset"],
+      });
+    }
+
+    return getDashboardPresetDateRange(
+      presetValue as Parameters<typeof getDashboardPresetDateRange>[0]
+    );
+  };
 
   return (
     <div className="flex w-full sm:justify-end">

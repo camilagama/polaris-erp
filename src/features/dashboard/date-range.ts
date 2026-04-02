@@ -40,6 +40,10 @@ export const dashboardDatePresetOptions = [
     label: "Este ano",
     value: "current-year",
   },
+  {
+    label: "Todo periodo",
+    value: "all-time",
+  },
 ] as const satisfies readonly DateRangePresetOption[];
 
 export type DashboardDatePreset =
@@ -88,6 +92,16 @@ export const getDashboardPresetDateRange = <
   preset: TPreset,
   referenceDate = new Date()
 ): ResolvedDateRange<TPreset> => {
+  if (preset === "all-time") {
+    const today = formatDateInputValue(referenceDate);
+
+    return normalizeDateRange({
+      from: today,
+      preset,
+      to: today,
+    });
+  }
+
   if (preset === "current-month") {
     return normalizeDateRange({
       from: formatDateInputValue(startOfMonth(referenceDate)),
@@ -119,6 +133,29 @@ export const getDashboardPresetDateRange = <
     preset,
     to: formatDateInputValue(endOfYear(referenceDate)),
   });
+};
+
+export const getDashboardPresetDateRangeWithBounds = ({
+  bounds,
+  preset,
+  referenceDate = new Date(),
+}: {
+  bounds: {
+    from: string;
+    to: string;
+  };
+  preset: DashboardDatePreset;
+  referenceDate?: Date;
+}): DashboardDateRange => {
+  if (preset === "all-time") {
+    return normalizeDateRange({
+      from: bounds.from,
+      preset,
+      to: formatDateInputValue(referenceDate),
+    });
+  }
+
+  return getDashboardPresetDateRange(preset, referenceDate);
 };
 
 export const resolveDateRangeFromSearchParams = <TPreset extends string>({
@@ -171,13 +208,28 @@ export const resolveDateRangeFromSearchParams = <TPreset extends string>({
   return getPresetDateRange(defaultPreset, referenceDate);
 };
 
-export const resolveDashboardDateRange = (
-  searchParams: Record<string, string | string[] | undefined>,
-  referenceDate = new Date()
-): DashboardDateRange => {
+export const resolveDashboardDateRange = ({
+  bounds,
+  referenceDate = new Date(),
+  searchParams,
+}: {
+  bounds?: {
+    from: string;
+    to: string;
+  };
+  referenceDate?: Date;
+  searchParams: Record<string, string | string[] | undefined>;
+}): DashboardDateRange => {
   return resolveDateRangeFromSearchParams({
     defaultPreset: "current-month",
-    getPresetDateRange: getDashboardPresetDateRange,
+    getPresetDateRange: (preset, currentReferenceDate) =>
+      bounds
+        ? getDashboardPresetDateRangeWithBounds({
+            bounds,
+            preset,
+            referenceDate: currentReferenceDate,
+          })
+        : getDashboardPresetDateRange(preset, currentReferenceDate),
     presetValues: dashboardDatePresetValues,
     referenceDate,
     searchParams,

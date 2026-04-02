@@ -10,8 +10,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { resolveDashboardDateRange } from "@/features/dashboard/date-range";
-import { getDashboardMetrics } from "@/features/dashboard/server";
+import {
+  dashboardDatePresetOptions,
+  resolveDashboardDateRange,
+} from "@/features/dashboard/date-range";
+import {
+  getDashboardDateBounds,
+  getDashboardMetrics,
+} from "@/features/dashboard/server";
 import { formatCurrency } from "@/lib/formatters";
 
 export const metadata: Metadata = {
@@ -21,7 +27,11 @@ export const metadata: Metadata = {
 
 export default async function DashboardPage(props: PageProps<"/">) {
   const searchParams = await props.searchParams;
-  const selectedRange = resolveDashboardDateRange(searchParams);
+  const bounds = await getDashboardDateBounds();
+  const selectedRange = resolveDashboardDateRange({
+    bounds,
+    searchParams,
+  });
   const metrics = await getDashboardMetrics({
     from: selectedRange.from,
     to: selectedRange.to,
@@ -92,9 +102,12 @@ export default async function DashboardPage(props: PageProps<"/">) {
 
         <div className="flex flex-wrap gap-2 sm:min-w-72 sm:justify-end">
           <DashboardDateRangeFilter
+            bounds={bounds}
             from={selectedRange.from}
             preset={selectedRange.preset}
+            presets={dashboardDatePresetOptions}
             to={selectedRange.to}
+            variant="dashboard"
           />
         </div>
       </div>

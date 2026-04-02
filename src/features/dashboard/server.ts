@@ -2,12 +2,51 @@ import "server-only";
 
 import { and, asc, eq, gt, gte, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { categories, products, saleItems, sales } from "@/db/schema";
+import {
+  categories,
+  productStockEntries,
+  products,
+  saleItems,
+  sales,
+} from "@/db/schema";
 import type {
   DashboardMetrics,
   DashboardSelectedRange,
 } from "@/features/dashboard/contracts";
 import { buildDashboardMetrics } from "@/features/dashboard/metrics";
+import { formatDateInputValue } from "@/lib/domain/date";
+
+export const getDashboardDateBounds = async (): Promise<{
+  from: string;
+  to: string;
+}> => {
+  const [salesRows, stockEntriesRows] = await Promise.all([
+    db
+      .select({
+        minOccurredOn: sql<string | null>`min(${sales.occurredOn})`,
+      })
+      .from(sales),
+    db
+      .select({
+        minStockedOn: sql<string | null>`min(${productStockEntries.stockedOn})`,
+      })
+      .from(productStockEntries),
+  ]);
+  const salesRow = salesRows[0];
+  const stockEntriesRow = stockEntriesRows[0];
+  const today = formatDateInputValue();
+  const earliestMovementDate = [
+    salesRow?.minOccurredOn,
+    stockEntriesRow?.minStockedOn,
+  ]
+    .filter((value): value is string => Boolean(value))
+    .sort((left, right) => left.localeCompare(right))[0];
+
+  return {
+    from: earliestMovementDate ?? today,
+    to: today,
+  };
+};
 
 export const getDashboardMetrics = async (
   range: DashboardSelectedRange

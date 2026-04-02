@@ -37,8 +37,6 @@ import {
 } from "@/components/ui/table";
 import type { SaleListItem, SalesAnalytics } from "@/features/sales/contracts";
 import {
-  getSalesPresetDateRange,
-  type SalesDatePreset,
   type SalesDateRange,
   salesDatePresetOptions,
 } from "@/features/sales/date-range";
@@ -121,16 +119,12 @@ export function SalesPanel({
 
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-80">
             <DashboardDateRangeFilter
+              bounds={dateBounds}
               from={selectedRange.from}
               preset={selectedRange.preset}
               presets={salesDatePresetOptions}
-              resolvePresetRange={(presetValue) =>
-                getSalesPresetDateRange({
-                  bounds: dateBounds,
-                  preset: presetValue as SalesDatePreset,
-                })
-              }
               to={selectedRange.to}
+              variant="sales"
             />
           </div>
         </div>
