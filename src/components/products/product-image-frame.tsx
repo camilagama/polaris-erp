@@ -45,7 +45,7 @@ export function ProductImageFrame({
   return (
     <div
       className={cn(
-        "relative overflow-hidden border border-border/60 bg-muted/20",
+        "relative size-full overflow-hidden border border-border/60 bg-muted/20",
         roundedClassName,
         className
       )}

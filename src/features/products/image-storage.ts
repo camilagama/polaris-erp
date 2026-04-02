@@ -163,6 +163,34 @@ export const readStagedProductImage = async ({
   return await readBodyToBuffer(response.Body);
 };
 
+export const readPublicProductImageVariant = async ({
+  productId,
+  variant,
+  version,
+}: {
+  productId: string;
+  variant: ProductImageVariant;
+  version: number;
+}) => {
+  const env = getRequiredStorageEnv();
+  const key = buildProductImageObjectKey(productId, version, variant);
+
+  const response = await getStorageClient().send(
+    new GetObjectCommand({
+      Bucket: env.publicBucket,
+      Key: key,
+    })
+  );
+
+  return {
+    body: await readBodyToBuffer(response.Body),
+    cacheControl:
+      response.CacheControl ?? "public, max-age=31536000, immutable",
+    contentType: response.ContentType ?? "image/webp",
+    etag: response.ETag ?? null,
+  };
+};
+
 export const uploadProcessedProductImageVariant = async ({
   body,
   productId,

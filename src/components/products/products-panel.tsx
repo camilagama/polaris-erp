@@ -559,7 +559,6 @@ export function ProductsPanel({
             onImageRemovalChange={setEditImageMarkedForRemoval}
             onNameChange={setEditName}
             productName={editName || editingProduct?.name || "produto"}
-            selectedImageFile={editImageFile}
           />
           <DialogFooter>
             <Button

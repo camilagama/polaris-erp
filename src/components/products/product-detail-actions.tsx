@@ -292,7 +292,6 @@ export function ProductDetailActions({
             onImageRemovalChange={setEditImageMarkedForRemoval}
             onNameChange={setEditName}
             productName={editName || product.name}
-            selectedImageFile={editImageFile}
           />
           <DialogFooter>
             <Button

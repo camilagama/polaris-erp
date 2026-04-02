@@ -1,20 +1,10 @@
-import {
-  ArrowDown01Icon,
-  Image01Icon,
-  PackageIcon,
-} from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, PackageIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { notFound } from "next/navigation";
 import { ProductDetailActions } from "@/components/products/product-detail-actions";
 import { ProductImageFrame } from "@/components/products/product-image-frame";
 import { ProductUnitsSoldChart } from "@/components/products/product-sales-chart";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { listCategoriesWithUsage } from "@/features/catalog/server";
 import { buildProductInventorySummary } from "@/features/products/history";
 import { getProductSalesHistoryMetrics } from "@/features/products/server";
@@ -102,7 +92,7 @@ export default async function ProdutoDetalhePage(
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(18rem,0.9fr)_minmax(18rem,0.9fr)]">
         <Card>
           <CardHeader>
             <CardTitle>Resumo</CardTitle>
@@ -120,9 +110,9 @@ export default async function ProdutoDetalhePage(
               <span className="text-muted-foreground">Preco de venda</span>
               <span>{formatCurrency(product.price)}</span>
               <span className="text-muted-foreground">Observacoes</span>
-              <p className="text-xs/relaxed">
+              <div className="text-xs/relaxed">
                 {product.description?.trim() || "Sem observacoes."}
-              </p>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -147,9 +137,7 @@ export default async function ProdutoDetalhePage(
             </div>
           </CardContent>
         </Card>
-      </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.2fr_0.8fr]">
         <Card>
           <CardHeader>
             <CardTitle>Custos</CardTitle>
@@ -189,24 +177,6 @@ export default async function ProdutoDetalhePage(
             </div>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Midia</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-md border border-border/50 px-3 py-2">
-              <p className="flex items-center gap-2 text-muted-foreground text-xs">
-                <HugeiconsIcon icon={Image01Icon} strokeWidth={2} />
-                Visualizacao da imagem
-              </p>
-              <p className="mt-1 text-sm">
-                Ajustes e troca de imagem ficam disponiveis no formulario de
-                edicao do produto.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       <Card>
@@ -242,18 +212,16 @@ export default async function ProdutoDetalhePage(
           <CardTitle>Historico</CardTitle>
         </CardHeader>
         <CardContent>
-          <Collapsible className="rounded-md border border-border/50">
-            <CollapsibleTrigger asChild>
-              <Button
-                className="w-full justify-between rounded-md px-3"
-                type="button"
-                variant="ghost"
-              >
-                Movimentacoes de estoque
-                <HugeiconsIcon data-icon="inline-end" icon={ArrowDown01Icon} />
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="border-border/50 border-t px-3 py-3">
+          <details className="group rounded-md border border-border/50">
+            <summary className="flex cursor-pointer list-none items-center justify-between rounded-md px-3 py-2 font-medium text-xs/relaxed transition-colors hover:bg-muted hover:text-foreground">
+              Movimentacoes de estoque
+              <HugeiconsIcon
+                className="transition-transform group-open:rotate-180"
+                data-icon="inline-end"
+                icon={ArrowDown01Icon}
+              />
+            </summary>
+            <div className="border-border/50 border-t px-3 py-3">
               <div className="flex flex-col gap-3">
                 {inventorySummary.historyItems.length === 0 ? (
                   <p className="text-muted-foreground text-xs">
@@ -308,8 +276,8 @@ export default async function ProdutoDetalhePage(
                   ))
                 )}
               </div>
-            </CollapsibleContent>
-          </Collapsible>
+            </div>
+          </details>
         </CardContent>
       </Card>
     </div>
