@@ -54,6 +54,7 @@ export const getDashboardMetrics = async (
   const [salesRows, saleItemRows, inventoryRows] = await Promise.all([
     db
       .select({
+        feeAmount: sales.feeAmount,
         freightAmount: sales.freightAmount,
         occurredOn: sales.occurredOn,
         status: sales.status,
@@ -115,6 +116,7 @@ export const getDashboardMetrics = async (
       unitCostSnapshot: Number(row.unitCostSnapshot),
     })),
     sales: salesRows.map((row) => ({
+      feeAmount: Number(row.feeAmount),
       freightAmount: Number(row.freightAmount),
       occurredOn: row.occurredOn,
       status: row.status as "cancelled" | "completed",

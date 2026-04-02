@@ -4,9 +4,14 @@ import { eq, sql } from "drizzle-orm";
 import { refresh } from "next/cache";
 import { db } from "@/db";
 import { products, saleItems, sales } from "@/db/schema";
-import { buildSaleSnapshot } from "@/features/sales/calculations";
+import { findCardInstallmentRule } from "@/features/catalog/payment-rules";
+import { getCatalogSettings } from "@/features/catalog/server";
+import {
+  buildSaleSnapshot,
+  calculateSaleFinancials,
+} from "@/features/sales/calculations";
 import { createSaleSchema } from "@/features/sales/schema";
-import { roundCurrency, toCurrencyString } from "@/lib/domain/currency";
+import { toCurrencyString } from "@/lib/domain/currency";
 import { formatCurrency } from "@/lib/formatters";
 import { requireActionSession } from "@/lib/server-action-auth";
 
@@ -70,10 +75,13 @@ export async function createSaleAction(data: {
   }>;
   notes?: string;
   occurredOn: string;
+  paymentFeePayer: "customer" | "not_applicable" | "seller";
+  paymentInstallments: number;
   paymentMethod: "card" | "pix";
 }): Promise<string> {
   await requireActionSession();
   const parsed = createSaleSchema.parse(data);
+  const catalogSettings = await getCatalogSettings();
 
   const createdSaleId = await db.transaction(async (tx) => {
     const productIds = parsed.items
@@ -123,37 +131,57 @@ export async function createSaleAction(data: {
         };
       })
     );
+    const installmentFeePercent =
+      parsed.paymentMethod === "card"
+        ? findCardInstallmentRule(
+            catalogSettings.cardInstallmentRules,
+            parsed.paymentInstallments
+          )?.feePercent
+        : 0;
 
-    const partialAmount = roundCurrency(
-      snapshot.totalAmount +
-        parsed.freightAmount +
-        parsed.additionalAmount -
-        parsed.discountAmount
-    );
+    if (
+      parsed.paymentMethod === "card" &&
+      installmentFeePercent === undefined
+    ) {
+      throw new Error(
+        "O parcelamento selecionado nao esta mais disponivel. Revise a venda."
+      );
+    }
 
-    if (partialAmount < 0) {
+    const financials = calculateSaleFinancials({
+      additionalAmount: parsed.additionalAmount,
+      discountAmount: parsed.discountAmount,
+      freightAmount: parsed.freightAmount,
+      installmentFeePercent: installmentFeePercent ?? 0,
+      itemSubtotal: snapshot.totalAmount,
+      paymentFeePayer: parsed.paymentFeePayer,
+      paymentInstallments: parsed.paymentInstallments,
+      paymentMethod: parsed.paymentMethod,
+    });
+
+    if (financials.totalAmount < 0) {
       throw new Error(
         "Desconto nao pode ser maior que o subtotal somado com frete e adicional."
       );
     }
 
-    const finalTotalAmount = partialAmount;
-
     const [createdSale] = await tx
       .insert(sales)
       .values({
         additionalAmount: toCurrencyString(parsed.additionalAmount),
+        chargedAmount: toCurrencyString(financials.chargedAmount),
         customerName: parsed.customerName || undefined,
         discountAmount: toCurrencyString(parsed.discountAmount),
-        feeAmount: "0.00",
+        feeAmount: toCurrencyString(financials.feeAmount),
         freightAmount: toCurrencyString(parsed.freightAmount),
         notes: parsed.notes || undefined,
         occurredOn: parsed.occurredOn,
-        paymentFeePercent: "0.00",
-        paymentInstallments: parsed.paymentMethod === "card" ? 1 : 0,
+        paymentFeePayer: parsed.paymentFeePayer,
+        paymentFeePercent: toCurrencyString(financials.paymentFeePercent),
+        paymentInstallments: parsed.paymentInstallments,
         paymentMethod: parsed.paymentMethod,
         status: "completed",
-        totalAmount: toCurrencyString(finalTotalAmount),
+        totalAmount: toCurrencyString(financials.totalAmount),
       })
       .returning({ id: sales.id });
 

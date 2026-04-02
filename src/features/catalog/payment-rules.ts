@@ -1,26 +1,19 @@
 import { normalizeMoney } from "@/lib/domain/currency";
 
-export type PaymentRuleMethod = "card" | "pix";
-
-export interface PaymentFeeRule {
-  code: string;
+export interface CardInstallmentRule {
   feePercent: number;
   installments: number;
-  paymentMethod: PaymentRuleMethod;
 }
 
 export const MAX_CARD_INSTALLMENTS = 12;
-export const PIX_RULE_CODE = "pix";
-export const ONE_TIME_CARD_RULE_CODE = "1x";
-
-const normalizeFeePercent = (value: number) => normalizeMoney(value);
+export const MIN_CARD_INSTALLMENTS = 1;
 
 const normalizeInstallments = (value: number) => {
   if (!Number.isInteger(value)) {
     return 0;
   }
 
-  if (value < 0) {
+  if (value < MIN_CARD_INSTALLMENTS) {
     return 0;
   }
 
@@ -31,148 +24,115 @@ const normalizeInstallments = (value: number) => {
   return value;
 };
 
-const buildPixRule = (feePercent = 0): PaymentFeeRule => ({
-  code: PIX_RULE_CODE,
-  feePercent: normalizeFeePercent(feePercent),
-  installments: 0,
-  paymentMethod: "pix",
-});
-
-const buildCardRule = (
-  installments: number,
-  feePercent = 0
-): PaymentFeeRule => ({
-  code: `${installments}x`,
-  feePercent: normalizeFeePercent(feePercent),
-  installments,
-  paymentMethod: "card",
-});
-
-export const buildDefaultPaymentFeeRules = (
-  oneTimeCardFeePercent = 0
-): PaymentFeeRule[] => [
-  buildPixRule(0),
-  buildCardRule(1, oneTimeCardFeePercent),
-];
-
-const isValidPixRule = (rule: PaymentFeeRule) =>
-  rule.paymentMethod === "pix" &&
-  rule.code === PIX_RULE_CODE &&
-  rule.installments === 0;
-
-const isValidCardRule = (rule: PaymentFeeRule) =>
-  rule.paymentMethod === "card" &&
-  rule.installments >= 1 &&
-  rule.installments <= MAX_CARD_INSTALLMENTS &&
-  rule.code === `${rule.installments}x`;
-
-const isValidRule = (rule: PaymentFeeRule) =>
-  isValidPixRule(rule) || isValidCardRule(rule);
-
-const toCandidateRule = (rawRule: unknown): PaymentFeeRule | null => {
+const toCardInstallmentRule = (
+  rawRule: unknown
+): CardInstallmentRule | undefined => {
   if (!(rawRule && typeof rawRule === "object")) {
-    return null;
+    return undefined;
   }
 
-  const maybeRule = rawRule as Partial<PaymentFeeRule>;
+  const maybeRule = rawRule as Partial<{
+    feePercent: number;
+    installments: number;
+    paymentMethod: "card" | "pix";
+  }>;
+
+  if (maybeRule.paymentMethod === "pix") {
+    return undefined;
+  }
+
   const installments = normalizeInstallments(Number(maybeRule.installments));
 
-  const paymentMethod: PaymentRuleMethod =
-    maybeRule.paymentMethod === "card" ? "card" : "pix";
-
-  if (paymentMethod === "pix") {
-    return buildPixRule(Number(maybeRule.feePercent));
+  if (installments === 0) {
+    return undefined;
   }
 
-  if (installments < 1) {
-    return null;
-  }
-
-  return buildCardRule(installments, Number(maybeRule.feePercent));
+  return {
+    feePercent: normalizeMoney(Number(maybeRule.feePercent)),
+    installments,
+  };
 };
 
-export const sortPaymentFeeRules = (
-  rules: PaymentFeeRule[]
-): PaymentFeeRule[] =>
-  [...rules].sort((left, right) => {
-    if (left.paymentMethod === "pix" && right.paymentMethod !== "pix") {
-      return -1;
-    }
+export const buildDefaultCardInstallmentRules = (
+  maxInstallments = MIN_CARD_INSTALLMENTS
+): CardInstallmentRule[] => {
+  const normalizedMaxInstallments = normalizeInstallments(maxInstallments);
+  const effectiveMaxInstallments =
+    normalizedMaxInstallments === 0
+      ? MIN_CARD_INSTALLMENTS
+      : normalizedMaxInstallments;
 
-    if (left.paymentMethod !== "pix" && right.paymentMethod === "pix") {
-      return 1;
-    }
+  const rules: CardInstallmentRule[] = [];
 
-    return left.installments - right.installments;
-  });
-
-export const normalizePaymentFeeRules = (
-  rawRules: unknown,
-  fallbackCardFeePercent = 0
-): PaymentFeeRule[] => {
-  const defaultRules = buildDefaultPaymentFeeRules(fallbackCardFeePercent);
-
-  if (!Array.isArray(rawRules)) {
-    return defaultRules;
+  for (
+    let installments = MIN_CARD_INSTALLMENTS;
+    installments <= effectiveMaxInstallments;
+    installments += 1
+  ) {
+    rules.push({
+      feePercent: 0,
+      installments,
+    });
   }
 
-  const byCode = new Map<string, PaymentFeeRule>();
+  return rules;
+};
+
+export const normalizeCardInstallmentRules = (
+  rawRules: unknown
+): CardInstallmentRule[] => {
+  if (!Array.isArray(rawRules)) {
+    return buildDefaultCardInstallmentRules();
+  }
+
+  const rulesByInstallments = new Map<number, CardInstallmentRule>();
 
   for (const rawRule of rawRules) {
-    const candidate = toCandidateRule(rawRule);
+    const candidate = toCardInstallmentRule(rawRule);
 
-    if (!(candidate && isValidRule(candidate))) {
+    if (!candidate) {
       continue;
     }
 
-    byCode.set(candidate.code, candidate);
+    rulesByInstallments.set(candidate.installments, candidate);
   }
 
-  if (!byCode.has(PIX_RULE_CODE)) {
-    byCode.set(PIX_RULE_CODE, buildPixRule(0));
-  }
+  const maxInstallments = Math.max(
+    ...rulesByInstallments.keys(),
+    MIN_CARD_INSTALLMENTS
+  );
+  const normalizedRules = buildDefaultCardInstallmentRules(maxInstallments);
 
-  if (!byCode.has(ONE_TIME_CARD_RULE_CODE)) {
-    byCode.set(
-      ONE_TIME_CARD_RULE_CODE,
-      buildCardRule(1, fallbackCardFeePercent)
-    );
-  }
-
-  return sortPaymentFeeRules([...byCode.values()]);
+  return normalizedRules.map((rule) => ({
+    feePercent: rulesByInstallments.get(rule.installments)?.feePercent ?? 0,
+    installments: rule.installments,
+  }));
 };
 
-export const getPaymentRuleLabel = (rule: PaymentFeeRule) => {
-  if (rule.paymentMethod === "pix") {
-    return "Pix";
-  }
-
-  return `${rule.installments}x`;
-};
-
-export const getAvailableCardInstallments = (rules: PaymentFeeRule[]) => {
-  const configuredCardInstallments = new Set(
-    rules
-      .filter((rule) => rule.paymentMethod === "card")
-      .map((rule) => rule.installments)
+export const syncCardInstallmentRulesMax = (
+  currentRules: CardInstallmentRule[],
+  maxInstallments: number
+): CardInstallmentRule[] => {
+  const currentRulesByInstallments = new Map(
+    normalizeCardInstallmentRules(currentRules).map((rule) => [
+      rule.installments,
+      rule.feePercent,
+    ])
   );
 
-  const available: number[] = [];
-
-  for (
-    let installments = 2;
-    installments <= MAX_CARD_INSTALLMENTS;
-    installments += 1
-  ) {
-    if (!configuredCardInstallments.has(installments)) {
-      available.push(installments);
-    }
-  }
-
-  return available;
+  return buildDefaultCardInstallmentRules(maxInstallments).map((rule) => ({
+    feePercent: currentRulesByInstallments.get(rule.installments) ?? 0,
+    installments: rule.installments,
+  }));
 };
 
-export const findPaymentRuleByCode = (
-  rules: PaymentFeeRule[],
-  code: string
-): PaymentFeeRule | undefined => rules.find((rule) => rule.code === code);
+export const findCardInstallmentRule = (
+  rules: CardInstallmentRule[],
+  installments: number
+): CardInstallmentRule | undefined =>
+  normalizeCardInstallmentRules(rules).find(
+    (rule) => rule.installments === installments
+  );
+
+export const getCardInstallmentRuleLabel = (installments: number) =>
+  `${installments}x`;

@@ -7,7 +7,7 @@ import {
 
 export const metadata: Metadata = {
   title: "Configuracoes | DG Imports",
-  description: "Categorias e markup operacional do DG Imports.",
+  description: "Categorias, markup e regras operacionais de pagamento.",
 };
 
 export default async function ConfiguracoesPage() {
@@ -21,8 +21,8 @@ export default async function ConfiguracoesPage() {
       <div className="space-y-2">
         <h1 className="font-semibold text-2xl tracking-tight">Configuracoes</h1>
         <p className="max-w-3xl text-muted-foreground text-sm">
-          Ajuste categorias e parametros de precificacao sem depender do fluxo
-          de cadastro de produtos.
+          Ajuste categorias, precificacao e regras de parcelamento sem depender
+          do fluxo de cadastro de produtos.
         </p>
       </div>
 

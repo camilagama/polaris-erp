@@ -1,6 +1,6 @@
 # Documento de Regras de Negocio
 ## Plataforma Web de Gestao de Produtos para Revenda
-### Versao: V1.3 (estado atual em 01/04/2026)
+### Versao: V1.4 (estado atual em 02/04/2026)
 
 ## 1. Objetivo atual do sistema
 
@@ -38,7 +38,7 @@ A aplicacao permanece gerencial e nao fiscal/contabil.
 - historico de movimentacoes por produto
 - calculo de custo medio movel
 - sugestao de preco minimo e ideal por markup
-- configuracao de regras de taxa por Pix, 1x e parcelas adicionais
+- configuracao de parcelamento de cartao com taxa por parcela
 
 ## 3. Fora do escopo atual
 
@@ -109,7 +109,9 @@ Evento de saida comercial com:
 
 - data da venda
 - cliente opcional
-- `paymentOptionCode`
+- `paymentMethod` (`pix` ou `card`)
+- `paymentInstallments`
+- `paymentFeePayer`
 - 1 ou mais itens
 - um produto por item, sem repeticao dentro da mesma venda
 - quantidade inteira por item
@@ -118,11 +120,24 @@ Evento de saida comercial com:
 - frete opcional
 - adicional opcional
 - desconto opcional
-- taxa calculada a partir da regra de pagamento selecionada
+- `totalAmount` como valor operacional da venda
+- `chargedAmount` como valor efetivamente cobrado do cliente
+- taxa calculada a partir da parcela selecionada quando o pagamento for cartao
 
-Formula oficial do total:
+Formula oficial:
 
-`subtotal dos itens + frete + adicional - desconto + taxa`
+`valor base da venda = subtotal dos itens + frete + adicional - desconto`
+
+Regras financeiras:
+
+- `pix`: `totalAmount = chargedAmount = valor base`
+- `card` com taxa do vendedor:
+  - `totalAmount = chargedAmount = valor base`
+  - `feeAmount` registra o custo da taxa
+- `card` com taxa do cliente:
+  - `totalAmount = valor base`
+  - `chargedAmount = valor base + acrescimo do cartao`
+  - `feeAmount = 0`
 
 Regras do modulo:
 
@@ -133,7 +148,8 @@ Regras do modulo:
 - cancelamento muda status para `cancelled`
 - cancelamento registra `cancelledAt`
 - venda cancelada estorna estoque
-- total final nao pode ser negativo
+- `totalAmount` nao pode ser negativo
+- `chargedAmount` nao pode ser menor que `totalAmount`
 
 ## 6. Regras oficiais de estoque
 
@@ -173,7 +189,8 @@ A regra oficial atual usa markup puro sobre custo medio para orientar o cadastro
 Observacoes:
 
 - taxas de pagamento nao entram na sugestao de preco de catalogo
-- frete, adicional, desconto e taxa entram apenas no total final da venda
+- frete, adicional e desconto entram no valor base da venda
+- o acrescimo do cartao so altera `chargedAmount` quando a taxa e repassada ao cliente
 - alterar o preco atual do produto impacta apenas vendas futuras
 - toda alteracao de preco registra valor anterior, valor novo, usuario e data
 
@@ -181,7 +198,9 @@ Observacoes:
 
 - `sale_items` nao aceita o mesmo `product_id` repetido para o mesmo `sale_id`
 - `sales.status` e `sales.cancelledAt` precisam permanecer consistentes
-- `paymentOptionCode`, parcelas, taxa e total final devem refletir a regra ativa escolhida na venda
+- `paymentMethod`, `paymentInstallments` e `paymentFeePayer` precisam refletir a escolha capturada na venda
+- `feeAmount` so representa custo quando a taxa for absorvida pelo vendedor
+- `chargedAmount` pode superar `totalAmount`, mas nunca compoe receita operacional ou lucro
 
 ## 10. Regra de exclusao fisica
 

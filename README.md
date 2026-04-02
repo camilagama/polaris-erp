@@ -87,9 +87,11 @@ Ainda nao implementado:
 - Vendas no MVP nascem como `completed`, com baixa imediata de estoque.
 - A venda valida se o preco visivel ainda corresponde ao preco atual do produto antes de concluir.
 - O mesmo produto nao pode se repetir dentro da mesma venda.
-- O total final da venda segue a formula oficial:
-  - `subtotal dos itens + frete + adicional - desconto + taxa`
-- A taxa aplicada depende da regra selecionada em `paymentOptionCode`.
+- O valor operacional da venda segue a formula oficial:
+  - `subtotal dos itens + frete + adicional - desconto`
+- Em cartao, o operador escolhe parcelas e quem paga a taxa.
+- Quando o vendedor absorve a taxa, ela vira custo em `feeAmount`.
+- Quando o cliente absorve a taxa, o acrescimo aparece em `chargedAmount`, sem inflar receita ou lucro.
 - Cancelamento de venda estorna estoque e exige consistencia entre `status` e `cancelledAt`.
 - Excluir um produto continua sendo uma operacao fisica destrutiva.
 - Se houver vendas vinculadas ao produto excluido, essas vendas tambem sao removidas por decisao operacional atual.

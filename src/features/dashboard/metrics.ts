@@ -22,6 +22,7 @@ const MAX_CATEGORY_SLICES = 5;
 const MAX_DAY_BUCKETS = 31;
 
 export interface DashboardSaleRecord {
+  feeAmount: number;
   freightAmount: number;
   occurredOn: string;
   status: "cancelled" | "completed";
@@ -287,7 +288,7 @@ export const buildDashboardMetrics = ({
       granularity,
     });
     const soldAmount = sale.totalAmount;
-    const redirectedCosts = roundCurrency(sale.freightAmount);
+    const redirectedCosts = roundCurrency(sale.freightAmount + sale.feeAmount);
 
     soldByBucket.set(
       bucketKey,

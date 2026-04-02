@@ -1,6 +1,13 @@
 import { z } from "zod";
 import { isoDateSchema } from "@/lib/domain/date";
 
+const salePaymentMethodValues = ["card", "pix"] as const;
+const salePaymentFeePayerValues = [
+  "customer",
+  "not_applicable",
+  "seller",
+] as const;
+
 const saleItemSchema = z.object({
   expectedUnitPrice: z.coerce.number().min(0, "Preco esperado invalido."),
   productId: z.string().min(1, "Produto invalido."),
@@ -30,7 +37,14 @@ export const createSaleSchema = z
       .min(1, "Adicione pelo menos um item na venda."),
     notes: z.string().trim().max(240).optional(),
     occurredOn: isoDateSchema,
-    paymentMethod: z.enum(["card", "pix"], {
+    paymentFeePayer: z.enum(salePaymentFeePayerValues, {
+      error: "Responsavel pela taxa invalido.",
+    }),
+    paymentInstallments: z.coerce
+      .number()
+      .int("Parcelas devem ser um numero inteiro.")
+      .min(0, "Parcelas nao pode ser negativo."),
+    paymentMethod: z.enum(salePaymentMethodValues, {
       error: "Metodo de pagamento invalido.",
     }),
   })
@@ -47,5 +61,41 @@ export const createSaleSchema = z
       }
 
       seenProductIds.add(item.productId);
+    }
+
+    if (value.paymentMethod === "pix") {
+      if (value.paymentInstallments !== 0) {
+        context.addIssue({
+          code: "custom",
+          message: "Pix nao aceita parcelamento.",
+          path: ["paymentInstallments"],
+        });
+      }
+
+      if (value.paymentFeePayer !== "not_applicable") {
+        context.addIssue({
+          code: "custom",
+          message: "Pix nao possui responsavel por taxa.",
+          path: ["paymentFeePayer"],
+        });
+      }
+
+      return;
+    }
+
+    if (value.paymentInstallments < 1 || value.paymentInstallments > 12) {
+      context.addIssue({
+        code: "custom",
+        message: "Selecione um parcelamento valido para o cartao.",
+        path: ["paymentInstallments"],
+      });
+    }
+
+    if (value.paymentFeePayer === "not_applicable") {
+      context.addIssue({
+        code: "custom",
+        message: "Selecione quem paga a taxa do cartao.",
+        path: ["paymentFeePayer"],
+      });
     }
   });

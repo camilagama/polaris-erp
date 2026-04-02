@@ -24,6 +24,12 @@ vi.mock("@/db", () => ({
   },
 }));
 
+const mockGetCatalogSettings = vi.fn();
+
+vi.mock("@/features/catalog/server", () => ({
+  getCatalogSettings: mockGetCatalogSettings,
+}));
+
 type MockFn = ReturnType<typeof vi.fn>;
 const STALE_PRICE_ERROR_REGEX =
   /Preco do produto Produto 1 foi atualizado para R\$[\s\u00A0]?100,00\. Revise a venda e tente novamente\./;
@@ -58,6 +64,7 @@ const resolveMocks = async () => {
   const dbModule = await import("@/db");
 
   return {
+    mockCatalogSettings: mockGetCatalogSettings as MockFn,
     mockDb: dbModule.db as unknown as {
       transaction: MockFn;
     },
@@ -268,12 +275,21 @@ describe("sales server actions", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
 
-    const { mockSession } = await resolveMocks();
+    const { mockCatalogSettings, mockSession } = await resolveMocks();
 
     mockSession.mockResolvedValue({
       user: {
         id: "user-1",
       },
+    });
+    mockCatalogSettings.mockResolvedValue({
+      cardInstallmentRules: [
+        { feePercent: 0, installments: 1 },
+        { feePercent: 1.5, installments: 2 },
+        { feePercent: 3, installments: 3 },
+      ],
+      idealMarkupPercent: 0,
+      minimumMarkupPercent: 0,
     });
   });
 
@@ -293,6 +309,8 @@ describe("sales server actions", () => {
           },
         ],
         occurredOn: "2026-03-31",
+        paymentFeePayer: "not_applicable",
+        paymentInstallments: 0,
         paymentMethod: "pix",
       })
     ).rejects.toThrowError("Sessao invalida. Faca login novamente.");
@@ -318,6 +336,8 @@ describe("sales server actions", () => {
           },
         ],
         occurredOn: "2026-03-31",
+        paymentFeePayer: "not_applicable",
+        paymentInstallments: 0,
         paymentMethod: "pix",
       })
     ).rejects.toThrowError("Nao repita o mesmo produto na venda.");
@@ -353,6 +373,8 @@ describe("sales server actions", () => {
           },
         ],
         occurredOn: "2026-03-31",
+        paymentFeePayer: "seller",
+        paymentInstallments: 1,
         paymentMethod: "card",
       }),
       createSaleAction({
@@ -364,6 +386,8 @@ describe("sales server actions", () => {
           },
         ],
         occurredOn: "2026-03-31",
+        paymentFeePayer: "not_applicable",
+        paymentInstallments: 0,
         paymentMethod: "pix",
       }),
     ]);
@@ -388,9 +412,11 @@ describe("sales server actions", () => {
 
     expect(createdSalePayload).toMatchObject({
       additionalAmount: "10.00",
+      chargedAmount: "275.00",
       discountAmount: "20.00",
       feeAmount: "0.00",
       freightAmount: "15.00",
+      paymentFeePayer: "seller",
       paymentFeePercent: "0.00",
       paymentInstallments: 1,
       paymentMethod: "card",
@@ -431,6 +457,8 @@ describe("sales server actions", () => {
         },
       ],
       occurredOn: "2026-03-31",
+      paymentFeePayer: "not_applicable",
+      paymentInstallments: 0,
       paymentMethod: "pix",
     });
 
@@ -438,8 +466,10 @@ describe("sales server actions", () => {
 
     expect(createdSalePayload).toMatchObject({
       additionalAmount: "10.00",
+      chargedAmount: "100.00",
       discountAmount: "0.00",
       feeAmount: "0.00",
+      paymentFeePayer: "not_applicable",
       paymentFeePercent: "0.00",
       paymentInstallments: 0,
       paymentMethod: "pix",
@@ -447,7 +477,7 @@ describe("sales server actions", () => {
     });
   });
 
-  it("stores card sales without fee and keeps the payment method for reporting", async () => {
+  it("stores card sales with seller fee as operational cost", async () => {
     const { createSaleAction } = await import("@/app/(app)/vendas/actions");
     const { mockDb } = await resolveMocks();
 
@@ -476,15 +506,66 @@ describe("sales server actions", () => {
         },
       ],
       occurredOn: "2026-03-31",
+      paymentFeePayer: "seller",
+      paymentInstallments: 3,
       paymentMethod: "card",
     });
 
     const [createdSalePayload] = harness.salesLog;
 
     expect(createdSalePayload).toMatchObject({
+      chargedAmount: "200.00",
+      feeAmount: "6.00",
+      paymentFeePayer: "seller",
+      paymentFeePercent: "3.00",
+      paymentInstallments: 3,
+      paymentMethod: "card",
+      totalAmount: "200.00",
+    });
+  });
+
+  it("stores card sales with customer fee only in charged amount", async () => {
+    const { createSaleAction } = await import("@/app/(app)/vendas/actions");
+    const { mockDb } = await resolveMocks();
+
+    const harness = createSalesHarness([
+      {
+        archivedAt: null,
+        costPrice: 30,
+        id: "product-1",
+        name: "Produto 1",
+        price: 100,
+        stock: 10,
+      },
+    ]);
+
+    mockDb.transaction.mockImplementation(harness.transaction as never);
+
+    await createSaleAction({
+      additionalAmount: 0,
+      discountAmount: 0,
+      freightAmount: 0,
+      items: [
+        {
+          expectedUnitPrice: 100,
+          productId: "product-1",
+          quantity: 2,
+        },
+      ],
+      occurredOn: "2026-03-31",
+      paymentFeePayer: "customer",
+      paymentInstallments: 3,
+      paymentMethod: "card",
+    });
+
+    const [createdSalePayload] = harness.salesLog;
+
+    expect(createdSalePayload).toMatchObject({
+      chargedAmount: "206.00",
       feeAmount: "0.00",
+      paymentFeePayer: "customer",
       paymentFeePercent: "0.00",
-      paymentInstallments: 1,
+      paymentInstallments: 3,
       paymentMethod: "card",
       totalAmount: "200.00",
     });
@@ -517,6 +598,8 @@ describe("sales server actions", () => {
           },
         ],
         occurredOn: "2026-03-31",
+        paymentFeePayer: "not_applicable",
+        paymentInstallments: 0,
         paymentMethod: "pix",
       })
     ).rejects.toThrowError(STALE_PRICE_ERROR_REGEX);

@@ -105,4 +105,41 @@ describe("buildSalesAnalytics", () => {
       { label: "abr/26", profit: 140, sold: 200 },
     ]);
   });
+
+  it("does not inflate revenue when the card fee is paid by the customer", () => {
+    const analytics = buildSalesAnalytics({
+      range: {
+        from: "2026-04-01",
+        to: "2026-04-30",
+      },
+      saleItems: [
+        {
+          occurredOn: "2026-04-15",
+          quantity: 1,
+          status: "completed",
+          unitCostSnapshot: 40,
+        },
+      ],
+      sales: [
+        {
+          feeAmount: 0,
+          freightAmount: 0,
+          occurredOn: "2026-04-15",
+          paymentMethod: "card",
+          status: "completed",
+          totalAmount: 100,
+        },
+      ],
+    });
+
+    expect(analytics.totalSold).toBe(100);
+    expect(analytics.totalProfit).toBe(60);
+    expect(analytics.paymentMethods).toEqual([
+      {
+        paymentMethod: "card",
+        salesCount: 1,
+        totalAmount: 100,
+      },
+    ]);
+  });
 });

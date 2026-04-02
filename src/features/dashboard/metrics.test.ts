@@ -41,12 +41,14 @@ describe("buildDashboardMetrics", () => {
       ],
       sales: [
         {
+          feeAmount: 5,
           freightAmount: 10,
           occurredOn: "2026-04-10",
           status: "completed",
           totalAmount: 120,
         },
         {
+          feeAmount: 0,
           freightAmount: 20,
           occurredOn: "2026-04-11",
           status: "cancelled",
@@ -56,8 +58,8 @@ describe("buildDashboardMetrics", () => {
     });
 
     expect(metrics.totalSold).toBe(120);
-    expect(metrics.totalCosts).toBe(70);
-    expect(metrics.totalResult).toBe(50);
+    expect(metrics.totalCosts).toBe(75);
+    expect(metrics.totalResult).toBe(45);
     expect(metrics.totalSalesCount).toBe(1);
     expect(metrics.topProducts).toEqual([
       {
@@ -94,6 +96,7 @@ describe("buildDashboardMetrics", () => {
       ],
       sales: [
         {
+          feeAmount: 6,
           freightAmount: 20,
           occurredOn: "2026-04-10",
           status: "completed",
@@ -103,8 +106,8 @@ describe("buildDashboardMetrics", () => {
     });
 
     expect(metrics.totalSold).toBe(210);
-    expect(metrics.totalCosts).toBe(80);
-    expect(metrics.totalResult).toBe(130);
+    expect(metrics.totalCosts).toBe(86);
+    expect(metrics.totalResult).toBe(124);
   });
 
   it("aggregates by day for shorter intervals", () => {
@@ -131,6 +134,7 @@ describe("buildDashboardMetrics", () => {
       ],
       sales: [
         {
+          feeAmount: 2,
           freightAmount: 15,
           occurredOn: "2026-04-02",
           status: "completed",
@@ -142,7 +146,7 @@ describe("buildDashboardMetrics", () => {
     expect(metrics.periodGranularity).toBe("day");
     expect(metrics.periodComparison).toEqual([
       { costs: 0, label: "01/04", result: 0, sold: 0 },
-      { costs: 35, label: "02/04", result: 65, sold: 100 },
+      { costs: 37, label: "02/04", result: 63, sold: 100 },
       { costs: 0, label: "03/04", result: 0, sold: 0 },
       { costs: 0, label: "04/04", result: 0, sold: 0 },
       { costs: 0, label: "05/04", result: 0, sold: 0 },
@@ -186,12 +190,14 @@ describe("buildDashboardMetrics", () => {
       ],
       sales: [
         {
+          feeAmount: 2,
           freightAmount: 15,
           occurredOn: "2026-02-02",
           status: "completed",
           totalAmount: 100,
         },
         {
+          feeAmount: 4,
           freightAmount: 10,
           occurredOn: "2026-04-12",
           status: "completed",
@@ -203,14 +209,14 @@ describe("buildDashboardMetrics", () => {
     expect(metrics.periodGranularity).toBe("month");
     expect(metrics.periodComparison).toEqual([
       { costs: 0, label: "jan/26", result: 0, sold: 0 },
-      { costs: 35, label: "fev/26", result: 65, sold: 100 },
+      { costs: 37, label: "fev/26", result: 63, sold: 100 },
       { costs: 0, label: "mar/26", result: 0, sold: 0 },
-      { costs: 40, label: "abr/26", result: 100, sold: 140 },
+      { costs: 44, label: "abr/26", result: 96, sold: 140 },
     ]);
     expect(metrics.totalSalesCount).toBe(2);
     expect(metrics.totalSold).toBe(240);
-    expect(metrics.totalCosts).toBe(75);
-    expect(metrics.totalResult).toBe(165);
+    expect(metrics.totalCosts).toBe(81);
+    expect(metrics.totalResult).toBe(159);
   });
 
   it("groups overflow categories into Outros", () => {

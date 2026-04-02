@@ -32,14 +32,53 @@ import {
 } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   canDeleteCategory,
   canRenameCategory,
 } from "@/features/catalog/guards";
+import {
+  buildDefaultCardInstallmentRules,
+  type CardInstallmentRule,
+  MAX_CARD_INSTALLMENTS,
+} from "@/features/catalog/payment-rules";
 import type {
   CatalogCategory,
   CatalogSettings,
 } from "@/features/catalog/server";
 import { formatPercent } from "@/lib/formatters";
+
+interface CardInstallmentRuleDraft {
+  feePercent: string;
+  installments: number;
+}
+
+const syncCardInstallmentRuleDrafts = (
+  currentRules: CardInstallmentRuleDraft[],
+  maxInstallments: number
+) => {
+  const rulesByInstallments = new Map(
+    currentRules.map((rule) => [rule.installments, rule.feePercent])
+  );
+
+  return buildDefaultCardInstallmentRules(maxInstallments).map((rule) => ({
+    feePercent: rulesByInstallments.get(rule.installments) ?? "0",
+    installments: rule.installments,
+  }));
+};
+
+const toRuleDrafts = (
+  rules: CardInstallmentRule[]
+): CardInstallmentRuleDraft[] =>
+  rules.map((rule) => ({
+    feePercent: rule.feePercent.toString(),
+    installments: rule.installments,
+  }));
 
 export function CatalogSettingsPanel({
   categories,
@@ -58,6 +97,9 @@ export function CatalogSettingsPanel({
   const [idealMarkupPercent, setIdealMarkupPercent] = useState(
     settings.idealMarkupPercent.toString()
   );
+  const [cardInstallmentRules, setCardInstallmentRules] = useState(() =>
+    toRuleDrafts(settings.cardInstallmentRules)
+  );
 
   const minimum = Number(minimumMarkupPercent) || 0;
   const ideal = Number(idealMarkupPercent) || 0;
@@ -67,6 +109,7 @@ export function CatalogSettingsPanel({
       : `Margem minima ${formatPercent(minimum)}% e ideal ${formatPercent(
           ideal
         )}% aplicadas sobre o custo do produto.`;
+  const selectedMaxInstallments = String(cardInstallmentRules.length);
 
   const handleCreateCategory = () => {
     startTransition(async () => {
@@ -120,6 +163,10 @@ export function CatalogSettingsPanel({
     startTransition(async () => {
       try {
         await saveCatalogSettingsAction({
+          cardInstallmentRules: cardInstallmentRules.map((rule) => ({
+            feePercent: Number(rule.feePercent) || 0,
+            installments: rule.installments,
+          })),
           idealMarkupPercent: Number(idealMarkupPercent) || 0,
           minimumMarkupPercent: Number(minimumMarkupPercent) || 0,
         });
@@ -273,68 +320,151 @@ export function CatalogSettingsPanel({
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Precificacao</CardTitle>
-          <CardDescription>
-            Defina os percentuais globais usados para sugerir preco minimo e
-            ideal no cadastro de produtos.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1">
-              <Label htmlFor="minimum-markup-percent">Margem minima (%)</Label>
-              <InputGroup>
-                <InputGroupInput
-                  id="minimum-markup-percent"
-                  min="0"
-                  onChange={(event) =>
-                    setMinimumMarkupPercent(event.target.value)
-                  }
-                  step="0.01"
-                  type="number"
-                  value={minimumMarkupPercent}
-                />
-                <InputGroupAddon align="inline-end">
-                  <InputGroupText>%</InputGroupText>
-                </InputGroupAddon>
-              </InputGroup>
+      <div className="flex flex-col gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Precificacao</CardTitle>
+            <CardDescription>
+              Defina os percentuais globais usados para sugerir preco minimo e
+              ideal no cadastro de produtos.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1">
+                <Label htmlFor="minimum-markup-percent">
+                  Margem minima (%)
+                </Label>
+                <InputGroup>
+                  <InputGroupInput
+                    id="minimum-markup-percent"
+                    min="0"
+                    onChange={(event) =>
+                      setMinimumMarkupPercent(event.target.value)
+                    }
+                    step="0.01"
+                    type="number"
+                    value={minimumMarkupPercent}
+                  />
+                  <InputGroupAddon align="inline-end">
+                    <InputGroupText>%</InputGroupText>
+                  </InputGroupAddon>
+                </InputGroup>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="ideal-markup-percent">Margem ideal (%)</Label>
+                <InputGroup>
+                  <InputGroupInput
+                    id="ideal-markup-percent"
+                    min="0"
+                    onChange={(event) =>
+                      setIdealMarkupPercent(event.target.value)
+                    }
+                    step="0.01"
+                    type="number"
+                    value={idealMarkupPercent}
+                  />
+                  <InputGroupAddon align="inline-end">
+                    <InputGroupText>%</InputGroupText>
+                  </InputGroupAddon>
+                </InputGroup>
+              </div>
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="ideal-markup-percent">Margem ideal (%)</Label>
-              <InputGroup>
-                <InputGroupInput
-                  id="ideal-markup-percent"
-                  min="0"
-                  onChange={(event) =>
-                    setIdealMarkupPercent(event.target.value)
-                  }
-                  step="0.01"
-                  type="number"
-                  value={idealMarkupPercent}
-                />
-                <InputGroupAddon align="inline-end">
-                  <InputGroupText>%</InputGroupText>
-                </InputGroupAddon>
-              </InputGroup>
+
+            <div className="rounded-lg border border-border/60 bg-muted/20 p-3 text-muted-foreground text-xs">
+              {pricingHint}
             </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          <div className="rounded-lg border border-border/60 bg-muted/20 p-3 text-muted-foreground text-xs">
-            {pricingHint}
-          </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Cartao</CardTitle>
+            <CardDescription>
+              Configure uma sequencia continua de 1x ate o maximo desejado. A
+              taxa de cada parcela e aplicada sobre o valor total da transacao.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-1">
+              <Label htmlFor="card-max-installments">Maximo de parcelas</Label>
+              <Select
+                onValueChange={(value) => {
+                  setCardInstallmentRules((currentRules) =>
+                    syncCardInstallmentRuleDrafts(currentRules, Number(value))
+                  );
+                }}
+                value={selectedMaxInstallments}
+              >
+                <SelectTrigger id="card-max-installments">
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from(
+                    { length: MAX_CARD_INSTALLMENTS },
+                    (_value, index) => index + 1
+                  ).map((installments) => (
+                    <SelectItem key={installments} value={String(installments)}>
+                      {installments}x
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-          <Button
-            className="w-full sm:w-auto"
-            disabled={pending}
-            onClick={handleSaveSettings}
-            type="button"
-          >
-            Salvar configuracoes
-          </Button>
-        </CardContent>
-      </Card>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {cardInstallmentRules.map((rule) => (
+                <div className="space-y-1" key={rule.installments}>
+                  <Label htmlFor={`card-fee-${rule.installments}`}>
+                    Taxa {rule.installments}x (%)
+                  </Label>
+                  <InputGroup>
+                    <InputGroupInput
+                      id={`card-fee-${rule.installments}`}
+                      min="0"
+                      onChange={(event) => {
+                        const nextValue = event.target.value;
+
+                        setCardInstallmentRules((currentRules) =>
+                          currentRules.map((currentRule) =>
+                            currentRule.installments === rule.installments
+                              ? {
+                                  ...currentRule,
+                                  feePercent: nextValue,
+                                }
+                              : currentRule
+                          )
+                        );
+                      }}
+                      step="0.01"
+                      type="number"
+                      value={rule.feePercent}
+                    />
+                    <InputGroupAddon align="inline-end">
+                      <InputGroupText>%</InputGroupText>
+                    </InputGroupAddon>
+                  </InputGroup>
+                </div>
+              ))}
+            </div>
+
+            <div className="rounded-lg border border-border/60 bg-muted/20 p-3 text-muted-foreground text-xs">
+              Quando o vendedor absorver a taxa, ela entra como custo da venda.
+              Quando o cliente pagar, o sistema aumenta apenas o valor cobrado,
+              sem registrar essa diferenca como receita.
+            </div>
+
+            <Button
+              className="w-full sm:w-auto"
+              disabled={pending}
+              onClick={handleSaveSettings}
+              type="button"
+            >
+              Salvar configuracoes
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

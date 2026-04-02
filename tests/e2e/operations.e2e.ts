@@ -6,6 +6,11 @@ const productDetailRouteRegex = /\/produtos\/.+/;
 const productsRouteRegex = /\/produtos$/;
 const price40Regex = /R\$\s*40,00/;
 const price55Regex = /R\$\s*55,00/;
+const price100Regex = /R\$\s*100,00/;
+const price103Regex = /R\$\s*103,00/;
+const price3Regex = /R\$\s*3,00/;
+const productComboboxRegex = /buscar produto/i;
+const threeInstallmentsRegex = /^3x$/;
 const saleDetailRouteRegex = /\/vendas\/.+/;
 
 test("creates inventory, records a sale, cancels it, and requires typed confirmation before destructive deletion", async ({
@@ -71,7 +76,7 @@ test("creates inventory, records a sale, cancels it, and requires typed confirma
   await saleDialog.getByLabel("Nome do cliente (opcional)").fill("Cliente E2E");
   await selectOption(
     page,
-    saleDialog.getByRole("combobox").nth(1),
+    saleDialog.getByRole("combobox", { name: productComboboxRegex }).first(),
     new RegExp(productName)
   );
   await saleDialog.getByRole("spinbutton").first().fill("2");
@@ -159,10 +164,13 @@ test("updates the catalog price for future sales without changing past sale snap
 
   const firstSaleDialog = page.getByRole("dialog");
 
-  await firstSaleDialog.getByRole("combobox").nth(1).click();
-  await page
-    .getByRole("option", { name: new RegExp(productName) })
-    .click({ force: true });
+  await firstSaleDialog
+    .getByRole("combobox", { name: productComboboxRegex })
+    .first()
+    .click();
+  await page.getByRole("option", { name: new RegExp(productName) }).click({
+    force: true,
+  });
   await firstSaleDialog
     .getByRole("button", { name: "Confirmar venda" })
     .click();
@@ -206,10 +214,13 @@ test("updates the catalog price for future sales without changing past sale snap
 
   const secondSaleDialog = page.getByRole("dialog");
 
-  await secondSaleDialog.getByRole("combobox").nth(1).click();
-  await page
-    .getByRole("option", { name: new RegExp(productName) })
-    .click({ force: true });
+  await secondSaleDialog
+    .getByRole("combobox", { name: productComboboxRegex })
+    .first()
+    .click();
+  await page.getByRole("option", { name: new RegExp(productName) }).click({
+    force: true,
+  });
   await secondSaleDialog
     .getByRole("button", { name: "Confirmar venda" })
     .click();
@@ -219,4 +230,119 @@ test("updates the catalog price for future sales without changing past sale snap
 
   await page.goto(firstSaleUrl);
   await expect(page.getByText(price40Regex).first()).toBeVisible();
+});
+
+test("configures card installments and records customer-paid and seller-paid fee flows", async ({
+  page,
+}) => {
+  const categoryName = createRunLabel("Categoria Cartao");
+  const productName = createRunLabel("Produto Cartao");
+
+  await login(page);
+
+  await page.goto("/configuracoes");
+  await page.getByLabel("Nova categoria").fill(categoryName);
+  await page.getByRole("button", { name: "Adicionar" }).first().click();
+  await expect(page.getByText(categoryName)).toBeVisible();
+
+  await selectOption(
+    page,
+    page.getByLabel("Maximo de parcelas"),
+    threeInstallmentsRegex
+  );
+  await page.getByLabel("Taxa 2x (%)").fill("1.5");
+  await page.getByLabel("Taxa 3x (%)").fill("3");
+  await page.getByRole("button", { name: "Salvar configuracoes" }).click();
+  await expect(page.getByText("Configuracoes salvas.")).toBeVisible();
+
+  await page.goto("/produtos");
+  await page.getByRole("button", { name: "Cadastrar Produto" }).click();
+
+  const productDialog = page.getByRole("dialog");
+
+  await productDialog.getByLabel("Nome do Produto").fill(productName);
+  await selectOption(
+    page,
+    productDialog.getByLabel("Categoria"),
+    new RegExp(categoryName)
+  );
+  await productDialog.getByLabel("Estoque Inicial").fill("3");
+  await productDialog.getByLabel("Custo Unitario").fill("60");
+  await productDialog.getByLabel("Preco de Venda").fill("100");
+  await productDialog.getByRole("button", { name: "Salvar Produto" }).click();
+  await expect(page.getByText("Produto cadastrado.")).toBeVisible();
+
+  await page.goto("/vendas");
+  await page.getByRole("button", { name: "Nova venda" }).click();
+
+  const customerFeeDialog = page.getByRole("dialog");
+
+  await customerFeeDialog.getByLabel("Metodo de pagamento").click();
+  await page.getByRole("option", { name: "Cartao" }).click();
+  await selectOption(
+    page,
+    customerFeeDialog.getByLabel("Parcelamento"),
+    threeInstallmentsRegex
+  );
+  await selectOption(
+    page,
+    customerFeeDialog.getByLabel("Quem paga a taxa"),
+    "Cliente"
+  );
+  await customerFeeDialog
+    .getByRole("combobox", { name: productComboboxRegex })
+    .first()
+    .click();
+  await page.getByRole("option", { name: new RegExp(productName) }).click({
+    force: true,
+  });
+  await customerFeeDialog
+    .getByLabel("Nome do cliente (opcional)")
+    .fill("Cliente Cartao");
+  await expect(customerFeeDialog.getByText(price103Regex)).toBeVisible();
+  await customerFeeDialog
+    .getByRole("button", { name: "Confirmar venda" })
+    .click();
+
+  await expect(page).toHaveURL(saleDetailRouteRegex);
+  await expect(page.getByText("Cartao 3x")).toBeVisible();
+  await expect(page.getByText("Cliente")).toBeVisible();
+  await expect(page.getByText("Cobrado do cliente")).toBeVisible();
+  await expect(page.getByText(price103Regex).first()).toBeVisible();
+  await expect(page.getByText(price100Regex).first()).toBeVisible();
+
+  await page.goto("/vendas");
+  await page.getByRole("button", { name: "Nova venda" }).click();
+
+  const sellerFeeDialog = page.getByRole("dialog");
+
+  await sellerFeeDialog.getByLabel("Metodo de pagamento").click();
+  await page.getByRole("option", { name: "Cartao" }).click();
+  await selectOption(
+    page,
+    sellerFeeDialog.getByLabel("Parcelamento"),
+    threeInstallmentsRegex
+  );
+  await selectOption(
+    page,
+    sellerFeeDialog.getByLabel("Quem paga a taxa"),
+    "Vendedor"
+  );
+  await sellerFeeDialog
+    .getByRole("combobox", { name: productComboboxRegex })
+    .first()
+    .click();
+  await page.getByRole("option", { name: new RegExp(productName) }).click({
+    force: true,
+  });
+  await sellerFeeDialog
+    .getByRole("button", { name: "Confirmar venda" })
+    .click();
+
+  await expect(page).toHaveURL(saleDetailRouteRegex);
+  await expect(page.getByText("Cartao 3x")).toBeVisible();
+  await expect(page.getByText("Vendedor")).toBeVisible();
+  await expect(page.getByText("Taxa do cartao")).toBeVisible();
+  await expect(page.getByText(price3Regex).first()).toBeVisible();
+  await expect(page.getByText(price100Regex).first()).toBeVisible();
 });

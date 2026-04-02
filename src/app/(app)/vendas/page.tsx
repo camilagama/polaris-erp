@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { SalesPanel } from "@/components/sales/sales-panel";
+import { getCatalogSettings } from "@/features/catalog/server";
 import { resolveSalesDateRange } from "@/features/sales/date-range";
 import { getSalesAnalytics, getSalesDateBounds } from "@/features/sales/server";
 import { getProductsQuery } from "../produtos/queries";
@@ -17,14 +18,16 @@ export default async function VendasPage(props: PageProps<"/vendas">) {
     bounds,
     searchParams,
   });
-  const [salesResult, productsResult, analytics] = await Promise.all([
-    getSalesQuery(),
-    getProductsQuery(),
-    getSalesAnalytics({
-      from: selectedRange.from,
-      to: selectedRange.to,
-    }),
-  ]);
+  const [salesResult, productsResult, analytics, catalogSettings] =
+    await Promise.all([
+      getSalesQuery(),
+      getProductsQuery(),
+      getSalesAnalytics({
+        from: selectedRange.from,
+        to: selectedRange.to,
+      }),
+      getCatalogSettings(),
+    ]);
 
   const saleProducts = productsResult.items
     .filter((product) => !product.archivedAt && product.stock > 0)
@@ -38,6 +41,7 @@ export default async function VendasPage(props: PageProps<"/vendas">) {
   return (
     <SalesPanel
       analytics={analytics}
+      cardInstallmentRules={catalogSettings.cardInstallmentRules}
       dateBounds={bounds}
       initialCursor={salesResult.nextCursor}
       saleProducts={saleProducts}

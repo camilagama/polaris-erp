@@ -13,6 +13,7 @@ import {
   OTHERS_CATEGORY_NAME,
 } from "./constants";
 import { canDeleteCategory, canRenameCategory } from "./guards";
+import { normalizeCardInstallmentRules } from "./payment-rules";
 
 const ensureOthersCategory = async () => {
   const existing = await db.query.categories.findFirst({
@@ -46,6 +47,10 @@ export interface CatalogCategory {
 }
 
 export interface CatalogSettings {
+  cardInstallmentRules: Array<{
+    feePercent: number;
+    installments: number;
+  }>;
   idealMarkupPercent: number;
   minimumMarkupPercent: number;
 }
@@ -57,6 +62,9 @@ export const getCatalogSettings = async (): Promise<CatalogSettings> => {
 
   if (existing) {
     return {
+      cardInstallmentRules: normalizeCardInstallmentRules(
+        existing.paymentFeeRules
+      ),
       idealMarkupPercent: Number(existing.idealMarkupPercent),
       minimumMarkupPercent: Number(existing.minimumMarkupPercent),
     };
@@ -70,6 +78,9 @@ export const getCatalogSettings = async (): Promise<CatalogSettings> => {
     .returning();
 
   return {
+    cardInstallmentRules: normalizeCardInstallmentRules(
+      created.paymentFeeRules
+    ),
     idealMarkupPercent: Number(created.idealMarkupPercent),
     minimumMarkupPercent: Number(created.minimumMarkupPercent),
   };
@@ -155,6 +166,9 @@ export const deleteCategory = async (id: string) => {
 
 export const saveCatalogSettings = async (input: unknown) => {
   const parsed = catalogSettingsSchema.parse(input);
+  const cardInstallmentRules = normalizeCardInstallmentRules(
+    parsed.cardInstallmentRules
+  );
 
   await db
     .insert(systemSettings)
@@ -162,11 +176,13 @@ export const saveCatalogSettings = async (input: unknown) => {
       id: GLOBAL_SETTINGS_ID,
       idealMarkupPercent: parsed.idealMarkupPercent.toFixed(2),
       minimumMarkupPercent: parsed.minimumMarkupPercent.toFixed(2),
+      paymentFeeRules: cardInstallmentRules,
     })
     .onConflictDoUpdate({
       set: {
         idealMarkupPercent: parsed.idealMarkupPercent.toFixed(2),
         minimumMarkupPercent: parsed.minimumMarkupPercent.toFixed(2),
+        paymentFeeRules: cardInstallmentRules,
         updatedAt: new Date(),
       },
       target: systemSettings.id,

@@ -33,10 +33,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  type CardInstallmentRule,
+  findCardInstallmentRule,
+  getCardInstallmentRuleLabel,
+} from "@/features/catalog/payment-rules";
+import {
+  calculateSaleFinancials,
+  type SaleFinancials,
+} from "@/features/sales/calculations";
+import type { SalePaymentFeePayer } from "@/features/sales/contracts";
 import { createSaleSchema } from "@/features/sales/schema";
 import { roundCurrency } from "@/lib/domain/currency";
 import { formatDateInputValue } from "@/lib/domain/date";
-import { formatCurrency } from "@/lib/formatters";
+import { formatCurrency, formatPercent } from "@/lib/formatters";
 
 export interface SaleProductOption {
   id: string;
@@ -51,15 +61,313 @@ interface SaleRowDraft {
   quantity: string;
 }
 
+interface ResolvedPaymentState {
+  paymentFeePayer: SalePaymentFeePayer;
+  paymentInstallments: number;
+}
+
+interface SalePayloadItem {
+  expectedUnitPrice: number;
+  productId: string;
+  quantity: number;
+}
+
 const createSaleRow = (): SaleRowDraft => ({
   id: crypto.randomUUID(),
   productId: "",
   quantity: "1",
 });
 
+const getDefaultCardInstallments = (rules: CardInstallmentRule[]) =>
+  String(rules[0]?.installments ?? 1);
+
+const isCardFeePayer = (
+  value: SalePaymentFeePayer | ""
+): value is "customer" | "seller" => value === "customer" || value === "seller";
+
+const resolvePaymentState = ({
+  paymentFeePayer,
+  paymentInstallments,
+  paymentMethod,
+}: {
+  paymentFeePayer: SalePaymentFeePayer | "";
+  paymentInstallments: string;
+  paymentMethod: "card" | "pix";
+}): ResolvedPaymentState => {
+  if (paymentMethod === "pix") {
+    return { paymentFeePayer: "not_applicable", paymentInstallments: 0 };
+  }
+
+  return {
+    paymentFeePayer: isCardFeePayer(paymentFeePayer)
+      ? paymentFeePayer
+      : "not_applicable",
+    paymentInstallments: Number(paymentInstallments),
+  };
+};
+
+const calculateBaseAmount = ({
+  additionalAmount,
+  discountAmount,
+  freightAmount,
+  itemSubtotal,
+}: {
+  additionalAmount: number;
+  discountAmount: number;
+  freightAmount: number;
+  itemSubtotal: number;
+}) =>
+  Number.isFinite(freightAmount) &&
+  Number.isFinite(additionalAmount) &&
+  Number.isFinite(discountAmount)
+    ? roundCurrency(
+        itemSubtotal + freightAmount + additionalAmount - discountAmount
+      )
+    : itemSubtotal;
+
+const getPreviewFinancials = ({
+  additionalAmount,
+  cardInstallmentRules,
+  discountAmount,
+  freightAmount,
+  itemSubtotal,
+  paymentFeePayer,
+  paymentInstallments,
+  paymentMethod,
+}: {
+  additionalAmount: number;
+  cardInstallmentRules: CardInstallmentRule[];
+  discountAmount: number;
+  freightAmount: number;
+  itemSubtotal: number;
+  paymentFeePayer: SalePaymentFeePayer | "";
+  paymentInstallments: string;
+  paymentMethod: "card" | "pix";
+}): SaleFinancials | null => {
+  const resolvedPaymentState = resolvePaymentState({
+    paymentFeePayer,
+    paymentInstallments,
+    paymentMethod,
+  });
+  const selectedInstallmentRule =
+    paymentMethod === "card"
+      ? findCardInstallmentRule(
+          cardInstallmentRules,
+          resolvedPaymentState.paymentInstallments
+        )
+      : undefined;
+
+  if (
+    paymentMethod === "card" &&
+    !(selectedInstallmentRule && isCardFeePayer(paymentFeePayer))
+  ) {
+    return null;
+  }
+
+  try {
+    return calculateSaleFinancials({
+      additionalAmount,
+      discountAmount,
+      freightAmount,
+      installmentFeePercent: selectedInstallmentRule?.feePercent ?? 0,
+      itemSubtotal,
+      paymentFeePayer: resolvedPaymentState.paymentFeePayer,
+      paymentInstallments: resolvedPaymentState.paymentInstallments,
+      paymentMethod,
+    });
+  } catch {
+    return null;
+  }
+};
+
+const buildPayloadItems = ({
+  items,
+  productById,
+}: {
+  items: SaleRowDraft[];
+  productById: Map<string, SaleProductOption>;
+}):
+  | { message: string; ok: false; shouldRefresh: boolean }
+  | { items: SalePayloadItem[]; ok: true } => {
+  const payloadItems: SalePayloadItem[] = [];
+
+  for (const item of items) {
+    if (item.productId.trim().length === 0) {
+      continue;
+    }
+
+    const selectedProduct = productById.get(item.productId);
+
+    if (!selectedProduct) {
+      return {
+        message: "Um dos produtos da venda nao esta mais disponivel.",
+        ok: false,
+        shouldRefresh: true,
+      };
+    }
+
+    payloadItems.push({
+      expectedUnitPrice: Number(selectedProduct.price),
+      productId: item.productId,
+      quantity: Number(item.quantity),
+    });
+  }
+
+  if (payloadItems.length === 0) {
+    return {
+      message: "Adicione pelo menos um item na venda.",
+      ok: false,
+      shouldRefresh: false,
+    };
+  }
+
+  return { items: payloadItems, ok: true };
+};
+
+const updateDraftItem = (
+  currentItems: SaleRowDraft[],
+  rowId: string,
+  updater: (item: SaleRowDraft) => SaleRowDraft
+) => currentItems.map((item) => (item.id === rowId ? updater(item) : item));
+
+function SaleProductRow({
+  item,
+  items,
+  products,
+  removeItem,
+  updateItem,
+}: {
+  item: SaleRowDraft;
+  items: SaleRowDraft[];
+  products: SaleProductOption[];
+  removeItem: (rowId: string) => void;
+  updateItem: (
+    rowId: string,
+    updater: (item: SaleRowDraft) => SaleRowDraft
+  ) => void;
+}) {
+  const productById = new Map(products.map((product) => [product.id, product]));
+  const selectedProduct = productById.get(item.productId);
+  const quantity = Number(item.quantity);
+  const unitPrice = selectedProduct ? Number(selectedProduct.price) : 0;
+  const lineTotal =
+    Number.isFinite(quantity) && Number.isFinite(unitPrice)
+      ? quantity * unitPrice
+      : 0;
+  const selectedByOthers = new Set(
+    items
+      .filter((otherItem) => otherItem.id !== item.id)
+      .map((otherItem) => otherItem.productId)
+      .filter(Boolean)
+  );
+  const availableProducts = products.filter(
+    (product) =>
+      product.id === item.productId || !selectedByOthers.has(product.id)
+  );
+
+  return (
+    <div className="grid items-center gap-3 rounded-md p-1.5 transition-colors hover:bg-muted/30 sm:grid-cols-[1fr_80px_100px_100px_40px]">
+      <div className="flex flex-col gap-1">
+        <Label className="text-[11px] text-muted-foreground sm:hidden">
+          Produto
+        </Label>
+        <ProductCombobox
+          onSelect={(productId) => {
+            updateItem(item.id, (currentItem) => ({
+              ...currentItem,
+              productId,
+            }));
+          }}
+          options={availableProducts}
+          value={item.productId}
+        />
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <Label className="text-[11px] text-muted-foreground sm:hidden">
+          Qtd.
+        </Label>
+        <Input
+          className="h-7 bg-background"
+          max={selectedProduct?.stock}
+          min="1"
+          onChange={(event) => {
+            const nextQuantityValue = event.target.value;
+            const parsedValue = Number.parseInt(nextQuantityValue, 10);
+
+            if (
+              selectedProduct &&
+              !Number.isNaN(parsedValue) &&
+              parsedValue > selectedProduct.stock
+            ) {
+              toast.error(
+                `Estoque insuficiente. Maximo disponivel: ${selectedProduct.stock} unidades.`
+              );
+              updateItem(item.id, (currentItem) => ({
+                ...currentItem,
+                quantity: String(selectedProduct.stock),
+              }));
+              return;
+            }
+
+            updateItem(item.id, (currentItem) => ({
+              ...currentItem,
+              quantity: nextQuantityValue,
+            }));
+          }}
+          step="1"
+          type="number"
+          value={item.quantity}
+        />
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <Label className="text-[11px] text-muted-foreground sm:hidden">
+          V. Unit.
+        </Label>
+        <div className="flex h-7 items-center text-foreground/80 text-xs sm:justify-end">
+          {formatCurrency(unitPrice)}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <Label className="text-[11px] text-muted-foreground sm:hidden">
+          Total
+        </Label>
+        <div className="flex h-7 items-center font-medium text-xs sm:justify-end">
+          {formatCurrency(lineTotal)}
+        </div>
+      </div>
+
+      <div className="flex items-center justify-end sm:justify-center">
+        <Button
+          aria-label="Remover item"
+          className={`h-8 w-8 text-muted-foreground hover:text-destructive ${
+            items.length <= 1 ? "invisible" : ""
+          }`}
+          disabled={items.length <= 1}
+          onClick={() => removeItem(item.id)}
+          size="icon"
+          type="button"
+          variant="ghost"
+        >
+          <HugeiconsIcon
+            className="size-4"
+            icon={Delete02Icon}
+            strokeWidth={2.5}
+          />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: dialog coordinates many draft inputs and submission states.
 export function CreateSaleDialog({
+  cardInstallmentRules,
   products,
 }: {
+  cardInstallmentRules: CardInstallmentRule[];
   products: SaleProductOption[];
 }) {
   const router = useRouter();
@@ -68,6 +376,10 @@ export function CreateSaleDialog({
   const [occurredOn, setOccurredOn] = useState(() => formatDateInputValue());
   const [customerName, setCustomerName] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"card" | "pix">("pix");
+  const [paymentInstallments, setPaymentInstallments] = useState("0");
+  const [paymentFeePayer, setPaymentFeePayer] = useState<
+    SalePaymentFeePayer | ""
+  >("not_applicable");
   const [additionalAmount, setAdditionalAmount] = useState("0");
   const [discountAmount, setDiscountAmount] = useState("0");
   const [freightAmount, setFreightAmount] = useState("0");
@@ -86,42 +398,49 @@ export function CreateSaleDialog({
 
     return acc + quantity * unitPrice;
   }, 0);
-
   const parsedFreightAmount = Number(freightAmount);
   const parsedAdditionalAmount = Number(additionalAmount);
   const parsedDiscountAmount = Number(discountAmount);
-
-  const baseAmount =
-    Number.isFinite(parsedFreightAmount) &&
-    Number.isFinite(parsedAdditionalAmount) &&
-    Number.isFinite(parsedDiscountAmount)
-      ? roundCurrency(
-          itemSubtotal +
-            parsedFreightAmount +
-            parsedAdditionalAmount -
-            parsedDiscountAmount
+  const selectedInstallmentRule =
+    paymentMethod === "card"
+      ? findCardInstallmentRule(
+          cardInstallmentRules,
+          Number(paymentInstallments)
         )
-      : itemSubtotal;
-  const totalAmount = baseAmount;
+      : undefined;
+  const financials = getPreviewFinancials({
+    additionalAmount: parsedAdditionalAmount,
+    cardInstallmentRules,
+    discountAmount: parsedDiscountAmount,
+    freightAmount: parsedFreightAmount,
+    itemSubtotal,
+    paymentFeePayer,
+    paymentInstallments,
+    paymentMethod,
+  });
+  const displayBaseAmount =
+    financials?.baseAmount ??
+    calculateBaseAmount({
+      additionalAmount: parsedAdditionalAmount,
+      discountAmount: parsedDiscountAmount,
+      freightAmount: parsedFreightAmount,
+      itemSubtotal,
+    });
+  const displayChargedAmount = financials?.chargedAmount ?? displayBaseAmount;
+  const customerFeeAmount = financials?.customerFeeAmount ?? 0;
+  const sellerFeeAmount = financials?.sellerFeeAmount ?? 0;
 
   const resetForm = () => {
     setOccurredOn(formatDateInputValue());
     setCustomerName("");
     setPaymentMethod("pix");
+    setPaymentInstallments("0");
+    setPaymentFeePayer("not_applicable");
     setAdditionalAmount("0");
     setDiscountAmount("0");
     setFreightAmount("0");
     setNotes("");
     setItems([createSaleRow()]);
-  };
-
-  const updateItem = (
-    rowId: string,
-    updater: (item: SaleRowDraft) => SaleRowDraft
-  ) => {
-    setItems((currentItems) =>
-      currentItems.map((item) => (item.id === rowId ? updater(item) : item))
-    );
   };
 
   const removeItem = (rowId: string) => {
@@ -134,46 +453,40 @@ export function CreateSaleDialog({
     });
   };
 
+  const updateItem = (
+    rowId: string,
+    updater: (item: SaleRowDraft) => SaleRowDraft
+  ) => {
+    setItems((currentItems) => updateDraftItem(currentItems, rowId, updater));
+  };
+
   const handleSubmit = () => {
-    const payloadItems: Array<{
-      expectedUnitPrice: number;
-      productId: string;
-      quantity: number;
-    }> = [];
+    const payloadItemsResult = buildPayloadItems({ items, productById });
 
-    for (const item of items) {
-      if (item.productId.trim().length === 0) {
-        continue;
-      }
-
-      const selectedProduct = productById.get(item.productId);
-
-      if (!selectedProduct) {
-        toast.error("Um dos produtos da venda nao esta mais disponivel.");
+    if (!payloadItemsResult.ok) {
+      if (payloadItemsResult.shouldRefresh) {
         router.refresh();
-        return;
       }
 
-      payloadItems.push({
-        expectedUnitPrice: Number(selectedProduct.price),
-        productId: item.productId,
-        quantity: Number(item.quantity),
-      });
-    }
-
-    if (payloadItems.length === 0) {
-      toast.error("Adicione pelo menos um item na venda.");
+      toast.error(payloadItemsResult.message);
       return;
     }
 
+    const resolvedPaymentState = resolvePaymentState({
+      paymentFeePayer,
+      paymentInstallments,
+      paymentMethod,
+    });
     const parsedPayload = createSaleSchema.safeParse({
       additionalAmount: parsedAdditionalAmount,
       customerName,
       discountAmount: parsedDiscountAmount,
       freightAmount: parsedFreightAmount,
-      items: payloadItems,
+      items: payloadItemsResult.items,
       notes,
       occurredOn,
+      paymentFeePayer: resolvedPaymentState.paymentFeePayer,
+      paymentInstallments: resolvedPaymentState.paymentInstallments,
       paymentMethod,
     });
 
@@ -182,7 +495,7 @@ export function CreateSaleDialog({
       return;
     }
 
-    if (baseAmount < 0) {
+    if (displayBaseAmount < 0) {
       toast.error(
         "Desconto nao pode ser maior que subtotal somado com frete e adicional."
       );
@@ -192,7 +505,6 @@ export function CreateSaleDialog({
     startTransition(async () => {
       try {
         const saleId = await createSaleAction(parsedPayload.data);
-
         toast.success("Venda registrada.");
         setOpen(false);
         resetForm();
@@ -261,9 +573,20 @@ export function CreateSaleDialog({
                       Metodo de pagamento
                     </Label>
                     <Select
-                      onValueChange={(value: "card" | "pix") =>
-                        setPaymentMethod(value)
-                      }
+                      onValueChange={(value: "card" | "pix") => {
+                        setPaymentMethod(value);
+
+                        if (value === "pix") {
+                          setPaymentInstallments("0");
+                          setPaymentFeePayer("not_applicable");
+                          return;
+                        }
+
+                        setPaymentInstallments(
+                          getDefaultCardInstallments(cardInstallmentRules)
+                        );
+                        setPaymentFeePayer("");
+                      }}
                       value={paymentMethod}
                     >
                       <SelectTrigger
@@ -278,6 +601,79 @@ export function CreateSaleDialog({
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {paymentMethod === "card" ? (
+                    <>
+                      <div className="flex flex-col gap-1.5">
+                        <Label
+                          className="text-muted-foreground text-xs"
+                          htmlFor="sale-payment-installments"
+                        >
+                          Parcelamento
+                        </Label>
+                        <Select
+                          onValueChange={setPaymentInstallments}
+                          value={paymentInstallments}
+                        >
+                          <SelectTrigger
+                            className="w-full"
+                            id="sale-payment-installments"
+                          >
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {cardInstallmentRules.map((rule) => (
+                              <SelectItem
+                                key={rule.installments}
+                                value={String(rule.installments)}
+                              >
+                                {getCardInstallmentRuleLabel(rule.installments)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <Label
+                          className="text-muted-foreground text-xs"
+                          htmlFor="sale-payment-fee-payer"
+                        >
+                          Quem paga a taxa
+                        </Label>
+                        <Select
+                          onValueChange={(value: "customer" | "seller") =>
+                            setPaymentFeePayer(value)
+                          }
+                          value={paymentFeePayer}
+                        >
+                          <SelectTrigger
+                            className="w-full"
+                            id="sale-payment-fee-payer"
+                          >
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="seller">Vendedor</SelectItem>
+                            <SelectItem value="customer">Cliente</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="rounded-lg border border-border/60 bg-muted/15 px-3 py-2 text-muted-foreground text-xs sm:col-span-2">
+                        Taxa configurada para{" "}
+                        {selectedInstallmentRule
+                          ? getCardInstallmentRuleLabel(
+                              selectedInstallmentRule.installments
+                            )
+                          : "o parcelamento selecionado"}
+                        :{" "}
+                        {formatPercent(
+                          selectedInstallmentRule?.feePercent ?? 0
+                        )}
+                        %.
+                      </div>
+                    </>
+                  ) : null}
+
                   <div className="flex flex-col gap-1.5 sm:col-span-2">
                     <Label
                       className="text-muted-foreground text-xs"
@@ -305,7 +701,10 @@ export function CreateSaleDialog({
                   <Button
                     className="h-7 text-xs"
                     onClick={() =>
-                      setItems((current) => [...current, createSaleRow()])
+                      setItems((currentItems) => [
+                        ...currentItems,
+                        createSaleRow(),
+                      ])
                     }
                     size="xs"
                     type="button"
@@ -330,129 +729,16 @@ export function CreateSaleDialog({
                   </div>
 
                   <div className="flex flex-col gap-1.5 p-1.5">
-                    {items.map((item) => {
-                      const selectedProduct = productById.get(item.productId);
-                      const quantity = Number(item.quantity);
-                      const unitPrice = selectedProduct
-                        ? Number(selectedProduct.price)
-                        : 0;
-                      const lineTotal =
-                        Number.isFinite(quantity) && Number.isFinite(unitPrice)
-                          ? quantity * unitPrice
-                          : 0;
-
-                      const selectedByOthers = new Set(
-                        items
-                          .filter((otherItem) => otherItem.id !== item.id)
-                          .map((otherItem) => otherItem.productId)
-                          .filter(Boolean)
-                      );
-
-                      const availableProducts = products.filter(
-                        (product) =>
-                          product.id === item.productId ||
-                          !selectedByOthers.has(product.id)
-                      );
-
-                      return (
-                        <div
-                          className="grid items-center gap-3 rounded-md p-1.5 transition-colors hover:bg-muted/30 sm:grid-cols-[1fr_80px_100px_100px_40px]"
-                          key={item.id}
-                        >
-                          <div className="flex flex-col gap-1">
-                            <Label className="text-[11px] text-muted-foreground sm:hidden">
-                              Produto
-                            </Label>
-                            <ProductCombobox
-                              onSelect={(productId) => {
-                                updateItem(item.id, (currentItem) => ({
-                                  ...currentItem,
-                                  productId,
-                                }));
-                              }}
-                              options={availableProducts}
-                              value={item.productId}
-                            />
-                          </div>
-
-                          <div className="flex flex-col gap-1">
-                            <Label className="text-[11px] text-muted-foreground sm:hidden">
-                              Qtd.
-                            </Label>
-                            <Input
-                              className="h-7 bg-background"
-                              max={selectedProduct?.stock}
-                              min="1"
-                              onChange={(event) => {
-                                const value = event.target.value;
-                                const parsedValue = Number.parseInt(value, 10);
-
-                                if (
-                                  selectedProduct &&
-                                  !Number.isNaN(parsedValue) &&
-                                  parsedValue > selectedProduct.stock
-                                ) {
-                                  toast.error(
-                                    `Estoque insuficiente. Maximo disponivel: ${selectedProduct.stock} unidades.`
-                                  );
-                                  updateItem(item.id, (currentItem) => ({
-                                    ...currentItem,
-                                    quantity: String(selectedProduct.stock),
-                                  }));
-                                  return;
-                                }
-
-                                updateItem(item.id, (currentItem) => ({
-                                  ...currentItem,
-                                  quantity: value,
-                                }));
-                              }}
-                              step="1"
-                              type="number"
-                              value={item.quantity}
-                            />
-                          </div>
-
-                          <div className="flex flex-col gap-1">
-                            <Label className="text-[11px] text-muted-foreground sm:hidden">
-                              V. Unit.
-                            </Label>
-                            <div className="flex h-7 items-center text-foreground/80 text-xs sm:justify-end">
-                              {formatCurrency(unitPrice)}
-                            </div>
-                          </div>
-
-                          <div className="flex flex-col gap-1">
-                            <Label className="text-[11px] text-muted-foreground sm:hidden">
-                              Total
-                            </Label>
-                            <div className="flex h-7 items-center font-medium text-xs sm:justify-end">
-                              {formatCurrency(lineTotal)}
-                            </div>
-                          </div>
-
-                          <div className="flex items-center justify-end sm:justify-center">
-                            <Button
-                              aria-label="Remover item"
-                              className={`h-8 w-8 text-muted-foreground hover:text-destructive ${
-                                items.length <= 1 ? "invisible" : ""
-                              }`}
-                              disabled={items.length <= 1}
-                              onClick={() => removeItem(item.id)}
-                              size="icon"
-                              type="button"
-                              variant="ghost"
-                            >
-                              <HugeiconsIcon
-                                className="size-4"
-                                icon={Delete02Icon}
-                                strokeWidth={2.5}
-                              />
-                            </Button>
-                          </div>
-                        </div>
-                      );
-                    })}
+                    {items.map((item) => (
+                      <SaleProductRow
+                        item={item}
+                        items={items}
+                        key={item.id}
+                        products={products}
+                        removeItem={removeItem}
+                        updateItem={updateItem}
+                      />
+                    ))}
                   </div>
                 </div>
               </div>
@@ -567,12 +853,56 @@ export function CreateSaleDialog({
                     </InputGroup>
                   </div>
                 </div>
+
+                <div className="-mx-5 my-0.5 h-px bg-border/40" />
+
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-medium text-muted-foreground">
+                    Valor da venda
+                  </span>
+                  <span className="font-medium">
+                    {formatCurrency(displayBaseAmount)}
+                  </span>
+                </div>
+
+                {paymentMethod === "card" && sellerFeeAmount > 0 ? (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium text-muted-foreground">
+                      Taxa do cartao (custo)
+                    </span>
+                    <span className="font-medium">
+                      {formatCurrency(sellerFeeAmount)}
+                    </span>
+                  </div>
+                ) : null}
+
+                {paymentMethod === "card" && customerFeeAmount > 0 ? (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium text-muted-foreground">
+                      Acrescimo no cartao
+                    </span>
+                    <span className="font-medium">
+                      {formatCurrency(customerFeeAmount)}
+                    </span>
+                  </div>
+                ) : null}
+
+                {paymentMethod === "card" && isCardFeePayer(paymentFeePayer) ? (
+                  <div className="rounded-lg border border-border/60 bg-background/70 px-3 py-2 text-muted-foreground text-xs">
+                    {paymentFeePayer === "seller"
+                      ? "A taxa do cartao entra como custo desta venda."
+                      : "O acrescimo do cartao sera cobrado do cliente e nao entra como receita."}
+                  </div>
+                ) : null}
+
                 <div className="mt-1 flex items-center justify-between rounded-md border border-border px-2 py-2">
                   <strong className="font-bold text-muted-foreground">
-                    Total final
+                    {paymentMethod === "card" && customerFeeAmount > 0
+                      ? "Cobrado do cliente"
+                      : "Total final"}
                   </strong>
                   <strong className="text-xl tracking-tight">
-                    {formatCurrency(totalAmount)}
+                    {formatCurrency(displayChargedAmount)}
                   </strong>
                 </div>
               </div>
@@ -582,9 +912,13 @@ export function CreateSaleDialog({
 
         <div className="flex flex-col gap-3 border-border/40 border-t bg-background/95 px-4 py-4 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-muted/20 px-3 py-2 sm:min-w-56">
-            <span className="text-muted-foreground text-sm">Total final</span>
+            <span className="text-muted-foreground text-sm">
+              {paymentMethod === "card" && customerFeeAmount > 0
+                ? "Cobrado do cliente"
+                : "Total final"}
+            </span>
             <strong className="font-semibold text-lg tabular-nums">
-              {formatCurrency(totalAmount)}
+              {formatCurrency(displayChargedAmount)}
             </strong>
           </div>
           <div className="flex items-center justify-end gap-3">

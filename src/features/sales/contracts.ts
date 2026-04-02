@@ -1,13 +1,21 @@
+export type SalePaymentMethod = "card" | "pix";
+export type SalePaymentFeePayer = "customer" | "not_applicable" | "seller";
+
 export interface SaleListItem {
   additionalAmount: string;
   cancelledAt: Date | null;
+  chargedAmount: string;
   customerName: string | null;
   discountAmount: string;
+  feeAmount: string;
   freightAmount: string;
   id: string;
   itemCount: number;
   occurredOn: string;
-  paymentMethod: "card" | "pix";
+  paymentFeePayer: SalePaymentFeePayer;
+  paymentFeePercent: string;
+  paymentInstallments: number;
+  paymentMethod: SalePaymentMethod;
   status: "cancelled" | "completed";
   totalAmount: string;
 }
@@ -26,15 +34,20 @@ export interface SaleDetailItem {
 export interface SaleDetail {
   additionalAmount: string;
   cancelledAt: Date | null;
+  chargedAmount: string;
   createdAt: Date;
   customerName: string | null;
   discountAmount: string;
+  feeAmount: string;
   freightAmount: string;
   id: string;
   items: SaleDetailItem[];
   notes: string | null;
   occurredOn: string;
-  paymentMethod: "card" | "pix";
+  paymentFeePayer: SalePaymentFeePayer;
+  paymentFeePercent: string;
+  paymentInstallments: number;
+  paymentMethod: SalePaymentMethod;
   status: "cancelled" | "completed";
   totalAmount: string;
 }
@@ -48,7 +61,7 @@ export interface SalesPerformancePoint {
 }
 
 export interface SalesPaymentMethodSummary {
-  paymentMethod: "card" | "pix";
+  paymentMethod: SalePaymentMethod;
   salesCount: number;
   totalAmount: number;
 }
@@ -67,7 +80,7 @@ export interface SalesAnalytics {
   periodGranularity: SalesPeriodGranularity;
   profitMarginPercent: number;
   statusSummary: SalesStatusSummary[];
-  topPaymentMethod: "card" | "pix" | null;
+  topPaymentMethod: SalePaymentMethod | null;
   totalProfit: number;
   totalSold: number;
 }

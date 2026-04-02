@@ -80,7 +80,9 @@ bun run db:push
 - baixa de estoque com motivos simplificados (`adjustment` e `operational`)
 - venda concluida no ato com baixa imediata de estoque
 - venda registra meio de pagamento (`pix` ou `card`)
-- total final da venda considera frete e taxa
+- venda registra `total_amount` como valor operacional e `charged_amount` como valor cobrado do cliente
+- parcelamento de cartao usa regras globais em `system_settings.payment_fee_rules`
+- `fee_amount` so representa custo quando a taxa e absorvida pelo vendedor
 - preco do item na venda e snapshot do preco atual do produto
 - cancelamento de venda com estorno automatico
 - detalhes da baixa devem ir em `notes`

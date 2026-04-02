@@ -28,8 +28,33 @@ const getStatusVariant = (status: "cancelled" | "completed") => {
   return "secondary" as const;
 };
 
-const getPaymentMethodLabel = (paymentMethod: "card" | "pix") =>
-  paymentMethod === "card" ? "Cartao" : "Pix";
+const getPaymentMethodLabel = ({
+  paymentInstallments,
+  paymentMethod,
+}: {
+  paymentInstallments: number;
+  paymentMethod: "card" | "pix";
+}) => {
+  if (paymentMethod === "pix") {
+    return "Pix";
+  }
+
+  return `Cartao ${paymentInstallments}x`;
+};
+
+const getPaymentFeePayerLabel = (
+  paymentFeePayer: "customer" | "not_applicable" | "seller"
+) => {
+  if (paymentFeePayer === "seller") {
+    return "Vendedor";
+  }
+
+  if (paymentFeePayer === "customer") {
+    return "Cliente";
+  }
+
+  return "Nao se aplica";
+};
 
 export default async function VendaDetalhePage(
   props: PageProps<"/vendas/[id]">
@@ -90,10 +115,18 @@ export default async function VendaDetalhePage(
             </div>
             <div>
               <p className="mb-1 text-[11px] text-muted-foreground uppercase tracking-wider">
-                Método de Pgto
+                Metodo de Pgto
               </p>
               <p className="font-medium text-sm">
-                {getPaymentMethodLabel(sale.paymentMethod)}
+                {getPaymentMethodLabel(sale)}
+              </p>
+            </div>
+            <div>
+              <p className="mb-1 text-[11px] text-muted-foreground uppercase tracking-wider">
+                Taxa do cartao
+              </p>
+              <p className="font-medium text-sm">
+                {getPaymentFeePayerLabel(sale.paymentFeePayer)}
               </p>
             </div>
             {sale.status === "cancelled" && (
@@ -109,7 +142,7 @@ export default async function VendaDetalhePage(
             {sale.notes && (
               <div className="col-span-2 sm:col-span-3">
                 <p className="mb-1 text-[11px] text-muted-foreground uppercase tracking-wider">
-                  Observações
+                  Observacoes
                 </p>
                 <p className="text-foreground/80 text-sm">{sale.notes}</p>
               </div>
@@ -117,14 +150,14 @@ export default async function VendaDetalhePage(
           </div>
 
           <div>
-            <h3 className="mb-4 font-medium text-lg">Itens da Venda</h3>
+            <h3 className="mb-4 font-medium text-lg">Itens da venda</h3>
             <div className="overflow-hidden rounded-lg border border-border/50">
               <Table>
                 <TableHeader className="bg-muted/30">
                   <TableRow className="hover:bg-transparent">
                     <TableHead className="pl-4">Produto</TableHead>
                     <TableHead className="w-[80px] text-center">Qtd</TableHead>
-                    <TableHead className="text-right">Unitário</TableHead>
+                    <TableHead className="text-right">Unitario</TableHead>
                     <TableHead className="pr-4 text-right">Subtotal</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -158,7 +191,7 @@ export default async function VendaDetalhePage(
 
         <div className="lg:col-start-3">
           <div className="sticky top-6 rounded-xl border border-border/50 bg-card p-6 shadow-sm">
-            <h3 className="mb-4 font-medium text-base">Resumo Financeiro</h3>
+            <h3 className="mb-4 font-medium text-base">Resumo financeiro</h3>
             <div className="space-y-3 text-sm">
               <div className="flex items-center justify-between text-muted-foreground">
                 <span>Subtotal ({sale.items.length} itens)</span>
@@ -172,17 +205,29 @@ export default async function VendaDetalhePage(
                 <span>Adicional</span>
                 <span>{formatCurrency(sale.additionalAmount)}</span>
               </div>
+              {Number(sale.feeAmount) > 0 && (
+                <div className="flex items-center justify-between text-muted-foreground">
+                  <span>Taxa do cartao</span>
+                  <span>{formatCurrency(sale.feeAmount)}</span>
+                </div>
+              )}
               {Number(sale.discountAmount) > 0 && (
                 <div className="flex items-center justify-between text-primary">
                   <span>Desconto</span>
                   <span>-{formatCurrency(sale.discountAmount)}</span>
                 </div>
               )}
+              {Number(sale.chargedAmount) > Number(sale.totalAmount) && (
+                <div className="flex items-center justify-between text-muted-foreground">
+                  <span>Cobrado do cliente</span>
+                  <span>{formatCurrency(sale.chargedAmount)}</span>
+                </div>
+              )}
 
               <div className="my-4 border-border/40 border-t border-dashed" />
 
               <div className="flex items-center justify-between font-semibold text-lg">
-                <span>Total</span>
+                <span>Valor da venda</span>
                 <span>{formatCurrency(sale.totalAmount)}</span>
               </div>
             </div>

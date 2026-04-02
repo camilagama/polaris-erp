@@ -37,6 +37,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import type { CardInstallmentRule } from "@/features/catalog/payment-rules";
 import type { SaleListItem, SalesAnalytics } from "@/features/sales/contracts";
 import {
   type SalesDateRange,
@@ -60,11 +61,19 @@ const getStatusVariant = (status: SaleListItem["status"]) => {
   return "secondary" as const;
 };
 
-const getPaymentMethodLabel = (paymentMethod: SaleListItem["paymentMethod"]) =>
-  paymentMethod === "card" ? "Cartao" : "Pix";
+const getPaymentMethodLabel = (
+  sale: Pick<SaleListItem, "paymentInstallments" | "paymentMethod">
+) => {
+  if (sale.paymentMethod === "pix") {
+    return "Pix";
+  }
+
+  return `Cartao ${sale.paymentInstallments}x`;
+};
 
 export function SalesPanel({
   analytics,
+  cardInstallmentRules,
   dateBounds,
   initialCursor,
   saleProducts,
@@ -72,6 +81,7 @@ export function SalesPanel({
   selectedRange,
 }: {
   analytics: SalesAnalytics;
+  cardInstallmentRules: CardInstallmentRule[];
   dateBounds: {
     from: string;
     to: string;
@@ -163,7 +173,10 @@ export function SalesPanel({
             </Select>
           </div>
 
-          <CreateSaleDialog products={saleProducts} />
+          <CreateSaleDialog
+            cardInstallmentRules={cardInstallmentRules}
+            products={saleProducts}
+          />
         </div>
       </div>
 
@@ -218,7 +231,7 @@ export function SalesPanel({
 
                 <div className="mt-3 flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">
-                    {getPaymentMethodLabel(sale.paymentMethod)}
+                    {getPaymentMethodLabel(sale)}
                   </span>
                   <span className="font-medium">{sale.itemCount} item(ns)</span>
                 </div>
@@ -260,9 +273,7 @@ export function SalesPanel({
                       </Link>
                     </TableCell>
                     <TableCell>{formatDate(sale.occurredOn)}</TableCell>
-                    <TableCell>
-                      {getPaymentMethodLabel(sale.paymentMethod)}
-                    </TableCell>
+                    <TableCell>{getPaymentMethodLabel(sale)}</TableCell>
                     <TableCell className="text-center">
                       {sale.itemCount}
                     </TableCell>

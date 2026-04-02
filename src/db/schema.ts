@@ -96,6 +96,11 @@ export const salePaymentMethodEnum = pgEnum("sale_payment_method", [
   "pix",
   "card",
 ]);
+export const salePaymentFeePayerEnum = pgEnum("sale_payment_fee_payer", [
+  "not_applicable",
+  "seller",
+  "customer",
+]);
 
 export const productWriteOffReasonEnum = pgEnum("product_write_off_reason", [
   "adjustment",
@@ -131,19 +136,11 @@ export const systemSettings = pgTable(
     })
       .notNull()
       .default("0"),
-    cardFeePercent: decimal("card_fee_percent", {
-      precision: 12,
-      scale: 2,
-    })
-      .notNull()
-      .default("0"),
     paymentFeeRules: jsonb("payment_fee_rules")
       .$type<
         Array<{
-          code: string;
-          feePercent: number;
           installments: number;
-          paymentMethod: "card" | "pix";
+          feePercent: number;
         }>
       >()
       .notNull()
@@ -158,10 +155,6 @@ export const systemSettings = pgTable(
     check(
       "system_settings_ideal_markup_percent_non_negative",
       sql`${table.idealMarkupPercent} >= 0`
-    ),
-    check(
-      "system_settings_card_fee_percent_non_negative",
-      sql`${table.cardFeePercent} >= 0`
     ),
   ]
 );
@@ -324,6 +317,9 @@ export const sales = pgTable(
       .default("pix")
       .notNull(),
     paymentInstallments: integer("payment_installments").default(0).notNull(),
+    paymentFeePayer: salePaymentFeePayerEnum("payment_fee_payer")
+      .default("not_applicable")
+      .notNull(),
     paymentFeePercent: decimal("payment_fee_percent", {
       precision: 12,
       scale: 2,
@@ -345,6 +341,9 @@ export const sales = pgTable(
       .notNull()
       .default("0"),
     totalAmount: decimal("total_amount", { precision: 12, scale: 2 })
+      .notNull()
+      .default("0"),
+    chargedAmount: decimal("charged_amount", { precision: 12, scale: 2 })
       .notNull()
       .default("0"),
     cancelledAt: timestamp("cancelled_at", tz),
@@ -375,8 +374,20 @@ export const sales = pgTable(
       "sales_payment_method_installments_valid",
       sql`(${table.paymentMethod} = 'pix' and ${table.paymentInstallments} = 0) or (${table.paymentMethod} = 'card' and ${table.paymentInstallments} between 1 and 12)`
     ),
+    check(
+      "sales_payment_method_fee_payer_valid",
+      sql`(${table.paymentMethod} = 'pix' and ${table.paymentFeePayer} = 'not_applicable') or (${table.paymentMethod} = 'card' and ${table.paymentFeePayer} in ('not_applicable', 'seller', 'customer'))`
+    ),
     check("sales_fee_amount_non_negative", sql`${table.feeAmount} >= 0`),
     check("sales_total_amount_non_negative", sql`${table.totalAmount} >= 0`),
+    check(
+      "sales_charged_amount_non_negative",
+      sql`${table.chargedAmount} >= 0`
+    ),
+    check(
+      "sales_charged_amount_gte_total_amount",
+      sql`${table.chargedAmount} >= ${table.totalAmount}`
+    ),
     check(
       "sales_status_cancelled_at_consistent",
       sql`(${table.status} = 'completed' and ${table.cancelledAt} is null) or (${table.status} = 'cancelled' and ${table.cancelledAt} is not null)`
