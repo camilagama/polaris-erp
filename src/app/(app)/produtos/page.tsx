@@ -4,6 +4,7 @@ import {
   getCatalogSettings,
   listCategoriesWithUsage,
 } from "@/features/catalog/server";
+import { getProductAnalytics } from "@/features/products/server";
 import { getProductsQuery } from "./queries";
 
 export const metadata: Metadata = {
@@ -12,14 +13,16 @@ export const metadata: Metadata = {
 };
 
 export default async function ProdutosPage() {
-  const [products, categories, settings] = await Promise.all([
+  const [products, categories, settings, analytics] = await Promise.all([
     getProductsQuery(),
     listCategoriesWithUsage(),
     getCatalogSettings(),
+    getProductAnalytics(),
   ]);
 
   return (
     <ProductsPanel
+      analytics={analytics}
       categories={categories.map((category) => ({
         id: category.id,
         key: category.key,

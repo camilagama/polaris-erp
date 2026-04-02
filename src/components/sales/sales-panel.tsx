@@ -2,12 +2,22 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { DashboardDateRangeFilter } from "@/components/dashboard/dashboard-date-range-filter";
 import {
   CreateSaleDialog,
   type SaleProductOption,
 } from "@/components/sales/create-sale-dialog";
+import { PaymentMethodChart } from "@/components/sales/payment-method-chart";
+import { SalesPerformanceChart } from "@/components/sales/sales-performance-chart";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -25,8 +35,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { SaleListItem } from "@/features/sales/contracts";
-import { formatCurrency, formatDate } from "@/lib/formatters";
+import type { SaleListItem, SalesAnalytics } from "@/features/sales/contracts";
+import {
+  getSalesPresetDateRange,
+  type SalesDatePreset,
+  type SalesDateRange,
+  salesDatePresetOptions,
+} from "@/features/sales/date-range";
+import { formatCurrency, formatDate, formatPercent } from "@/lib/formatters";
 
 const getStatusLabel = (status: SaleListItem["status"]) => {
   if (status === "cancelled") {
@@ -48,11 +64,20 @@ const getPaymentMethodLabel = (paymentMethod: SaleListItem["paymentMethod"]) =>
   paymentMethod === "card" ? "Cartao" : "Pix";
 
 export function SalesPanel({
+  analytics,
+  dateBounds,
   saleProducts,
   sales,
+  selectedRange,
 }: {
+  analytics: SalesAnalytics;
+  dateBounds: {
+    from: string;
+    to: string;
+  };
   saleProducts: SaleProductOption[];
   sales: SaleListItem[];
+  selectedRange: SalesDateRange;
 }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<
@@ -83,14 +108,122 @@ export function SalesPanel({
   return (
     <div className="flex flex-col gap-6 p-4 pb-20 sm:p-6 sm:pb-6">
       <div className="flex flex-col gap-3">
-        <div className="flex flex-col gap-1">
-          <h1 className="font-heading font-semibold text-2xl tracking-tight">
-            Vendas
-          </h1>
-          <p className="max-w-2xl text-muted-foreground text-sm">
-            Registre vendas concluidas com baixa imediata de estoque e abra o
-            detalhe para revisar composicao financeira, itens e cancelamento.
-          </p>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex flex-col gap-1">
+            <h1 className="font-heading font-semibold text-2xl tracking-tight">
+              Vendas
+            </h1>
+            <p className="max-w-2xl text-muted-foreground text-sm">
+              Registre vendas concluidas com baixa imediata de estoque e abra o
+              detalhe para revisar composicao financeira, itens e cancelamento.
+            </p>
+          </div>
+
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-80">
+            <DashboardDateRangeFilter
+              from={selectedRange.from}
+              preset={selectedRange.preset}
+              presets={salesDatePresetOptions}
+              resolvePresetRange={(presetValue) =>
+                getSalesPresetDateRange({
+                  bounds: dateBounds,
+                  preset: presetValue as SalesDatePreset,
+                })
+              }
+              to={selectedRange.to}
+            />
+          </div>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <Card>
+            <CardHeader className="gap-1 pb-1.5">
+              <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
+                Total vendido
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <strong className="font-heading text-[1.65rem] leading-none tracking-tight">
+                {formatCurrency(analytics.totalSold)}
+              </strong>
+              <CardDescription className="mt-1 text-[11px]">
+                Valor concluido em {selectedRange.label.toLowerCase()}.
+              </CardDescription>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="gap-1 pb-1.5">
+              <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
+                Lucro total
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <strong className="font-heading text-[1.65rem] leading-none tracking-tight">
+                {formatCurrency(analytics.totalProfit)}
+              </strong>
+              <CardDescription className="mt-1 text-[11px]">
+                Margem de {formatPercent(analytics.profitMarginPercent)}%.
+              </CardDescription>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="gap-1 pb-1.5">
+              <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
+                Vendas concluidas
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <strong className="font-heading text-[1.65rem] leading-none tracking-tight">
+                {analytics.completedSalesCount}
+              </strong>
+              <CardDescription className="mt-1 text-[11px]">
+                Ticket medio de {formatCurrency(analytics.averageTicket)}.
+              </CardDescription>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="gap-1 pb-1.5">
+              <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
+                Pagamento lider
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <strong className="font-heading text-[1.65rem] leading-none tracking-tight">
+                {analytics.topPaymentMethod
+                  ? getPaymentMethodLabel(analytics.topPaymentMethod)
+                  : "-"}
+              </strong>
+              <CardDescription className="mt-1 text-[11px]">
+                {analytics.cancelledSalesCount} venda(s) cancelada(s) no
+                periodo.
+              </CardDescription>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid gap-4 xl:grid-cols-[1.35fr_0.95fr]">
+          <Card>
+            <CardHeader className="gap-1 pb-2">
+              <CardTitle className="text-base">Desempenho no periodo</CardTitle>
+              <CardDescription>{selectedRange.label}</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <SalesPerformanceChart data={analytics.performance} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="gap-1 pb-2">
+              <CardTitle className="text-base">Mix de pagamentos</CardTitle>
+              <CardDescription>Vendas concluidas por metodo</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <PaymentMethodChart data={analytics.paymentMethods} />
+            </CardContent>
+          </Card>
         </div>
 
         <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">

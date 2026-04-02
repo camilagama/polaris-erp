@@ -5,20 +5,27 @@ import { useTransition } from "react";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import {
   buildDashboardRangeQuery,
-  type DashboardDatePreset,
+  type DateRangePresetOption,
   dashboardDatePresetOptions,
   getDashboardPresetDateRange,
 } from "@/features/dashboard/date-range";
 
 interface DashboardDateRangeFilterProps {
   from: string;
-  preset: DashboardDatePreset | null;
+  preset: string | null;
+  presets?: readonly DateRangePresetOption<string>[];
+  resolvePresetRange?: (presetValue: string) => { from: string; to: string };
   to: string;
 }
 
 export function DashboardDateRangeFilter({
   from,
   preset,
+  presets = dashboardDatePresetOptions,
+  resolvePresetRange = (presetValue) =>
+    getDashboardPresetDateRange(
+      presetValue as Parameters<typeof getDashboardPresetDateRange>[0]
+    ),
   to,
 }: DashboardDateRangeFilterProps) {
   const pathname = usePathname();
@@ -32,7 +39,7 @@ export function DashboardDateRangeFilter({
         onChange={({ from: nextFrom, preset: nextPreset, to: nextTo }) => {
           const query = buildDashboardRangeQuery({
             from: nextFrom,
-            preset: nextPreset as DashboardDatePreset | null,
+            preset: nextPreset,
             to: nextTo,
           });
 
@@ -40,10 +47,8 @@ export function DashboardDateRangeFilter({
             router.replace(query ? `${pathname}?${query}` : pathname);
           });
         }}
-        presets={dashboardDatePresetOptions}
-        resolvePresetRange={(presetValue) =>
-          getDashboardPresetDateRange(presetValue as DashboardDatePreset)
-        }
+        presets={presets}
+        resolvePresetRange={resolvePresetRange}
         value={{
           from,
           preset,

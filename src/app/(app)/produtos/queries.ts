@@ -117,6 +117,7 @@ export async function getProductSalesByProductIdQuery(
       cancelledAt: sales.cancelledAt,
       createdAt: saleItems.createdAt,
       id: saleItems.id,
+      lineTotal: saleItems.lineTotal,
       occurredOn: sales.occurredOn,
       quantity: saleItems.quantity,
       saleId: sales.id,
@@ -130,6 +131,7 @@ export async function getProductSalesByProductIdQuery(
 
   return rows.map((row) => ({
     ...row,
+    lineTotal: row.lineTotal,
     quantity: Number(row.quantity),
     status: row.status as ProductSaleHistoryItem["status"],
   }));

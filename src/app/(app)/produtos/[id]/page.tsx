@@ -2,6 +2,7 @@ import { ArrowDown01Icon, PackageIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { notFound } from "next/navigation";
 import { ProductDetailActions } from "@/components/products/product-detail-actions";
+import { ProductSalesChart } from "@/components/products/product-sales-chart";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -11,6 +12,7 @@ import {
 } from "@/components/ui/collapsible";
 import { listCategoriesWithUsage } from "@/features/catalog/server";
 import { buildProductInventorySummary } from "@/features/products/history";
+import { getProductSalesHistoryMetrics } from "@/features/products/server";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 import {
   getProductByIdQuery,
@@ -23,13 +25,14 @@ export default async function ProdutoDetalhePage(
   props: PageProps<"/produtos/[id]">
 ) {
   const { id } = await props.params;
-  const [product, stockEntries, writeOffs, sales, categories] =
+  const [product, stockEntries, writeOffs, sales, categories, salesMetrics] =
     await Promise.all([
       getProductByIdQuery(id),
       getProductStockEntriesByProductIdQuery(id),
       getProductStockWriteOffsByProductIdQuery(id),
       getProductSalesByProductIdQuery(id),
       listCategoriesWithUsage(),
+      getProductSalesHistoryMetrics(id),
     ]);
 
   if (!product) {
@@ -160,6 +163,38 @@ export default async function ProdutoDetalhePage(
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Vendas do produto</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+            <ProductSalesChart
+              data={salesMetrics.trend}
+              emptyLabel="Esse produto ainda nao tem vendas concluidas."
+            />
+            <div className="grid gap-3 text-xs">
+              <div className="rounded-md border border-border/50 px-3 py-2">
+                <p className="text-muted-foreground">Unidades vendidas</p>
+                <p className="font-medium text-sm">
+                  {salesMetrics.totalQuantitySold} un.
+                </p>
+              </div>
+              <div className="rounded-md border border-border/50 px-3 py-2">
+                <p className="text-muted-foreground">Valor vendido</p>
+                <p className="font-medium text-sm">
+                  {formatCurrency(salesMetrics.totalSoldAmount)}
+                </p>
+              </div>
+              <div className="rounded-md border border-border/50 px-3 py-2">
+                <p className="text-muted-foreground">Vendas vinculadas</p>
+                <p className="font-medium text-sm">{linkedSalesCount}</p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

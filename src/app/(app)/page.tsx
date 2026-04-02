@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { DashboardDateRangeFilter } from "@/components/dashboard/dashboard-date-range-filter";
-import { InventoryCategoriesChart } from "@/components/dashboard/inventory-categories-chart";
 import { RevenueResultChart } from "@/components/dashboard/revenue-result-chart";
 import { TopProductsChart } from "@/components/dashboard/top-products-chart";
 import { Badge } from "@/components/ui/badge";
@@ -146,16 +145,6 @@ export default async function DashboardPage(props: PageProps<"/">) {
             </CardHeader>
             <CardContent className="pt-0">
               <TopProductsChart data={metrics.topProducts} />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="gap-1 pb-2">
-              <CardTitle className="text-base">Categorias no estoque</CardTitle>
-              <CardDescription>Estoque atual</CardDescription>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <InventoryCategoriesChart data={metrics.inventoryByCategory} />
             </CardContent>
           </Card>
         </div>

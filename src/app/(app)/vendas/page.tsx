@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { SalesPanel } from "@/components/sales/sales-panel";
+import { resolveSalesDateRange } from "@/features/sales/date-range";
+import { getSalesAnalytics, getSalesDateBounds } from "@/features/sales/server";
 import { getProductsQuery } from "../produtos/queries";
 import { getSalesQuery } from "./queries";
 
@@ -8,10 +10,20 @@ export const metadata: Metadata = {
   description: "Registro, consulta e cancelamento de vendas do DG Imports.",
 };
 
-export default async function VendasPage() {
-  const [sales, products] = await Promise.all([
+export default async function VendasPage(props: PageProps<"/vendas">) {
+  const searchParams = await props.searchParams;
+  const bounds = await getSalesDateBounds();
+  const selectedRange = resolveSalesDateRange({
+    bounds,
+    searchParams,
+  });
+  const [sales, products, analytics] = await Promise.all([
     getSalesQuery(),
     getProductsQuery(),
+    getSalesAnalytics({
+      from: selectedRange.from,
+      to: selectedRange.to,
+    }),
   ]);
 
   const saleProducts = products
@@ -23,5 +35,13 @@ export default async function VendasPage() {
       stock: product.stock,
     }));
 
-  return <SalesPanel saleProducts={saleProducts} sales={sales} />;
+  return (
+    <SalesPanel
+      analytics={analytics}
+      dateBounds={bounds}
+      saleProducts={saleProducts}
+      sales={sales}
+      selectedRange={selectedRange}
+    />
+  );
 }

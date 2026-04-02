@@ -11,6 +11,18 @@ import {
 import { ptBR } from "date-fns/locale";
 import { formatDateInputValue, isoDateSchema } from "@/lib/domain/date";
 
+export interface DateRangePresetOption<TValue extends string = string> {
+  label: string;
+  value: TValue;
+}
+
+export interface ResolvedDateRange<TPreset extends string = string> {
+  from: string;
+  label: string;
+  preset: TPreset | null;
+  to: string;
+}
+
 export const dashboardDatePresetOptions = [
   {
     label: "Mes atual",
@@ -28,34 +40,33 @@ export const dashboardDatePresetOptions = [
     label: "Este ano",
     value: "current-year",
   },
-] as const;
+] as const satisfies readonly DateRangePresetOption[];
 
 export type DashboardDatePreset =
   (typeof dashboardDatePresetOptions)[number]["value"];
 
-export interface DashboardDateRange {
-  from: string;
-  label: string;
-  preset: DashboardDatePreset | null;
-  to: string;
-}
+export type DashboardDateRange = ResolvedDateRange<DashboardDatePreset>;
 
-const dashboardDatePresetValues = new Set<DashboardDatePreset>(
-  dashboardDatePresetOptions.map((option) => option.value)
+export const createDatePresetValues = <TPreset extends string>(
+  presets: readonly DateRangePresetOption<TPreset>[]
+) => new Set<TPreset>(presets.map((option) => option.value));
+
+const dashboardDatePresetValues = createDatePresetValues(
+  dashboardDatePresetOptions
 );
 
 const isValidIsoDate = (value: string | undefined) =>
   value ? isoDateSchema.safeParse(value).success : false;
 
-const normalizeDateRange = ({
+export const normalizeDateRange = <TPreset extends string>({
   from,
   preset,
   to,
 }: {
   from: string;
-  preset: DashboardDatePreset | null;
+  preset: TPreset | null;
   to: string;
-}): DashboardDateRange => {
+}): ResolvedDateRange<TPreset> => {
   const normalizedFrom = from <= to ? from : to;
   const normalizedTo = from <= to ? to : from;
 
@@ -71,10 +82,12 @@ const normalizeDateRange = ({
   };
 };
 
-export const getDashboardPresetDateRange = (
-  preset: DashboardDatePreset,
+export const getDashboardPresetDateRange = <
+  TPreset extends DashboardDatePreset,
+>(
+  preset: TPreset,
   referenceDate = new Date()
-): DashboardDateRange => {
+): ResolvedDateRange<TPreset> => {
   if (preset === "current-month") {
     return normalizeDateRange({
       from: formatDateInputValue(startOfMonth(referenceDate)),
@@ -108,10 +121,22 @@ export const getDashboardPresetDateRange = (
   });
 };
 
-export const resolveDashboardDateRange = (
-  searchParams: Record<string, string | string[] | undefined>,
-  referenceDate = new Date()
-): DashboardDateRange => {
+export const resolveDateRangeFromSearchParams = <TPreset extends string>({
+  defaultPreset,
+  getPresetDateRange,
+  presetValues,
+  referenceDate = new Date(),
+  searchParams,
+}: {
+  defaultPreset: TPreset;
+  getPresetDateRange: (
+    preset: TPreset,
+    referenceDate?: Date
+  ) => ResolvedDateRange<TPreset>;
+  presetValues: Set<TPreset>;
+  referenceDate?: Date;
+  searchParams: Record<string, string | string[] | undefined>;
+}): ResolvedDateRange<TPreset> => {
   const fromValue = Array.isArray(searchParams.from)
     ? searchParams.from[0]
     : searchParams.from;
@@ -128,10 +153,8 @@ export const resolveDashboardDateRange = (
     isValidIsoDate(fromValue) &&
     isValidIsoDate(toValue)
   ) {
-    const preset = dashboardDatePresetValues.has(
-      presetValue as DashboardDatePreset
-    )
-      ? (presetValue as DashboardDatePreset)
+    const preset = presetValues.has(presetValue as TPreset)
+      ? (presetValue as TPreset)
       : null;
 
     return normalizeDateRange({
@@ -141,14 +164,24 @@ export const resolveDashboardDateRange = (
     });
   }
 
-  if (dashboardDatePresetValues.has(presetValue as DashboardDatePreset)) {
-    return getDashboardPresetDateRange(
-      presetValue as DashboardDatePreset,
-      referenceDate
-    );
+  if (presetValues.has(presetValue as TPreset)) {
+    return getPresetDateRange(presetValue as TPreset, referenceDate);
   }
 
-  return getDashboardPresetDateRange("current-month", referenceDate);
+  return getPresetDateRange(defaultPreset, referenceDate);
+};
+
+export const resolveDashboardDateRange = (
+  searchParams: Record<string, string | string[] | undefined>,
+  referenceDate = new Date()
+): DashboardDateRange => {
+  return resolveDateRangeFromSearchParams({
+    defaultPreset: "current-month",
+    getPresetDateRange: getDashboardPresetDateRange,
+    presetValues: dashboardDatePresetValues,
+    referenceDate,
+    searchParams,
+  });
 };
 
 export const getDashboardPreviousDateRange = ({
@@ -167,7 +200,7 @@ export const getDashboardPreviousDateRange = ({
 
   return normalizeDateRange({
     from: formatDateInputValue(previousFrom),
-    preset: null,
+    preset: null as DashboardDatePreset | null,
     to: formatDateInputValue(previousTo),
   });
 };
@@ -178,7 +211,7 @@ export const buildDashboardRangeQuery = ({
   to,
 }: {
   from: string;
-  preset: DashboardDatePreset | null;
+  preset: string | null;
   to: string;
 }) => {
   const params = new URLSearchParams();

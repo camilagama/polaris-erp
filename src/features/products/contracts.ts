@@ -35,9 +35,36 @@ export interface ProductSaleHistoryItem {
   cancelledAt: Date | null;
   createdAt: Date;
   id: string;
+  lineTotal: string;
   occurredOn: string;
   quantity: number;
   saleId: string;
   status: "cancelled" | "completed";
   unitCostSnapshot: string;
+}
+
+export interface ProductInventoryCategory {
+  categoryName: string;
+  inventoryValue: number;
+}
+
+export interface ProductSalesPoint {
+  label: string;
+  quantitySold: number;
+  soldAmount: number;
+}
+
+export interface ProductAnalytics {
+  inventoryByCategory: ProductInventoryCategory[];
+  recentSales: ProductSalesPoint[];
+  totalActiveProductsInStock: number;
+  totalInventoryInvestment: number;
+  totalUnitsInStock: number;
+  totalZeroStockProducts: number;
+}
+
+export interface ProductSalesHistoryMetrics {
+  totalQuantitySold: number;
+  totalSoldAmount: number;
+  trend: ProductSalesPoint[];
 }

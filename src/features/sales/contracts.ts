@@ -38,3 +38,30 @@ export interface SaleDetail {
   status: "cancelled" | "completed";
   totalAmount: string;
 }
+
+export type SalesPeriodGranularity = "day" | "month";
+
+export interface SalesPerformancePoint {
+  label: string;
+  profit: number;
+  sold: number;
+}
+
+export interface SalesPaymentMethodSummary {
+  paymentMethod: "card" | "pix";
+  salesCount: number;
+  totalAmount: number;
+}
+
+export interface SalesAnalytics {
+  averageTicket: number;
+  cancelledSalesCount: number;
+  completedSalesCount: number;
+  paymentMethods: SalesPaymentMethodSummary[];
+  performance: SalesPerformancePoint[];
+  periodGranularity: SalesPeriodGranularity;
+  profitMarginPercent: number;
+  topPaymentMethod: "card" | "pix" | null;
+  totalProfit: number;
+  totalSold: number;
+}

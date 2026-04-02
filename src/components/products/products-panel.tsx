@@ -15,9 +15,17 @@ import {
   updateProductAction,
 } from "@/app/(app)/produtos/actions";
 import { ProductEditFields } from "@/components/products/product-edit-fields";
+import { ProductSalesChart } from "@/components/products/product-sales-chart";
 import { RegisterProductDialog } from "@/components/products/register-product-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -49,8 +57,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { ProductListItem } from "@/features/products/contracts";
+import type {
+  ProductAnalytics,
+  ProductListItem,
+} from "@/features/products/contracts";
 import { formatCurrency } from "@/lib/formatters";
+import { InventoryCategoriesChart } from "../dashboard/inventory-categories-chart";
 
 interface ProductCategoryOption {
   id: string;
@@ -108,10 +120,12 @@ function ProductRowActions({
 }
 
 export function ProductsPanel({
+  analytics,
   categories,
   products,
   settings,
 }: {
+  analytics: ProductAnalytics;
   categories: ProductCategoryOption[];
   products: ProductListItem[];
   settings: {
@@ -219,6 +233,99 @@ export function ProductsPanel({
             Abra o detalhe para ver historico, custo medio e movimentacoes. A
             listagem concentra filtro rapido, status e acoes operacionais.
           </p>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <Card>
+            <CardHeader className="gap-1 pb-1.5">
+              <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
+                Total em estoque
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <strong className="font-heading text-[1.65rem] leading-none tracking-tight">
+                {analytics.totalUnitsInStock} un.
+              </strong>
+              <CardDescription className="mt-1 text-[11px]">
+                Soma das unidades dos produtos ativos.
+              </CardDescription>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="gap-1 pb-1.5">
+              <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
+                Valor investido
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <strong className="font-heading text-[1.65rem] leading-none tracking-tight">
+                {formatCurrency(analytics.totalInventoryInvestment)}
+              </strong>
+              <CardDescription className="mt-1 text-[11px]">
+                Custo total do estoque atual.
+              </CardDescription>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="gap-1 pb-1.5">
+              <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
+                Produtos com estoque
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <strong className="font-heading text-[1.65rem] leading-none tracking-tight">
+                {analytics.totalActiveProductsInStock}
+              </strong>
+              <CardDescription className="mt-1 text-[11px]">
+                Itens ativos prontos para venda.
+              </CardDescription>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="gap-1 pb-1.5">
+              <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
+                Estoque zerado
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <strong className="font-heading text-[1.65rem] leading-none tracking-tight">
+                {analytics.totalZeroStockProducts}
+              </strong>
+              <CardDescription className="mt-1 text-[11px]">
+                Produtos ativos que precisam reposicao.
+              </CardDescription>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid gap-4 xl:grid-cols-[1.35fr_0.95fr]">
+          <Card>
+            <CardHeader className="gap-1 pb-2">
+              <CardTitle className="text-base">Vendas recentes</CardTitle>
+              <CardDescription>Ultimos 30 dias</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <ProductSalesChart
+                data={analytics.recentSales}
+                emptyLabel="Sem vendas recentes para exibir curva de produtos."
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="gap-1 pb-2">
+              <CardTitle className="text-base">Categorias no estoque</CardTitle>
+              <CardDescription>
+                Distribuicao do inventario atual
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <InventoryCategoriesChart data={analytics.inventoryByCategory} />
+            </CardContent>
+          </Card>
         </div>
 
         <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
