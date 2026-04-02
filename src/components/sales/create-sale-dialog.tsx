@@ -78,9 +78,6 @@ const createSaleRow = (): SaleRowDraft => ({
   quantity: "1",
 });
 
-const getDefaultCardInstallments = (rules: CardInstallmentRule[]) =>
-  String(rules[0]?.installments ?? 1);
-
 const isCardFeePayer = (
   value: SalePaymentFeePayer | ""
 ): value is "customer" | "seller" => value === "customer" || value === "seller";
@@ -266,7 +263,7 @@ function SaleProductRow({
   );
 
   return (
-    <div className="grid items-center gap-3 rounded-md p-1.5 transition-colors hover:bg-muted/30 sm:grid-cols-[1fr_80px_100px_100px_40px]">
+    <div className="grid items-center gap-3 rounded-md p-1.5 transition-colors hover:bg-muted/30 sm:grid-cols-[minmax(0,1fr)_80px_100px_100px_40px]">
       <div className="flex flex-col gap-1">
         <Label className="text-[11px] text-muted-foreground sm:hidden">
           Produto
@@ -573,21 +570,26 @@ export function CreateSaleDialog({
                       Metodo de pagamento
                     </Label>
                     <Select
-                      onValueChange={(value: "card" | "pix") => {
-                        setPaymentMethod(value);
-
+                      onValueChange={(value) => {
                         if (value === "pix") {
+                          setPaymentMethod("pix");
                           setPaymentInstallments("0");
                           setPaymentFeePayer("not_applicable");
                           return;
                         }
 
-                        setPaymentInstallments(
-                          getDefaultCardInstallments(cardInstallmentRules)
+                        const installments = value.split("-")[1] ?? "1";
+                        setPaymentMethod("card");
+                        setPaymentInstallments(installments);
+                        setPaymentFeePayer((prev) =>
+                          isCardFeePayer(prev) ? prev : "seller"
                         );
-                        setPaymentFeePayer("");
                       }}
-                      value={paymentMethod}
+                      value={
+                        paymentMethod === "pix"
+                          ? "pix"
+                          : `card-${paymentInstallments}`
+                      }
                     >
                       <SelectTrigger
                         className="w-full"
@@ -597,81 +599,64 @@ export function CreateSaleDialog({
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="pix">Pix</SelectItem>
-                        <SelectItem value="card">Cartao</SelectItem>
+                        {cardInstallmentRules.map((rule) => (
+                          <SelectItem
+                            key={rule.installments}
+                            value={`card-${rule.installments}`}
+                          >
+                            {getCardInstallmentRuleLabel(rule.installments)} no
+                            cartao
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
 
                   {paymentMethod === "card" ? (
-                    <>
-                      <div className="flex flex-col gap-1.5">
-                        <Label
-                          className="text-muted-foreground text-xs"
-                          htmlFor="sale-payment-installments"
-                        >
-                          Parcelamento
-                        </Label>
-                        <Select
-                          onValueChange={setPaymentInstallments}
-                          value={paymentInstallments}
-                        >
-                          <SelectTrigger
-                            className="w-full"
-                            id="sale-payment-installments"
+                    <div className="flex flex-col gap-4 sm:col-span-2">
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="flex flex-col gap-1.5">
+                          <Label
+                            className="text-muted-foreground text-xs"
+                            htmlFor="sale-payment-fee-payer"
                           >
-                            <SelectValue placeholder="Selecione" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {cardInstallmentRules.map((rule) => (
-                              <SelectItem
-                                key={rule.installments}
-                                value={String(rule.installments)}
-                              >
-                                {getCardInstallmentRuleLabel(rule.installments)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="flex flex-col gap-1.5">
-                        <Label
-                          className="text-muted-foreground text-xs"
-                          htmlFor="sale-payment-fee-payer"
-                        >
-                          Quem paga a taxa
-                        </Label>
-                        <Select
-                          onValueChange={(value: "customer" | "seller") =>
-                            setPaymentFeePayer(value)
-                          }
-                          value={paymentFeePayer}
-                        >
-                          <SelectTrigger
-                            className="w-full"
-                            id="sale-payment-fee-payer"
+                            Quem paga a taxa
+                          </Label>
+                          <Select
+                            onValueChange={(value: "customer" | "seller") =>
+                              setPaymentFeePayer(value)
+                            }
+                            value={paymentFeePayer}
                           >
-                            <SelectValue placeholder="Selecione" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="seller">Vendedor</SelectItem>
-                            <SelectItem value="customer">Cliente</SelectItem>
-                          </SelectContent>
-                        </Select>
+                            <SelectTrigger
+                              className="w-full"
+                              id="sale-payment-fee-payer"
+                            >
+                              <SelectValue placeholder="Selecione" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="seller">Vendedor</SelectItem>
+                              <SelectItem value="customer">Cliente</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex items-end">
+                          <div className="flex h-9 w-full items-center rounded-lg border border-border/60 bg-muted/15 px-3 text-muted-foreground text-xs">
+                            Taxa configurada para{" "}
+                            {selectedInstallmentRule
+                              ? getCardInstallmentRuleLabel(
+                                  selectedInstallmentRule.installments
+                                )
+                              : "o parcelamento selecionado"}
+                            :{" "}
+                            {formatPercent(
+                              selectedInstallmentRule?.feePercent ?? 0
+                            )}
+                            %.
+                          </div>
+                        </div>
                       </div>
-                      <div className="rounded-lg border border-border/60 bg-muted/15 px-3 py-2 text-muted-foreground text-xs sm:col-span-2">
-                        Taxa configurada para{" "}
-                        {selectedInstallmentRule
-                          ? getCardInstallmentRuleLabel(
-                              selectedInstallmentRule.installments
-                            )
-                          : "o parcelamento selecionado"}
-                        :{" "}
-                        {formatPercent(
-                          selectedInstallmentRule?.feePercent ?? 0
-                        )}
-                        %.
-                      </div>
-                    </>
+                    </div>
                   ) : null}
 
                   <div className="flex flex-col gap-1.5 sm:col-span-2">
@@ -720,7 +705,7 @@ export function CreateSaleDialog({
                 </div>
 
                 <div className="rounded-md border border-border/60">
-                  <div className="hidden grid-cols-[1fr_80px_100px_100px_40px] gap-3 border-border/60 border-b px-3 py-2 font-medium text-[11px] text-muted-foreground uppercase tracking-wider sm:grid">
+                  <div className="hidden grid-cols-[minmax(0,1fr)_80px_100px_100px_40px] gap-3 border-border/60 border-b px-3 py-2 font-medium text-[11px] text-muted-foreground uppercase tracking-wider sm:grid">
                     <span>Produto</span>
                     <span>Qtd.</span>
                     <span className="text-right">V. Unit.</span>
@@ -910,33 +895,17 @@ export function CreateSaleDialog({
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 border-border/40 border-t bg-background/95 px-4 py-4 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-muted/20 px-3 py-2 sm:min-w-56">
-            <span className="text-muted-foreground text-sm">
-              {paymentMethod === "card" && customerFeeAmount > 0
-                ? "Cobrado do cliente"
-                : "Total final"}
-            </span>
-            <strong className="font-semibold text-lg tabular-nums">
-              {formatCurrency(displayChargedAmount)}
-            </strong>
-          </div>
-          <div className="flex items-center justify-end gap-3">
-            <Button
-              onClick={() => setOpen(false)}
-              type="button"
-              variant="ghost"
-            >
-              Cancelar
-            </Button>
-            <Button
-              disabled={pending || products.length === 0}
-              onClick={handleSubmit}
-              type="button"
-            >
-              {pending ? "Registrando..." : "Confirmar venda"}
-            </Button>
-          </div>
+        <div className="flex items-center justify-end gap-3 border-border/40 border-t bg-background/95 px-4 py-4 backdrop-blur sm:px-6">
+          <Button onClick={() => setOpen(false)} type="button" variant="ghost">
+            Cancelar
+          </Button>
+          <Button
+            disabled={pending || products.length === 0}
+            onClick={handleSubmit}
+            type="button"
+          >
+            {pending ? "Registrando..." : "Confirmar venda"}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

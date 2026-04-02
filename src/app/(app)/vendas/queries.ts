@@ -1,4 +1,4 @@
-import { asc, count, desc, eq, lt } from "drizzle-orm";
+import { asc, desc, eq, lt, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { saleItems, sales } from "@/db/schema";
 import type { SaleDetail, SaleListItem } from "@/features/sales/contracts";
@@ -27,7 +27,11 @@ export async function getSalesQuery(
       feeAmount: sales.feeAmount,
       freightAmount: sales.freightAmount,
       id: sales.id,
-      itemCount: count(saleItems.id),
+      itemCount: sql<number>`(
+        select count(*)
+        from "sale_items"
+        where "sale_items"."sale_id" = "sales"."id"
+      )`,
       occurredOn: sales.occurredOn,
       paymentFeePayer: sales.paymentFeePayer,
       paymentFeePercent: sales.paymentFeePercent,
@@ -37,8 +41,6 @@ export async function getSalesQuery(
       totalAmount: sales.totalAmount,
     })
     .from(sales)
-    .leftJoin(saleItems, eq(saleItems.saleId, sales.id))
-    .groupBy(sales.id)
     .orderBy(desc(sales.occurredOn), desc(sales.createdAt))
     .limit(limit);
 
