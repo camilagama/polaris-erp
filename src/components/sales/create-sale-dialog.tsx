@@ -360,7 +360,6 @@ function SaleProductRow({
   );
 }
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: dialog coordinates many draft inputs and submission states.
 export function CreateSaleDialog({
   cardInstallmentRules,
   products,
@@ -427,11 +426,11 @@ export function CreateSaleDialog({
   const displayChargedAmount = financials?.chargedAmount ?? displayBaseAmount;
   const customerFeeAmount = financials?.customerFeeAmount ?? 0;
   const sellerFeeAmount = financials?.sellerFeeAmount ?? 0;
+  const totalFeeAmount = roundCurrency(customerFeeAmount + sellerFeeAmount);
   const displayReceivedAmount = calculateSaleReceivedAmount({
-    feeAmount: sellerFeeAmount,
+    feeAmount: totalFeeAmount,
     freightAmount: parsedFreightAmount,
-    paymentFeePayer,
-    totalAmount: displayBaseAmount,
+    saleAmount: displayChargedAmount,
   });
 
   const resetForm = () => {
@@ -853,7 +852,7 @@ export function CreateSaleDialog({
                     Valor da venda
                   </span>
                   <span className="font-medium">
-                    {formatCurrency(displayBaseAmount)}
+                    {formatCurrency(displayChargedAmount)}
                   </span>
                 </div>
 
@@ -880,7 +879,7 @@ export function CreateSaleDialog({
                 {paymentMethod === "card" && customerFeeAmount > 0 ? (
                   <div className="flex items-center justify-between text-sm">
                     <span className="font-medium text-muted-foreground">
-                      Acrescimo no cartao
+                      Taxa do cartao (cliente)
                     </span>
                     <span className="font-medium">
                       {formatCurrency(customerFeeAmount)}
@@ -890,9 +889,7 @@ export function CreateSaleDialog({
 
                 <div className="mt-1 flex items-center justify-between rounded-md border border-border px-2 py-2">
                   <strong className="font-bold text-muted-foreground">
-                    {paymentMethod === "card" && customerFeeAmount > 0
-                      ? "Cobrado do cliente"
-                      : "Total final"}
+                    Total final
                   </strong>
                   <strong className="text-xl tracking-tight">
                     {formatCurrency(displayChargedAmount)}

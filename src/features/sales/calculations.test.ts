@@ -161,21 +161,19 @@ describe("calculateSaleReceivedAmount", () => {
       calculateSaleReceivedAmount({
         feeAmount: 6,
         freightAmount: 20,
-        paymentFeePayer: "seller",
-        totalAmount: 120,
+        saleAmount: 120,
       })
     ).toBe(94);
   });
 
-  it("ignores customer-paid fees when calculating received amount", () => {
+  it("subtracts customer-paid fees when sale amount already includes them", () => {
     expect(
       calculateSaleReceivedAmount({
-        feeAmount: 6,
+        feeAmount: 2.5,
         freightAmount: 20,
-        paymentFeePayer: "customer",
-        totalAmount: 120,
+        saleAmount: 102.5,
       })
-    ).toBe(100);
+    ).toBe(80);
   });
 
   it("keeps pix sales without fee deduction", () => {
@@ -183,8 +181,7 @@ describe("calculateSaleReceivedAmount", () => {
       calculateSaleReceivedAmount({
         feeAmount: 0,
         freightAmount: 15,
-        paymentFeePayer: "not_applicable",
-        totalAmount: 120,
+        saleAmount: 120,
       })
     ).toBe(105);
   });

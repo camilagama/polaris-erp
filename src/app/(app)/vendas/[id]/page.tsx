@@ -71,11 +71,15 @@ export default async function VendaDetalhePage(
     (acc, item) => acc + Number(item.lineTotal),
     0
   );
+  const customerChargedFeeAmount = Math.max(
+    Number(sale.chargedAmount) - Number(sale.totalAmount),
+    0
+  );
+  const totalFeeAmount = Number(sale.feeAmount) + customerChargedFeeAmount;
   const receivedAmount = calculateSaleReceivedAmount({
-    feeAmount: Number(sale.feeAmount),
+    feeAmount: totalFeeAmount,
     freightAmount: Number(sale.freightAmount),
-    paymentFeePayer: sale.paymentFeePayer,
-    totalAmount: Number(sale.totalAmount),
+    saleAmount: Number(sale.chargedAmount),
   });
   const saleTitle = sale.customerName
     ? `Venda para ${sale.customerName}`
@@ -212,15 +216,15 @@ export default async function VendaDetalhePage(
                 <span>Adicional</span>
                 <span>{formatCurrency(sale.additionalAmount)}</span>
               </div>
-              {Number(sale.feeAmount) > 0 && (
-                <div className="flex items-center justify-between text-muted-foreground">
+              {totalFeeAmount > 0 && (
+                <div className="flex items-center justify-between text-red-400">
                   <span>
                     Taxa do cartao
                     {sale.paymentFeePayer === "seller"
                       ? " (vendedor)"
                       : " (cliente)"}
                   </span>
-                  <span>{formatCurrency(sale.feeAmount)}</span>
+                  <span>{formatCurrency(totalFeeAmount)}</span>
                 </div>
               )}
               {Number(sale.discountAmount) > 0 && (
@@ -229,23 +233,16 @@ export default async function VendaDetalhePage(
                   <span>-{formatCurrency(sale.discountAmount)}</span>
                 </div>
               )}
-              {Number(sale.chargedAmount) > Number(sale.totalAmount) && (
-                <div className="flex items-center justify-between text-muted-foreground">
-                  <span>Cobrado do cliente</span>
-                  <span>{formatCurrency(sale.chargedAmount)}</span>
-                </div>
-              )}
 
               <div className="my-4 border-border/40 border-t border-dashed" />
 
-              <div className="flex items-center justify-between font-medium">
+              <div className="flex items-center justify-between font-semibold text-lg">
+                <span>Valor total:</span>
+                <span>{formatCurrency(sale.chargedAmount)}</span>
+              </div>
+              <div className="flex items-center justify-between font-medium text-emerald-500">
                 <span>Valor recebido</span>
                 <span>{formatCurrency(receivedAmount)}</span>
-              </div>
-
-              <div className="flex items-center justify-between font-semibold text-lg">
-                <span>Valor da venda</span>
-                <span>{formatCurrency(sale.totalAmount)}</span>
               </div>
             </div>
           </div>

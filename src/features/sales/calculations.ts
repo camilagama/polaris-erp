@@ -45,16 +45,14 @@ export interface SaleFinancials {
 export const calculateSaleReceivedAmount = ({
   feeAmount,
   freightAmount,
-  paymentFeePayer,
-  totalAmount,
+  saleAmount,
 }: {
   feeAmount: number;
   freightAmount: number;
-  paymentFeePayer: SalePaymentFeePayer;
-  totalAmount: number;
+  saleAmount: number;
 }) => {
-  const normalizedTotalAmount = roundCurrency(
-    normalizeNonNegativeNumber(totalAmount)
+  const normalizedSaleAmount = roundCurrency(
+    normalizeNonNegativeNumber(saleAmount)
   );
   const normalizedFreightAmount = roundCurrency(
     normalizeNonNegativeNumber(freightAmount)
@@ -62,11 +60,9 @@ export const calculateSaleReceivedAmount = ({
   const normalizedFeeAmount = roundCurrency(
     normalizeNonNegativeNumber(feeAmount)
   );
-  const sellerFeeAmount =
-    paymentFeePayer === "seller" ? normalizedFeeAmount : 0;
 
   return roundCurrency(
-    normalizedTotalAmount - normalizedFreightAmount - sellerFeeAmount
+    normalizedSaleAmount - normalizedFreightAmount - normalizedFeeAmount
   );
 };
 
