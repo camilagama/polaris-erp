@@ -1,13 +1,26 @@
-import { asc, count, desc, eq } from "drizzle-orm";
+import { asc, count, desc, eq, lt } from "drizzle-orm";
 import { db } from "@/db";
 import { saleItems, sales } from "@/db/schema";
 import type { SaleDetail, SaleListItem } from "@/features/sales/contracts";
 
-export async function getSalesQuery(): Promise<SaleListItem[]> {
-  const rows = await db
+const DEFAULT_PAGE_SIZE = 50;
+
+export interface PaginatedSalesList {
+  items: SaleListItem[];
+  nextCursor: string | null;
+}
+
+export async function getSalesQuery(
+  cursor?: string,
+  pageSize = DEFAULT_PAGE_SIZE
+): Promise<PaginatedSalesList> {
+  const limit = pageSize + 1;
+
+  const baseQuery = db
     .select({
       additionalAmount: sales.additionalAmount,
       cancelledAt: sales.cancelledAt,
+      createdAt: sales.createdAt,
       customerName: sales.customerName,
       discountAmount: sales.discountAmount,
       freightAmount: sales.freightAmount,
@@ -21,14 +34,28 @@ export async function getSalesQuery(): Promise<SaleListItem[]> {
     .from(sales)
     .leftJoin(saleItems, eq(saleItems.saleId, sales.id))
     .groupBy(sales.id)
-    .orderBy(desc(sales.occurredOn), desc(sales.createdAt));
+    .orderBy(desc(sales.occurredOn), desc(sales.createdAt))
+    .limit(limit);
 
-  return rows.map((row) => ({
-    ...row,
-    itemCount: Number(row.itemCount),
-    paymentMethod: row.paymentMethod as SaleListItem["paymentMethod"],
-    status: row.status as SaleListItem["status"],
-  }));
+  if (cursor) {
+    baseQuery.where(lt(sales.createdAt, new Date(cursor)));
+  }
+
+  const rows = await baseQuery;
+  const hasMore = rows.length > pageSize;
+  const items = hasMore ? rows.slice(0, pageSize) : rows;
+
+  return {
+    items: items.map((row) => ({
+      ...row,
+      itemCount: Number(row.itemCount),
+      paymentMethod: row.paymentMethod as SaleListItem["paymentMethod"],
+      status: row.status as SaleListItem["status"],
+    })),
+    nextCursor: hasMore
+      ? (items.at(-1)?.createdAt.toISOString() ?? null)
+      : null,
+  };
 }
 
 export async function getSaleByIdQuery(

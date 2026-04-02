@@ -13,6 +13,10 @@ describe("buildDashboardMetrics", () => {
       range: selectedRange,
       saleItems: [
         {
+          imageBlurDataUrl: null,
+          imageHeight: null,
+          imageVersion: null,
+          imageWidth: null,
           lineTotal: 100,
           occurredOn: "2026-04-10",
           productId: "product-1",
@@ -22,6 +26,10 @@ describe("buildDashboardMetrics", () => {
           unitCostSnapshot: 30,
         },
         {
+          imageBlurDataUrl: null,
+          imageHeight: null,
+          imageVersion: null,
+          imageWidth: null,
           lineTotal: 200,
           occurredOn: "2026-04-11",
           productId: "product-2",
@@ -54,6 +62,10 @@ describe("buildDashboardMetrics", () => {
     expect(metrics.topProducts).toEqual([
       {
         id: "product-1",
+        imageBlurDataUrl: null,
+        imageHeight: null,
+        imageVersion: null,
+        imageWidth: null,
         name: "Produto A",
         quantitySold: 2,
         soldAmount: 100,
@@ -67,6 +79,10 @@ describe("buildDashboardMetrics", () => {
       range: selectedRange,
       saleItems: [
         {
+          imageBlurDataUrl: null,
+          imageHeight: null,
+          imageVersion: null,
+          imageWidth: null,
           lineTotal: 180,
           occurredOn: "2026-04-10",
           productId: "product-1",
@@ -100,6 +116,10 @@ describe("buildDashboardMetrics", () => {
       },
       saleItems: [
         {
+          imageBlurDataUrl: null,
+          imageHeight: null,
+          imageVersion: null,
+          imageWidth: null,
           lineTotal: 60,
           occurredOn: "2026-04-02",
           productId: "product-1",
@@ -138,6 +158,10 @@ describe("buildDashboardMetrics", () => {
       },
       saleItems: [
         {
+          imageBlurDataUrl: null,
+          imageHeight: null,
+          imageVersion: null,
+          imageWidth: null,
           lineTotal: 60,
           occurredOn: "2026-02-02",
           productId: "product-1",
@@ -147,6 +171,10 @@ describe("buildDashboardMetrics", () => {
           unitCostSnapshot: 20,
         },
         {
+          imageBlurDataUrl: null,
+          imageHeight: null,
+          imageVersion: null,
+          imageWidth: null,
           lineTotal: 70,
           occurredOn: "2026-04-12",
           productId: "product-2",

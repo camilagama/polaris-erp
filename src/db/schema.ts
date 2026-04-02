@@ -12,15 +12,26 @@ import {
   text,
   timestamp,
   uniqueIndex,
+  uuid,
 } from "drizzle-orm/pg-core";
 
+// ---------------------------------------------------------------------------
+// Shared helpers
+// ---------------------------------------------------------------------------
+
+const tz = { withTimezone: true } as const;
+
 export const timestamps = {
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
+  createdAt: timestamp("created_at", tz).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", tz)
     .defaultNow()
     .$onUpdateFn(() => new Date())
     .notNull(),
 };
+
+// ---------------------------------------------------------------------------
+// Auth tables (Better Auth managed – IDs kept as TEXT)
+// ---------------------------------------------------------------------------
 
 export const users = pgTable("users", {
   id: text("id").primaryKey(),
@@ -31,47 +42,72 @@ export const users = pgTable("users", {
   ...timestamps,
 });
 
-export const sessions = pgTable("sessions", {
-  id: text("id").primaryKey(),
-  expiresAt: timestamp("expires_at").notNull(),
-  token: text("token").notNull().unique(),
-  ipAddress: text("ip_address"),
-  userAgent: text("user_agent"),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  ...timestamps,
-});
+export const sessions = pgTable(
+  "sessions",
+  {
+    id: text("id").primaryKey(),
+    expiresAt: timestamp("expires_at", tz).notNull(),
+    token: text("token").notNull().unique(),
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    ...timestamps,
+  },
+  (table) => [index("sessions_user_id_idx").on(table.userId)]
+);
 
-export const accounts = pgTable("accounts", {
-  id: text("id").primaryKey(),
-  accountId: text("account_id").notNull(),
-  providerId: text("provider_id").notNull(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  accessToken: text("access_token"),
-  refreshToken: text("refresh_token"),
-  idToken: text("id_token"),
-  accessTokenExpiresAt: timestamp("access_token_expires_at"),
-  refreshTokenExpiresAt: timestamp("refresh_token_expires_at"),
-  scope: text("scope"),
-  password: text("password"),
-  ...timestamps,
-});
+export const accounts = pgTable(
+  "accounts",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id").notNull(),
+    providerId: text("provider_id").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    accessToken: text("access_token"),
+    refreshToken: text("refresh_token"),
+    idToken: text("id_token"),
+    accessTokenExpiresAt: timestamp("access_token_expires_at", tz),
+    refreshTokenExpiresAt: timestamp("refresh_token_expires_at", tz),
+    scope: text("scope"),
+    password: text("password"),
+    ...timestamps,
+  },
+  (table) => [index("accounts_user_id_idx").on(table.userId)]
+);
 
 export const verifications = pgTable("verifications", {
   id: text("id").primaryKey(),
   identifier: text("identifier").notNull(),
   value: text("value").notNull(),
-  expiresAt: timestamp("expires_at").notNull(),
+  expiresAt: timestamp("expires_at", tz).notNull(),
   ...timestamps,
 });
 
+// ---------------------------------------------------------------------------
+// Domain enums
+// ---------------------------------------------------------------------------
+
+export const saleStatusEnum = pgEnum("sale_status", ["completed", "cancelled"]);
+export const salePaymentMethodEnum = pgEnum("sale_payment_method", [
+  "pix",
+  "card",
+]);
+
+export const productWriteOffReasonEnum = pgEnum("product_write_off_reason", [
+  "adjustment",
+  "operational",
+]);
+
+// ---------------------------------------------------------------------------
+// Domain tables (IDs as native UUID, timestamps with timezone)
+// ---------------------------------------------------------------------------
+
 export const categories = pgTable("categories", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
+  id: uuid("id").primaryKey().defaultRandom(),
   key: text("key").notNull().unique(),
   name: text("name").notNull().unique(),
   description: text("description"),
@@ -130,27 +166,14 @@ export const systemSettings = pgTable(
   ]
 );
 
-export const saleStatusEnum = pgEnum("sale_status", ["completed", "cancelled"]);
-export const salePaymentMethodEnum = pgEnum("sale_payment_method", [
-  "pix",
-  "card",
-]);
-
-export const productWriteOffReasonEnum = pgEnum("product_write_off_reason", [
-  "adjustment",
-  "operational",
-]);
-
 export const products = pgTable(
   "products",
   {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
+    id: uuid("id").primaryKey().defaultRandom(),
     name: text("name").notNull(),
     description: text("description"),
     purchasedOn: date("purchased_on").default(sql`CURRENT_DATE`).notNull(),
-    categoryId: text("category_id")
+    categoryId: uuid("category_id")
       .notNull()
       .references(() => categories.id),
     costPrice: decimal("cost_price", { precision: 12, scale: 2 })
@@ -162,8 +185,8 @@ export const products = pgTable(
     imageWidth: integer("image_width"),
     imageHeight: integer("image_height"),
     imageBlurDataUrl: text("image_blur_data_url"),
-    imageUploadedAt: timestamp("image_uploaded_at"),
-    archivedAt: timestamp("archived_at"),
+    imageUploadedAt: timestamp("image_uploaded_at", tz),
+    archivedAt: timestamp("archived_at", tz),
     ...timestamps,
   },
   (table) => [
@@ -182,18 +205,21 @@ export const products = pgTable(
       "products_image_height_positive",
       sql`${table.imageHeight} is null or ${table.imageHeight} > 0`
     ),
-    index("products_archived_at_idx").on(table.archivedAt),
     index("products_category_id_idx").on(table.categoryId),
+    index("products_active_name_idx")
+      .on(table.name)
+      .where(sql`archived_at IS NULL`),
+    index("products_archived_idx")
+      .on(table.archivedAt)
+      .where(sql`archived_at IS NOT NULL`),
   ]
 );
 
 export const productStockEntries = pgTable(
   "product_stock_entries",
   {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
-    productId: text("product_id")
+    id: uuid("id").primaryKey().defaultRandom(),
+    productId: uuid("product_id")
       .notNull()
       .references(() => products.id, { onDelete: "cascade" }),
     stockedOn: date("stocked_on").default(sql`CURRENT_DATE`).notNull(),
@@ -222,10 +248,8 @@ export const productStockEntries = pgTable(
 export const productStockWriteOffs = pgTable(
   "product_stock_write_offs",
   {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
-    productId: text("product_id")
+    id: uuid("id").primaryKey().defaultRandom(),
+    productId: uuid("product_id")
       .notNull()
       .references(() => products.id, { onDelete: "cascade" }),
     happenedOn: date("happened_on").default(sql`CURRENT_DATE`).notNull(),
@@ -256,9 +280,7 @@ export const productStockWriteOffs = pgTable(
 export const sales = pgTable(
   "sales",
   {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
+    id: uuid("id").primaryKey().defaultRandom(),
     occurredOn: date("occurred_on").default(sql`CURRENT_DATE`).notNull(),
     status: saleStatusEnum("status").default("completed").notNull(),
     paymentMethod: salePaymentMethodEnum("payment_method")
@@ -288,7 +310,7 @@ export const sales = pgTable(
     totalAmount: decimal("total_amount", { precision: 12, scale: 2 })
       .notNull()
       .default("0"),
-    cancelledAt: timestamp("cancelled_at"),
+    cancelledAt: timestamp("cancelled_at", tz),
     ...timestamps,
   },
   (table) => [
@@ -322,22 +344,27 @@ export const sales = pgTable(
       "sales_status_cancelled_at_consistent",
       sql`(${table.status} = 'completed' and ${table.cancelledAt} is null) or (${table.status} = 'cancelled' and ${table.cancelledAt} is not null)`
     ),
-    index("sales_occurred_on_idx").on(table.occurredOn),
-    index("sales_payment_method_idx").on(table.paymentMethod),
-    index("sales_status_idx").on(table.status),
+    // Composite indexes: equality first, range last
+    index("sales_status_occurred_on_idx").on(table.status, table.occurredOn),
+    index("sales_payment_method_occurred_on_idx").on(
+      table.paymentMethod,
+      table.occurredOn
+    ),
+    index("sales_occurred_on_created_at_idx").on(
+      table.occurredOn,
+      table.createdAt
+    ),
   ]
 );
 
 export const saleItems = pgTable(
   "sale_items",
   {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
-    saleId: text("sale_id")
+    id: uuid("id").primaryKey().defaultRandom(),
+    saleId: uuid("sale_id")
       .notNull()
       .references(() => sales.id, { onDelete: "cascade" }),
-    productId: text("product_id")
+    productId: uuid("product_id")
       .notNull()
       .references(() => products.id, { onDelete: "cascade" }),
     productNameSnapshot: text("product_name_snapshot").notNull(),

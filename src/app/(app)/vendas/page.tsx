@@ -17,7 +17,7 @@ export default async function VendasPage(props: PageProps<"/vendas">) {
     bounds,
     searchParams,
   });
-  const [sales, products, analytics] = await Promise.all([
+  const [salesResult, productsResult, analytics] = await Promise.all([
     getSalesQuery(),
     getProductsQuery(),
     getSalesAnalytics({
@@ -26,7 +26,7 @@ export default async function VendasPage(props: PageProps<"/vendas">) {
     }),
   ]);
 
-  const saleProducts = products
+  const saleProducts = productsResult.items
     .filter((product) => !product.archivedAt && product.stock > 0)
     .map((product) => ({
       id: product.id,
@@ -40,7 +40,7 @@ export default async function VendasPage(props: PageProps<"/vendas">) {
       analytics={analytics}
       dateBounds={bounds}
       saleProducts={saleProducts}
-      sales={sales}
+      sales={salesResult.items}
       selectedRange={selectedRange}
     />
   );

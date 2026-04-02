@@ -1,4 +1,4 @@
-import { asc, desc, eq } from "drizzle-orm";
+import { asc, desc, eq, lt } from "drizzle-orm";
 import { db } from "@/db";
 import {
   categories,
@@ -15,6 +15,8 @@ import type {
   ProductStockWriteOffItem,
 } from "@/features/products/contracts";
 import { buildProductImageUrl } from "@/features/products/image-urls";
+
+const DEFAULT_PAGE_SIZE = 50;
 
 const mapProductImage = (row: {
   id: string;
@@ -42,13 +44,24 @@ const mapProductImage = (row: {
   };
 };
 
-export async function getProductsQuery(): Promise<ProductListItem[]> {
-  const rows = await db
+export interface PaginatedProductsList {
+  items: ProductListItem[];
+  nextCursor: string | null;
+}
+
+export async function getProductsQuery(
+  cursor?: string,
+  pageSize = DEFAULT_PAGE_SIZE
+): Promise<PaginatedProductsList> {
+  const limit = pageSize + 1;
+
+  const baseQuery = db
     .select({
       archivedAt: products.archivedAt,
       categoryId: products.categoryId,
       categoryName: categories.name,
       costPrice: products.costPrice,
+      createdAt: products.createdAt,
       description: products.description,
       id: products.id,
       imageBlurDataUrl: products.imageBlurDataUrl,
@@ -62,21 +75,35 @@ export async function getProductsQuery(): Promise<ProductListItem[]> {
     })
     .from(products)
     .innerJoin(categories, eq(products.categoryId, categories.id))
-    .orderBy(asc(products.name));
+    .orderBy(asc(products.name), asc(products.createdAt))
+    .limit(limit);
 
-  return rows.map((row) => ({
-    archivedAt: row.archivedAt,
-    categoryId: row.categoryId,
-    categoryName: row.categoryName,
-    costPrice: row.costPrice,
-    description: row.description,
-    id: row.id,
-    image: mapProductImage(row),
-    name: row.name,
-    price: row.price,
-    purchasedOn: row.purchasedOn,
-    stock: row.stock,
-  }));
+  if (cursor) {
+    baseQuery.where(lt(products.createdAt, new Date(cursor)));
+  }
+
+  const rows = await baseQuery;
+  const hasMore = rows.length > pageSize;
+  const items = hasMore ? rows.slice(0, pageSize) : rows;
+
+  return {
+    items: items.map((row) => ({
+      archivedAt: row.archivedAt,
+      categoryId: row.categoryId,
+      categoryName: row.categoryName,
+      costPrice: row.costPrice,
+      description: row.description,
+      id: row.id,
+      image: mapProductImage(row),
+      name: row.name,
+      price: row.price,
+      purchasedOn: row.purchasedOn,
+      stock: row.stock,
+    })),
+    nextCursor: hasMore
+      ? (items.at(-1)?.createdAt.toISOString() ?? null)
+      : null,
+  };
 }
 
 export async function getProductByIdQuery(
@@ -140,7 +167,8 @@ export async function getProductStockEntriesByProductIdQuery(
     .orderBy(
       desc(productStockEntries.stockedOn),
       desc(productStockEntries.createdAt)
-    );
+    )
+    .limit(200);
 
   return entries.map((entry) => ({
     ...entry,
@@ -167,7 +195,8 @@ export async function getProductStockWriteOffsByProductIdQuery(
     .orderBy(
       desc(productStockWriteOffs.happenedOn),
       desc(productStockWriteOffs.createdAt)
-    );
+    )
+    .limit(200);
 
   return writeOffs.map((writeOff) => ({
     ...writeOff,
@@ -194,7 +223,8 @@ export async function getProductSalesByProductIdQuery(
     .from(saleItems)
     .innerJoin(sales, eq(saleItems.saleId, sales.id))
     .where(eq(saleItems.productId, productId))
-    .orderBy(desc(sales.occurredOn), desc(saleItems.createdAt));
+    .orderBy(desc(sales.occurredOn), desc(saleItems.createdAt))
+    .limit(200);
 
   return rows.map((row) => ({
     ...row,
