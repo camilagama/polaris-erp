@@ -42,6 +42,34 @@ export interface SaleFinancials {
   totalAmount: number;
 }
 
+export const calculateSaleReceivedAmount = ({
+  feeAmount,
+  freightAmount,
+  paymentFeePayer,
+  totalAmount,
+}: {
+  feeAmount: number;
+  freightAmount: number;
+  paymentFeePayer: SalePaymentFeePayer;
+  totalAmount: number;
+}) => {
+  const normalizedTotalAmount = roundCurrency(
+    normalizeNonNegativeNumber(totalAmount)
+  );
+  const normalizedFreightAmount = roundCurrency(
+    normalizeNonNegativeNumber(freightAmount)
+  );
+  const normalizedFeeAmount = roundCurrency(
+    normalizeNonNegativeNumber(feeAmount)
+  );
+  const sellerFeeAmount =
+    paymentFeePayer === "seller" ? normalizedFeeAmount : 0;
+
+  return roundCurrency(
+    normalizedTotalAmount - normalizedFreightAmount - sellerFeeAmount
+  );
+};
+
 export const buildSaleSnapshot = (
   items: SaleDraftItem[]
 ): SaleSnapshotResult => {

@@ -40,6 +40,7 @@ import {
 } from "@/features/catalog/payment-rules";
 import {
   calculateSaleFinancials,
+  calculateSaleReceivedAmount,
   type SaleFinancials,
 } from "@/features/sales/calculations";
 import type { SalePaymentFeePayer } from "@/features/sales/contracts";
@@ -426,6 +427,12 @@ export function CreateSaleDialog({
   const displayChargedAmount = financials?.chargedAmount ?? displayBaseAmount;
   const customerFeeAmount = financials?.customerFeeAmount ?? 0;
   const sellerFeeAmount = financials?.sellerFeeAmount ?? 0;
+  const displayReceivedAmount = calculateSaleReceivedAmount({
+    feeAmount: sellerFeeAmount,
+    freightAmount: parsedFreightAmount,
+    paymentFeePayer,
+    totalAmount: displayBaseAmount,
+  });
 
   const resetForm = () => {
     setOccurredOn(formatDateInputValue());
@@ -850,6 +857,15 @@ export function CreateSaleDialog({
                   </span>
                 </div>
 
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-medium text-muted-foreground">
+                    Valor recebido
+                  </span>
+                  <span className="font-medium">
+                    {formatCurrency(displayReceivedAmount)}
+                  </span>
+                </div>
+
                 {paymentMethod === "card" && sellerFeeAmount > 0 ? (
                   <div className="flex items-center justify-between text-sm">
                     <span className="font-medium text-muted-foreground">
@@ -875,8 +891,8 @@ export function CreateSaleDialog({
                 {paymentMethod === "card" && isCardFeePayer(paymentFeePayer) ? (
                   <div className="rounded-lg border border-border/60 bg-background/70 px-3 py-2 text-muted-foreground text-xs">
                     {paymentFeePayer === "seller"
-                      ? "A taxa do cartao entra como custo desta venda."
-                      : "O acrescimo do cartao sera cobrado do cliente e nao entra como receita."}
+                      ? "Valor recebido = valor da venda - frete - taxa paga pelo vendedor."
+                      : "Valor recebido = valor da venda - frete. O acrescimo do cartao fica fora da receita da venda."}
                   </div>
                 ) : null}
 

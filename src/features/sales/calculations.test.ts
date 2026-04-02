@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildSaleSnapshot,
   calculateSaleFinancials,
+  calculateSaleReceivedAmount,
 } from "@/features/sales/calculations";
 
 describe("buildSaleSnapshot", () => {
@@ -151,5 +152,40 @@ describe("calculateSaleFinancials", () => {
     ).toThrowError(
       "Desconto nao pode ser maior que o subtotal somado com frete e adicional."
     );
+  });
+});
+
+describe("calculateSaleReceivedAmount", () => {
+  it("subtracts freight and seller-paid fees from the sale total", () => {
+    expect(
+      calculateSaleReceivedAmount({
+        feeAmount: 6,
+        freightAmount: 20,
+        paymentFeePayer: "seller",
+        totalAmount: 120,
+      })
+    ).toBe(94);
+  });
+
+  it("ignores customer-paid fees when calculating received amount", () => {
+    expect(
+      calculateSaleReceivedAmount({
+        feeAmount: 6,
+        freightAmount: 20,
+        paymentFeePayer: "customer",
+        totalAmount: 120,
+      })
+    ).toBe(100);
+  });
+
+  it("keeps pix sales without fee deduction", () => {
+    expect(
+      calculateSaleReceivedAmount({
+        feeAmount: 0,
+        freightAmount: 15,
+        paymentFeePayer: "not_applicable",
+        totalAmount: 120,
+      })
+    ).toBe(105);
   });
 });

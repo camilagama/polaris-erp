@@ -9,6 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { calculateSaleReceivedAmount } from "@/features/sales/calculations";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/formatters";
 import { getSaleByIdQuery } from "../queries";
 
@@ -70,6 +71,12 @@ export default async function VendaDetalhePage(
     (acc, item) => acc + Number(item.lineTotal),
     0
   );
+  const receivedAmount = calculateSaleReceivedAmount({
+    feeAmount: Number(sale.feeAmount),
+    freightAmount: Number(sale.freightAmount),
+    paymentFeePayer: sale.paymentFeePayer,
+    totalAmount: Number(sale.totalAmount),
+  });
   const saleTitle = sale.customerName
     ? `Venda para ${sale.customerName}`
     : "Detalhes da venda";
@@ -207,7 +214,12 @@ export default async function VendaDetalhePage(
               </div>
               {Number(sale.feeAmount) > 0 && (
                 <div className="flex items-center justify-between text-muted-foreground">
-                  <span>Taxa do cartao</span>
+                  <span>
+                    Taxa do cartao
+                    {sale.paymentFeePayer === "seller"
+                      ? " (vendedor)"
+                      : " (cliente)"}
+                  </span>
                   <span>{formatCurrency(sale.feeAmount)}</span>
                 </div>
               )}
@@ -226,10 +238,22 @@ export default async function VendaDetalhePage(
 
               <div className="my-4 border-border/40 border-t border-dashed" />
 
+              <div className="flex items-center justify-between font-medium">
+                <span>Valor recebido</span>
+                <span>{formatCurrency(receivedAmount)}</span>
+              </div>
+
               <div className="flex items-center justify-between font-semibold text-lg">
                 <span>Valor da venda</span>
                 <span>{formatCurrency(sale.totalAmount)}</span>
               </div>
+
+              <p className="text-muted-foreground text-xs">
+                Valor recebido = valor da venda - frete
+                {sale.paymentFeePayer === "seller"
+                  ? " - taxa paga pelo vendedor."
+                  : "."}
+              </p>
             </div>
           </div>
         </div>
