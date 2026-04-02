@@ -33,6 +33,7 @@ describe("buildProductAnalytics", () => {
           stock: 4,
         },
       ],
+      purchases: [],
       sales: [],
       today: "2026-04-30",
     });
@@ -40,7 +41,6 @@ describe("buildProductAnalytics", () => {
     expect(analytics.totalUnitsInStock).toBe(5);
     expect(analytics.totalInventoryInvestment).toBe(340);
     expect(analytics.totalActiveProductsInStock).toBe(2);
-    expect(analytics.totalZeroStockProducts).toBe(1);
     expect(analytics.inventoryByCategory).toEqual([
       {
         categoryName: "Celulares",
@@ -56,6 +56,13 @@ describe("buildProductAnalytics", () => {
   it("builds the recent sales series for the last 30 days", () => {
     const analytics = buildProductAnalytics({
       inventory: [],
+      purchases: [
+        {
+          occurredOn: "2026-04-28",
+          quantity: 2,
+          unitCost: 40,
+        },
+      ],
       sales: [
         {
           lineTotal: 120,
@@ -79,14 +86,19 @@ describe("buildProductAnalytics", () => {
       today: "2026-04-30",
     });
 
-    expect(analytics.recentSales.at(-2)).toEqual({
+    expect(analytics.recentPerformance.at(-3)).toEqual({
+      label: "28/04",
+      purchaseAmount: 80,
+      soldAmount: 0,
+    });
+    expect(analytics.recentPerformance.at(-2)).toEqual({
       label: "29/04",
-      quantitySold: 3,
+      purchaseAmount: 0,
       soldAmount: 200,
     });
-    expect(analytics.recentSales.at(-1)).toEqual({
+    expect(analytics.recentPerformance.at(-1)).toEqual({
       label: "30/04",
-      quantitySold: 0,
+      purchaseAmount: 0,
       soldAmount: 0,
     });
   });
@@ -123,12 +135,10 @@ describe("buildProductSalesHistoryMetrics", () => {
       {
         label: "01/04",
         quantitySold: 2,
-        soldAmount: 100,
       },
       {
         label: "03/04",
         quantitySold: 1,
-        soldAmount: 80,
       },
     ]);
   });

@@ -2,6 +2,7 @@ import { addDays, format, parseISO, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type {
   ProductAnalytics,
+  ProductCatalogPerformancePoint,
   ProductInventoryCategory,
   ProductSalesHistoryMetrics,
   ProductSalesPoint,
@@ -17,6 +18,12 @@ interface ProductInventoryRecord {
   categoryName: string;
   costPrice: number;
   stock: number;
+}
+
+interface ProductPurchaseRecord {
+  occurredOn: string;
+  quantity: number;
+  unitCost: number;
 }
 
 interface ProductSaleRecord {
@@ -97,23 +104,25 @@ const buildDayBuckets = ({ from, to }: { from: string; to: string }) => {
   return buckets;
 };
 
-const buildSalesPoints = ({
+const buildRecentPerformance = ({
+  purchases,
   sales,
   to,
 }: {
+  purchases: ProductPurchaseRecord[];
   sales: ProductSaleRecord[];
   to: string;
-}): ProductSalesPoint[] => {
+}): ProductCatalogPerformancePoint[] => {
   const fromDate = subDays(parseISO(`${to}T00:00:00`), MAX_DAY_BUCKETS - 1);
   const from = formatDateInputValue(fromDate);
   const bucketMap = new Map<
     string,
-    { quantitySold: number; soldAmount: number }
+    { purchaseAmount: number; soldAmount: number }
   >(
     buildDayBuckets({ from, to }).map((bucket) => [
       bucket.key,
       {
-        quantitySold: 0,
+        purchaseAmount: 0,
         soldAmount: 0,
       },
     ])
@@ -134,13 +143,28 @@ const buildSalesPoints = ({
       continue;
     }
 
-    bucket.quantitySold += sale.quantity;
     bucket.soldAmount = roundCurrency(bucket.soldAmount + sale.lineTotal);
+  }
+
+  for (const purchase of purchases) {
+    if (purchase.occurredOn < from || purchase.occurredOn > to) {
+      continue;
+    }
+
+    const bucket = bucketMap.get(purchase.occurredOn);
+
+    if (!bucket) {
+      continue;
+    }
+
+    bucket.purchaseAmount = roundCurrency(
+      bucket.purchaseAmount + purchase.quantity * purchase.unitCost
+    );
   }
 
   return buildDayBuckets({ from, to }).map((bucket) => ({
     label: bucket.label,
-    quantitySold: bucketMap.get(bucket.key)?.quantitySold ?? 0,
+    purchaseAmount: bucketMap.get(bucket.key)?.purchaseAmount ?? 0,
     soldAmount: bucketMap.get(bucket.key)?.soldAmount ?? 0,
   }));
 };
@@ -157,53 +181,42 @@ const buildHistoryTrend = (sales: ProductSaleRecord[]): ProductSalesPoint[] => {
     left.localeCompare(right)
   );
   const granularity = sortedDates.length <= MAX_DAY_BUCKETS ? "day" : "month";
-  const grouped = new Map<
-    string,
-    { quantitySold: number; soldAmount: number }
-  >();
+  const grouped = new Map<string, number>();
 
   for (const sale of completedSales) {
     const key =
       granularity === "day" ? sale.occurredOn : sale.occurredOn.slice(0, 7);
-    const currentBucket = grouped.get(key) ?? {
-      quantitySold: 0,
-      soldAmount: 0,
-    };
 
-    currentBucket.quantitySold += sale.quantity;
-    currentBucket.soldAmount = roundCurrency(
-      currentBucket.soldAmount + sale.lineTotal
-    );
-    grouped.set(key, currentBucket);
+    grouped.set(key, (grouped.get(key) ?? 0) + sale.quantity);
   }
 
   return Array.from(grouped.entries())
     .sort(([left], [right]) => left.localeCompare(right))
-    .map(([key, values]) => ({
+    .map(([key, quantitySold]) => ({
       label:
         granularity === "day"
           ? format(parseISO(`${key}T00:00:00`), "dd/MM", { locale: ptBR })
           : format(parseISO(`${key}-01T00:00:00`), "MMM/yy", {
               locale: ptBR,
             }),
-      quantitySold: values.quantitySold,
-      soldAmount: values.soldAmount,
+      quantitySold,
     }));
 };
 
 export const buildProductAnalytics = ({
   inventory,
+  purchases,
   sales,
   today = formatDateInputValue(),
 }: {
   inventory: ProductInventoryRecord[];
+  purchases: ProductPurchaseRecord[];
   sales: ProductSaleRecord[];
   today?: string;
 }): ProductAnalytics => {
   let totalUnitsInStock = 0;
   let totalInventoryInvestment = 0;
   let totalActiveProductsInStock = 0;
-  let totalZeroStockProducts = 0;
 
   for (const product of inventory) {
     if (product.archivedAt) {
@@ -217,21 +230,19 @@ export const buildProductAnalytics = ({
 
     if (product.stock > 0) {
       totalActiveProductsInStock += 1;
-    } else {
-      totalZeroStockProducts += 1;
     }
   }
 
   return {
     inventoryByCategory: buildInventoryByCategory(inventory),
-    recentSales: buildSalesPoints({
+    recentPerformance: buildRecentPerformance({
+      purchases,
       sales,
       to: today,
     }),
     totalActiveProductsInStock,
     totalInventoryInvestment,
     totalUnitsInStock,
-    totalZeroStockProducts,
   };
 };
 

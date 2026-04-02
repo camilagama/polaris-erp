@@ -2,7 +2,7 @@ import { ArrowDown01Icon, PackageIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { notFound } from "next/navigation";
 import { ProductDetailActions } from "@/components/products/product-detail-actions";
-import { ProductSalesChart } from "@/components/products/product-sales-chart";
+import { ProductUnitsSoldChart } from "@/components/products/product-sales-chart";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -41,7 +41,6 @@ export default async function ProdutoDetalhePage(
 
   const linkedSalesCount = new Set(sales.map((saleItem) => saleItem.saleId))
     .size;
-
   const averageCost = Number(product.costPrice);
   const inventorySummary = buildProductInventorySummary({
     averageCost,
@@ -170,7 +169,7 @@ export default async function ProdutoDetalhePage(
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-            <ProductSalesChart
+            <ProductUnitsSoldChart
               data={salesMetrics.trend}
               emptyLabel="Esse produto ainda nao tem vendas concluidas."
             />
@@ -186,10 +185,6 @@ export default async function ProdutoDetalhePage(
                 <p className="font-medium text-sm">
                   {formatCurrency(salesMetrics.totalSoldAmount)}
                 </p>
-              </div>
-              <div className="rounded-md border border-border/50 px-3 py-2">
-                <p className="text-muted-foreground">Vendas vinculadas</p>
-                <p className="font-medium text-sm">{linkedSalesCount}</p>
               </div>
             </div>
           </div>

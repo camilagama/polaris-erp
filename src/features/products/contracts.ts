@@ -48,19 +48,23 @@ export interface ProductInventoryCategory {
   inventoryValue: number;
 }
 
+export interface ProductCatalogPerformancePoint {
+  label: string;
+  purchaseAmount: number;
+  soldAmount: number;
+}
+
 export interface ProductSalesPoint {
   label: string;
   quantitySold: number;
-  soldAmount: number;
 }
 
 export interface ProductAnalytics {
   inventoryByCategory: ProductInventoryCategory[];
-  recentSales: ProductSalesPoint[];
+  recentPerformance: ProductCatalogPerformancePoint[];
   totalActiveProductsInStock: number;
   totalInventoryInvestment: number;
   totalUnitsInStock: number;
-  totalZeroStockProducts: number;
 }
 
 export interface ProductSalesHistoryMetrics {
