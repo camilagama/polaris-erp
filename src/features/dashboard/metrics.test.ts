@@ -44,6 +44,7 @@ describe("buildDashboardMetrics", () => {
           feeAmount: 5,
           freightAmount: 10,
           occurredOn: "2026-04-10",
+          paymentFeePayer: "seller",
           status: "completed",
           totalAmount: 120,
         },
@@ -51,6 +52,7 @@ describe("buildDashboardMetrics", () => {
           feeAmount: 0,
           freightAmount: 20,
           occurredOn: "2026-04-11",
+          paymentFeePayer: "not_applicable",
           status: "cancelled",
           totalAmount: 240,
         },
@@ -58,6 +60,8 @@ describe("buildDashboardMetrics", () => {
     });
 
     expect(metrics.totalSold).toBe(120);
+    expect(metrics.totalProductCosts).toBe(60);
+    expect(metrics.totalShippingAndSellerFees).toBe(15);
     expect(metrics.totalCosts).toBe(75);
     expect(metrics.totalResult).toBe(45);
     expect(metrics.totalSalesCount).toBe(1);
@@ -99,6 +103,7 @@ describe("buildDashboardMetrics", () => {
           feeAmount: 6,
           freightAmount: 20,
           occurredOn: "2026-04-10",
+          paymentFeePayer: "seller",
           status: "completed",
           totalAmount: 210,
         },
@@ -106,8 +111,47 @@ describe("buildDashboardMetrics", () => {
     });
 
     expect(metrics.totalSold).toBe(210);
+    expect(metrics.totalProductCosts).toBe(60);
+    expect(metrics.totalShippingAndSellerFees).toBe(26);
     expect(metrics.totalCosts).toBe(86);
     expect(metrics.totalResult).toBe(124);
+  });
+
+  it("ignores customer-paid fees in shipping and fees totals", () => {
+    const metrics = buildDashboardMetrics({
+      inventory: [],
+      range: selectedRange,
+      saleItems: [
+        {
+          imageBlurDataUrl: null,
+          imageHeight: null,
+          imageVersion: null,
+          imageWidth: null,
+          lineTotal: 100,
+          occurredOn: "2026-04-10",
+          productId: "product-1",
+          productName: "Produto A",
+          quantity: 2,
+          status: "completed",
+          unitCostSnapshot: 30,
+        },
+      ],
+      sales: [
+        {
+          feeAmount: 8,
+          freightAmount: 12,
+          occurredOn: "2026-04-10",
+          paymentFeePayer: "customer",
+          status: "completed",
+          totalAmount: 120,
+        },
+      ],
+    });
+
+    expect(metrics.totalProductCosts).toBe(60);
+    expect(metrics.totalShippingAndSellerFees).toBe(12);
+    expect(metrics.totalCosts).toBe(72);
+    expect(metrics.totalResult).toBe(48);
   });
 
   it("aggregates by day for shorter intervals", () => {
@@ -137,6 +181,7 @@ describe("buildDashboardMetrics", () => {
           feeAmount: 2,
           freightAmount: 15,
           occurredOn: "2026-04-02",
+          paymentFeePayer: "seller",
           status: "completed",
           totalAmount: 100,
         },
@@ -193,6 +238,7 @@ describe("buildDashboardMetrics", () => {
           feeAmount: 2,
           freightAmount: 15,
           occurredOn: "2026-02-02",
+          paymentFeePayer: "seller",
           status: "completed",
           totalAmount: 100,
         },
@@ -200,6 +246,7 @@ describe("buildDashboardMetrics", () => {
           feeAmount: 4,
           freightAmount: 10,
           occurredOn: "2026-04-12",
+          paymentFeePayer: "seller",
           status: "completed",
           totalAmount: 140,
         },
@@ -215,6 +262,8 @@ describe("buildDashboardMetrics", () => {
     ]);
     expect(metrics.totalSalesCount).toBe(2);
     expect(metrics.totalSold).toBe(240);
+    expect(metrics.totalProductCosts).toBe(50);
+    expect(metrics.totalShippingAndSellerFees).toBe(31);
     expect(metrics.totalCosts).toBe(81);
     expect(metrics.totalResult).toBe(159);
   });
@@ -253,6 +302,8 @@ describe("buildDashboardMetrics", () => {
     });
 
     expect(metrics.totalSold).toBe(0);
+    expect(metrics.totalProductCosts).toBe(0);
+    expect(metrics.totalShippingAndSellerFees).toBe(0);
     expect(metrics.totalCosts).toBe(0);
     expect(metrics.totalResult).toBe(0);
     expect(metrics.totalSalesCount).toBe(0);

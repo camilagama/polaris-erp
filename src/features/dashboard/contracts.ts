@@ -37,7 +37,9 @@ export interface DashboardMetrics {
   selectedRange: DashboardSelectedRange;
   topProducts: DashboardTopProduct[];
   totalCosts: number;
+  totalProductCosts: number;
   totalResult: number;
   totalSalesCount: number;
+  totalShippingAndSellerFees: number;
   totalSold: number;
 }

@@ -57,6 +57,7 @@ export const getDashboardMetrics = async (
         feeAmount: sales.feeAmount,
         freightAmount: sales.freightAmount,
         occurredOn: sales.occurredOn,
+        paymentFeePayer: sales.paymentFeePayer,
         status: sales.status,
         totalAmount: sales.totalAmount,
       })
@@ -119,6 +120,10 @@ export const getDashboardMetrics = async (
       feeAmount: Number(row.feeAmount),
       freightAmount: Number(row.freightAmount),
       occurredOn: row.occurredOn,
+      paymentFeePayer: row.paymentFeePayer as
+        | "customer"
+        | "not_applicable"
+        | "seller",
       status: row.status as "cancelled" | "completed",
       totalAmount: Number(row.totalAmount),
     })),

@@ -25,6 +25,7 @@ export interface DashboardSaleRecord {
   feeAmount: number;
   freightAmount: number;
   occurredOn: string;
+  paymentFeePayer: "customer" | "not_applicable" | "seller";
   status: "cancelled" | "completed";
   totalAmount: number;
 }
@@ -264,6 +265,8 @@ export const buildDashboardMetrics = ({
   const { buckets, granularity } = buildPeriodBuckets(range);
   const soldByBucket = new Map<string, number>();
   const costByBucket = new Map<string, number>();
+  let totalProductCosts = 0;
+  let totalShippingAndSellerFees = 0;
   let totalSold = 0;
   let totalCosts = 0;
   let totalSalesCount = 0;
@@ -288,7 +291,11 @@ export const buildDashboardMetrics = ({
       granularity,
     });
     const soldAmount = sale.totalAmount;
-    const redirectedCosts = roundCurrency(sale.freightAmount + sale.feeAmount);
+    const sellerFeeAmount =
+      sale.paymentFeePayer === "seller" ? sale.feeAmount : 0;
+    const shippingAndSellerFees = roundCurrency(
+      sale.freightAmount + sellerFeeAmount
+    );
 
     soldByBucket.set(
       bucketKey,
@@ -296,11 +303,14 @@ export const buildDashboardMetrics = ({
     );
     costByBucket.set(
       bucketKey,
-      roundCurrency((costByBucket.get(bucketKey) ?? 0) + redirectedCosts)
+      roundCurrency((costByBucket.get(bucketKey) ?? 0) + shippingAndSellerFees)
     );
 
     totalSold = roundCurrency(totalSold + soldAmount);
-    totalCosts = roundCurrency(totalCosts + redirectedCosts);
+    totalShippingAndSellerFees = roundCurrency(
+      totalShippingAndSellerFees + shippingAndSellerFees
+    );
+    totalCosts = roundCurrency(totalCosts + shippingAndSellerFees);
     totalSalesCount += 1;
   }
 
@@ -329,6 +339,7 @@ export const buildDashboardMetrics = ({
       bucketKey,
       roundCurrency((costByBucket.get(bucketKey) ?? 0) + itemCost)
     );
+    totalProductCosts = roundCurrency(totalProductCosts + itemCost);
     totalCosts = roundCurrency(totalCosts + itemCost);
   }
 
@@ -353,9 +364,11 @@ export const buildDashboardMetrics = ({
     periodGranularity: granularity,
     resultStatus: getResultStatus(totalResult),
     selectedRange: range,
+    totalProductCosts,
     totalCosts,
     totalResult,
     totalSalesCount,
+    totalShippingAndSellerFees,
     totalSold,
     topProducts: buildTopProducts({
       range,

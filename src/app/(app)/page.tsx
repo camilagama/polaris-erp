@@ -77,9 +77,14 @@ export default async function DashboardPage(props: PageProps<"/">) {
       value: formatCurrency(metrics.totalResult),
     },
     {
-      label: "Custos no periodo",
-      note: "Custo de Produtos e frete",
-      value: formatCurrency(metrics.totalCosts),
+      label: "Custo dos produtos",
+      note: "Custo dos itens vendidos no periodo",
+      value: formatCurrency(metrics.totalProductCosts),
+    },
+    {
+      label: "Custo de Frete + taxas",
+      note: "Frete e taxas pagas pelo vendedor",
+      value: formatCurrency(metrics.totalShippingAndSellerFees),
     },
     {
       label: "Vendas concluidas",
@@ -112,7 +117,7 @@ export default async function DashboardPage(props: PageProps<"/">) {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         {summaryCards.map((card) => (
           <Card key={card.label}>
             <CardHeader className="gap-1 pb-1.5">
