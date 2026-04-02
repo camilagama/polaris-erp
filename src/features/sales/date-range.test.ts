@@ -11,6 +11,7 @@ describe("resolveSalesDateRange", () => {
         from: "2025-01-10",
         to: "2026-04-02",
       },
+      referenceDate: new Date("2026-04-15T12:00:00.000Z"),
       searchParams: {
         preset: "all-time",
       },
@@ -19,7 +20,7 @@ describe("resolveSalesDateRange", () => {
     expect(range).toMatchObject({
       from: "2025-01-10",
       preset: "all-time",
-      to: "2026-04-02",
+      to: "2026-04-15",
     });
   });
 
@@ -50,12 +51,13 @@ describe("resolveSalesDateRange", () => {
         to: "2026-04-02",
       },
       preset: "all-time",
+      referenceDate: new Date("2026-04-15T12:00:00.000Z"),
     });
 
     expect(range).toMatchObject({
       from: "2026-04-02",
       preset: "all-time",
-      to: "2026-04-02",
+      to: "2026-04-15",
     });
   });
 });

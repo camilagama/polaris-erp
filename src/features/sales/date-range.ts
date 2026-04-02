@@ -6,6 +6,7 @@ import {
   type ResolvedDateRange,
   resolveDateRangeFromSearchParams,
 } from "@/features/dashboard/date-range";
+import { formatDateInputValue } from "@/lib/domain/date";
 
 export const salesDatePresetOptions = [
   {
@@ -52,7 +53,7 @@ export const getSalesPresetDateRange = ({
     return normalizeDateRange({
       from: bounds.from,
       preset,
-      to: bounds.to,
+      to: formatDateInputValue(referenceDate),
     });
   }
 

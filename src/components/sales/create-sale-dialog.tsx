@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { createSaleAction } from "@/app/(app)/vendas/actions";
+import { ProductDatePicker } from "@/components/products/product-date-picker";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -225,10 +226,9 @@ export function CreateSaleDialog({
                     >
                       Data da venda
                     </Label>
-                    <Input
+                    <ProductDatePicker
                       id="sale-date"
-                      onChange={(event) => setOccurredOn(event.target.value)}
-                      type="date"
+                      onChange={setOccurredOn}
                       value={occurredOn}
                     />
                   </div>

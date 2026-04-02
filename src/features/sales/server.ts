@@ -2,7 +2,7 @@ import "server-only";
 
 import { asc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { saleItems, sales } from "@/db/schema";
+import { productStockEntries, saleItems, sales } from "@/db/schema";
 import { buildSalesAnalytics } from "@/features/sales/analytics";
 import type { SalesAnalytics } from "@/features/sales/contracts";
 import { formatDateInputValue } from "@/lib/domain/date";
@@ -11,17 +11,31 @@ export const getSalesDateBounds = async (): Promise<{
   from: string;
   to: string;
 }> => {
-  const [row] = await db
-    .select({
-      maxOccurredOn: sql<string | null>`max(${sales.occurredOn})`,
-      minOccurredOn: sql<string | null>`min(${sales.occurredOn})`,
-    })
-    .from(sales);
+  const [salesRows, stockEntriesRows] = await Promise.all([
+    db
+      .select({
+        minOccurredOn: sql<string | null>`min(${sales.occurredOn})`,
+      })
+      .from(sales),
+    db
+      .select({
+        minStockedOn: sql<string | null>`min(${productStockEntries.stockedOn})`,
+      })
+      .from(productStockEntries),
+  ]);
+  const salesRow = salesRows[0];
+  const stockEntriesRow = stockEntriesRows[0];
   const today = formatDateInputValue();
+  const earliestMovementDate = [
+    salesRow?.minOccurredOn,
+    stockEntriesRow?.minStockedOn,
+  ]
+    .filter((value): value is string => Boolean(value))
+    .sort((left, right) => left.localeCompare(right))[0];
 
   return {
-    from: row?.minOccurredOn ?? today,
-    to: row?.maxOccurredOn ?? today,
+    from: earliestMovementDate ?? today,
+    to: today,
   };
 };
 
