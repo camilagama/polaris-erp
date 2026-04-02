@@ -25,7 +25,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { PaymentFeeRule } from "@/features/catalog/payment-rules";
 import type { SaleListItem } from "@/features/sales/contracts";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 
@@ -45,23 +44,13 @@ const getStatusVariant = (status: SaleListItem["status"]) => {
   return "secondary" as const;
 };
 
-const getPaymentMethodLabel = (
-  paymentMethod: SaleListItem["paymentMethod"],
-  paymentInstallments: number
-) => {
-  if (paymentMethod === "card") {
-    return `${paymentInstallments}x`;
-  }
-
-  return "Pix";
-};
+const getPaymentMethodLabel = (paymentMethod: SaleListItem["paymentMethod"]) =>
+  paymentMethod === "card" ? "Cartao" : "Pix";
 
 export function SalesPanel({
-  paymentFeeRules,
   saleProducts,
   sales,
 }: {
-  paymentFeeRules: PaymentFeeRule[];
   saleProducts: SaleProductOption[];
   sales: SaleListItem[];
 }) {
@@ -128,10 +117,7 @@ export function SalesPanel({
             </Select>
           </div>
 
-          <CreateSaleDialog
-            paymentFeeRules={paymentFeeRules}
-            products={saleProducts}
-          />
+          <CreateSaleDialog products={saleProducts} />
         </div>
       </div>
 
@@ -186,10 +172,7 @@ export function SalesPanel({
 
                 <div className="mt-3 flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">
-                    {getPaymentMethodLabel(
-                      sale.paymentMethod,
-                      sale.paymentInstallments
-                    )}
+                    {getPaymentMethodLabel(sale.paymentMethod)}
                   </span>
                   <span className="font-medium">{sale.itemCount} item(ns)</span>
                 </div>
@@ -232,10 +215,7 @@ export function SalesPanel({
                     </TableCell>
                     <TableCell>{formatDate(sale.occurredOn)}</TableCell>
                     <TableCell>
-                      {getPaymentMethodLabel(
-                        sale.paymentMethod,
-                        sale.paymentInstallments
-                      )}
+                      {getPaymentMethodLabel(sale.paymentMethod)}
                     </TableCell>
                     <TableCell className="text-center">
                       {sale.itemCount}

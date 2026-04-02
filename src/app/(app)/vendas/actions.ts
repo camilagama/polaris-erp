@@ -3,12 +3,7 @@
 import { eq, sql } from "drizzle-orm";
 import { refresh } from "next/cache";
 import { db } from "@/db";
-import { products, saleItems, sales, systemSettings } from "@/db/schema";
-import { GLOBAL_SETTINGS_ID } from "@/features/catalog/constants";
-import {
-  findPaymentRuleByCode,
-  normalizePaymentFeeRules,
-} from "@/features/catalog/payment-rules";
+import { products, saleItems, sales } from "@/db/schema";
 import { buildSaleSnapshot } from "@/features/sales/calculations";
 import { createSaleSchema } from "@/features/sales/schema";
 import { roundCurrency, toCurrencyString } from "@/lib/domain/currency";
@@ -73,27 +68,10 @@ export async function createSaleAction(data: {
   }>;
   notes?: string;
   occurredOn: string;
-  paymentOptionCode: string;
+  paymentMethod: "card" | "pix";
 }): Promise<string> {
   await requireActionSession();
   const parsed = createSaleSchema.parse(data);
-  const rawCardFeeSetting = await db.query.systemSettings.findFirst({
-    where: eq(systemSettings.id, GLOBAL_SETTINGS_ID),
-  });
-  const paymentFeeRules = normalizePaymentFeeRules(
-    rawCardFeeSetting?.paymentFeeRules,
-    Number(rawCardFeeSetting?.cardFeePercent ?? 0)
-  );
-  const selectedPaymentRule = findPaymentRuleByCode(
-    paymentFeeRules,
-    parsed.paymentOptionCode
-  );
-
-  if (!selectedPaymentRule) {
-    throw new Error(
-      "Metodo de pagamento invalido para as configuracoes atuais."
-    );
-  }
 
   const createdSaleId = await db.transaction(async (tx) => {
     const productIds = parsed.items
@@ -151,12 +129,7 @@ export async function createSaleAction(data: {
       );
     }
 
-    const calculatedFeeAmount =
-      partialAmount > 0
-        ? roundCurrency(partialAmount * (selectedPaymentRule.feePercent / 100))
-        : 0;
-
-    const finalTotalAmount = roundCurrency(partialAmount + calculatedFeeAmount);
+    const finalTotalAmount = partialAmount;
 
     const [createdSale] = await tx
       .insert(sales)
@@ -164,13 +137,13 @@ export async function createSaleAction(data: {
         additionalAmount: toCurrencyString(parsed.additionalAmount),
         customerName: parsed.customerName || undefined,
         discountAmount: toCurrencyString(parsed.discountAmount),
-        feeAmount: toCurrencyString(calculatedFeeAmount),
+        feeAmount: "0.00",
         freightAmount: toCurrencyString(parsed.freightAmount),
         notes: parsed.notes || undefined,
         occurredOn: parsed.occurredOn,
-        paymentFeePercent: toCurrencyString(selectedPaymentRule.feePercent),
-        paymentInstallments: selectedPaymentRule.installments,
-        paymentMethod: selectedPaymentRule.paymentMethod,
+        paymentFeePercent: "0.00",
+        paymentInstallments: parsed.paymentMethod === "card" ? 1 : 0,
+        paymentMethod: parsed.paymentMethod,
         status: "completed",
         totalAmount: toCurrencyString(finalTotalAmount),
       })

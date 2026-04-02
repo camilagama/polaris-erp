@@ -31,15 +31,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  getPaymentRuleLabel,
-  type PaymentFeeRule,
-  sortPaymentFeeRules,
-} from "@/features/catalog/payment-rules";
 import { createSaleSchema } from "@/features/sales/schema";
 import { roundCurrency } from "@/lib/domain/currency";
 import { formatDateInputValue } from "@/lib/domain/date";
-import { formatCurrency, formatPercent } from "@/lib/formatters";
+import { formatCurrency } from "@/lib/formatters";
 
 export interface SaleProductOption {
   id: string;
@@ -61,10 +56,8 @@ const createSaleRow = (): SaleRowDraft => ({
 });
 
 export function CreateSaleDialog({
-  paymentFeeRules,
   products,
 }: {
-  paymentFeeRules: PaymentFeeRule[];
   products: SaleProductOption[];
 }) {
   const router = useRouter();
@@ -72,10 +65,7 @@ export function CreateSaleDialog({
   const [pending, startTransition] = useTransition();
   const [occurredOn, setOccurredOn] = useState(() => formatDateInputValue());
   const [customerName, setCustomerName] = useState("");
-  const normalizedPaymentFeeRules = sortPaymentFeeRules(paymentFeeRules);
-  const [paymentOptionCode, setPaymentOptionCode] = useState<string>(
-    normalizedPaymentFeeRules[0]?.code ?? "pix"
-  );
+  const [paymentMethod, setPaymentMethod] = useState<"card" | "pix">("pix");
   const [additionalAmount, setAdditionalAmount] = useState("0");
   const [discountAmount, setDiscountAmount] = useState("0");
   const [freightAmount, setFreightAmount] = useState("0");
@@ -98,10 +88,6 @@ export function CreateSaleDialog({
   const parsedFreightAmount = Number(freightAmount);
   const parsedAdditionalAmount = Number(additionalAmount);
   const parsedDiscountAmount = Number(discountAmount);
-  const selectedPaymentRule =
-    normalizedPaymentFeeRules.find((rule) => rule.code === paymentOptionCode) ??
-    normalizedPaymentFeeRules[0];
-  const selectedFeePercent = selectedPaymentRule?.feePercent ?? 0;
 
   const baseAmount =
     Number.isFinite(parsedFreightAmount) &&
@@ -114,16 +100,12 @@ export function CreateSaleDialog({
             parsedDiscountAmount
         )
       : itemSubtotal;
-  const calculatedFeeAmount =
-    baseAmount <= 0
-      ? 0
-      : roundCurrency(baseAmount * (selectedFeePercent / 100));
-  const totalAmount = roundCurrency(baseAmount + calculatedFeeAmount);
+  const totalAmount = baseAmount;
 
   const resetForm = () => {
     setOccurredOn(formatDateInputValue());
     setCustomerName("");
-    setPaymentOptionCode(normalizedPaymentFeeRules[0]?.code ?? "pix");
+    setPaymentMethod("pix");
     setAdditionalAmount("0");
     setDiscountAmount("0");
     setFreightAmount("0");
@@ -171,7 +153,7 @@ export function CreateSaleDialog({
       items: payloadItems,
       notes,
       occurredOn,
-      paymentOptionCode,
+      paymentMethod,
     });
 
     if (!parsedPayload.success) {
@@ -258,8 +240,10 @@ export function CreateSaleDialog({
                       Metodo de pagamento
                     </Label>
                     <Select
-                      onValueChange={setPaymentOptionCode}
-                      value={paymentOptionCode}
+                      onValueChange={(value: "card" | "pix") =>
+                        setPaymentMethod(value)
+                      }
+                      value={paymentMethod}
                     >
                       <SelectTrigger
                         className="w-full"
@@ -268,11 +252,8 @@ export function CreateSaleDialog({
                         <SelectValue placeholder="Selecione" />
                       </SelectTrigger>
                       <SelectContent>
-                        {normalizedPaymentFeeRules.map((rule) => (
-                          <SelectItem key={rule.code} value={rule.code}>
-                            {getPaymentRuleLabel(rule)}
-                          </SelectItem>
-                        ))}
+                        <SelectItem value="pix">Pix</SelectItem>
+                        <SelectItem value="card">Cartao</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -578,22 +559,6 @@ export function CreateSaleDialog({
                     </InputGroup>
                   </div>
                 </div>
-
-                <div className="-mx-5 my-0.5 h-px bg-border/40" />
-
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium text-muted-foreground">
-                    Taxa (
-                    {formatPercent(selectedFeePercent, {
-                      minimumFractionDigits: 2,
-                    })}
-                    %)
-                  </span>
-                  <span className="font-medium text-destructive/80">
-                    + {formatCurrency(calculatedFeeAmount)}
-                  </span>
-                </div>
-
                 <div className="mt-1 flex items-center justify-between rounded-md border border-border px-2 py-2">
                   <strong className="font-bold text-muted-foreground">
                     Total final

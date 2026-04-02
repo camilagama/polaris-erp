@@ -10,9 +10,6 @@ export async function getSalesQuery(): Promise<SaleListItem[]> {
       cancelledAt: sales.cancelledAt,
       customerName: sales.customerName,
       discountAmount: sales.discountAmount,
-      feeAmount: sales.feeAmount,
-      paymentFeePercent: sales.paymentFeePercent,
-      paymentInstallments: sales.paymentInstallments,
       freightAmount: sales.freightAmount,
       id: sales.id,
       itemCount: count(saleItems.id),
@@ -29,7 +26,6 @@ export async function getSalesQuery(): Promise<SaleListItem[]> {
   return rows.map((row) => ({
     ...row,
     itemCount: Number(row.itemCount),
-    paymentInstallments: Number(row.paymentInstallments),
     paymentMethod: row.paymentMethod as SaleListItem["paymentMethod"],
     status: row.status as SaleListItem["status"],
   }));
@@ -67,7 +63,6 @@ export async function getSaleByIdQuery(
       ...item,
       quantity: Number(item.quantity),
     })),
-    paymentInstallments: Number(sale.paymentInstallments),
     paymentMethod: sale.paymentMethod as SaleDetail["paymentMethod"],
     status: sale.status as SaleDetail["status"],
   };

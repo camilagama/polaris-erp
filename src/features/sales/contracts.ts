@@ -3,13 +3,10 @@ export interface SaleListItem {
   cancelledAt: Date | null;
   customerName: string | null;
   discountAmount: string;
-  feeAmount: string;
   freightAmount: string;
   id: string;
   itemCount: number;
   occurredOn: string;
-  paymentFeePercent: string;
-  paymentInstallments: number;
   paymentMethod: "card" | "pix";
   status: "cancelled" | "completed";
   totalAmount: string;
@@ -32,14 +29,11 @@ export interface SaleDetail {
   createdAt: Date;
   customerName: string | null;
   discountAmount: string;
-  feeAmount: string;
   freightAmount: string;
   id: string;
   items: SaleDetailItem[];
   notes: string | null;
   occurredOn: string;
-  paymentFeePercent: string;
-  paymentInstallments: number;
   paymentMethod: "card" | "pix";
   status: "cancelled" | "completed";
   totalAmount: string;

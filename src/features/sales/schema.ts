@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { PIX_RULE_CODE } from "@/features/catalog/payment-rules";
 import { isoDateSchema } from "@/lib/domain/date";
 
 const saleItemSchema = z.object({
@@ -30,11 +29,9 @@ export const createSaleSchema = z
       .min(1, "Adicione pelo menos um item na venda."),
     notes: z.string().trim().max(240).optional(),
     occurredOn: isoDateSchema,
-    paymentOptionCode: z
-      .string()
-      .trim()
-      .min(1, "Metodo de pagamento invalido.")
-      .default(PIX_RULE_CODE),
+    paymentMethod: z.enum(["card", "pix"], {
+      error: "Metodo de pagamento invalido.",
+    }),
   })
   .superRefine((value, context) => {
     const seenProductIds = new Set<string>();

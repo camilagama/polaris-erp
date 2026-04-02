@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { SalesPanel } from "@/components/sales/sales-panel";
-import { getCatalogSettings } from "@/features/catalog/server";
 import { getProductsQuery } from "../produtos/queries";
 import { getSalesQuery } from "./queries";
 
@@ -10,10 +9,9 @@ export const metadata: Metadata = {
 };
 
 export default async function VendasPage() {
-  const [sales, products, settings] = await Promise.all([
+  const [sales, products] = await Promise.all([
     getSalesQuery(),
     getProductsQuery(),
-    getCatalogSettings(),
   ]);
 
   const saleProducts = products
@@ -25,11 +23,5 @@ export default async function VendasPage() {
       stock: product.stock,
     }));
 
-  return (
-    <SalesPanel
-      paymentFeeRules={settings.paymentFeeRules}
-      saleProducts={saleProducts}
-      sales={sales}
-    />
-  );
+  return <SalesPanel saleProducts={saleProducts} sales={sales} />;
 }

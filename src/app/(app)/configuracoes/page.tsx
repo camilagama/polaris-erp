@@ -7,7 +7,7 @@ import {
 
 export const metadata: Metadata = {
   title: "Configuracoes | DG Imports",
-  description: "Categorias, markup e taxas operacionais do DG Imports.",
+  description: "Categorias e markup operacional do DG Imports.",
 };
 
 export default async function ConfiguracoesPage() {
