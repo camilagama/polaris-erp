@@ -207,7 +207,9 @@ export const buildSalesAnalytics = ({
     );
     profitByBucket.set(
       bucketKey,
-      roundCurrency((profitByBucket.get(bucketKey) ?? 0) + sale.totalAmount)
+      roundCurrency(
+        (profitByBucket.get(bucketKey) ?? 0) + sale.totalAmount - saleCosts
+      )
     );
 
     totalSold = roundCurrency(totalSold + sale.totalAmount);

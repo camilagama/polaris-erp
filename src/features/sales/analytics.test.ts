@@ -100,9 +100,9 @@ describe("buildSalesAnalytics", () => {
     expect(analytics.periodGranularity).toBe("month");
     expect(analytics.performance).toEqual([
       { label: "jan/26", profit: 0, sold: 0 },
-      { label: "fev/26", profit: 60, sold: 100 },
+      { label: "fev/26", profit: 50, sold: 100 },
       { label: "mar/26", profit: 0, sold: 0 },
-      { label: "abr/26", profit: 160, sold: 200 },
+      { label: "abr/26", profit: 140, sold: 200 },
     ]);
   });
 });

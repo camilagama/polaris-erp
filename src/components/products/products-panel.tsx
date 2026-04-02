@@ -411,7 +411,7 @@ export function ProductsPanel({
         </>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[0.85fr_0.95fr_1.8fr]">
         <div className="flex flex-col gap-4">
           <Card className="flex flex-1 flex-col justify-center">
             <CardHeader className="gap-1 pb-1.5">

@@ -8,6 +8,7 @@ import {
   type SaleProductOption,
 } from "@/components/sales/create-sale-dialog";
 import { PaymentMethodChart } from "@/components/sales/payment-method-chart";
+import { SalesPerformanceChart } from "@/components/sales/sales-performance-chart";
 import { SalesStatusChart } from "@/components/sales/sales-status-chart";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -275,7 +276,7 @@ export function SalesPanel({
         </>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[0.85fr_0.95fr_0.95fr_1.8fr]">
         <div className="flex flex-col gap-4">
           <Card className="flex flex-1 flex-col justify-center">
             <CardHeader className="gap-1 pb-1.5">
@@ -332,6 +333,20 @@ export function SalesPanel({
           </CardHeader>
           <CardContent className="flex flex-1 items-center pt-0">
             <PaymentMethodChart data={analytics.paymentMethods} />
+          </CardContent>
+        </Card>
+
+        <Card className="flex flex-col">
+          <CardHeader className="gap-1 pb-2">
+            <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
+              Vendas no periodo
+            </CardTitle>
+            <CardDescription className="text-[11px]">
+              {selectedRange.label}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-1 items-center pt-0">
+            <SalesPerformanceChart data={analytics.performance} />
           </CardContent>
         </Card>
       </div>
