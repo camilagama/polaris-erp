@@ -232,7 +232,7 @@ export function SalesPanel({
             ))}
           </div>
 
-          <div className="hidden rounded-lg border border-border/60 bg-card md:block">
+          <div className="hidden overflow-hidden rounded-lg border border-border/50 md:block">
             <Table>
               <TableHeader className="bg-muted/30">
                 <TableRow className="hover:bg-transparent">

@@ -1,7 +1,6 @@
-import { PackageIcon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
 import { notFound } from "next/navigation";
 import { ProductDetailActions } from "@/components/products/product-detail-actions";
+import { ProductHistoryPanel } from "@/components/products/product-history-panel";
 import { ProductImageFrame } from "@/components/products/product-image-frame";
 import { ProductUnitsSoldChart } from "@/components/products/product-sales-chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +10,7 @@ import {
 } from "@/features/catalog/server";
 import { buildProductInventorySummary } from "@/features/products/history";
 import { getProductSalesHistoryMetrics } from "@/features/products/server";
-import { formatCurrency, formatDate, formatDateTime } from "@/lib/formatters";
+import { formatCurrency } from "@/lib/formatters";
 import {
   getProductByIdQuery,
   getProductPriceChangesByProductIdQuery,
@@ -86,29 +85,10 @@ export default async function ProdutoDetalhePage(
 
   return (
     <div className="flex flex-col gap-6 p-4 pb-20 sm:p-6 sm:pb-6">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-muted-foreground text-xs">
-          <HugeiconsIcon icon={PackageIcon} size={16} strokeWidth={2} />
-          Produto
-        </div>
-        <ProductDetailActions
-          categories={categories.map((category) => ({
-            id: category.id,
-            name: category.name,
-          }))}
-          linkedSalesCount={linkedSalesCount}
-          product={product}
-          settings={settings}
-        />
-      </div>
-
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
         <div className="space-y-6 xl:col-span-2">
           <Card className="border-border/50 shadow-sm">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg">Detalhes</CardTitle>
-            </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
               <div className="flex flex-col gap-6 sm:flex-row">
                 <div className="size-24 shrink-0 overflow-hidden rounded-lg border border-border/50 bg-muted/30 sm:size-32">
                   <ProductImageFrame
@@ -118,55 +98,55 @@ export default async function ProdutoDetalhePage(
                     sizes="128px"
                   />
                 </div>
-                <div className="grid flex-1 grid-cols-2 gap-4 sm:grid-cols-3">
-                  <div>
-                    <p className="mb-1 text-[11px] text-muted-foreground uppercase tracking-wider">
-                      Categoria
-                    </p>
-                    <p className="font-medium text-sm">
-                      {product.categoryName}
-                    </p>
+                <div className="flex-1 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h1 className="font-semibold text-2xl tracking-tight">
+                      {product.name}
+                    </h1>
+                    <ProductDetailActions
+                      categories={categories.map((category) => ({
+                        id: category.id,
+                        name: category.name,
+                      }))}
+                      linkedSalesCount={linkedSalesCount}
+                      product={product}
+                      settings={settings}
+                    />
                   </div>
-                  <div>
-                    <p className="mb-1 text-[11px] text-muted-foreground uppercase tracking-wider">
-                      Estoque Atual
-                    </p>
-                    <p className="font-medium text-sm">{product.stock} un.</p>
-                  </div>
-                  <div>
-                    <p className="mb-1 text-[11px] text-muted-foreground uppercase tracking-wider">
-                      Status
-                    </p>
-                    <p className="font-medium text-sm">
-                      {product.archivedAt ? "Arquivado" : "Ativo"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="mb-1 text-[11px] text-muted-foreground uppercase tracking-wider">
-                      Data da Compra
-                    </p>
-                    <p className="font-medium text-sm">
-                      {formatDate(product.purchasedOn)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="mb-1 text-[11px] text-muted-foreground uppercase tracking-wider">
-                      Preço de Venda
-                    </p>
-                    <p className="font-medium text-sm">
-                      {formatCurrency(product.price)}
-                    </p>
-                  </div>
-                  {product.description && (
-                    <div className="col-span-2 mt-2 sm:col-span-3">
+                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                    <div>
                       <p className="mb-1 text-[11px] text-muted-foreground uppercase tracking-wider">
-                        Observações
+                        Categoria
                       </p>
-                      <p className="text-foreground/80 text-sm">
-                        {product.description.trim()}
+                      <p className="font-medium text-sm">
+                        {product.categoryName}
                       </p>
                     </div>
-                  )}
+                    <div>
+                      <p className="mb-1 text-[11px] text-muted-foreground uppercase tracking-wider">
+                        Status
+                      </p>
+                      <p className="font-medium text-sm">
+                        {product.archivedAt ? "Arquivado" : "Ativo"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="mb-1 text-[11px] text-muted-foreground uppercase tracking-wider">
+                        Estoque
+                      </p>
+                      <p className="font-medium text-sm">{product.stock} un.</p>
+                    </div>
+                    {product.description && (
+                      <div className="col-span-2 mt-2 sm:col-span-3">
+                        <p className="mb-1 text-[11px] text-muted-foreground uppercase tracking-wider">
+                          Observações
+                        </p>
+                        <p className="text-foreground/80 text-sm">
+                          {product.description.trim()}
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -174,7 +154,7 @@ export default async function ProdutoDetalhePage(
 
           <Card className="border-border/50 shadow-sm">
             <CardHeader className="flex flex-col justify-between gap-2 pb-4 sm:flex-row sm:items-center">
-              <CardTitle className="text-lg">Vendas do Produto</CardTitle>
+              <CardTitle className="text-base">Vendas do Produto</CardTitle>
               <div className="flex gap-4 text-sm">
                 <div>
                   <span className="mr-1.5 text-muted-foreground">
@@ -199,162 +179,59 @@ export default async function ProdutoDetalhePage(
               />
             </CardContent>
           </Card>
-
-          <Card className="border-border/50 shadow-sm">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg">
-                Histórico de Movimentações
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {inventorySummary.historyItems.length === 0 ? (
-                <p className="text-muted-foreground text-sm">
-                  Sem movimentações registradas.
-                </p>
-              ) : (
-                <div className="relative ml-2 space-y-6 border-border/50 border-l pl-5 sm:ml-3">
-                  {inventorySummary.historyItems.map((item) => (
-                    <div className="relative" key={item.id}>
-                      <div className="absolute top-1.5 -left-[1.60rem] size-2.5 rounded-full border border-border bg-muted sm:-left-[1.65rem]" />
-                      <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
-                        <div>
-                          <p className="font-medium text-sm">
-                            {item.quantityLabel}
-                          </p>
-                          <p className="mt-0.5 text-muted-foreground text-xs">
-                            {item.label} em {formatDate(item.date)}
-                          </p>
-                          {item.notes && (
-                            <p className="mt-1.5 text-muted-foreground/80 text-xs italic">
-                              "{item.notes}"
-                            </p>
-                          )}
-                        </div>
-                        <div className="text-sm sm:text-right">
-                          <p>{formatCurrency(item.unitCost)} un.</p>
-                          {(() => {
-                            if (item.variant === "writeOff") {
-                              return (
-                                <p className="mt-0.5 font-medium text-destructive">
-                                  Prej. {formatCurrency(item.totalValue)}
-                                </p>
-                              );
-                            }
-                            if (item.variant === "sale") {
-                              return (
-                                <p className="mt-0.5 text-muted-foreground">
-                                  Saída {formatCurrency(item.totalValue)}
-                                </p>
-                              );
-                            }
-                            if (item.variant === "saleReversal") {
-                              return (
-                                <p className="mt-0.5 font-medium text-primary">
-                                  Estorno {formatCurrency(item.totalValue)}
-                                </p>
-                              );
-                            }
-                            return (
-                              <p className="mt-0.5 font-medium">
-                                {formatCurrency(item.totalValue)}
-                              </p>
-                            );
-                          })()}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
         </div>
 
         <div className="space-y-6">
           <Card className="border-border/50 bg-muted/10 shadow-sm">
             <CardHeader className="pb-4">
-              <CardTitle className="text-lg">Indicadores Financeiros</CardTitle>
+              <CardTitle className="text-base">
+                Indicadores Financeiros
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between border-border/40 border-b pb-3">
+                <span className="text-muted-foreground text-sm">
+                  Preço de Venda
+                </span>
+                <span className="font-medium text-sm">
+                  {formatCurrency(product.price)}
+                </span>
+              </div>
               <div className="flex items-center justify-between border-border/40 border-b pb-3">
                 <span className="text-muted-foreground text-sm">
                   Custo Médio
                 </span>
-                <span className="font-medium">
+                <span className="font-medium text-sm">
                   {formatCurrency(averageCost)}
                 </span>
               </div>
               <div className="flex items-center justify-between border-border/40 border-b pb-3">
                 <span className="text-muted-foreground text-sm">
-                  Custo em Estoque
+                  Custo de Investimento
                 </span>
-                <span className="font-medium">
+                <span className="font-medium text-sm">
                   {formatCurrency(inventorySummary.totalCost)}
                 </span>
               </div>
               <div className="flex items-center justify-between border-border/40 border-b pb-3">
-                <span className="text-muted-foreground text-sm">
-                  Abastecimentos
-                </span>
-                <span className="font-medium">
-                  {inventorySummary.totalEntries} un.
-                </span>
-              </div>
-              <div className="flex items-center justify-between border-border/40 border-b pb-3">
                 <span className="text-muted-foreground text-sm">Baixas</span>
-                <span className="font-medium">
+                <span className="font-medium text-sm">
                   {inventorySummary.totalWriteOffs} un.
                 </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground text-sm">Prejuízo</span>
-                <span className="font-medium text-destructive">
+                <span className="font-medium text-destructive text-sm">
                   {formatCurrency(inventorySummary.totalWriteOffLoss)}
                 </span>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-border/50 bg-muted/10 shadow-sm">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg">Histórico de Preços</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {priceChanges.length > 0 ? (
-                <div className="space-y-4">
-                  {priceChanges.map((change, index) => (
-                    <div
-                      className={
-                        index === priceChanges.length - 1
-                          ? ""
-                          : "border-border/40 border-b pb-3"
-                      }
-                      key={change.id}
-                    >
-                      <div className="flex justify-between">
-                        <span className="flex gap-2 font-medium text-sm">
-                          <span className="text-muted-foreground line-through">
-                            {formatCurrency(change.previousPrice)}
-                          </span>
-                          <span>{formatCurrency(change.nextPrice)}</span>
-                        </span>
-                        <span className="text-muted-foreground text-xs">
-                          {change.changedByUserName ?? "Usuário"}
-                        </span>
-                      </div>
-                      <p className="mt-1 text-[11px] text-muted-foreground">
-                        {formatDateTime(change.createdAt)}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-muted-foreground text-xs">
-                  Nenhuma alteração registrada.
-                </p>
-              )}
-            </CardContent>
-          </Card>
+          <ProductHistoryPanel
+            inventoryItems={inventorySummary.historyItems}
+            priceChanges={priceChanges}
+          />
         </div>
       </div>
     </div>

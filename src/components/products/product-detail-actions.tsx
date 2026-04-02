@@ -6,8 +6,8 @@ import {
   Delete02Icon,
   Edit01Icon,
   ListPlusIcon,
-  Menu03Icon,
   MinusSignCircleIcon,
+  MoreVerticalIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
@@ -223,11 +223,13 @@ export function ProductDetailActions({
         <DropdownMenuTrigger asChild>
           <Button
             aria-label={`Acoes para ${product.name}`}
-            size="xs"
+            className="gap-2 px-3"
+            size="sm"
             type="button"
-            variant="ghost"
+            variant="outline"
           >
-            <HugeiconsIcon icon={Menu03Icon} strokeWidth={2} />
+            <HugeiconsIcon icon={MoreVerticalIcon} strokeWidth={2} />
+            <span className="font-medium">Ações</span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-36">

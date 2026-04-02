@@ -53,20 +53,7 @@ export default async function VendaDetalhePage(
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-4 pb-20 sm:p-6 sm:pb-6">
       <div className="flex items-center justify-between gap-3 border-border/40 border-b pb-6">
         <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Badge
-              className="px-2.5 font-normal shadow-none"
-              variant={getStatusVariant(sale.status)}
-            >
-              {getStatusLabel(sale.status)}
-            </Badge>
-            <p className="text-muted-foreground text-sm">
-              {formatDate(sale.occurredOn)}
-            </p>
-          </div>
-          <h1 className="mt-2 font-semibold text-2xl tracking-tight">
-            {saleTitle}
-          </h1>
+          <h1 className="font-semibold text-2xl tracking-tight">{saleTitle}</h1>
         </div>
         <SaleDetailActions sale={sale} />
       </div>
@@ -80,6 +67,25 @@ export default async function VendaDetalhePage(
               </p>
               <p className="font-medium text-sm">
                 {sale.customerName || "Sem cliente"}
+              </p>
+            </div>
+            <div className="flex flex-col items-start gap-1">
+              <p className="text-[11px] text-muted-foreground uppercase tracking-wider">
+                Status
+              </p>
+              <Badge
+                className="px-2 font-normal shadow-none"
+                variant={getStatusVariant(sale.status)}
+              >
+                {getStatusLabel(sale.status)}
+              </Badge>
+            </div>
+            <div>
+              <p className="mb-1 text-[11px] text-muted-foreground uppercase tracking-wider">
+                Data
+              </p>
+              <p className="font-medium text-sm">
+                {formatDate(sale.occurredOn)}
               </p>
             </div>
             <div>

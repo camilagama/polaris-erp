@@ -43,10 +43,10 @@ export function ProductHistoryPanel({
   return (
     <Card className="border-border/50 bg-muted/10 shadow-sm">
       <CardHeader className="pb-4">
-        <CardTitle className="text-lg">Históricos</CardTitle>
+        <CardTitle className="text-base">Históricos</CardTitle>
       </CardHeader>
       <CardContent>
-        <Tabs className="w-full" defaultValue="movimentacoes">
+        <Tabs className="flex w-full flex-col" defaultValue="movimentacoes">
           <TabsList className="mb-4 grid w-full grid-cols-2">
             <TabsTrigger value="movimentacoes">Movimentações</TabsTrigger>
             <TabsTrigger value="precos">Preços</TabsTrigger>
@@ -127,27 +127,21 @@ export function ProductHistoryPanel({
 
           <TabsContent className="space-y-4" value="precos">
             {priceChanges.length > 0 ? (
-              <div className="space-y-4">
-                {visiblePriceChanges.map((change, index) => (
-                  <div
-                    className={
-                      index === visiblePriceChanges.length - 1
-                        ? ""
-                        : "border-border/40 border-b pb-3"
-                    }
-                    key={change.id}
-                  >
-                    <div className="flex justify-between">
-                      <span className="flex gap-2 font-medium text-sm">
-                        <span className="text-muted-foreground line-through">
+              <div className="relative ml-2 space-y-6 border-border/50 border-l pl-5 sm:ml-3">
+                {visiblePriceChanges.map((change) => (
+                  <div className="relative" key={change.id}>
+                    <div className="absolute top-1.5 -left-[1.60rem] size-2.5 rounded-full border border-border bg-muted sm:-left-[1.65rem]" />
+                    <div className="flex flex-col justify-between gap-1 sm:flex-row sm:items-center">
+                      <div className="flex flex-col gap-0.5 font-medium text-[13px]">
+                        <span>{formatCurrency(change.nextPrice)}</span>
+                        <span className="text-[11px] text-muted-foreground line-through">
                           {formatCurrency(change.previousPrice)}
                         </span>
-                        <span>{formatCurrency(change.nextPrice)}</span>
-                      </span>
+                      </div>
+                      <p className="text-muted-foreground text-xs sm:text-right">
+                        {formatDateTime(change.createdAt)}
+                      </p>
                     </div>
-                    <p className="mt-1 text-[11px] text-muted-foreground">
-                      {formatDateTime(change.createdAt)}
-                    </p>
                   </div>
                 ))}
               </div>
