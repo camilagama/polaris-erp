@@ -6,10 +6,25 @@
       "sourceType": "github",
       "computedHash": "f483c304fcde060211ffae00f49bb728536e7e7613c99db45b5b924d9fc17243"
     },
+    "cloudflare": {
+      "source": "cloudflare/skills",
+      "sourceType": "github",
+      "computedHash": "eda55c320815013fcf93ba726bf324ea1710a64f0e2a9c136a4eb68d6f283acf"
+    },
+    "cloudflare-r2": {
+      "source": "ovachiever/droid-tings",
+      "sourceType": "github",
+      "computedHash": "88ce63142238767555f4f96677237c3f2084cb993583ea1f20cc781de796bd42"
+    },
     "find-skills": {
       "source": "vercel-labs/skills",
       "sourceType": "github",
       "computedHash": "645b891da1edbae76ab79c7b088d4e73397464f8396edaf773c0e01971ce75d6"
+    },
+    "integrate-uppy-transloadit-s3-uploading-to-nextjs": {
+      "source": "transloadit/skills",
+      "sourceType": "github",
+      "computedHash": "bf419df2331e70b710c5613d2bc4b0b4d5b930f91dd51060ef891bf94729bc50"
     },
     "neon-postgres": {
       "source": "neondatabase/agent-skills",
