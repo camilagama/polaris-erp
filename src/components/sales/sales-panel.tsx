@@ -280,74 +280,85 @@ export function SalesPanel({
         </>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Card>
-          <CardHeader className="gap-1 pb-1.5">
-            <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
-              Total vendido
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <strong className="font-heading text-[1.65rem] leading-none tracking-tight">
-              {formatCurrency(analytics.totalSold)}
-            </strong>
-            <CardDescription className="mt-1 text-[11px]">
-              Valor concluido em {selectedRange.label.toLowerCase()}.
-            </CardDescription>
-          </CardContent>
-        </Card>
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="flex flex-col gap-4">
+          <Card className="flex flex-1 flex-col justify-center">
+            <CardHeader className="gap-1 pb-1.5">
+              <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
+                Total vendido
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <strong className="font-heading text-[1.65rem] leading-none tracking-tight">
+                {formatCurrency(analytics.totalSold)}
+              </strong>
+              <CardDescription className="mt-1 text-[11px]">
+                Valor concluido em {selectedRange.label.toLowerCase()}.
+              </CardDescription>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="gap-1 pb-1.5">
-            <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
-              Lucro total
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <strong className="font-heading text-[1.65rem] leading-none tracking-tight">
-              {formatCurrency(analytics.totalProfit)}
-            </strong>
-            <CardDescription className="mt-1 text-[11px]">
-              Margem de {formatPercent(analytics.profitMarginPercent)}%.
-            </CardDescription>
-          </CardContent>
-        </Card>
+          <Card className="flex flex-1 flex-col justify-center">
+            <CardHeader className="gap-1 pb-1.5">
+              <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
+                Lucro total
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <strong className="font-heading text-[1.65rem] leading-none tracking-tight">
+                {formatCurrency(analytics.totalProfit)}
+              </strong>
+              <CardDescription className="mt-1 text-[11px]">
+                Margem de {formatPercent(analytics.profitMarginPercent)}%.
+              </CardDescription>
+            </CardContent>
+          </Card>
+        </div>
 
-        <Card>
-          <CardHeader className="gap-1 pb-1.5">
-            <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
-              Vendas concluidas
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <strong className="font-heading text-[1.65rem] leading-none tracking-tight">
-              {analytics.completedSalesCount}
-            </strong>
-            <CardDescription className="mt-1 text-[11px]">
-              Ticket medio de {formatCurrency(analytics.averageTicket)}.
-            </CardDescription>
-          </CardContent>
-        </Card>
+        <div className="flex flex-col gap-4">
+          <Card className="flex flex-1 flex-col justify-center">
+            <CardHeader className="gap-1 pb-1.5">
+              <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
+                Vendas concluidas
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <strong className="font-heading text-[1.65rem] leading-none tracking-tight">
+                {analytics.completedSalesCount}
+              </strong>
+              <CardDescription className="mt-1 text-[11px]">
+                Ticket medio de {formatCurrency(analytics.averageTicket)}.
+              </CardDescription>
+            </CardContent>
+          </Card>
 
-        <Card>
+          <Card className="flex flex-1 flex-col justify-center">
+            <CardHeader className="gap-1 pb-1.5">
+              <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
+                Vendas canceladas
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <strong className="font-heading text-[1.65rem] leading-none tracking-tight">
+                {analytics.cancelledSalesCount}
+              </strong>
+              <CardDescription className="mt-1 text-[11px]">
+                Venda(s) cancelada(s) em {selectedRange.label.toLowerCase()}.
+              </CardDescription>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card className="flex flex-col">
           <CardHeader className="gap-1 pb-2">
-            <CardTitle className="text-base">Mix de pagamentos</CardTitle>
-            <CardDescription>Vendas concluidas por metodo</CardDescription>
+            <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
+              Mix de pagamentos
+            </CardTitle>
           </CardHeader>
-          <CardContent className="pt-0">
+          <CardContent className="flex flex-1 items-center pt-0">
             <PaymentMethodChart data={analytics.paymentMethods} />
           </CardContent>
         </Card>
-      </div>
-
-      <div className="rounded-xl border border-border/60 bg-card px-4 py-3">
-        <p className="text-[11px] text-muted-foreground uppercase tracking-[0.14em]">
-          Cancelamentos no periodo
-        </p>
-        <p className="mt-1 font-medium text-sm">
-          {analytics.cancelledSalesCount} venda(s) cancelada(s) em{" "}
-          {selectedRange.label.toLowerCase()}.
-        </p>
       </div>
     </div>
   );
