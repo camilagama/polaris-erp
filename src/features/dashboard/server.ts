@@ -65,6 +65,10 @@ export const getDashboardMetrics = async (
       ),
     db
       .select({
+        imageBlurDataUrl: products.imageBlurDataUrl,
+        imageHeight: products.imageHeight,
+        imageVersion: products.imageVersion,
+        imageWidth: products.imageWidth,
         lineTotal: saleItems.lineTotal,
         occurredOn: sales.occurredOn,
         productId: saleItems.productId,
@@ -75,6 +79,7 @@ export const getDashboardMetrics = async (
       })
       .from(saleItems)
       .innerJoin(sales, eq(saleItems.saleId, sales.id))
+      .innerJoin(products, eq(saleItems.productId, products.id))
       .where(
         and(gte(sales.occurredOn, range.from), lte(sales.occurredOn, range.to))
       ),
@@ -97,6 +102,10 @@ export const getDashboardMetrics = async (
     })),
     range,
     saleItems: saleItemRows.map((row) => ({
+      imageBlurDataUrl: row.imageBlurDataUrl,
+      imageHeight: row.imageHeight,
+      imageVersion: row.imageVersion,
+      imageWidth: row.imageWidth,
       lineTotal: Number(row.lineTotal),
       occurredOn: row.occurredOn,
       productId: row.productId,

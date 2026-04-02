@@ -15,6 +15,10 @@ export interface DashboardPeriodComparisonPoint {
 
 export interface DashboardTopProduct {
   id: string;
+  imageBlurDataUrl: string | null;
+  imageHeight: number | null;
+  imageVersion: number | null;
+  imageWidth: number | null;
   name: string;
   quantitySold: number;
   soldAmount: number;

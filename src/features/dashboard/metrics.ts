@@ -29,6 +29,10 @@ export interface DashboardSaleRecord {
 }
 
 export interface DashboardSaleItemRecord {
+  imageBlurDataUrl: string | null;
+  imageHeight: number | null;
+  imageVersion: number | null;
+  imageWidth: number | null;
   lineTotal: number;
   occurredOn: string;
   productId: string;
@@ -154,6 +158,10 @@ const buildTopProducts = ({
     if (!currentProduct) {
       products.set(item.productId, {
         id: item.productId,
+        imageBlurDataUrl: item.imageBlurDataUrl,
+        imageHeight: item.imageHeight,
+        imageVersion: item.imageVersion,
+        imageWidth: item.imageWidth,
         name: item.productName,
         quantitySold: item.quantity,
         soldAmount: roundCurrency(item.lineTotal),

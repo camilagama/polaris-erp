@@ -1,4 +1,7 @@
+import { Image01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import type { Metadata } from "next";
+import Image from "next/image";
 import { DashboardDateRangeFilter } from "@/components/dashboard/dashboard-date-range-filter";
 import { RevenueResultChart } from "@/components/dashboard/revenue-result-chart";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +20,7 @@ import {
   getDashboardDateBounds,
   getDashboardMetrics,
 } from "@/features/dashboard/server";
+import { buildProductImageUrl } from "@/features/products/image-urls";
 import { formatCurrency } from "@/lib/formatters";
 
 export const metadata: Metadata = {
@@ -159,24 +163,56 @@ export default async function DashboardPage(props: PageProps<"/">) {
                 </div>
               ) : (
                 <div className="rounded-xl border border-border/60">
-                  <div className="grid grid-cols-[1fr_auto] gap-3 border-border/60 border-b px-4 py-3 font-medium text-[11px] text-muted-foreground uppercase tracking-[0.14em]">
+                  <div className="grid grid-cols-[1fr_auto] gap-3 border-border/60 border-b bg-muted/5 px-4 py-2 font-medium text-[10px] text-muted-foreground uppercase tracking-[0.12em]">
                     <span>Produto</span>
-                    <span>Vendidos</span>
+                    <span className="text-right">Vendidos</span>
                   </div>
                   <div className="divide-y divide-border/50">
-                    {metrics.topProducts.slice(0, 5).map((product) => (
-                      <div
-                        className="grid grid-cols-[1fr_auto] items-center gap-3 px-4 py-3"
-                        key={product.id}
-                      >
-                        <span className="truncate font-medium text-sm">
-                          {product.name}
-                        </span>
-                        <span className="font-semibold text-sm tabular-nums">
-                          {product.quantitySold}
-                        </span>
-                      </div>
-                    ))}
+                    {metrics.topProducts.slice(0, 5).map((product) => {
+                      const hasImage =
+                        product.imageVersion !== null &&
+                        product.imageWidth !== null &&
+                        product.imageHeight !== null;
+
+                      const imageUrl = hasImage
+                        ? buildProductImageUrl(
+                            product.id,
+                            product.imageVersion as number,
+                            "table"
+                          )
+                        : null;
+
+                      return (
+                        <div
+                          className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-4 py-2.5"
+                          key={product.id}
+                        >
+                          <div className="relative flex size-8 items-center justify-center overflow-hidden rounded-lg border border-border/40 bg-muted/10 text-muted-foreground/50">
+                            {imageUrl ? (
+                              <Image
+                                alt={product.name}
+                                className="object-cover"
+                                fill
+                                sizes="32px"
+                                src={imageUrl}
+                              />
+                            ) : (
+                              <HugeiconsIcon
+                                icon={Image01Icon}
+                                size={14}
+                                strokeWidth={2}
+                              />
+                            )}
+                          </div>
+                          <span className="truncate font-medium text-sm">
+                            {product.name}
+                          </span>
+                          <span className="font-semibold text-sm tabular-nums">
+                            {product.quantitySold}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
