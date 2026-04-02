@@ -1,25 +1,41 @@
 import "server-only";
 import { z } from "zod";
 
+const optionalNonEmptyString = z.preprocess((value) => {
+  if (typeof value !== "string") {
+    return value;
+  }
+
+  const trimmedValue = value.trim();
+  return trimmedValue.length === 0 ? undefined : trimmedValue;
+}, z.string().min(1).optional());
+
 const serverEnvSchema = z.object({
   DATABASE_URL: z.string().min(1),
   DATABASE_URL_DIRECT: z.string().min(1).optional(),
   BETTER_AUTH_SECRET: z.string().min(1),
   BETTER_AUTH_URL: z.string().url(),
-  CRON_SECRET: z.string().min(1).optional(),
-  GOOGLE_CLIENT_ID: z.string().min(1).optional(),
-  GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
+  CRON_SECRET: optionalNonEmptyString,
+  GOOGLE_CLIENT_ID: optionalNonEmptyString,
+  GOOGLE_CLIENT_SECRET: optionalNonEmptyString,
   NEXT_PUBLIC_APP_URL: z.string().url(),
-  NEXT_PUBLIC_GOOGLE_CLIENT_ID: z.string().min(1).optional(),
+  NEXT_PUBLIC_GOOGLE_CLIENT_ID: optionalNonEmptyString,
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),
-  R2_ACCESS_KEY_ID: z.string().min(1).optional(),
-  R2_ACCOUNT_ID: z.string().min(1).optional(),
-  R2_BUCKET_PUBLIC: z.string().min(1).optional(),
-  R2_BUCKET_STAGING: z.string().min(1).optional(),
-  R2_PUBLIC_BASE_URL: z.string().url().optional(),
-  R2_SECRET_ACCESS_KEY: z.string().min(1).optional(),
+  R2_ACCESS_KEY_ID: optionalNonEmptyString,
+  R2_ACCOUNT_ID: optionalNonEmptyString,
+  R2_BUCKET_PUBLIC: optionalNonEmptyString,
+  R2_BUCKET_STAGING: optionalNonEmptyString,
+  R2_PUBLIC_BASE_URL: z.preprocess((value) => {
+    if (typeof value !== "string") {
+      return value;
+    }
+
+    const trimmedValue = value.trim();
+    return trimmedValue.length === 0 ? undefined : trimmedValue;
+  }, z.string().url().optional()),
+  R2_SECRET_ACCESS_KEY: optionalNonEmptyString,
 });
 
 export const serverEnv = serverEnvSchema.parse({
