@@ -8,6 +8,7 @@ import {
   type SaleProductOption,
 } from "@/components/sales/create-sale-dialog";
 import { PaymentMethodChart } from "@/components/sales/payment-method-chart";
+import { SalesStatusChart } from "@/components/sales/sales-status-chart";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -280,7 +281,7 @@ export function SalesPanel({
         </>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <div className="flex flex-col gap-4">
           <Card className="flex flex-1 flex-col justify-center">
             <CardHeader className="gap-1 pb-1.5">
@@ -315,39 +316,19 @@ export function SalesPanel({
           </Card>
         </div>
 
-        <div className="flex flex-col gap-4">
-          <Card className="flex flex-1 flex-col justify-center">
-            <CardHeader className="gap-1 pb-1.5">
-              <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
-                Vendas concluidas
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <strong className="font-heading text-[1.65rem] leading-none tracking-tight">
-                {analytics.completedSalesCount}
-              </strong>
-              <CardDescription className="mt-1 text-[11px]">
-                Ticket medio de {formatCurrency(analytics.averageTicket)}.
-              </CardDescription>
-            </CardContent>
-          </Card>
-
-          <Card className="flex flex-1 flex-col justify-center">
-            <CardHeader className="gap-1 pb-1.5">
-              <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
-                Vendas canceladas
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <strong className="font-heading text-[1.65rem] leading-none tracking-tight">
-                {analytics.cancelledSalesCount}
-              </strong>
-              <CardDescription className="mt-1 text-[11px]">
-                Venda(s) cancelada(s) em {selectedRange.label.toLowerCase()}.
-              </CardDescription>
-            </CardContent>
-          </Card>
-        </div>
+        <Card className="flex flex-col">
+          <CardHeader className="gap-1 pb-2">
+            <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
+              Status das vendas
+            </CardTitle>
+            <CardDescription className="text-[11px]">
+              Ticket medio de {formatCurrency(analytics.averageTicket)}.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-1 items-center pt-0">
+            <SalesStatusChart data={analytics.statusSummary} />
+          </CardContent>
+        </Card>
 
         <Card className="flex flex-col">
           <CardHeader className="gap-1 pb-2">

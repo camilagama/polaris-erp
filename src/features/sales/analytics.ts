@@ -12,6 +12,7 @@ import type {
   SalesPaymentMethodSummary,
   SalesPerformancePoint,
   SalesPeriodGranularity,
+  SalesStatusSummary,
 } from "@/features/sales/contracts";
 import { roundCurrency } from "@/lib/domain/currency";
 import { formatDateInputValue } from "@/lib/domain/date";
@@ -141,6 +142,23 @@ const buildPaymentMethods = (
   );
 };
 
+const buildStatusSummary = ({
+  cancelledSalesCount,
+  completedSalesCount,
+}: {
+  cancelledSalesCount: number;
+  completedSalesCount: number;
+}): SalesStatusSummary[] => [
+  {
+    count: completedSalesCount,
+    status: "completed",
+  },
+  {
+    count: cancelledSalesCount,
+    status: "cancelled",
+  },
+];
+
 export const buildSalesAnalytics = ({
   range,
   saleItems,
@@ -252,6 +270,10 @@ export const buildSalesAnalytics = ({
     periodGranularity: granularity,
     performance,
     profitMarginPercent,
+    statusSummary: buildStatusSummary({
+      cancelledSalesCount,
+      completedSalesCount,
+    }),
     totalProfit,
     totalSold,
     topPaymentMethod: paymentMethods[0]?.paymentMethod ?? null,

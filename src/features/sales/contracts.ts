@@ -53,6 +53,11 @@ export interface SalesPaymentMethodSummary {
   totalAmount: number;
 }
 
+export interface SalesStatusSummary {
+  count: number;
+  status: "cancelled" | "completed";
+}
+
 export interface SalesAnalytics {
   averageTicket: number;
   cancelledSalesCount: number;
@@ -61,6 +66,7 @@ export interface SalesAnalytics {
   performance: SalesPerformancePoint[];
   periodGranularity: SalesPeriodGranularity;
   profitMarginPercent: number;
+  statusSummary: SalesStatusSummary[];
   topPaymentMethod: "card" | "pix" | null;
   totalProfit: number;
   totalSold: number;
