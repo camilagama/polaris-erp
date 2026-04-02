@@ -87,14 +87,9 @@ export default async function ProdutoDetalhePage(
   return (
     <div className="flex flex-col gap-6 p-4 pb-20 sm:p-6 sm:pb-6">
       <div className="flex items-center justify-between gap-3">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 text-muted-foreground text-xs">
-            <HugeiconsIcon icon={PackageIcon} size={16} strokeWidth={2} />
-            Produto
-          </div>
-          <h1 className="font-semibold text-2xl tracking-tight">
-            {product.name}
-          </h1>
+        <div className="flex items-center gap-2 text-muted-foreground text-xs">
+          <HugeiconsIcon icon={PackageIcon} size={16} strokeWidth={2} />
+          Produto
         </div>
         <ProductDetailActions
           categories={categories.map((category) => ({

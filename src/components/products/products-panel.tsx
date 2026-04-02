@@ -380,8 +380,8 @@ export function ProductsPanel({
 
           <div className="hidden rounded-lg border border-border/60 bg-card md:block">
             <Table>
-              <TableHeader>
-                <TableRow>
+              <TableHeader className="bg-muted/30">
+                <TableRow className="hover:bg-transparent">
                   <TableHead className="pl-4 sm:pl-6">Produto</TableHead>
                   <TableHead>Categoria</TableHead>
                   <TableHead>Preco</TableHead>
@@ -394,7 +394,7 @@ export function ProductsPanel({
               <TableBody>
                 {visibleProducts.map((product) => {
                   return (
-                    <TableRow key={product.id}>
+                    <TableRow className="border-border/40" key={product.id}>
                       <TableCell className="max-w-[200px] pl-4 sm:pl-6">
                         <div className="flex items-center gap-3">
                           <ProductTableThumbnail product={product} />

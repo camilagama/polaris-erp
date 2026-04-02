@@ -234,8 +234,8 @@ export function SalesPanel({
 
           <div className="hidden rounded-lg border border-border/60 bg-card md:block">
             <Table>
-              <TableHeader>
-                <TableRow>
+              <TableHeader className="bg-muted/30">
+                <TableRow className="hover:bg-transparent">
                   <TableHead className="pl-4 sm:pl-6">Venda</TableHead>
                   <TableHead>Data</TableHead>
                   <TableHead>Pagamento</TableHead>
@@ -249,7 +249,7 @@ export function SalesPanel({
               </TableHeader>
               <TableBody>
                 {visibleSales.map((sale) => (
-                  <TableRow key={sale.id}>
+                  <TableRow className="border-border/40" key={sale.id}>
                     <TableCell className="max-w-[200px] pl-4 sm:pl-6">
                       <Link
                         className="block truncate font-medium hover:underline"
