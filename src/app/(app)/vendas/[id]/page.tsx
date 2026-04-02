@@ -30,9 +30,11 @@ const getStatusVariant = (status: "cancelled" | "completed") => {
 };
 
 const getPaymentMethodLabel = ({
+  paymentFeePayer,
   paymentInstallments,
   paymentMethod,
 }: {
+  paymentFeePayer: "customer" | "not_applicable" | "seller";
   paymentInstallments: number;
   paymentMethod: "card" | "pix";
 }) => {
@@ -40,21 +42,9 @@ const getPaymentMethodLabel = ({
     return "Pix";
   }
 
-  return `Cartao ${paymentInstallments}x`;
-};
+  const payerLabel = paymentFeePayer === "seller" ? "vendedor" : "cliente";
 
-const getPaymentFeePayerLabel = (
-  paymentFeePayer: "customer" | "not_applicable" | "seller"
-) => {
-  if (paymentFeePayer === "seller") {
-    return "Vendedor";
-  }
-
-  if (paymentFeePayer === "customer") {
-    return "Cliente";
-  }
-
-  return "Nao se aplica";
+  return `Cartao ${paymentInstallments}x (${payerLabel})`;
 };
 
 export default async function VendaDetalhePage(
@@ -71,6 +61,10 @@ export default async function VendaDetalhePage(
     (acc, item) => acc + Number(item.lineTotal),
     0
   );
+  const productCostAmount = sale.items.reduce(
+    (acc, item) => acc + Number(item.unitCostSnapshot) * item.quantity,
+    0
+  );
   const customerChargedFeeAmount = Math.max(
     Number(sale.chargedAmount) - Number(sale.totalAmount),
     0
@@ -81,6 +75,7 @@ export default async function VendaDetalhePage(
     freightAmount: Number(sale.freightAmount),
     saleAmount: Number(sale.chargedAmount),
   });
+  const profitAmount = receivedAmount - productCostAmount;
   const saleTitle = sale.customerName
     ? `Venda para ${sale.customerName}`
     : "Detalhes da venda";
@@ -134,10 +129,22 @@ export default async function VendaDetalhePage(
             </div>
             <div>
               <p className="mb-1 text-[11px] text-muted-foreground uppercase tracking-wider">
-                Taxa do cartao
+                Custo do produto
               </p>
               <p className="font-medium text-sm">
-                {getPaymentFeePayerLabel(sale.paymentFeePayer)}
+                {formatCurrency(productCostAmount)}
+              </p>
+            </div>
+            <div>
+              <p className="mb-1 text-[11px] text-muted-foreground uppercase tracking-wider">
+                Lucro
+              </p>
+              <p
+                className={`font-medium text-sm ${
+                  profitAmount < 0 ? "text-red-400" : "text-emerald-500"
+                }`}
+              >
+                {formatCurrency(profitAmount)}
               </p>
             </div>
             {sale.status === "cancelled" && (
