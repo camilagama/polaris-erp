@@ -15,7 +15,7 @@ export default async function SignInPage() {
     redirect("/");
   }
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-7xl items-center px-6 py-16">
+    <main className="min-h-screen w-full">
       <SignInForm />
     </main>
   );

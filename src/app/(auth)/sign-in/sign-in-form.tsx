@@ -1,17 +1,8 @@
 "use client";
 
-import { GoogleIcon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
 import { useActionState, useEffect, useState } from "react";
 import { signInAction } from "@/app/(auth)/sign-in/actions";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authClient, hasGoogleAuthClient } from "@/lib/auth-client";
@@ -61,7 +52,7 @@ export function SignInForm() {
 
     if (!hasGoogleAuthClient) {
       setGoogleError(
-        "Login com Google indisponivel neste ambiente. Use email e senha."
+        "Login com Google indisponível neste ambiente. Use email e senha."
       );
       setGooglePending(false);
       return;
@@ -74,118 +65,359 @@ export function SignInForm() {
 
     if (result.error) {
       setGoogleError(
-        result.error.message ?? "Nao foi possivel entrar com Google."
+        result.error.message ?? "Não foi possível entrar com Google."
       );
       setGooglePending(false);
     }
   };
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-      <Card className="border-border/60 bg-card/80 shadow-sm backdrop-blur">
-        <CardHeader className="gap-3">
-          <p className="font-semibold text-primary text-xs uppercase tracking-[0.22em]">
+    <div className="grid min-h-svh lg:grid-cols-2">
+      <div className="flex flex-col gap-4 p-6 md:p-10">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 font-medium">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+              <span className="font-bold">DG</span>
+            </div>
             DG Imports
-          </p>
-          <CardTitle className="font-heading text-3xl tracking-tight">
-            Gestao operacional para revenda com produtos e estoque confiaveis.
-          </CardTitle>
-          <CardDescription className="max-w-2xl text-sm leading-6">
-            A versao atual concentra autenticacao, catalogo, estoque, vendas e
-            configuracoes operacionais com custo medio movel e taxas
-            parametrizadas.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-3">
-          {[
-            {
-              title: "Estoque confiavel",
-              copy: "Saldo consolidado no produto e historico de movimentos sem edicao destrutiva.",
-            },
-            {
-              title: "Custo medio simplificado",
-              copy: "Reposicoes recalculam custo medio e baixas preservam rastreabilidade com observacoes.",
-            },
-            {
-              title: "Vendas operacionais",
-              copy: "O fluxo atual registra venda concluida, aplica taxa por pagamento e permite cancelamento com estorno.",
-            },
-          ].map((feature) => (
-            <Card
-              className="rounded-2xl border border-border/60 bg-background/80 p-4"
-              key={feature.title}
-            >
-              <h2 className="mb-2 font-semibold text-sm">{feature.title}</h2>
-              <p className="text-muted-foreground text-sm">{feature.copy}</p>
-            </Card>
-          ))}
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/60 bg-card shadow-sm">
-        <CardHeader className="gap-2">
-          <CardTitle className="font-heading text-2xl tracking-tight">
-            Entrar
-          </CardTitle>
-          <CardDescription>
-            Use email e senha para acessar a area protegida da operacao.
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent className="flex flex-col gap-6">
-          <form action={signInFormAction} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2">
-              <Label className="font-medium text-sm" htmlFor="email">
-                Email
-              </Label>
-              <Input id="email" name="email" required type="email" />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label className="font-medium text-sm" htmlFor="password">
-                Senha
-              </Label>
-              <Input
-                id="password"
-                minLength={8}
-                name="password"
-                required
-                type="password"
-              />
-            </div>
-            {signInState.error ? (
-              <p className="text-destructive text-sm">{signInState.error}</p>
-            ) : null}
-            <Button className="w-full" disabled={signInPending} type="submit">
-              {signInPending ? "Entrando..." : "Entrar no painel"}
-            </Button>
-          </form>
-
-          <div className="flex items-center gap-3">
-            <div className="h-px flex-1 bg-border/60" />
-            <span className="text-[11px] text-muted-foreground uppercase tracking-[0.18em]">
-              acesso alternativo
-            </span>
-            <div className="h-px flex-1 bg-border/60" />
           </div>
+        </div>
+        <div className="flex flex-1 items-center justify-center">
+          <div className="w-full max-w-xs sm:max-w-sm">
+            <div className="mb-8 flex flex-col items-center text-center">
+              <h1 className="font-heading text-3xl tracking-tight">
+                Entrar na sua conta
+              </h1>
+              <p className="mt-2 text-muted-foreground text-sm">
+                Entre com Google ou use seu email e senha
+              </p>
+            </div>
 
-          <div className="flex flex-col gap-3 rounded-2xl border border-border/60 bg-muted/10 p-4">
-            <Button
-              className="h-10 w-full"
-              disabled={googlePending || !hasGoogleAuthClient}
-              onClick={handleGoogleSignIn}
-              type="button"
-              variant="secondary"
-            >
-              <HugeiconsIcon icon={GoogleIcon} strokeWidth={2} />
-              {googlePending ? "Redirecionando..." : "Continuar com Google"}
-            </Button>
+            <form action={signInFormAction} className="flex flex-col gap-4">
+              <Button
+                className="relative h-11 w-full"
+                disabled={googlePending || !hasGoogleAuthClient}
+                onClick={handleGoogleSignIn}
+                type="button"
+                variant="outline"
+              >
+                <div className="absolute left-4">
+                  <svg
+                    aria-hidden="true"
+                    className="size-5"
+                    overflow="hidden"
+                    viewBox="0 0 268.152 273.883"
+                    xmlns="http://www.w3.org/2000/svg"
+                    xmlnsXlink="http://www.w3.org/1999/xlink"
+                    xmlSpace="preserve"
+                  >
+                    <defs>
+                      <linearGradient id="google__a">
+                        <stop offset="0" stop-color="#0fbc5c" />
+                        <stop offset="1" stop-color="#0cba65" />
+                      </linearGradient>
+                      <linearGradient id="google__g">
+                        <stop offset=".231" stop-color="#0fbc5f" />
+                        <stop offset=".312" stop-color="#0fbc5f" />
+                        <stop offset=".366" stop-color="#0fbc5e" />
+                        <stop offset=".458" stop-color="#0fbc5d" />
+                        <stop offset=".54" stop-color="#12bc58" />
+                        <stop offset=".699" stop-color="#28bf3c" />
+                        <stop offset=".771" stop-color="#38c02b" />
+                        <stop offset=".861" stop-color="#52c218" />
+                        <stop offset=".915" stop-color="#67c30f" />
+                        <stop offset="1" stop-color="#86c504" />
+                      </linearGradient>
+                      <linearGradient id="google__h">
+                        <stop offset=".142" stop-color="#1abd4d" />
+                        <stop offset=".248" stop-color="#6ec30d" />
+                        <stop offset=".312" stop-color="#8ac502" />
+                        <stop offset=".366" stop-color="#a2c600" />
+                        <stop offset=".446" stop-color="#c8c903" />
+                        <stop offset=".54" stop-color="#ebcb03" />
+                        <stop offset=".616" stop-color="#f7cd07" />
+                        <stop offset=".699" stop-color="#fdcd04" />
+                        <stop offset=".771" stop-color="#fdce05" />
+                        <stop offset=".861" stop-color="#ffce0a" />
+                      </linearGradient>
+                      <linearGradient id="google__f">
+                        <stop offset=".316" stop-color="#ff4c3c" />
+                        <stop offset=".604" stop-color="#ff692c" />
+                        <stop offset=".727" stop-color="#ff7825" />
+                        <stop offset=".885" stop-color="#ff8d1b" />
+                        <stop offset="1" stop-color="#ff9f13" />
+                      </linearGradient>
+                      <linearGradient id="google__b">
+                        <stop offset=".231" stop-color="#ff4541" />
+                        <stop offset=".312" stop-color="#ff4540" />
+                        <stop offset=".458" stop-color="#ff4640" />
+                        <stop offset=".54" stop-color="#ff473f" />
+                        <stop offset=".699" stop-color="#ff5138" />
+                        <stop offset=".771" stop-color="#ff5b33" />
+                        <stop offset=".861" stop-color="#ff6c29" />
+                        <stop offset="1" stop-color="#ff8c18" />
+                      </linearGradient>
+                      <linearGradient id="google__d">
+                        <stop offset=".408" stop-color="#fb4e5a" />
+                        <stop offset="1" stop-color="#ff4540" />
+                      </linearGradient>
+                      <linearGradient id="google__c">
+                        <stop offset=".132" stop-color="#0cba65" />
+                        <stop offset=".21" stop-color="#0bb86d" />
+                        <stop offset=".297" stop-color="#09b479" />
+                        <stop offset=".396" stop-color="#08ad93" />
+                        <stop offset=".477" stop-color="#0aa6a9" />
+                        <stop offset=".568" stop-color="#0d9cc6" />
+                        <stop offset=".667" stop-color="#1893dd" />
+                        <stop offset=".769" stop-color="#258bf1" />
+                        <stop offset=".859" stop-color="#3086ff" />
+                      </linearGradient>
+                      <linearGradient id="google__e">
+                        <stop offset=".366" stop-color="#ff4e3a" />
+                        <stop offset=".458" stop-color="#ff8a1b" />
+                        <stop offset=".54" stop-color="#ffa312" />
+                        <stop offset=".616" stop-color="#ffb60c" />
+                        <stop offset=".771" stop-color="#ffcd0a" />
+                        <stop offset=".861" stop-color="#fecf0a" />
+                        <stop offset=".915" stop-color="#fecf08" />
+                        <stop offset="1" stop-color="#fdcd01" />
+                      </linearGradient>
+                      <linearGradient
+                        gradientUnits="userSpaceOnUse"
+                        id="google__s"
+                        x1="219.7"
+                        x2="254.467"
+                        xlinkHref="#google__a"
+                        y1="329.535"
+                        y2="329.535"
+                      />
+                      <radialGradient
+                        cx="109.627"
+                        cy="135.862"
+                        fx="109.627"
+                        fy="135.862"
+                        gradientTransform="matrix(-1.93688 1.043 1.45573 2.55542 290.525 -400.634)"
+                        gradientUnits="userSpaceOnUse"
+                        id="google__m"
+                        r="71.46"
+                        xlinkHref="#google__b"
+                      />
+                      <radialGradient
+                        cx="45.259"
+                        cy="279.274"
+                        fx="45.259"
+                        fy="279.274"
+                        gradientTransform="matrix(-3.5126 -4.45809 -1.69255 1.26062 870.8 191.554)"
+                        gradientUnits="userSpaceOnUse"
+                        id="google__n"
+                        r="71.46"
+                        xlinkHref="#google__c"
+                      />
+                      <radialGradient
+                        cx="304.017"
+                        cy="118.009"
+                        fx="304.017"
+                        fy="118.009"
+                        gradientTransform="matrix(2.06435 0 0 2.59204 -297.679 -151.747)"
+                        gradientUnits="userSpaceOnUse"
+                        id="google__l"
+                        r="47.854"
+                        xlinkHref="#google__d"
+                      />
+                      <radialGradient
+                        cx="181.001"
+                        cy="177.201"
+                        fx="181.001"
+                        fy="177.201"
+                        gradientTransform="matrix(-.24858 2.08314 2.96249 .33417 -255.146 -331.164)"
+                        gradientUnits="userSpaceOnUse"
+                        id="google__o"
+                        r="71.46"
+                        xlinkHref="#google__e"
+                      />
+                      <radialGradient
+                        cx="207.673"
+                        cy="108.097"
+                        fx="207.673"
+                        fy="108.097"
+                        gradientTransform="matrix(-1.2492 1.34326 -3.89684 -3.4257 880.501 194.905)"
+                        gradientUnits="userSpaceOnUse"
+                        id="google__p"
+                        r="41.102"
+                        xlinkHref="#google__f"
+                      />
+                      <radialGradient
+                        cx="109.627"
+                        cy="135.862"
+                        fx="109.627"
+                        fy="135.862"
+                        gradientTransform="matrix(-1.93688 -1.043 1.45573 -2.55542 290.525 838.683)"
+                        gradientUnits="userSpaceOnUse"
+                        id="google__r"
+                        r="71.46"
+                        xlinkHref="#google__g"
+                      />
+                      <radialGradient
+                        cx="154.87"
+                        cy="145.969"
+                        fx="154.87"
+                        fy="145.969"
+                        gradientTransform="matrix(-.0814 -1.93722 2.92674 -.11625 -215.135 632.86)"
+                        gradientUnits="userSpaceOnUse"
+                        id="google__j"
+                        r="71.46"
+                        xlinkHref="#google__h"
+                      />
+                      <filter
+                        color-interpolation-filters="sRGB"
+                        height="1.116"
+                        id="google__q"
+                        width="1.097"
+                        x="-.048"
+                        y="-.058"
+                      >
+                        <feGaussianBlur stdDeviation="1.701" />
+                      </filter>
+                      <filter
+                        color-interpolation-filters="sRGB"
+                        height="1.02"
+                        id="google__k"
+                        width="1.033"
+                        x="-.017"
+                        y="-.01"
+                      >
+                        <feGaussianBlur stdDeviation=".242" />
+                      </filter>
+                      <clipPath clipPathUnits="userSpaceOnUse" id="google__i">
+                        <path d="M371.378 193.24H237.083v53.438h77.167c-1.241 7.563-4.026 15.003-8.105 21.786-4.674 7.773-10.451 13.69-16.373 18.196-17.74 13.498-38.42 16.258-52.783 16.258-36.283 0-67.283-23.286-79.285-54.928-.484-1.149-.805-2.335-1.197-3.507a81.115 81.115 0 0 1-4.101-25.448c0-9.226 1.569-18.057 4.43-26.398 11.285-32.897 42.985-57.467 80.179-57.467 7.481 0 14.685.884 21.517 2.648a77.668 77.668 0 0 1 33.425 18.25l40.834-39.712c-24.839-22.616-57.219-36.32-95.844-36.32-30.878 0-59.386 9.553-82.748 25.7-18.945 13.093-34.483 30.625-44.97 50.985-9.753 18.879-15.094 39.8-15.094 62.294 0 22.495 5.35 43.633 15.103 62.337v.126c10.302 19.857 25.368 36.954 43.678 49.988 15.997 11.386 44.68 26.551 84.031 26.551 22.63 0 42.687-4.051 60.375-11.644 12.76-5.478 24.065-12.622 34.301-21.804 13.525-12.132 24.117-27.139 31.347-44.404 7.23-17.265 11.097-36.79 11.097-57.957 0-9.858-.998-19.87-2.689-28.968Z" />
+                      </clipPath>
+                    </defs>
+                    <g
+                      clipPath="url(#google__i)"
+                      transform="matrix(.95792 0 0 .98525 -90.174 -78.856)"
+                    >
+                      <path
+                        d="M92.076 219.958c.148 22.14 6.501 44.983 16.117 63.424v.127c6.949 13.392 16.445 23.97 27.26 34.452l65.327-23.67c-12.36-6.235-14.246-10.055-23.105-17.026-9.054-9.066-15.802-19.473-20.004-31.677h-.17l.17-.127c-2.765-8.058-3.037-16.613-3.14-25.503Z"
+                        fill="url(#google__j)"
+                        filter="url(#google__k)"
+                      />
+                      <path
+                        d="M237.083 79.025c-6.456 22.526-3.988 44.421 0 57.161 7.457.006 14.64.888 21.45 2.647a77.662 77.662 0 0 1 33.424 18.25l41.88-40.726c-24.81-22.59-54.667-37.297-96.754-37.332Z"
+                        fill="url(#google__l)"
+                        filter="url(#google__k)"
+                      />
+                      <path
+                        d="M236.943 78.847c-31.67 0-60.91 9.798-84.871 26.359a145.533 145.533 0 0 0-24.332 21.15c-1.904 17.744 14.257 39.551 46.262 39.37 15.528-17.936 38.495-29.542 64.056-29.542l.07.002-1.044-57.335c-.048 0-.093-.004-.14-.004Z"
+                        fill="url(#google__m)"
+                        filter="url(#google__k)"
+                      />
+                      <path
+                        d="m341.475 226.379-28.268 19.285c-1.24 7.562-4.028 15.002-8.107 21.786-4.674 7.772-10.45 13.69-16.373 18.196-17.702 13.47-38.328 16.244-52.687 16.255-14.842 25.102-17.444 37.675 1.043 57.934 22.877-.016 43.157-4.117 61.046-11.796 12.931-5.551 24.388-12.792 34.761-22.097 13.706-12.295 24.442-27.503 31.769-45 7.327-17.497 11.245-37.282 11.245-58.734Z"
+                        fill="url(#google__n)"
+                        filter="url(#google__k)"
+                      />
+                      <path
+                        d="M234.996 191.21v57.498h136.006c1.196-7.874 5.152-18.064 5.152-26.5 0-9.858-.996-21.899-2.687-30.998Z"
+                        fill="#3086ff"
+                        filter="url(#google__k)"
+                      />
+                      <path
+                        d="M128.39 124.327c-8.394 9.119-15.564 19.326-21.249 30.364-9.753 18.879-15.094 41.83-15.094 64.324 0 .317.026.627.029.944 4.32 8.224 59.666 6.649 62.456 0-.004-.31-.039-.613-.039-.924 0-9.226 1.57-16.026 4.43-24.367 3.53-10.289 9.056-19.763 16.123-27.926 1.602-2.031 5.875-6.397 7.121-9.016.475-.997-.862-1.557-.937-1.908-.083-.393-1.876-.077-2.277-.37-1.275-.929-3.8-1.414-5.334-1.845-3.277-.921-8.708-2.953-11.725-5.06-9.536-6.658-24.417-14.612-33.505-24.216Z"
+                        fill="url(#google__o)"
+                        filter="url(#google__k)"
+                      />
+                      <path
+                        d="M162.099 155.857c22.112 13.301 28.471-6.714 43.173-12.977l-25.574-52.664a144.74 144.74 0 0 0-26.543 14.504c-12.316 8.512-23.192 18.9-32.176 30.72Z"
+                        fill="url(#google__p)"
+                        filter="url(#google__q)"
+                      />
+                      <path
+                        d="M171.099 290.222c-29.683 10.641-34.33 11.023-37.062 29.29a144.806 144.806 0 0 0 16.792 13.984c15.996 11.386 46.766 26.551 86.118 26.551.046 0 .09-.004.137-.004v-59.157l-.094.002c-14.736 0-26.512-3.843-38.585-10.527-2.977-1.648-8.378 2.777-11.123.799-3.786-2.729-12.9 2.35-16.183-.938Z"
+                        fill="url(#google__r)"
+                        filter="url(#google__k)"
+                      />
+                      <path
+                        d="M219.7 299.023v59.996c5.506.64 11.236 1.028 17.247 1.028 6.026 0 11.855-.307 17.52-.872v-59.748a105.119 105.119 0 0 1-17.477 1.461c-5.932 0-11.7-.686-17.29-1.865Z"
+                        fill="url(#google__s)"
+                        filter="url(#google__k)"
+                        opacity=".5"
+                      />
+                    </g>
+                  </svg>
+                </div>
+                {googlePending ? "Redirecionando..." : "Continuar com Google"}
+              </Button>
 
-            {googleError ? (
-              <p className="text-destructive text-sm">{googleError}</p>
-            ) : null}
+              <div className="relative my-2 py-4">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-border/70 border-t" />
+                </div>
+                <div className="relative flex justify-center">
+                  <span className="bg-background px-3 text-[10px] text-muted-foreground/60 uppercase tracking-widest">
+                    Ou use seu email
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <Label
+                  className="font-medium text-foreground/80 text-sm"
+                  htmlFor="email"
+                >
+                  Email
+                </Label>
+                <Input
+                  className="h-10"
+                  id="email"
+                  name="email"
+                  required
+                  type="email"
+                />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <Label
+                  className="font-medium text-foreground/80 text-sm"
+                  htmlFor="password"
+                >
+                  Senha
+                </Label>
+                <Input
+                  className="h-10"
+                  id="password"
+                  minLength={8}
+                  name="password"
+                  required
+                  type="password"
+                />
+              </div>
+
+              {signInState.error || googleError ? (
+                <div className="mt-1 rounded-md bg-destructive/10 p-3 text-destructive text-sm">
+                  {signInState.error || googleError}
+                </div>
+              ) : null}
+
+              <Button
+                className="mt-2 h-11 w-full"
+                disabled={signInPending}
+                type="submit"
+              >
+                {signInPending ? "Entrando..." : "Entrar no painel"}
+              </Button>
+            </form>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
+      <div className="relative hidden bg-muted lg:block">
+        <div
+          className="absolute inset-0 h-full w-full bg-center bg-cover dark:brightness-[0.3] dark:grayscale"
+          style={{
+            backgroundImage:
+              'url("https://images.unsplash.com/photo-1497436072909-60f360e1d4b1?auto=format&fit=crop&q=80&w=2560")',
+          }}
+        />
+      </div>
     </div>
   );
 }
