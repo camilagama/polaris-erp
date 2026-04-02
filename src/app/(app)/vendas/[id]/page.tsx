@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import { SaleDetailActions } from "@/components/sales/sale-detail-actions";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -51,141 +50,139 @@ export default async function VendaDetalhePage(
     : "Detalhes da venda";
 
   return (
-    <div className="flex flex-col gap-6 p-4 pb-20 sm:p-6 sm:pb-6">
-      <div className="flex items-center justify-between gap-3">
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-4 pb-20 sm:p-6 sm:pb-6">
+      <div className="flex items-center justify-between gap-3 border-border/40 border-b pb-6">
         <div className="space-y-1">
-          <p className="text-muted-foreground text-xs uppercase tracking-[0.14em]">
-            Venda
-          </p>
-          <h1 className="font-semibold text-2xl tracking-tight">{saleTitle}</h1>
-          <p className="text-muted-foreground text-sm">
-            {formatDate(sale.occurredOn)}
-          </p>
+          <div className="flex items-center gap-2">
+            <Badge
+              className="px-2.5 font-normal shadow-none"
+              variant={getStatusVariant(sale.status)}
+            >
+              {getStatusLabel(sale.status)}
+            </Badge>
+            <p className="text-muted-foreground text-sm">
+              {formatDate(sale.occurredOn)}
+            </p>
+          </div>
+          <h1 className="mt-2 font-semibold text-2xl tracking-tight">
+            {saleTitle}
+          </h1>
         </div>
-        <div className="flex items-center gap-2">
-          <Badge variant={getStatusVariant(sale.status)}>
-            {getStatusLabel(sale.status)}
-          </Badge>
-          <SaleDetailActions sale={sale} />
-        </div>
+        <SaleDetailActions sale={sale} />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle>Resumo</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-[140px_1fr] gap-x-3 gap-y-3 text-xs">
-              <span className="text-muted-foreground">Data da venda</span>
-              <span>{formatDate(sale.occurredOn)}</span>
-              <span className="text-muted-foreground">Cliente</span>
-              <span>{sale.customerName || "Sem cliente"}</span>
-              <span className="text-muted-foreground">Status</span>
-              <span>{getStatusLabel(sale.status)}</span>
-              <span className="text-muted-foreground">Pagamento</span>
-              <span>{getPaymentMethodLabel(sale.paymentMethod)}</span>
-              <span className="text-muted-foreground">Cancelada em</span>
-              <span>{formatDateTime(sale.cancelledAt)}</span>
-              <span className="text-muted-foreground">Observacoes</span>
-              <p className="text-xs/relaxed">
-                {sale.notes || "Sem observacoes."}
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+        <div className="space-y-8 lg:col-span-2">
+          <div className="grid grid-cols-2 gap-6 sm:grid-cols-3">
+            <div>
+              <p className="mb-1 text-[11px] text-muted-foreground uppercase tracking-wider">
+                Cliente
+              </p>
+              <p className="font-medium text-sm">
+                {sale.customerName || "Sem cliente"}
               </p>
             </div>
-          </CardContent>
-        </Card>
+            <div>
+              <p className="mb-1 text-[11px] text-muted-foreground uppercase tracking-wider">
+                Método de Pgto
+              </p>
+              <p className="font-medium text-sm">
+                {getPaymentMethodLabel(sale.paymentMethod)}
+              </p>
+            </div>
+            {sale.status === "cancelled" && (
+              <div>
+                <p className="mb-1 text-[11px] text-muted-foreground uppercase tracking-wider">
+                  Cancelada em
+                </p>
+                <p className="font-medium text-destructive text-sm">
+                  {formatDateTime(sale.cancelledAt)}
+                </p>
+              </div>
+            )}
+            {sale.notes && (
+              <div className="col-span-2 sm:col-span-3">
+                <p className="mb-1 text-[11px] text-muted-foreground uppercase tracking-wider">
+                  Observações
+                </p>
+                <p className="text-foreground/80 text-sm">{sale.notes}</p>
+              </div>
+            )}
+          </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Totais</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-3 text-xs">
-              <div className="rounded-md border border-border/50 px-3 py-2">
-                <p className="text-muted-foreground">Itens</p>
-                <p className="font-medium text-sm">{sale.items.length}</p>
+          <div>
+            <h3 className="mb-4 font-medium text-lg">Itens da Venda</h3>
+            <div className="overflow-hidden rounded-lg border border-border/50">
+              <Table>
+                <TableHeader className="bg-muted/30">
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="pl-4">Produto</TableHead>
+                    <TableHead className="w-[80px] text-center">Qtd</TableHead>
+                    <TableHead className="text-right">Unitário</TableHead>
+                    <TableHead className="pr-4 text-right">Subtotal</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sale.items.map((item) => (
+                    <TableRow className="border-border/40" key={item.id}>
+                      <TableCell className="pl-4">
+                        <span className="block font-medium">
+                          {item.productNameSnapshot}
+                        </span>
+                        <span className="text-muted-foreground text-xs">
+                          Custo: {formatCurrency(item.unitCostSnapshot)}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-center text-muted-foreground">
+                        x{item.quantity}
+                      </TableCell>
+                      <TableCell className="text-right text-muted-foreground">
+                        {formatCurrency(item.unitPriceSnapshot)}
+                      </TableCell>
+                      <TableCell className="pr-4 text-right font-medium">
+                        {formatCurrency(item.lineTotal)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </div>
+
+        <div className="lg:col-start-3">
+          <div className="sticky top-6 rounded-xl border border-border/50 bg-card p-6 shadow-sm">
+            <h3 className="mb-4 font-medium text-base">Resumo Financeiro</h3>
+            <div className="space-y-3 text-sm">
+              <div className="flex items-center justify-between text-muted-foreground">
+                <span>Subtotal ({sale.items.length} itens)</span>
+                <span>{formatCurrency(itemSubtotal)}</span>
               </div>
-              <div className="rounded-md border border-border/50 px-3 py-2">
-                <p className="text-muted-foreground">Subtotal dos itens</p>
-                <p className="font-medium text-sm">
-                  {formatCurrency(itemSubtotal)}
-                </p>
+              <div className="flex items-center justify-between text-muted-foreground">
+                <span>Frete</span>
+                <span>{formatCurrency(sale.freightAmount)}</span>
               </div>
-              <div className="rounded-md border border-border/50 px-3 py-2">
-                <p className="text-muted-foreground">Frete</p>
-                <p className="font-medium text-sm">
-                  {formatCurrency(sale.freightAmount)}
-                </p>
+              <div className="flex items-center justify-between text-muted-foreground">
+                <span>Adicional</span>
+                <span>{formatCurrency(sale.additionalAmount)}</span>
               </div>
-              <div className="rounded-md border border-border/50 px-3 py-2">
-                <p className="text-muted-foreground">Adicional</p>
-                <p className="font-medium text-sm">
-                  {formatCurrency(sale.additionalAmount)}
-                </p>
-              </div>
-              <div className="rounded-md border border-border/50 px-3 py-2">
-                <p className="text-muted-foreground">Desconto</p>
-                <p className="font-medium text-sm">
-                  - {formatCurrency(sale.discountAmount)}
-                </p>
-              </div>
-              <div className="rounded-md border border-border/50 px-3 py-2">
-                <p className="text-muted-foreground">Total da venda</p>
-                <p className="font-medium text-sm">
-                  {formatCurrency(sale.totalAmount)}
-                </p>
+              {Number(sale.discountAmount) > 0 && (
+                <div className="flex items-center justify-between text-primary">
+                  <span>Desconto</span>
+                  <span>-{formatCurrency(sale.discountAmount)}</span>
+                </div>
+              )}
+
+              <div className="my-4 border-border/40 border-t border-dashed" />
+
+              <div className="flex items-center justify-between font-semibold text-lg">
+                <span>Total</span>
+                <span>{formatCurrency(sale.totalAmount)}</span>
               </div>
             </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Itens da venda</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-md border border-border/60">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="pl-4">Produto</TableHead>
-                  <TableHead className="text-center">Qtd.</TableHead>
-                  <TableHead>Preco</TableHead>
-                  <TableHead>Custo</TableHead>
-                  <TableHead className="pr-4 text-right">Subtotal</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sale.items.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="max-w-[250px] pl-4 font-medium">
-                      <span
-                        className="block truncate"
-                        title={item.productNameSnapshot}
-                      >
-                        {item.productNameSnapshot}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {item.quantity}
-                    </TableCell>
-                    <TableCell>
-                      {formatCurrency(item.unitPriceSnapshot)}
-                    </TableCell>
-                    <TableCell>
-                      {formatCurrency(item.unitCostSnapshot)}
-                    </TableCell>
-                    <TableCell className="pr-4 text-right">
-                      {formatCurrency(item.lineTotal)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

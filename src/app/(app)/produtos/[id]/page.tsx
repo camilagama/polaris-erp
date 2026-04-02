@@ -1,4 +1,4 @@
-import { ArrowDown01Icon, PackageIcon } from "@hugeicons/core-free-icons";
+import { PackageIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { notFound } from "next/navigation";
 import { ProductDetailActions } from "@/components/products/product-detail-actions";
@@ -89,7 +89,7 @@ export default async function ProdutoDetalhePage(
       <div className="flex items-center justify-between gap-3">
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-muted-foreground text-xs">
-            <HugeiconsIcon icon={PackageIcon} strokeWidth={2} />
+            <HugeiconsIcon icon={PackageIcon} size={16} strokeWidth={2} />
             Produto
           </div>
           <h1 className="font-semibold text-2xl tracking-tight">
@@ -107,250 +107,261 @@ export default async function ProdutoDetalhePage(
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(18rem,0.85fr)]">
-        <Card>
-          <CardHeader>
-            <CardTitle>Resumo</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-              <div className="size-28 shrink-0 sm:size-32">
-                <ProductImageFrame
-                  alt={`Imagem do produto ${product.name}`}
-                  image={product.image}
-                  priority
-                  sizes="128px"
-                />
-              </div>
-
-              <div className="min-w-0 flex-1">
-                <div className="grid grid-cols-[120px_1fr] gap-x-3 gap-y-3 text-xs">
-                  <span className="text-muted-foreground">Categoria</span>
-                  <span>{product.categoryName}</span>
-                  <span className="text-muted-foreground">Compra</span>
-                  <span>{formatDate(product.purchasedOn)}</span>
-                  <span className="text-muted-foreground">Status</span>
-                  <span>{product.archivedAt ? "Arquivado" : "Ativo"}</span>
-                  <span className="text-muted-foreground">Estoque atual</span>
-                  <span>{product.stock} un.</span>
-                  <span className="text-muted-foreground">Preco de venda</span>
-                  <span>{formatCurrency(product.price)}</span>
-                  <span className="text-muted-foreground">Observacoes</span>
-                  <div className="text-xs/relaxed">
-                    {product.description?.trim() || "Sem observacoes."}
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+        <div className="space-y-6 xl:col-span-2">
+          <Card className="border-border/50 shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">Detalhes</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col gap-6 sm:flex-row">
+                <div className="size-24 shrink-0 overflow-hidden rounded-lg border border-border/50 bg-muted/30 sm:size-32">
+                  <ProductImageFrame
+                    alt={`Imagem do produto ${product.name}`}
+                    image={product.image}
+                    priority
+                    sizes="128px"
+                  />
+                </div>
+                <div className="grid flex-1 grid-cols-2 gap-4 sm:grid-cols-3">
+                  <div>
+                    <p className="mb-1 text-[11px] text-muted-foreground uppercase tracking-wider">
+                      Categoria
+                    </p>
+                    <p className="font-medium text-sm">
+                      {product.categoryName}
+                    </p>
                   </div>
+                  <div>
+                    <p className="mb-1 text-[11px] text-muted-foreground uppercase tracking-wider">
+                      Estoque Atual
+                    </p>
+                    <p className="font-medium text-sm">{product.stock} un.</p>
+                  </div>
+                  <div>
+                    <p className="mb-1 text-[11px] text-muted-foreground uppercase tracking-wider">
+                      Status
+                    </p>
+                    <p className="font-medium text-sm">
+                      {product.archivedAt ? "Arquivado" : "Ativo"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="mb-1 text-[11px] text-muted-foreground uppercase tracking-wider">
+                      Data da Compra
+                    </p>
+                    <p className="font-medium text-sm">
+                      {formatDate(product.purchasedOn)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="mb-1 text-[11px] text-muted-foreground uppercase tracking-wider">
+                      Preço de Venda
+                    </p>
+                    <p className="font-medium text-sm">
+                      {formatCurrency(product.price)}
+                    </p>
+                  </div>
+                  {product.description && (
+                    <div className="col-span-2 mt-2 sm:col-span-3">
+                      <p className="mb-1 text-[11px] text-muted-foreground uppercase tracking-wider">
+                        Observações
+                      </p>
+                      <p className="text-foreground/80 text-sm">
+                        {product.description.trim()}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Custos</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-3 text-xs">
-              <div className="rounded-md border border-border/50 px-3 py-2">
-                <p className="text-muted-foreground">Custo medio</p>
-                <p className="font-medium text-sm">
-                  {formatCurrency(averageCost)}
-                </p>
-              </div>
-              <div className="rounded-md border border-border/50 px-3 py-2">
-                <p className="text-muted-foreground">Custo total em estoque</p>
-                <p className="font-medium text-sm">
-                  {formatCurrency(inventorySummary.totalCost)}
-                </p>
-              </div>
-              <div className="rounded-md border border-border/50 px-3 py-2">
-                <p className="text-muted-foreground">Total abastecido</p>
-                <p className="font-medium text-sm">
-                  {inventorySummary.totalEntries} un.
-                </p>
-              </div>
-              <div className="rounded-md border border-border/50 px-3 py-2">
-                <p className="text-muted-foreground">Total baixado</p>
-                <p className="font-medium text-sm">
-                  {inventorySummary.totalWriteOffs} un.
-                </p>
-              </div>
-              <div className="rounded-md border border-border/50 px-3 py-2">
-                <p className="text-muted-foreground">Prejuizo acumulado</p>
-                <p className="font-medium text-sm">
-                  {formatCurrency(inventorySummary.totalWriteOffLoss)}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Preco</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-3 text-xs">
-            <div className="rounded-md border border-border/50 px-3 py-2">
-              <p className="text-muted-foreground">Preco atual</p>
-              <p className="font-medium text-sm">
-                {formatCurrency(product.price)}
-              </p>
-            </div>
-            <div className="rounded-md border border-border/50 px-3 py-2">
-              <p className="text-muted-foreground">Ultima alteracao</p>
-              {priceChanges[0] ? (
-                <div className="space-y-1">
-                  <p className="font-medium text-sm">
-                    {formatCurrency(priceChanges[0].previousPrice)} para{" "}
-                    {formatCurrency(priceChanges[0].nextPrice)}
-                  </p>
-                  <p className="text-muted-foreground">
-                    {formatDateTime(priceChanges[0].createdAt)}
-                    {priceChanges[0].changedByUserName
-                      ? ` por ${priceChanges[0].changedByUserName}`
-                      : ""}
-                  </p>
+          <Card className="border-border/50 shadow-sm">
+            <CardHeader className="flex flex-col justify-between gap-2 pb-4 sm:flex-row sm:items-center">
+              <CardTitle className="text-lg">Vendas do Produto</CardTitle>
+              <div className="flex gap-4 text-sm">
+                <div>
+                  <span className="mr-1.5 text-muted-foreground">
+                    Unidades:
+                  </span>
+                  <span className="font-medium">
+                    {salesMetrics.totalQuantitySold}
+                  </span>
                 </div>
+                <div>
+                  <span className="mr-1.5 text-muted-foreground">Total:</span>
+                  <span className="font-medium">
+                    {formatCurrency(salesMetrics.totalSoldAmount)}
+                  </span>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <ProductUnitsSoldChart
+                data={salesMetrics.trend}
+                emptyLabel="Nenhuma venda concluída."
+              />
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/50 shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">
+                Histórico de Movimentações
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {inventorySummary.historyItems.length === 0 ? (
+                <p className="text-muted-foreground text-sm">
+                  Sem movimentações registradas.
+                </p>
               ) : (
-                <p className="text-muted-foreground">
-                  Nenhuma alteracao registrada desde a implantacao deste
-                  historico.
-                </p>
+                <div className="relative ml-2 space-y-6 border-border/50 border-l pl-5 sm:ml-3">
+                  {inventorySummary.historyItems.map((item) => (
+                    <div className="relative" key={item.id}>
+                      <div className="absolute top-1.5 -left-[1.60rem] size-2.5 rounded-full border border-border bg-muted sm:-left-[1.65rem]" />
+                      <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
+                        <div>
+                          <p className="font-medium text-sm">
+                            {item.quantityLabel}
+                          </p>
+                          <p className="mt-0.5 text-muted-foreground text-xs">
+                            {item.label} em {formatDate(item.date)}
+                          </p>
+                          {item.notes && (
+                            <p className="mt-1.5 text-muted-foreground/80 text-xs italic">
+                              "{item.notes}"
+                            </p>
+                          )}
+                        </div>
+                        <div className="text-sm sm:text-right">
+                          <p>{formatCurrency(item.unitCost)} un.</p>
+                          {(() => {
+                            if (item.variant === "writeOff") {
+                              return (
+                                <p className="mt-0.5 font-medium text-destructive">
+                                  Prej. {formatCurrency(item.totalValue)}
+                                </p>
+                              );
+                            }
+                            if (item.variant === "sale") {
+                              return (
+                                <p className="mt-0.5 text-muted-foreground">
+                                  Saída {formatCurrency(item.totalValue)}
+                                </p>
+                              );
+                            }
+                            if (item.variant === "saleReversal") {
+                              return (
+                                <p className="mt-0.5 font-medium text-primary">
+                                  Estorno {formatCurrency(item.totalValue)}
+                                </p>
+                              );
+                            }
+                            return (
+                              <p className="mt-0.5 font-medium">
+                                {formatCurrency(item.totalValue)}
+                              </p>
+                            );
+                          })()}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
-            </div>
-            {priceChanges.length > 0 ? (
-              <div className="rounded-md border border-border/50 px-3 py-2">
-                <p className="mb-2 text-muted-foreground">Historico recente</p>
-                <div className="flex flex-col gap-2">
-                  {priceChanges.map((change) => (
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="space-y-6">
+          <Card className="border-border/50 bg-muted/10 shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">Indicadores Financeiros</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between border-border/40 border-b pb-3">
+                <span className="text-muted-foreground text-sm">
+                  Custo Médio
+                </span>
+                <span className="font-medium">
+                  {formatCurrency(averageCost)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between border-border/40 border-b pb-3">
+                <span className="text-muted-foreground text-sm">
+                  Custo em Estoque
+                </span>
+                <span className="font-medium">
+                  {formatCurrency(inventorySummary.totalCost)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between border-border/40 border-b pb-3">
+                <span className="text-muted-foreground text-sm">
+                  Abastecimentos
+                </span>
+                <span className="font-medium">
+                  {inventorySummary.totalEntries} un.
+                </span>
+              </div>
+              <div className="flex items-center justify-between border-border/40 border-b pb-3">
+                <span className="text-muted-foreground text-sm">Baixas</span>
+                <span className="font-medium">
+                  {inventorySummary.totalWriteOffs} un.
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground text-sm">Prejuízo</span>
+                <span className="font-medium text-destructive">
+                  {formatCurrency(inventorySummary.totalWriteOffLoss)}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/50 bg-muted/10 shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">Histórico de Preços</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {priceChanges.length > 0 ? (
+                <div className="space-y-4">
+                  {priceChanges.map((change, index) => (
                     <div
-                      className="flex items-start justify-between gap-3 border-border/40 border-b pb-2 last:border-b-0 last:pb-0"
+                      className={
+                        index === priceChanges.length - 1
+                          ? ""
+                          : "border-border/40 border-b pb-3"
+                      }
                       key={change.id}
                     >
-                      <div className="min-w-0">
-                        <p className="font-medium">
-                          {formatCurrency(change.previousPrice)} para{" "}
-                          {formatCurrency(change.nextPrice)}
-                        </p>
-                        <p className="text-muted-foreground">
-                          {formatDateTime(change.createdAt)}
-                        </p>
+                      <div className="flex justify-between">
+                        <span className="flex gap-2 font-medium text-sm">
+                          <span className="text-muted-foreground line-through">
+                            {formatCurrency(change.previousPrice)}
+                          </span>
+                          <span>{formatCurrency(change.nextPrice)}</span>
+                        </span>
+                        <span className="text-muted-foreground text-xs">
+                          {change.changedByUserName ?? "Usuário"}
+                        </span>
                       </div>
-                      <p className="shrink-0 text-right text-muted-foreground">
-                        {change.changedByUserName ?? "Usuario"}
+                      <p className="mt-1 text-[11px] text-muted-foreground">
+                        {formatDateTime(change.createdAt)}
                       </p>
                     </div>
                   ))}
                 </div>
-              </div>
-            ) : null}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Vendas do produto</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-            <ProductUnitsSoldChart
-              data={salesMetrics.trend}
-              emptyLabel="Esse produto ainda nao tem vendas concluidas."
-            />
-            <div className="grid gap-3 text-xs">
-              <div className="rounded-md border border-border/50 px-3 py-2">
-                <p className="text-muted-foreground">Unidades vendidas</p>
-                <p className="font-medium text-sm">
-                  {salesMetrics.totalQuantitySold} un.
+              ) : (
+                <p className="text-muted-foreground text-xs">
+                  Nenhuma alteração registrada.
                 </p>
-              </div>
-              <div className="rounded-md border border-border/50 px-3 py-2">
-                <p className="text-muted-foreground">Valor vendido</p>
-                <p className="font-medium text-sm">
-                  {formatCurrency(salesMetrics.totalSoldAmount)}
-                </p>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Historico</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <details className="group rounded-md border border-border/50">
-            <summary className="flex cursor-pointer list-none items-center justify-between rounded-md px-3 py-2 font-medium text-xs/relaxed transition-colors hover:bg-muted hover:text-foreground">
-              Movimentacoes de estoque
-              <HugeiconsIcon
-                className="transition-transform group-open:rotate-180"
-                data-icon="inline-end"
-                icon={ArrowDown01Icon}
-              />
-            </summary>
-            <div className="border-border/50 border-t px-3 py-3">
-              <div className="flex flex-col gap-3">
-                {inventorySummary.historyItems.length === 0 ? (
-                  <p className="text-muted-foreground text-xs">
-                    Sem movimentacoes registradas.
-                  </p>
-                ) : (
-                  inventorySummary.historyItems.map((item) => (
-                    <div
-                      className="flex items-center justify-between gap-3 rounded-md border border-border/40 px-3 py-2 text-xs"
-                      key={item.id}
-                    >
-                      <div className="min-w-0">
-                        <p className="font-medium">{item.quantityLabel}</p>
-                        <p className="text-muted-foreground">
-                          {item.label} em {formatDate(item.date)}
-                        </p>
-                        {item.notes ? (
-                          <p className="mt-1 text-muted-foreground">
-                            {item.notes}
-                          </p>
-                        ) : null}
-                      </div>
-                      <div className="shrink-0 text-right text-muted-foreground">
-                        <p>{formatCurrency(item.unitCost)}</p>
-                        {(() => {
-                          if (item.variant === "writeOff") {
-                            return (
-                              <p className="text-destructive">
-                                Prej. {formatCurrency(item.totalValue)}
-                              </p>
-                            );
-                          }
-
-                          if (item.variant === "sale") {
-                            return (
-                              <p>Saida {formatCurrency(item.totalValue)}</p>
-                            );
-                          }
-
-                          if (item.variant === "saleReversal") {
-                            return (
-                              <p className="text-primary">
-                                Estorno {formatCurrency(item.totalValue)}
-                              </p>
-                            );
-                          }
-
-                          return <p>{formatCurrency(item.totalValue)}</p>;
-                        })()}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </details>
-        </CardContent>
-      </Card>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }
