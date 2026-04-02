@@ -1,6 +1,6 @@
 "use server";
 
-import { eq, inArray, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { refresh } from "next/cache";
 import { db } from "@/db";
 import {
@@ -8,8 +8,6 @@ import {
   productStockEntries,
   productStockWriteOffs,
   products,
-  saleItems,
-  sales,
 } from "@/db/schema";
 import { getProductCategoryById } from "@/features/catalog/server";
 import {
@@ -368,57 +366,6 @@ export async function unarchiveProductAction(id: string) {
       archivedAt: null,
     })
     .where(eq(products.id, id));
-
-  revalidateProducts();
-}
-
-export async function deleteProductAction(id: string, confirmationName = "") {
-  await requireActionSession();
-  let deletedImageVersion: number | null = null;
-
-  await db.transaction(async (tx) => {
-    const [product] = await tx
-      .select({
-        imageVersion: products.imageVersion,
-        name: products.name,
-      })
-      .from(products)
-      .where(eq(products.id, id));
-
-    if (!product) {
-      throw new Error("Produto nao encontrado.");
-    }
-
-    const relatedSales = await tx
-      .selectDistinct({ saleId: saleItems.saleId })
-      .from(saleItems)
-      .where(eq(saleItems.productId, id));
-
-    if (relatedSales.length > 0) {
-      if (confirmationName.trim() !== product.name) {
-        throw new Error(
-          `Digite exatamente "${product.name}" para confirmar a exclusao com vendas vinculadas.`
-        );
-      }
-
-      await tx.delete(sales).where(
-        inArray(
-          sales.id,
-          relatedSales.map((item) => item.saleId)
-        )
-      );
-    }
-
-    await tx.delete(products).where(eq(products.id, id));
-    deletedImageVersion = product.imageVersion;
-  });
-
-  if (deletedImageVersion !== null) {
-    await deleteProductImageVersion({
-      productId: id,
-      version: deletedImageVersion,
-    }).catch(() => undefined);
-  }
 
   revalidateProducts();
 }

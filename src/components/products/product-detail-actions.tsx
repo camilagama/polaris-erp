@@ -3,7 +3,6 @@
 import {
   Archive01Icon,
   ArrowLeft01Icon,
-  Delete02Icon,
   Edit01Icon,
   ListPlusIcon,
   MinusSignCircleIcon,
@@ -11,13 +10,11 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
   addProductStockAction,
   archiveProductAction,
-  deleteProductAction,
   removeProductImageAction,
   replaceProductImageAction,
   unarchiveProductAction,
@@ -27,16 +24,6 @@ import {
 import { ProductDatePicker } from "@/components/products/product-date-picker";
 import { ProductEditFields } from "@/components/products/product-edit-fields";
 import { uploadProductImageToStaging } from "@/components/products/product-image-upload";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -73,24 +60,20 @@ interface ProductCategoryOption {
 
 export function ProductDetailActions({
   categories,
-  linkedSalesCount,
   product,
   settings,
 }: {
   categories: ProductCategoryOption[];
-  linkedSalesCount: number;
   product: ProductListItem;
   settings: {
     idealMarkupPercent: number;
     minimumMarkupPercent: number;
   };
 }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [editing, setEditing] = useState(false);
   const [stocking, setStocking] = useState(false);
   const [writingOff, setWritingOff] = useState(false);
-  const [deleting, setDeleting] = useState(false);
   const [editName, setEditName] = useState(product.name);
   const [editCategoryId, setEditCategoryId] = useState(product.categoryId);
   const [editDescription, setEditDescription] = useState(
@@ -111,7 +94,6 @@ export function ProductDetailActions({
     "adjustment" | "operational"
   >("operational");
   const [writeOffNotes, setWriteOffNotes] = useState("");
-  const [deleteConfirmationText, setDeleteConfirmationText] = useState("");
 
   const handleEditProduct = () => {
     startTransition(async () => {
@@ -205,18 +187,6 @@ export function ProductDetailActions({
     });
   };
 
-  const deleteActionLabel = (() => {
-    if (pending) {
-      return "Deletando...";
-    }
-
-    if (linkedSalesCount > 0) {
-      return "Deletar produto e vendas";
-    }
-
-    return "Deletar definitivamente";
-  })();
-
   return (
     <>
       <DropdownMenu>
@@ -263,16 +233,6 @@ export function ProductDetailActions({
           <DropdownMenuItem onSelect={handleArchiveToggle}>
             <HugeiconsIcon icon={Archive01Icon} strokeWidth={2} />
             {product.archivedAt ? "Ativar" : "Arquivar"}
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            onSelect={() => {
-              setDeleting(true);
-            }}
-            variant="destructive"
-          >
-            <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
-            Deletar
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -453,89 +413,6 @@ export function ProductDetailActions({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <AlertDialog
-        onOpenChange={(open) => {
-          setDeleting(open);
-
-          if (!open) {
-            setDeleteConfirmationText("");
-          }
-        }}
-        open={deleting}
-      >
-        <AlertDialogContent className="sm:max-w-115">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Deletar produto</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acao e irreversivel. O produto{" "}
-              <strong>{product.name}</strong> sera apagado em definitivo, junto
-              com entradas, baixas e qualquer vinculo operacional associado a
-              ele.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          {linkedSalesCount > 0 ? (
-            <div className="flex flex-col gap-3 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-3">
-              <p className="text-destructive text-xs">
-                Este produto esta vinculado a {linkedSalesCount} venda
-                {linkedSalesCount > 1 ? "s" : ""}. Ao confirmar, essas vendas e
-                seus itens tambem serao removidos.
-              </p>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="delete-product-confirmation">
-                  Digite o nome do produto para confirmar
-                </Label>
-                <Input
-                  id="delete-product-confirmation"
-                  onChange={(event) =>
-                    setDeleteConfirmationText(event.target.value)
-                  }
-                  placeholder={product.name}
-                  value={deleteConfirmationText}
-                />
-              </div>
-            </div>
-          ) : (
-            <p className="text-muted-foreground text-xs">
-              Nenhuma venda vinculada encontrada para este produto.
-            </p>
-          )}
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={pending}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={
-                pending ||
-                (linkedSalesCount > 0 &&
-                  deleteConfirmationText.trim() !== product.name)
-              }
-              onClick={(event) => {
-                event.preventDefault();
-                startTransition(async () => {
-                  try {
-                    await deleteProductAction(
-                      product.id,
-                      deleteConfirmationText
-                    );
-                    toast.success("Produto removido definitivamente.");
-                    setDeleting(false);
-                    setDeleteConfirmationText("");
-                    router.push("/produtos");
-                  } catch (error) {
-                    toast.error(
-                      error instanceof Error
-                        ? error.message
-                        : "Nao foi possivel deletar o produto."
-                    );
-                  }
-                });
-              }}
-              variant="destructive"
-            >
-              {deleteActionLabel}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }

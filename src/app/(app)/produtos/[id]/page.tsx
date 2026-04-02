@@ -47,8 +47,6 @@ export default async function ProdutoDetalhePage(
     notFound();
   }
 
-  const linkedSalesCount = new Set(sales.map((saleItem) => saleItem.saleId))
-    .size;
   const averageCost = Number(product.costPrice);
   const inventorySummary = buildProductInventorySummary({
     averageCost,
@@ -108,7 +106,6 @@ export default async function ProdutoDetalhePage(
                         id: category.id,
                         name: category.name,
                       }))}
-                      linkedSalesCount={linkedSalesCount}
                       product={product}
                       settings={settings}
                     />

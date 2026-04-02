@@ -13,7 +13,7 @@ import { usePathname } from "next/navigation";
 import type { ComponentProps } from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -192,20 +192,14 @@ export function AppSidebar({ onSignOut, user, ...props }: AppSidebarProps) {
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem asChild variant="destructive">
-                  <form action={onSignOut} className="w-full">
-                    <Button
-                      className="h-auto w-full justify-start px-0 py-0 text-destructive hover:bg-transparent hover:text-destructive"
-                      type="submit"
-                      variant="ghost"
-                    >
-                      <HugeiconsIcon
-                        className="mr-2 size-4"
-                        icon={Logout01Icon}
-                      />
-                      Sair
-                    </Button>
-                  </form>
+                <DropdownMenuItem
+                  onSelect={() => {
+                    onSignOut();
+                  }}
+                  variant="destructive"
+                >
+                  <HugeiconsIcon className="mr-2 size-4" icon={Logout01Icon} />
+                  <span>Sair</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
