@@ -45,13 +45,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import {
   Table,
@@ -152,7 +145,6 @@ export function ProductsPanel({
   const [pending, startTransition] = useTransition();
   const [showArchived, setShowArchived] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [categoryFilterId, setCategoryFilterId] = useState("all");
   const [editingProduct, setEditingProduct] = useState<ProductListItem | null>(
     null
   );
@@ -173,10 +165,7 @@ export function ProductsPanel({
       return false;
     }
 
-    const matchesCategory =
-      categoryFilterId === "all" || product.categoryId === categoryFilterId;
-
-    if (!matchesCategory) {
+    if (!matchesArchive) {
       return false;
     }
 
@@ -269,26 +258,11 @@ export function ProductsPanel({
         <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center">
             <Input
+              className="w-full sm:w-80"
               onChange={(event) => setSearchTerm(event.target.value)}
               placeholder="Buscar por nome ou categoria"
               value={searchTerm}
             />
-            <Select
-              onValueChange={setCategoryFilterId}
-              value={categoryFilterId}
-            >
-              <SelectTrigger className="w-full sm:w-52">
-                <SelectValue placeholder="Filtrar categoria" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas categorias</SelectItem>
-                {categories.map((category) => (
-                  <SelectItem key={category.id} value={category.id}>
-                    {category.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
 
           <div className="flex items-center gap-2">

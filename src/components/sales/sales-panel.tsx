@@ -120,8 +120,9 @@ export function SalesPanel({
         </div>
 
         <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <Input
+              className="w-full sm:w-80"
               onChange={(event) => setSearchTerm(event.target.value)}
               placeholder="Buscar por cliente"
               value={searchTerm}
