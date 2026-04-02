@@ -1,11 +1,9 @@
 "use client";
 
-import { Cell, Pie, PieChart } from "recharts";
+import { Bar, BarChart, Cell, XAxis, YAxis } from "recharts";
 import {
   type ChartConfig,
   ChartContainer,
-  ChartLegend,
-  ChartLegendContent,
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
@@ -34,12 +32,27 @@ export function InventoryCategoriesChart({
     );
   }
 
-  const chartData = data.map((item, index) => ({
+  const MAX_CATEGORIES = 6;
+  const displayData =
+    data.length > MAX_CATEGORIES
+      ? [
+          ...data.slice(0, MAX_CATEGORIES - 1),
+          {
+            categoryName: "Outros",
+            inventoryValue: data
+              .slice(MAX_CATEGORIES - 1)
+              .reduce((sum, item) => sum + item.inventoryValue, 0),
+          },
+        ]
+      : data;
+
+  const chartData = displayData.map((item, index) => ({
     categoryKey: `category-${index + 1}`,
     categoryName: item.categoryName,
     fill: `var(--color-category-${index + 1})`,
     inventoryValue: item.inventoryValue,
   }));
+
   const chartConfig = chartData.reduce<ChartConfig>((config, item, index) => {
     config[item.categoryKey] = {
       color:
@@ -52,46 +65,48 @@ export function InventoryCategoriesChart({
 
   return (
     <ChartContainer className="h-48 w-full" config={chartConfig}>
-      <PieChart accessibilityLayer>
+      <BarChart
+        accessibilityLayer
+        data={chartData}
+        layout="vertical"
+        margin={{ left: 0, right: 0, top: 0, bottom: 0 }}
+      >
+        <YAxis
+          axisLine={false}
+          dataKey="categoryName"
+          tickFormatter={(value) =>
+            value.length > 15 ? `${value.slice(0, 15)}...` : value
+          }
+          tickLine={false}
+          tickMargin={10}
+          type="category"
+          width={100}
+        />
+        <XAxis dataKey="inventoryValue" hide type="number" />
         <ChartTooltip
           content={
             <ChartTooltipContent
-              formatter={(value, name) => (
+              formatter={(value, _name, props) => (
                 <div className="flex flex-1 items-center justify-between gap-4">
                   <span className="text-muted-foreground">
-                    {chartConfig[String(name)]?.label ?? name}
+                    {props.payload.categoryName}
                   </span>
                   <span className="font-medium font-mono text-foreground">
                     {formatCurrency(Number(value))}
                   </span>
                 </div>
               )}
-              nameKey="categoryKey"
+              hideLabel
             />
           }
+          cursor={false}
         />
-        <Pie
-          data={chartData}
-          dataKey="inventoryValue"
-          innerRadius={44}
-          nameKey="categoryKey"
-          outerRadius={68}
-          paddingAngle={2}
-          strokeWidth={4}
-        >
+        <Bar dataKey="inventoryValue" radius={4}>
           {chartData.map((item) => (
             <Cell fill={item.fill} key={item.categoryKey} />
           ))}
-        </Pie>
-        <ChartLegend
-          content={
-            <ChartLegendContent
-              className="flex-wrap gap-2 pt-2 text-[11px]"
-              nameKey="categoryKey"
-            />
-          }
-        />
-      </PieChart>
+        </Bar>
+      </BarChart>
     </ChartContainer>
   );
 }

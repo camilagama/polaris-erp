@@ -337,7 +337,7 @@ export function SalesPanel({
                   {formatCurrency(analytics.totalSold)}
                 </strong>
                 <CardDescription className="mt-1 text-[11px]">
-                  Valor concluido em {selectedRange.label.toLowerCase()}.
+                  Total vendido no período.
                 </CardDescription>
               </CardContent>
             </Card>
