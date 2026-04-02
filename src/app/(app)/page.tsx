@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { DashboardDateRangeFilter } from "@/components/dashboard/dashboard-date-range-filter";
 import { RevenueResultChart } from "@/components/dashboard/revenue-result-chart";
-import { TopProductsChart } from "@/components/dashboard/top-products-chart";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -41,7 +40,6 @@ export default async function DashboardPage(props: PageProps<"/">) {
     variant: "destructive" | "outline" | "secondary";
   };
   let resultLabel = "Resultado no periodo";
-  let resultSummary = "Vendas e custos ficaram equilibrados.";
 
   if (metrics.resultStatus === "profit") {
     resultBadge = {
@@ -49,14 +47,12 @@ export default async function DashboardPage(props: PageProps<"/">) {
       variant: "secondary",
     };
     resultLabel = "Lucro no periodo";
-    resultSummary = "As vendas ficaram acima dos custos.";
   } else if (metrics.resultStatus === "loss") {
     resultBadge = {
       label: "Prejuizo",
       variant: "destructive",
     };
     resultLabel = "Prejuizo no periodo";
-    resultSummary = "Os custos ficaram acima das vendas.";
   } else {
     resultBadge = {
       label: "Empatado",
@@ -157,35 +153,35 @@ export default async function DashboardPage(props: PageProps<"/">) {
               <CardDescription>{selectedRange.label}</CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
-              <TopProductsChart data={metrics.topProducts} />
+              {metrics.topProducts.length === 0 ? (
+                <div className="flex h-48 items-center justify-center rounded-2xl border border-border/70 border-dashed bg-muted/10 px-4 text-center text-muted-foreground text-sm">
+                  Sem vendas no periodo para montar o ranking.
+                </div>
+              ) : (
+                <div className="rounded-xl border border-border/60">
+                  <div className="grid grid-cols-[1fr_auto] gap-3 border-border/60 border-b px-4 py-3 font-medium text-[11px] text-muted-foreground uppercase tracking-[0.14em]">
+                    <span>Produto</span>
+                    <span>Vendidos</span>
+                  </div>
+                  <div className="divide-y divide-border/50">
+                    {metrics.topProducts.slice(0, 5).map((product) => (
+                      <div
+                        className="grid grid-cols-[1fr_auto] items-center gap-3 px-4 py-3"
+                        key={product.id}
+                      >
+                        <span className="truncate font-medium text-sm">
+                          {product.name}
+                        </span>
+                        <span className="font-semibold text-sm tabular-nums">
+                          {product.quantitySold}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
-        </div>
-      </div>
-
-      <div className="grid gap-3 md:grid-cols-3">
-        <div className="rounded-xl border border-border/60 bg-card px-4 py-3">
-          <p className="text-[11px] text-muted-foreground uppercase tracking-[0.14em]">
-            Situacao
-          </p>
-          <p className="mt-1 font-medium text-sm">{resultSummary}</p>
-        </div>
-        <div className="rounded-xl border border-border/60 bg-card px-4 py-3">
-          <p className="text-[11px] text-muted-foreground uppercase tracking-[0.14em]">
-            Produto em destaque
-          </p>
-          <p className="mt-1 font-medium text-sm">
-            {metrics.topProducts[0]?.name ?? "Sem destaque."}
-          </p>
-        </div>
-        <div className="rounded-xl border border-border/60 bg-card px-4 py-3">
-          <p className="text-[11px] text-muted-foreground uppercase tracking-[0.14em]">
-            Categoria principal
-          </p>
-          <p className="mt-1 font-medium text-sm">
-            {metrics.inventoryByCategory[0]?.categoryName ??
-              "Sem distribuicao."}
-          </p>
         </div>
       </div>
     </div>
