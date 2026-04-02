@@ -14,11 +14,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  authClient,
-  hasGoogleAuthClient,
-  isLocalAuthOrigin,
-} from "@/lib/auth-client";
+import { authClient, hasGoogleAuthClient } from "@/lib/auth-client";
 
 const authInitialState = {
   error: null,
@@ -31,16 +27,8 @@ export function SignInForm() {
   );
   const [googlePending, setGooglePending] = useState(false);
   const [googleError, setGoogleError] = useState<string | null>(null);
-  const [isLocalOrigin, setIsLocalOrigin] = useState(false);
 
   useEffect(() => {
-    const localOrigin = isLocalAuthOrigin(window.location.hostname);
-    setIsLocalOrigin(localOrigin);
-
-    if (localOrigin) {
-      return;
-    }
-
     if (!hasGoogleAuthClient) {
       return;
     }
@@ -91,15 +79,6 @@ export function SignInForm() {
       setGooglePending(false);
     }
   };
-
-  let googleAccessCopy =
-    "Google e One Tap nao estao configurados neste ambiente. O login por email e senha continua disponivel.";
-
-  if (hasGoogleAuthClient) {
-    googleAccessCopy = isLocalOrigin
-      ? "One Tap fica desativado localmente para evitar prompts invalidos. O login por email e senha continua como caminho principal."
-      : "One Tap abre automaticamente quando o Google permitir o prompt neste navegador.";
-  }
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
@@ -200,9 +179,7 @@ export function SignInForm() {
               <HugeiconsIcon icon={GoogleIcon} strokeWidth={2} />
               {googlePending ? "Redirecionando..." : "Continuar com Google"}
             </Button>
-            <p className="text-center text-muted-foreground text-xs leading-5">
-              {googleAccessCopy}
-            </p>
+
             {googleError ? (
               <p className="text-destructive text-sm">{googleError}</p>
             ) : null}

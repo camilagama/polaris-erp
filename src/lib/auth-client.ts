@@ -4,10 +4,6 @@ import { oneTapClient } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
 
 const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-const localAuthHosts = new Set(["127.0.0.1", "localhost"]);
-
-export const isLocalAuthOrigin = (hostname: string) =>
-  localAuthHosts.has(hostname);
 
 export const hasGoogleAuthClient = typeof googleClientId === "string";
 
