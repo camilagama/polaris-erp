@@ -3,7 +3,6 @@
 import { Image01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Image from "next/image";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import type { ProductImageAsset } from "@/features/products/contracts";
 import { cn } from "@/lib/utils";
 
@@ -23,22 +22,19 @@ export function ProductImageFrame({
   sizes?: string;
 }) {
   const roundedClassName = shape === "wide" ? "rounded-xl" : "rounded-lg";
+  const imageSrc = image?.detailUrl ?? null;
 
-  if (!image) {
+  if (!(image && imageSrc)) {
     return (
-      <Avatar
+      <div
         className={cn(
-          "size-full border border-border/60 bg-muted/20 text-muted-foreground",
+          "flex size-full items-center justify-center overflow-hidden border border-border/60 bg-muted/20 text-muted-foreground",
           roundedClassName,
           className
         )}
       >
-        <AvatarFallback
-          className={cn("bg-muted/20 text-muted-foreground", roundedClassName)}
-        >
-          <HugeiconsIcon icon={Image01Icon} strokeWidth={1.8} />
-        </AvatarFallback>
-      </Avatar>
+        <HugeiconsIcon icon={Image01Icon} strokeWidth={1.8} />
+      </div>
     );
   }
 
@@ -58,7 +54,7 @@ export function ProductImageFrame({
         placeholder="blur"
         priority={priority}
         sizes={sizes}
-        src={shape === "wide" ? image.detailUrl : image.tableUrl}
+        src={imageSrc}
         unoptimized
       />
     </div>

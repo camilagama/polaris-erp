@@ -2,16 +2,13 @@
 
 import {
   Cancel01Icon,
-  CheckmarkCircle02Icon,
   Image01Icon,
   ImageUploadIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Image from "next/image";
 import { useEffect, useMemo } from "react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import type { ProductImageAsset } from "@/features/products/contracts";
 import { formatBytes, useFileUpload } from "@/hooks/use-file-upload";
 import { cn } from "@/lib/utils";
@@ -75,30 +72,6 @@ const translateUploadError = (error: string | undefined) => {
   return error;
 };
 
-const getHelperText = ({
-  currentImage,
-  isMarkedForRemoval,
-  selectedFile,
-}: {
-  currentImage: ProductImageAsset | null;
-  isMarkedForRemoval: boolean;
-  selectedFile: File | null;
-}) => {
-  if (selectedFile) {
-    return `${selectedFile.name} - ${formatBytes(selectedFile.size)}`;
-  }
-
-  if (currentImage && !isMarkedForRemoval) {
-    return "Imagem atual vinculada ao produto.";
-  }
-
-  if (isMarkedForRemoval) {
-    return "A imagem atual sera removida ao salvar.";
-  }
-
-  return "Nenhuma imagem selecionada.";
-};
-
 function ProductImagePreview({
   previewUrl,
   visibleImage,
@@ -123,48 +96,6 @@ function ProductImagePreview({
         </div>
       )}
     </div>
-  );
-}
-
-function ProductImageStatus({
-  currentImage,
-  helperText,
-  isDragging,
-  isMarkedForRemoval,
-  selectedFile,
-}: {
-  currentImage: ProductImageAsset | null;
-  helperText: string;
-  isDragging: boolean;
-  isMarkedForRemoval: boolean;
-  selectedFile: File | null;
-}) {
-  return (
-    <>
-      <div className="flex flex-wrap items-center gap-2">
-        <Badge variant={selectedFile ? "default" : "secondary"}>
-          {selectedFile ? "Nova imagem" : "Sem imagem"}
-        </Badge>
-        {currentImage && !isMarkedForRemoval && !selectedFile ? (
-          <Badge variant="outline">Atual</Badge>
-        ) : null}
-        {isDragging ? <Badge variant="outline">Solte para enviar</Badge> : null}
-      </div>
-      <div className="flex flex-col gap-2">
-        <p className="font-medium text-foreground text-sm">
-          {selectedFile || (currentImage && !isMarkedForRemoval)
-            ? "Imagem pronta para uso"
-            : "Adicione uma imagem para o produto"}
-        </p>
-        <p className="text-muted-foreground text-sm">
-          Arraste o arquivo para a area abaixo ou escolha uma imagem
-          manualmente.
-        </p>
-        <p className="min-w-0 truncate text-muted-foreground text-xs">
-          {helperText}
-        </p>
-      </div>
-    </>
   );
 }
 
@@ -211,10 +142,10 @@ function ProductImageSecondaryActions({
         >
           <HugeiconsIcon
             data-icon="inline-start"
-            icon={isMarkedForRemoval ? CheckmarkCircle02Icon : Cancel01Icon}
+            icon={Cancel01Icon}
             strokeWidth={2}
           />
-          {isMarkedForRemoval ? "Manter imagem atual" : "Remover atual"}
+          {isMarkedForRemoval ? "Manter atual" : "Remover atual"}
         </Button>
       ) : null}
     </div>
@@ -262,13 +193,11 @@ export function ProductImageInput({
     onFileChange(selectedFile);
   }, [onFileChange, onRemoveCurrentImageToggle, selectedFile]);
 
-  const helperText = getHelperText({
-    currentImage,
-    isMarkedForRemoval,
-    selectedFile,
-  });
   const hasVisibleImage = Boolean(displayImage);
   const visibleImage = hasVisibleImage ? displayImage : null;
+  const fileLabel = selectedFile
+    ? `${selectedFile.name} - ${formatBytes(selectedFile.size)}`
+    : null;
 
   return (
     <div className="flex flex-col gap-3">
@@ -296,25 +225,15 @@ export function ProductImageInput({
         )}
       >
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-          <div className="flex shrink-0 items-center gap-4">
+          <div className="flex shrink-0 items-center">
             <ProductImagePreview
               previewUrl={previewUrl}
               visibleImage={visibleImage}
             />
           </div>
 
-          <div className="flex min-w-0 flex-1 flex-col gap-3">
-            <ProductImageStatus
-              currentImage={currentImage}
-              helperText={helperText}
-              isDragging={state.isDragging}
-              isMarkedForRemoval={isMarkedForRemoval}
-              selectedFile={selectedFile}
-            />
-
-            <Separator className="my-4" />
-
-            <div className="flex flex-col gap-3">
+          <div className="flex min-w-0 flex-1 flex-col gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Button
                 className={cn(
                   "min-h-14 justify-start rounded-2xl border border-border/70 border-dashed bg-muted/15 px-4 text-left hover:bg-muted/25",
@@ -348,6 +267,12 @@ export function ProductImageInput({
                 previewUrl={previewUrl}
               />
             </div>
+
+            {fileLabel ? (
+              <p className="truncate text-muted-foreground text-xs">
+                {fileLabel}
+              </p>
+            ) : null}
           </div>
         </div>
       </div>

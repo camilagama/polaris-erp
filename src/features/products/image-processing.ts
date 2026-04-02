@@ -67,14 +67,12 @@ export const processProductImage = async (
     normalized
       .clone()
       .resize({
-        background: { alpha: 0, b: 0, g: 0, r: 0 },
-        fit: sharp.fit.contain,
+        fit: sharp.fit.cover,
         height: PRODUCT_IMAGE_TABLE_DIMENSION,
+        position: sharp.strategy.attention,
         width: PRODUCT_IMAGE_TABLE_DIMENSION,
-        withoutEnlargement: true,
       })
       .webp({
-        alphaQuality: 100,
         effort: WEBP_EFFORT,
         quality: 72,
       })
