@@ -16,7 +16,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import type { DashboardMonthlyComparisonPoint } from "@/features/dashboard/contracts";
+import type { DashboardPeriodComparisonPoint } from "@/features/dashboard/contracts";
 import { formatCompactCurrency, formatCurrency } from "@/lib/formatters";
 
 const chartConfig = {
@@ -45,7 +45,7 @@ const getSeriesLabel = (name: number | string | undefined) => {
 export function RevenueResultChart({
   data,
 }: {
-  data: DashboardMonthlyComparisonPoint[];
+  data: DashboardPeriodComparisonPoint[];
 }) {
   const hasData = data.some((point) => point.sold > 0 || point.costs > 0);
 
@@ -63,7 +63,7 @@ export function RevenueResultChart({
         <CartesianGrid vertical={false} />
         <XAxis
           axisLine={false}
-          dataKey="monthLabel"
+          dataKey="label"
           tickLine={false}
           tickMargin={10}
         />

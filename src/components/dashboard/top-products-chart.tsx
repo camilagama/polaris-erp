@@ -53,7 +53,7 @@ export function TopProductsChart({ data }: { data: DashboardTopProduct[] }) {
   if (data.length === 0) {
     return (
       <div className="flex h-56 items-center justify-center rounded-2xl border border-border/70 border-dashed bg-muted/10 px-4 text-center text-muted-foreground text-sm">
-        Sem vendas concluidas neste mes para montar o ranking de produtos.
+        Sem vendas concluidas neste periodo para montar o ranking de produtos.
       </div>
     );
   }

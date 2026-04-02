@@ -1,20 +1,17 @@
 import "server-only";
 
-import { and, asc, eq, gt, gte, lt, sql } from "drizzle-orm";
+import { and, asc, eq, gt, gte, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { categories, products, saleItems, sales } from "@/db/schema";
-import {
-  buildDashboardMetrics,
-  getDashboardDateRange,
-} from "@/features/dashboard/metrics";
-import type { DashboardMetrics } from "./contracts";
+import type {
+  DashboardMetrics,
+  DashboardSelectedRange,
+} from "@/features/dashboard/contracts";
+import { buildDashboardMetrics } from "@/features/dashboard/metrics";
 
 export const getDashboardMetrics = async (
-  referenceDate = new Date()
+  range: DashboardSelectedRange
 ): Promise<DashboardMetrics> => {
-  const { comparisonStart, nextMonthStart } =
-    getDashboardDateRange(referenceDate);
-
   const [salesRows, saleItemRows, inventoryRows] = await Promise.all([
     db
       .select({
@@ -26,10 +23,7 @@ export const getDashboardMetrics = async (
       })
       .from(sales)
       .where(
-        and(
-          gte(sales.occurredOn, comparisonStart),
-          lt(sales.occurredOn, nextMonthStart)
-        )
+        and(gte(sales.occurredOn, range.from), lte(sales.occurredOn, range.to))
       ),
     db
       .select({
@@ -44,10 +38,7 @@ export const getDashboardMetrics = async (
       .from(saleItems)
       .innerJoin(sales, eq(saleItems.saleId, sales.id))
       .where(
-        and(
-          gte(sales.occurredOn, comparisonStart),
-          lt(sales.occurredOn, nextMonthStart)
-        )
+        and(gte(sales.occurredOn, range.from), lte(sales.occurredOn, range.to))
       ),
     db
       .select({
@@ -66,7 +57,7 @@ export const getDashboardMetrics = async (
       categoryName: row.categoryName,
       inventoryValue: Number(row.inventoryValue),
     })),
-    referenceDate,
+    range,
     saleItems: saleItemRows.map((row) => ({
       lineTotal: Number(row.lineTotal),
       occurredOn: row.occurredOn,

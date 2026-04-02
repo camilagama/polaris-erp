@@ -1,29 +1,25 @@
+import {
+  addDays,
+  addMonths,
+  differenceInCalendarDays,
+  format,
+  parseISO,
+  startOfMonth,
+} from "date-fns";
+import { ptBR } from "date-fns/locale";
 import type {
   DashboardInventoryCategory,
   DashboardMetrics,
-  DashboardResultStatus,
+  DashboardPeriodComparisonPoint,
+  DashboardPeriodGranularity,
+  DashboardSelectedRange,
   DashboardTopProduct,
 } from "@/features/dashboard/contracts";
 import { roundCurrency } from "@/lib/domain/currency";
 import { formatDateInputValue } from "@/lib/domain/date";
 
-const RECENT_MONTHS_COUNT = 6;
 const MAX_CATEGORY_SLICES = 5;
-
-const MONTH_LABELS = [
-  "jan",
-  "fev",
-  "mar",
-  "abr",
-  "mai",
-  "jun",
-  "jul",
-  "ago",
-  "set",
-  "out",
-  "nov",
-  "dez",
-] as const;
+const MAX_DAY_BUCKETS = 31;
 
 export interface DashboardSaleRecord {
   feeAmount: number;
@@ -48,98 +44,38 @@ export interface DashboardInventoryRecord {
   inventoryValue: number;
 }
 
-export interface DashboardDateRange {
-  comparisonStart: string;
-  currentMonthKey: string;
-  currentMonthLabel: string;
-  currentMonthStart: string;
-  nextMonthStart: string;
-  recentMonthKeys: string[];
-}
-
 interface BuildDashboardMetricsInput {
   inventory: DashboardInventoryRecord[];
-  referenceDate?: Date;
+  range: DashboardSelectedRange;
   saleItems: DashboardSaleItemRecord[];
   sales: DashboardSaleRecord[];
 }
 
-const buildMonthKey = (year: number, monthIndex: number) =>
-  `${year}-${String(monthIndex + 1).padStart(2, "0")}`;
-
-const buildMonthLabel = (monthKey: string) => {
-  const [year, month] = monthKey.split("-");
-  const monthIndex = Number(month) - 1;
-
-  return `${MONTH_LABELS[monthIndex]}/${year.slice(2)}`;
-};
+interface DashboardPeriodBucket {
+  key: string;
+  label: string;
+}
 
 const isDateInRange = ({
   date,
-  endExclusive,
+  endInclusive,
   startInclusive,
 }: {
   date: string;
-  endExclusive: string;
+  endInclusive: string;
   startInclusive: string;
-}) => date >= startInclusive && date < endExclusive;
+}) => date >= startInclusive && date <= endInclusive;
 
-export const getDashboardDateRange = (
-  referenceDate = new Date()
-): DashboardDateRange => {
-  const currentMonthStartDate = new Date(
-    referenceDate.getFullYear(),
-    referenceDate.getMonth(),
-    1
-  );
-  const nextMonthStartDate = new Date(
-    referenceDate.getFullYear(),
-    referenceDate.getMonth() + 1,
-    1
-  );
-  const comparisonStartDate = new Date(
-    referenceDate.getFullYear(),
-    referenceDate.getMonth() - (RECENT_MONTHS_COUNT - 1),
-    1
-  );
-
-  const recentMonthKeys = Array.from(
-    { length: RECENT_MONTHS_COUNT },
-    (_, index) => {
-      const monthDate = new Date(
-        comparisonStartDate.getFullYear(),
-        comparisonStartDate.getMonth() + index,
-        1
-      );
-
-      return buildMonthKey(monthDate.getFullYear(), monthDate.getMonth());
-    }
-  );
-  const currentMonthKey = buildMonthKey(
-    currentMonthStartDate.getFullYear(),
-    currentMonthStartDate.getMonth()
-  );
-
-  return {
-    comparisonStart: formatDateInputValue(comparisonStartDate),
-    currentMonthKey,
-    currentMonthLabel: buildMonthLabel(currentMonthKey),
-    currentMonthStart: formatDateInputValue(currentMonthStartDate),
-    nextMonthStart: formatDateInputValue(nextMonthStartDate),
-    recentMonthKeys,
-  };
-};
-
-const getResultStatus = (value: number): DashboardResultStatus => {
+const getResultStatus = (value: number) => {
   if (value > 0) {
-    return "profit";
+    return "profit" as const;
   }
 
   if (value < 0) {
-    return "loss";
+    return "loss" as const;
   }
 
-  return "breakEven";
+  return "breakEven" as const;
 };
 
 const buildInventoryByCategory = (
@@ -191,12 +127,10 @@ const buildInventoryByCategory = (
 };
 
 const buildTopProducts = ({
-  currentMonthStart,
-  nextMonthStart,
+  range,
   saleItems,
 }: {
-  currentMonthStart: string;
-  nextMonthStart: string;
+  range: DashboardSelectedRange;
   saleItems: DashboardSaleItemRecord[];
 }): DashboardTopProduct[] => {
   const products = new Map<string, DashboardTopProduct>();
@@ -209,8 +143,8 @@ const buildTopProducts = ({
     if (
       !isDateInRange({
         date: item.occurredOn,
-        endExclusive: nextMonthStart,
-        startInclusive: currentMonthStart,
+        endInclusive: range.to,
+        startInclusive: range.from,
       })
     ) {
       continue;
@@ -244,24 +178,87 @@ const buildTopProducts = ({
     .slice(0, 5);
 };
 
+const buildPeriodBuckets = ({
+  from,
+  to,
+}: DashboardSelectedRange): {
+  buckets: DashboardPeriodBucket[];
+  granularity: DashboardPeriodGranularity;
+} => {
+  const fromDate = parseISO(`${from}T00:00:00`);
+  const toDate = parseISO(`${to}T00:00:00`);
+  const totalDays = differenceInCalendarDays(toDate, fromDate) + 1;
+
+  if (totalDays <= MAX_DAY_BUCKETS) {
+    const buckets: DashboardPeriodBucket[] = [];
+
+    for (
+      let currentDate = fromDate;
+      currentDate <= toDate;
+      currentDate = addDays(currentDate, 1)
+    ) {
+      buckets.push({
+        key: formatDateInputValue(currentDate),
+        label: format(currentDate, "dd/MM", {
+          locale: ptBR,
+        }),
+      });
+    }
+
+    return {
+      buckets,
+      granularity: "day",
+    };
+  }
+
+  const buckets: DashboardPeriodBucket[] = [];
+  const lastMonthDate = startOfMonth(toDate);
+
+  for (
+    let currentDate = startOfMonth(fromDate);
+    currentDate <= lastMonthDate;
+    currentDate = addMonths(currentDate, 1)
+  ) {
+    buckets.push({
+      key: format(currentDate, "yyyy-MM"),
+      label: format(currentDate, "MMM/yy", {
+        locale: ptBR,
+      }),
+    });
+  }
+
+  return {
+    buckets,
+    granularity: "month",
+  };
+};
+
+const getBucketKey = ({
+  date,
+  granularity,
+}: {
+  date: string;
+  granularity: DashboardPeriodGranularity;
+}) => {
+  if (granularity === "day") {
+    return date;
+  }
+
+  return date.slice(0, 7);
+};
+
 export const buildDashboardMetrics = ({
   inventory,
-  referenceDate = new Date(),
+  range,
   saleItems,
   sales,
 }: BuildDashboardMetricsInput): DashboardMetrics => {
-  const {
-    comparisonStart,
-    currentMonthKey,
-    currentMonthLabel,
-    currentMonthStart,
-    nextMonthStart,
-    recentMonthKeys,
-  } = getDashboardDateRange(referenceDate);
-
-  const soldByMonth = new Map<string, number>();
-  const costByMonth = new Map<string, number>();
-  const salesCountByMonth = new Map<string, number>();
+  const { buckets, granularity } = buildPeriodBuckets(range);
+  const soldByBucket = new Map<string, number>();
+  const costByBucket = new Map<string, number>();
+  let totalSold = 0;
+  let totalCosts = 0;
+  let totalSalesCount = 0;
 
   for (const sale of sales) {
     if (sale.status !== "completed") {
@@ -271,26 +268,32 @@ export const buildDashboardMetrics = ({
     if (
       !isDateInRange({
         date: sale.occurredOn,
-        endExclusive: nextMonthStart,
-        startInclusive: comparisonStart,
+        endInclusive: range.to,
+        startInclusive: range.from,
       })
     ) {
       continue;
     }
 
-    const monthKey = sale.occurredOn.slice(0, 7);
-    const currentSold = soldByMonth.get(monthKey) ?? 0;
-    const currentSalesCount = salesCountByMonth.get(monthKey) ?? 0;
+    const bucketKey = getBucketKey({
+      date: sale.occurredOn,
+      granularity,
+    });
     const soldAmount = sale.totalAmount;
+    const redirectedCosts = roundCurrency(sale.freightAmount + sale.feeAmount);
 
-    soldByMonth.set(monthKey, roundCurrency(currentSold + soldAmount));
-    costByMonth.set(
-      monthKey,
-      roundCurrency(
-        (costByMonth.get(monthKey) ?? 0) + sale.freightAmount + sale.feeAmount
-      )
+    soldByBucket.set(
+      bucketKey,
+      roundCurrency((soldByBucket.get(bucketKey) ?? 0) + soldAmount)
     );
-    salesCountByMonth.set(monthKey, currentSalesCount + 1);
+    costByBucket.set(
+      bucketKey,
+      roundCurrency((costByBucket.get(bucketKey) ?? 0) + redirectedCosts)
+    );
+
+    totalSold = roundCurrency(totalSold + soldAmount);
+    totalCosts = roundCurrency(totalCosts + redirectedCosts);
+    totalSalesCount += 1;
   }
 
   for (const item of saleItems) {
@@ -301,52 +304,53 @@ export const buildDashboardMetrics = ({
     if (
       !isDateInRange({
         date: item.occurredOn,
-        endExclusive: nextMonthStart,
-        startInclusive: comparisonStart,
+        endInclusive: range.to,
+        startInclusive: range.from,
       })
     ) {
       continue;
     }
 
-    const monthKey = item.occurredOn.slice(0, 7);
-    const currentCost = costByMonth.get(monthKey) ?? 0;
-    const itemCost = item.quantity * item.unitCostSnapshot;
+    const bucketKey = getBucketKey({
+      date: item.occurredOn,
+      granularity,
+    });
+    const itemCost = roundCurrency(item.quantity * item.unitCostSnapshot);
 
-    costByMonth.set(monthKey, roundCurrency(currentCost + itemCost));
+    costByBucket.set(
+      bucketKey,
+      roundCurrency((costByBucket.get(bucketKey) ?? 0) + itemCost)
+    );
+    totalCosts = roundCurrency(totalCosts + itemCost);
   }
 
-  const monthlyComparison = recentMonthKeys.map((monthKey) => {
-    const sold = soldByMonth.get(monthKey) ?? 0;
-    const costs = costByMonth.get(monthKey) ?? 0;
-    const result = roundCurrency(sold - costs);
+  const periodComparison: DashboardPeriodComparisonPoint[] = buckets.map(
+    (bucket) => {
+      const sold = soldByBucket.get(bucket.key) ?? 0;
+      const costs = costByBucket.get(bucket.key) ?? 0;
 
-    return {
-      costs,
-      monthKey,
-      monthLabel: buildMonthLabel(monthKey),
-      result,
-      sold,
-    };
-  });
-
-  const currentMonthMetrics =
-    monthlyComparison.find((point) => point.monthKey === currentMonthKey) ??
-    null;
-  const monthlySalesCount = salesCountByMonth.get(currentMonthKey) ?? 0;
+      return {
+        costs,
+        label: bucket.label,
+        result: roundCurrency(sold - costs),
+        sold,
+      };
+    }
+  );
+  const totalResult = roundCurrency(totalSold - totalCosts);
 
   return {
     inventoryByCategory: buildInventoryByCategory(inventory),
-    monthlyComparison,
-    monthlyCosts: currentMonthMetrics?.costs ?? 0,
-    monthlyResult: currentMonthMetrics?.result ?? 0,
-    monthlySold: currentMonthMetrics?.sold ?? 0,
-    monthlySalesCount,
-    referenceMonthKey: currentMonthKey,
-    referenceMonthLabel: currentMonthLabel,
-    resultStatus: getResultStatus(currentMonthMetrics?.result ?? 0),
+    periodComparison,
+    periodGranularity: granularity,
+    resultStatus: getResultStatus(totalResult),
+    selectedRange: range,
+    totalCosts,
+    totalResult,
+    totalSalesCount,
+    totalSold,
     topProducts: buildTopProducts({
-      currentMonthStart,
-      nextMonthStart,
+      range,
       saleItems,
     }),
   };

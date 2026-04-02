@@ -1,9 +1,14 @@
+export type DashboardPeriodGranularity = "day" | "month";
 export type DashboardResultStatus = "breakEven" | "loss" | "profit";
 
-export interface DashboardMonthlyComparisonPoint {
+export interface DashboardSelectedRange {
+  from: string;
+  to: string;
+}
+
+export interface DashboardPeriodComparisonPoint {
   costs: number;
-  monthKey: string;
-  monthLabel: string;
+  label: string;
   result: number;
   sold: number;
 }
@@ -22,13 +27,13 @@ export interface DashboardInventoryCategory {
 
 export interface DashboardMetrics {
   inventoryByCategory: DashboardInventoryCategory[];
-  monthlyComparison: DashboardMonthlyComparisonPoint[];
-  monthlyCosts: number;
-  monthlyResult: number;
-  monthlySalesCount: number;
-  monthlySold: number;
-  referenceMonthKey: string;
-  referenceMonthLabel: string;
+  periodComparison: DashboardPeriodComparisonPoint[];
+  periodGranularity: DashboardPeriodGranularity;
   resultStatus: DashboardResultStatus;
+  selectedRange: DashboardSelectedRange;
   topProducts: DashboardTopProduct[];
+  totalCosts: number;
+  totalResult: number;
+  totalSalesCount: number;
+  totalSold: number;
 }
