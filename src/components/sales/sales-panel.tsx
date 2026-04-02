@@ -107,7 +107,7 @@ export function SalesPanel({
   return (
     <div className="flex flex-col gap-6 p-4 pb-20 sm:p-6 sm:pb-6">
       <div className="flex flex-col gap-3">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex flex-col gap-1">
           <div className="flex flex-col gap-1">
             <h1 className="font-heading font-semibold text-2xl tracking-tight">
               Vendas
@@ -116,17 +116,6 @@ export function SalesPanel({
               Registre vendas concluidas com baixa imediata de estoque e abra o
               detalhe para revisar composicao financeira, itens e cancelamento.
             </p>
-          </div>
-
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-80">
-            <DashboardDateRangeFilter
-              bounds={dateBounds}
-              from={selectedRange.from}
-              preset={selectedRange.preset}
-              presets={salesDatePresetOptions}
-              to={selectedRange.to}
-              variant="sales"
-            />
           </div>
         </div>
 
@@ -276,79 +265,105 @@ export function SalesPanel({
         </>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[0.85fr_0.95fr_0.95fr_1.8fr]">
-        <div className="flex flex-col gap-4">
-          <Card className="flex flex-1 flex-col justify-center">
-            <CardHeader className="gap-1 pb-1.5">
+      <Separator />
+
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex flex-col gap-1">
+            <h2 className="font-heading font-semibold text-xl tracking-tight">
+              Analytics
+            </h2>
+            <p className="text-muted-foreground text-sm">
+              Indicadores e distribuicoes do periodo selecionado.
+            </p>
+          </div>
+
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-80">
+            <DashboardDateRangeFilter
+              bounds={dateBounds}
+              from={selectedRange.from}
+              preset={selectedRange.preset}
+              presets={salesDatePresetOptions}
+              to={selectedRange.to}
+              variant="sales"
+            />
+          </div>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[0.85fr_0.95fr_0.95fr_1.8fr]">
+          <div className="flex flex-col gap-4">
+            <Card className="flex flex-1 flex-col justify-center">
+              <CardHeader className="gap-1 pb-1.5">
+                <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
+                  Total vendido
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <strong className="font-heading text-[1.65rem] leading-none tracking-tight">
+                  {formatCurrency(analytics.totalSold)}
+                </strong>
+                <CardDescription className="mt-1 text-[11px]">
+                  Valor concluido em {selectedRange.label.toLowerCase()}.
+                </CardDescription>
+              </CardContent>
+            </Card>
+
+            <Card className="flex flex-1 flex-col justify-center">
+              <CardHeader className="gap-1 pb-1.5">
+                <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
+                  Lucro total
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <strong className="font-heading text-[1.65rem] leading-none tracking-tight">
+                  {formatCurrency(analytics.totalProfit)}
+                </strong>
+                <CardDescription className="mt-1 text-[11px]">
+                  Margem de {formatPercent(analytics.profitMarginPercent)}%.
+                </CardDescription>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="flex flex-col">
+            <CardHeader className="gap-1 pb-2">
               <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
-                Total vendido
+                Status das vendas
               </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <strong className="font-heading text-[1.65rem] leading-none tracking-tight">
-                {formatCurrency(analytics.totalSold)}
-              </strong>
-              <CardDescription className="mt-1 text-[11px]">
-                Valor concluido em {selectedRange.label.toLowerCase()}.
+              <CardDescription className="text-[11px]">
+                Ticket medio de {formatCurrency(analytics.averageTicket)}.
               </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-1 items-center pt-0">
+              <SalesStatusChart data={analytics.statusSummary} />
             </CardContent>
           </Card>
 
-          <Card className="flex flex-1 flex-col justify-center">
-            <CardHeader className="gap-1 pb-1.5">
+          <Card className="flex flex-col">
+            <CardHeader className="gap-1 pb-2">
               <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
-                Lucro total
+                Mix de pagamentos
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-0">
-              <strong className="font-heading text-[1.65rem] leading-none tracking-tight">
-                {formatCurrency(analytics.totalProfit)}
-              </strong>
-              <CardDescription className="mt-1 text-[11px]">
-                Margem de {formatPercent(analytics.profitMarginPercent)}%.
+            <CardContent className="flex flex-1 items-center pt-0">
+              <PaymentMethodChart data={analytics.paymentMethods} />
+            </CardContent>
+          </Card>
+
+          <Card className="flex flex-col">
+            <CardHeader className="gap-1 pb-2">
+              <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
+                Vendas no periodo
+              </CardTitle>
+              <CardDescription className="text-[11px]">
+                {selectedRange.label}
               </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-1 items-center pt-0">
+              <SalesPerformanceChart data={analytics.performance} />
             </CardContent>
           </Card>
         </div>
-
-        <Card className="flex flex-col">
-          <CardHeader className="gap-1 pb-2">
-            <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
-              Status das vendas
-            </CardTitle>
-            <CardDescription className="text-[11px]">
-              Ticket medio de {formatCurrency(analytics.averageTicket)}.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-1 items-center pt-0">
-            <SalesStatusChart data={analytics.statusSummary} />
-          </CardContent>
-        </Card>
-
-        <Card className="flex flex-col">
-          <CardHeader className="gap-1 pb-2">
-            <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
-              Mix de pagamentos
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-1 items-center pt-0">
-            <PaymentMethodChart data={analytics.paymentMethods} />
-          </CardContent>
-        </Card>
-
-        <Card className="flex flex-col">
-          <CardHeader className="gap-1 pb-2">
-            <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
-              Vendas no periodo
-            </CardTitle>
-            <CardDescription className="text-[11px]">
-              {selectedRange.label}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-1 items-center pt-0">
-            <SalesPerformanceChart data={analytics.performance} />
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

@@ -411,71 +411,84 @@ export function ProductsPanel({
         </>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[0.85fr_0.95fr_1.8fr]">
-        <div className="flex flex-col gap-4">
-          <Card className="flex flex-1 flex-col justify-center">
-            <CardHeader className="gap-1 pb-1.5">
+      <Separator />
+
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-1">
+          <h2 className="font-heading font-semibold text-xl tracking-tight">
+            Analytics
+          </h2>
+          <p className="text-muted-foreground text-sm">
+            Leitura consolidada de estoque, categorias e desempenho recente.
+          </p>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[0.85fr_0.95fr_1.8fr]">
+          <div className="flex flex-col gap-4">
+            <Card className="flex flex-1 flex-col justify-center">
+              <CardHeader className="gap-1 pb-1.5">
+                <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
+                  Total em estoque
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <strong className="font-heading text-[1.65rem] leading-none tracking-tight">
+                  {analytics.totalUnitsInStock} un.
+                </strong>
+                <CardDescription className="mt-1 text-[11px]">
+                  Soma das unidades dos produtos ativos.
+                </CardDescription>
+              </CardContent>
+            </Card>
+
+            <Card className="flex flex-1 flex-col justify-center">
+              <CardHeader className="gap-1 pb-1.5">
+                <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
+                  Valor investido
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <strong className="font-heading text-[1.65rem] leading-none tracking-tight">
+                  {formatCurrency(analytics.totalInventoryInvestment)}
+                </strong>
+                <CardDescription className="mt-1 text-[11px]">
+                  Soma historica de todas as compras de estoque.
+                </CardDescription>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="flex flex-col">
+            <CardHeader className="gap-1 pb-2">
               <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
-                Total em estoque
+                Categorias no estoque
               </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <strong className="font-heading text-[1.65rem] leading-none tracking-tight">
-                {analytics.totalUnitsInStock} un.
-              </strong>
-              <CardDescription className="mt-1 text-[11px]">
-                Soma das unidades dos produtos ativos.
+              <CardDescription className="text-[11px]">
+                Distribuicao do inventario atual
               </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-1 items-center pt-0">
+              <InventoryCategoriesChart data={analytics.inventoryByCategory} />
             </CardContent>
           </Card>
 
-          <Card className="flex flex-1 flex-col justify-center">
-            <CardHeader className="gap-1 pb-1.5">
+          <Card className="flex flex-col">
+            <CardHeader className="gap-1 pb-2">
               <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
-                Valor investido
+                Faturamento x compras
               </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <strong className="font-heading text-[1.65rem] leading-none tracking-tight">
-                {formatCurrency(analytics.totalInventoryInvestment)}
-              </strong>
-              <CardDescription className="mt-1 text-[11px]">
-                Soma historica de todas as compras de estoque.
+              <CardDescription className="text-[11px]">
+                Ultimos 30 dias
               </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-1 items-center pt-0">
+              <ProductCatalogPerformanceChart
+                data={analytics.recentPerformance}
+                emptyLabel="Sem movimentacao recente para exibir faturamento e compras."
+              />
             </CardContent>
           </Card>
         </div>
-
-        <Card className="flex flex-col">
-          <CardHeader className="gap-1 pb-2">
-            <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
-              Categorias no estoque
-            </CardTitle>
-            <CardDescription className="text-[11px]">
-              Distribuicao do inventario atual
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-1 items-center pt-0">
-            <InventoryCategoriesChart data={analytics.inventoryByCategory} />
-          </CardContent>
-        </Card>
-
-        <Card className="flex flex-col">
-          <CardHeader className="gap-1 pb-2">
-            <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
-              Faturamento x compras
-            </CardTitle>
-            <CardDescription className="text-[11px]">
-              Ultimos 30 dias
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-1 items-center pt-0">
-            <ProductCatalogPerformanceChart
-              data={analytics.recentPerformance}
-              emptyLabel="Sem movimentacao recente para exibir faturamento e compras."
-            />
-          </CardContent>
-        </Card>
       </div>
 
       <Dialog
