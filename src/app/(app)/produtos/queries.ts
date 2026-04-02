@@ -119,6 +119,7 @@ export async function getProductByIdQuery(
       categoryId: products.categoryId,
       categoryName: categories.name,
       costPrice: products.costPrice,
+      createdAt: products.createdAt,
       description: products.description,
       id: products.id,
       imageBlurDataUrl: products.imageBlurDataUrl,
