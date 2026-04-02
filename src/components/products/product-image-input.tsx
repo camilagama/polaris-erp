@@ -7,10 +7,10 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Image from "next/image";
-import { type DragEvent, useEffect, useMemo, useRef, useState } from "react";
-import { validateProductImageFile } from "@/components/products/product-image-upload";
+import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import type { ProductImageAsset } from "@/features/products/contracts";
+import { useFileUpload } from "@/hooks/use-file-upload";
 import { cn } from "@/lib/utils";
 
 interface ProductImageInputProps {
@@ -24,6 +24,9 @@ interface ProductImageInputProps {
   onFileChange: (file: File | null) => void;
   onRemoveCurrentImageToggle?: (value: boolean) => void;
 }
+
+const PRODUCT_IMAGE_ACCEPT = "image/jpeg,image/png,image/webp";
+const PRODUCT_IMAGE_MAX_BYTES = 10 * 1024 * 1024;
 
 const buildDisplayImage = ({
   currentImage,
@@ -53,6 +56,22 @@ const buildDisplayImage = ({
   return null;
 };
 
+const translateUploadError = (error: string | undefined) => {
+  if (!error) {
+    return null;
+  }
+
+  if (error.includes("maximum size")) {
+    return "A imagem excede o limite de 10 MB.";
+  }
+
+  if (error.includes("accepted file type")) {
+    return "Use uma imagem JPG, PNG ou WebP.";
+  }
+
+  return error;
+};
+
 export function ProductImageInput({
   currentImage = null,
   currentImageAlt = "Imagem do produto",
@@ -64,19 +83,29 @@ export function ProductImageInput({
   onFileChange,
   onRemoveCurrentImageToggle,
 }: ProductImageInputProps) {
-  const inputRef = useRef<HTMLInputElement | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [fileName, setFileName] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
-
-  useEffect(() => {
-    return () => {
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
+  const [state, actions] = useFileUpload({
+    accept: PRODUCT_IMAGE_ACCEPT,
+    maxFiles: 1,
+    maxSize: PRODUCT_IMAGE_MAX_BYTES,
+    onFilesAdded: (addedFiles) => {
+      const selectedFile = addedFiles[0]?.file;
+      if (selectedFile instanceof File) {
+        onRemoveCurrentImageToggle?.(false);
+        onFileChange(selectedFile);
       }
-    };
-  }, [previewUrl]);
+    },
+    onFilesChange: (files) => {
+      const selectedFile = files[0]?.file;
+      onFileChange(selectedFile instanceof File ? selectedFile : null);
+    },
+  });
+
+  const previewUrl = state.files[0]?.preview ?? null;
+  const fileName =
+    state.files[0]?.file instanceof File
+      ? state.files[0].file.name
+      : (state.files[0]?.file.name ?? null);
+  const error = translateUploadError(state.errors[0]);
 
   const displayImage = useMemo(
     () =>
@@ -90,65 +119,8 @@ export function ProductImageInput({
   );
 
   const clearSelectedFile = () => {
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-    }
-
-    if (inputRef.current) {
-      inputRef.current.value = "";
-    }
-
-    setPreviewUrl(null);
-    setFileName(null);
-    setError(null);
+    actions.clearFiles();
     onFileChange(null);
-  };
-
-  const handleSelectedFile = (selectedFile: File | null) => {
-    if (!selectedFile) {
-      clearSelectedFile();
-      return;
-    }
-
-    try {
-      validateProductImageFile(selectedFile);
-      const nextPreviewUrl = URL.createObjectURL(selectedFile);
-
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
-      }
-
-      setPreviewUrl(nextPreviewUrl);
-      setFileName(selectedFile.name);
-      setError(null);
-      onRemoveCurrentImageToggle?.(false);
-      onFileChange(selectedFile);
-    } catch (validationError) {
-      if (inputRef.current) {
-        inputRef.current.value = "";
-      }
-
-      setPreviewUrl(null);
-      setFileName(null);
-      setError(
-        validationError instanceof Error
-          ? validationError.message
-          : "Selecione uma imagem valida."
-      );
-      onFileChange(null);
-    }
-  };
-
-  const handleDrop = (event: DragEvent<HTMLButtonElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
-    setIsDragging(false);
-
-    if (disabled) {
-      return;
-    }
-
-    handleSelectedFile(event.dataTransfer.files?.[0] ?? null);
   };
 
   const hasVisibleImage = Boolean(displayImage);
@@ -177,117 +149,90 @@ export function ProductImageInput({
       </div>
 
       <input
-        accept={["image/jpeg", "image/png", "image/webp"].join(",")}
+        {...actions.getInputProps({
+          accept: PRODUCT_IMAGE_ACCEPT,
+          disabled,
+          id,
+        })}
         className="sr-only"
-        disabled={disabled}
-        id={id}
-        onChange={(event) =>
-          handleSelectedFile(event.target.files?.[0] ?? null)
-        }
-        ref={inputRef}
-        type="file"
       />
 
-      <div className="relative">
-        <button
-          className={cn(
-            "group relative flex min-h-48 w-full items-center justify-center overflow-hidden rounded-2xl border border-border/70 border-dashed bg-muted/15 p-4 text-left transition-colors",
-            hasVisibleImage
-              ? "border-border/60 border-solid bg-card"
-              : "hover:bg-muted/25",
-            isDragging && "border-primary bg-primary/5",
-            disabled && "pointer-events-none opacity-60"
-          )}
-          onClick={() => inputRef.current?.click()}
-          onDragEnter={(event) => {
-            event.preventDefault();
-            setIsDragging(true);
-          }}
-          onDragLeave={(event) => {
-            event.preventDefault();
-            if (
-              !event.currentTarget.contains(event.relatedTarget as Node | null)
-            ) {
-              setIsDragging(false);
-            }
-          }}
-          onDragOver={(event) => {
-            event.preventDefault();
-          }}
-          onDrop={handleDrop}
-          type="button"
-        >
+      <div className="grid gap-3 rounded-2xl border border-border/60 bg-card p-3 sm:grid-cols-[8.5rem_minmax(0,1fr)]">
+        <div className="relative aspect-square overflow-hidden rounded-2xl border border-border/60 bg-muted/20">
           {visibleImage ? (
-            <>
-              <div className="absolute inset-0">
-                <Image
-                  alt={visibleImage.alt}
-                  className="object-contain"
-                  fill
-                  sizes="(max-width: 768px) 100vw, 420px"
-                  src={visibleImage.src}
-                  unoptimized={previewUrl !== null}
-                />
-              </div>
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-background/90 via-background/40 to-transparent px-4 py-3">
-                <div className="flex items-end justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="font-medium text-sm">
-                      {previewUrl ? "Nova imagem selecionada" : "Imagem atual"}
-                    </p>
-                    <p className="truncate text-muted-foreground text-xs">
-                      {fileName ?? "Clique para trocar ou arraste outra imagem"}
-                    </p>
-                  </div>
-                  <div className="hidden shrink-0 rounded-md border border-border/60 bg-background/90 px-2 py-1 text-[11px] text-muted-foreground sm:block">
-                    Trocar
-                  </div>
-                </div>
-              </div>
-            </>
+            <Image
+              alt={visibleImage.alt}
+              className="object-cover"
+              fill
+              sizes="136px"
+              src={visibleImage.src}
+              unoptimized={previewUrl !== null}
+            />
           ) : (
-            <div className="flex max-w-sm flex-col items-center gap-3 text-center">
-              <div className="flex size-14 items-center justify-center rounded-2xl border border-border/60 bg-background/80 text-muted-foreground">
-                <HugeiconsIcon icon={ImageUploadIcon} strokeWidth={1.8} />
-              </div>
-              <div className="space-y-1">
-                <p className="font-medium text-sm">
-                  Arraste uma imagem ou clique para selecionar
-                </p>
-                <p className="text-muted-foreground text-xs">
-                  JPG, PNG ou WebP. O app gera automaticamente a versao de
-                  detalhe e a miniatura da tabela.
-                </p>
-              </div>
+            <div className="flex size-full items-center justify-center text-muted-foreground">
+              <HugeiconsIcon icon={Image01Icon} strokeWidth={1.8} />
             </div>
           )}
-        </button>
-
-        {previewUrl ? (
-          <span className="absolute top-3 right-3">
-            <Button
-              aria-label="Remover imagem selecionada"
-              className="rounded-full"
-              onClick={(event) => {
-                event.stopPropagation();
-                clearSelectedFile();
-              }}
-              size="icon-xs"
-              type="button"
-              variant="secondary"
-            >
-              <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} />
-            </Button>
-          </span>
-        ) : null}
-      </div>
-
-      {hasVisibleImage ? null : (
-        <div className="flex items-center gap-2 text-muted-foreground text-xs">
-          <HugeiconsIcon icon={Image01Icon} strokeWidth={1.8} />
-          Nenhuma imagem selecionada.
         </div>
-      )}
+
+        <div className="flex min-w-0 flex-col justify-between gap-3">
+          <button
+            className={cn(
+              "flex min-h-28 w-full flex-col items-start justify-center rounded-2xl border border-border/70 border-dashed bg-muted/15 px-4 py-3 text-left transition-colors",
+              !hasVisibleImage && "hover:bg-muted/25",
+              state.isDragging && "border-primary bg-primary/5",
+              disabled && "pointer-events-none opacity-60"
+            )}
+            onClick={actions.openFileDialog}
+            onDragEnter={actions.handleDragEnter}
+            onDragLeave={actions.handleDragLeave}
+            onDragOver={actions.handleDragOver}
+            onDrop={actions.handleDrop}
+            type="button"
+          >
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <HugeiconsIcon icon={ImageUploadIcon} strokeWidth={1.8} />
+              <span className="font-medium text-foreground text-sm">
+                {hasVisibleImage
+                  ? "Trocar imagem"
+                  : "Selecionar imagem do produto"}
+              </span>
+            </div>
+            <p className="mt-2 text-muted-foreground text-xs">
+              Arraste e solte aqui ou clique para buscar no dispositivo.
+            </p>
+            <p className="mt-1 text-muted-foreground text-xs">
+              JPG, PNG ou WebP com ate 10 MB.
+            </p>
+          </button>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {previewUrl ? (
+              <Button
+                aria-label="Remover imagem selecionada"
+                onClick={clearSelectedFile}
+                size="xs"
+                type="button"
+                variant="secondary"
+              >
+                <HugeiconsIcon
+                  data-icon="inline-start"
+                  icon={Cancel01Icon}
+                  strokeWidth={2}
+                />
+                Limpar selecao
+              </Button>
+            ) : null}
+
+            <p className="min-w-0 truncate text-muted-foreground text-xs">
+              {fileName ??
+                (visibleImage
+                  ? "Imagem pronta para edicao."
+                  : "Nenhuma imagem selecionada.")}
+            </p>
+          </div>
+        </div>
+      </div>
 
       {isMarkedForRemoval && !previewUrl ? (
         <p className="text-[11px] text-muted-foreground">

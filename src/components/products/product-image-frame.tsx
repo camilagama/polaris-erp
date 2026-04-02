@@ -53,7 +53,7 @@ export function ProductImageFrame({
       <Image
         alt={alt}
         blurDataURL={image.blurDataURL}
-        className="object-contain"
+        className="object-cover"
         fill
         placeholder="blur"
         priority={priority}

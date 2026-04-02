@@ -92,46 +92,38 @@ export default async function ProdutoDetalhePage(
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(18rem,0.9fr)_minmax(18rem,0.9fr)]">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(18rem,0.85fr)]">
         <Card>
           <CardHeader>
             <CardTitle>Resumo</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-[120px_1fr] gap-x-3 gap-y-3 text-xs">
-              <span className="text-muted-foreground">Categoria</span>
-              <span>{product.categoryName}</span>
-              <span className="text-muted-foreground">Compra</span>
-              <span>{formatDate(product.purchasedOn)}</span>
-              <span className="text-muted-foreground">Status</span>
-              <span>{product.archivedAt ? "Arquivado" : "Ativo"}</span>
-              <span className="text-muted-foreground">Estoque atual</span>
-              <span>{product.stock} un.</span>
-              <span className="text-muted-foreground">Preco de venda</span>
-              <span>{formatCurrency(product.price)}</span>
-              <span className="text-muted-foreground">Observacoes</span>
-              <div className="text-xs/relaxed">
-                {product.description?.trim() || "Sem observacoes."}
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+              <div className="size-28 shrink-0 sm:size-32">
+                <ProductImageFrame
+                  alt={`Imagem do produto ${product.name}`}
+                  image={product.image}
+                  priority
+                  sizes="128px"
+                />
               </div>
-            </div>
-          </CardContent>
-        </Card>
 
-        <Card className="h-fit">
-          <CardHeader>
-            <CardTitle>Imagem</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex justify-center xl:justify-start">
-              <div className="w-full max-w-80">
-                <div className="relative aspect-[4/3]">
-                  <ProductImageFrame
-                    alt={`Imagem do produto ${product.name}`}
-                    image={product.image}
-                    priority
-                    shape="wide"
-                    sizes="(max-width: 1280px) 50vw, 320px"
-                  />
+              <div className="min-w-0 flex-1">
+                <div className="grid grid-cols-[120px_1fr] gap-x-3 gap-y-3 text-xs">
+                  <span className="text-muted-foreground">Categoria</span>
+                  <span>{product.categoryName}</span>
+                  <span className="text-muted-foreground">Compra</span>
+                  <span>{formatDate(product.purchasedOn)}</span>
+                  <span className="text-muted-foreground">Status</span>
+                  <span>{product.archivedAt ? "Arquivado" : "Ativo"}</span>
+                  <span className="text-muted-foreground">Estoque atual</span>
+                  <span>{product.stock} un.</span>
+                  <span className="text-muted-foreground">Preco de venda</span>
+                  <span>{formatCurrency(product.price)}</span>
+                  <span className="text-muted-foreground">Observacoes</span>
+                  <div className="text-xs/relaxed">
+                    {product.description?.trim() || "Sem observacoes."}
+                  </div>
                 </div>
               </div>
             </div>
