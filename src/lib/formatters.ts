@@ -9,6 +9,11 @@ const currencyFormatter = new Intl.NumberFormat("pt-BR", {
   style: "currency",
 });
 
+const compactNumberFormatter = new Intl.NumberFormat("pt-BR", {
+  maximumFractionDigits: 1,
+  notation: "compact",
+});
+
 const dateTimeFormatter = new Intl.DateTimeFormat("pt-BR", {
   day: "2-digit",
   hour: "2-digit",
@@ -19,6 +24,15 @@ const dateTimeFormatter = new Intl.DateTimeFormat("pt-BR", {
 
 export const formatCurrency = (value: number | string | null | undefined) =>
   currencyFormatter.format(Number(value) || 0);
+
+export const formatCompactCurrency = (
+  value: number | string | null | undefined
+) => {
+  const normalizedValue = Number(value) || 0;
+  const prefix = normalizedValue < 0 ? "-R$ " : "R$ ";
+
+  return `${prefix}${compactNumberFormatter.format(Math.abs(normalizedValue))}`;
+};
 
 export const formatDate = (value: string) =>
   format(parseIsoDate(value), "dd/MM/yyyy", { locale: ptBR });
