@@ -25,6 +25,8 @@ vi.mock("@/db", () => ({
 }));
 
 type MockFn = ReturnType<typeof vi.fn>;
+const STALE_PRICE_ERROR_REGEX =
+  /Preco do produto Produto 1 foi atualizado para R\$[\s\u00A0]?100,00\. Revise a venda e tente novamente\./;
 
 interface ProductState {
   archivedAt: Date | null;
@@ -285,6 +287,7 @@ describe("sales server actions", () => {
       createSaleAction({
         items: [
           {
+            expectedUnitPrice: 90,
             productId: "product-1",
             quantity: 1,
           },
@@ -304,10 +307,12 @@ describe("sales server actions", () => {
       createSaleAction({
         items: [
           {
+            expectedUnitPrice: 90,
             productId: "product-1",
             quantity: 1,
           },
           {
+            expectedUnitPrice: 90,
             productId: "product-1",
             quantity: 1,
           },
@@ -342,6 +347,7 @@ describe("sales server actions", () => {
         freightAmount: 15,
         items: [
           {
+            expectedUnitPrice: 90,
             productId: "product-1",
             quantity: 3,
           },
@@ -352,6 +358,7 @@ describe("sales server actions", () => {
       createSaleAction({
         items: [
           {
+            expectedUnitPrice: 90,
             productId: "product-1",
             quantity: 3,
           },
@@ -418,6 +425,7 @@ describe("sales server actions", () => {
       discountAmount: 0,
       items: [
         {
+          expectedUnitPrice: 90,
           productId: "product-1",
           quantity: 1,
         },
@@ -462,6 +470,7 @@ describe("sales server actions", () => {
       freightAmount: 0,
       items: [
         {
+          expectedUnitPrice: 100,
           productId: "product-1",
           quantity: 2,
         },
@@ -479,6 +488,42 @@ describe("sales server actions", () => {
       paymentMethod: "card",
       totalAmount: "200.00",
     });
+  });
+
+  it("rejects the sale when the visible price is stale and asks for review", async () => {
+    const { createSaleAction } = await import("@/app/(app)/vendas/actions");
+    const { mockDb } = await resolveMocks();
+
+    const harness = createSalesHarness([
+      {
+        archivedAt: null,
+        costPrice: 30,
+        id: "product-1",
+        name: "Produto 1",
+        price: 100,
+        stock: 10,
+      },
+    ]);
+
+    mockDb.transaction.mockImplementation(harness.transaction as never);
+
+    await expect(
+      createSaleAction({
+        items: [
+          {
+            expectedUnitPrice: 90,
+            productId: "product-1",
+            quantity: 1,
+          },
+        ],
+        occurredOn: "2026-03-31",
+        paymentMethod: "pix",
+      })
+    ).rejects.toThrowError(STALE_PRICE_ERROR_REGEX);
+
+    expect(harness.salesLog).toEqual([]);
+    expect(harness.saleItemsLog).toEqual([]);
+    expect(harness.productById.get("product-1")?.stock).toBe(10);
   });
 
   it("cancels a sale and restores stock", async () => {

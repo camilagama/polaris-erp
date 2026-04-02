@@ -2,6 +2,7 @@ import { z } from "zod";
 import { isoDateSchema } from "@/lib/domain/date";
 
 const saleItemSchema = z.object({
+  expectedUnitPrice: z.coerce.number().min(0, "Preco esperado invalido."),
   productId: z.string().min(1, "Produto invalido."),
   quantity: z.coerce
     .number()

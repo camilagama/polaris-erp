@@ -7,6 +7,7 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { createSaleAction } from "@/app/(app)/vendas/actions";
 import { ProductDatePicker } from "@/components/products/product-date-picker";
+import { ProductCombobox } from "@/components/sales/product-combobox";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -134,12 +135,31 @@ export function CreateSaleDialog({
   };
 
   const handleSubmit = () => {
-    const payloadItems = items
-      .filter((item) => item.productId.trim().length > 0)
-      .map((item) => ({
+    const payloadItems: Array<{
+      expectedUnitPrice: number;
+      productId: string;
+      quantity: number;
+    }> = [];
+
+    for (const item of items) {
+      if (item.productId.trim().length === 0) {
+        continue;
+      }
+
+      const selectedProduct = productById.get(item.productId);
+
+      if (!selectedProduct) {
+        toast.error("Um dos produtos da venda nao esta mais disponivel.");
+        router.refresh();
+        return;
+      }
+
+      payloadItems.push({
+        expectedUnitPrice: Number(selectedProduct.price),
         productId: item.productId,
         quantity: Number(item.quantity),
-      }));
+      });
+    }
 
     if (payloadItems.length === 0) {
       toast.error("Adicione pelo menos um item na venda.");
@@ -178,6 +198,7 @@ export function CreateSaleDialog({
         resetForm();
         router.push(`/vendas/${saleId}`);
       } catch (error) {
+        router.refresh();
         toast.error(
           error instanceof Error
             ? error.message
@@ -342,29 +363,16 @@ export function CreateSaleDialog({
                             <Label className="text-[11px] text-muted-foreground sm:hidden">
                               Produto
                             </Label>
-                            <Select
-                              onValueChange={(value) => {
+                            <ProductCombobox
+                              onSelect={(productId) => {
                                 updateItem(item.id, (currentItem) => ({
                                   ...currentItem,
-                                  productId: value,
+                                  productId,
                                 }));
                               }}
+                              options={availableProducts}
                               value={item.productId}
-                            >
-                              <SelectTrigger className="h-8 w-full">
-                                <SelectValue placeholder="Selecione um produto" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {availableProducts.map((product) => (
-                                  <SelectItem
-                                    key={product.id}
-                                    value={product.id}
-                                  >
-                                    {product.name} ({product.stock} un.)
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            />
                           </div>
 
                           <div className="flex flex-col gap-1">

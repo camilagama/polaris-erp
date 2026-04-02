@@ -75,10 +75,15 @@ export function ProductDetailActions({
   categories,
   linkedSalesCount,
   product,
+  settings,
 }: {
   categories: ProductCategoryOption[];
   linkedSalesCount: number;
   product: ProductListItem;
+  settings: {
+    idealMarkupPercent: number;
+    minimumMarkupPercent: number;
+  };
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -91,6 +96,7 @@ export function ProductDetailActions({
   const [editDescription, setEditDescription] = useState(
     product.description ?? ""
   );
+  const [editPrice, setEditPrice] = useState(product.price);
   const [editImageFile, setEditImageFile] = useState<File | null>(null);
   const [editImageMarkedForRemoval, setEditImageMarkedForRemoval] =
     useState(false);
@@ -114,6 +120,7 @@ export function ProductDetailActions({
           categoryId: editCategoryId,
           description: editDescription || undefined,
           name: editName,
+          price: editPrice,
         });
 
         if (editImageFile) {
@@ -231,7 +238,15 @@ export function ProductDetailActions({
             </Link>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={() => setEditing(true)}>
+          <DropdownMenuItem
+            onSelect={() => {
+              setEditName(product.name);
+              setEditCategoryId(product.categoryId);
+              setEditDescription(product.description ?? "");
+              setEditPrice(product.price);
+              setEditing(true);
+            }}
+          >
             <HugeiconsIcon icon={Edit01Icon} strokeWidth={2} />
             Editar
           </DropdownMenuItem>
@@ -267,6 +282,7 @@ export function ProductDetailActions({
           if (!open) {
             setEditImageFile(null);
             setEditImageMarkedForRemoval(false);
+            setEditPrice(product.price);
           }
         }}
         open={editing}
@@ -281,6 +297,7 @@ export function ProductDetailActions({
           <ProductEditFields
             categories={categories}
             categoryId={editCategoryId}
+            costPrice={product.costPrice}
             description={editDescription}
             image={product.image}
             imageDisabled={pending}
@@ -291,11 +308,20 @@ export function ProductDetailActions({
             onImageFileChange={setEditImageFile}
             onImageRemovalChange={setEditImageMarkedForRemoval}
             onNameChange={setEditName}
+            onPriceChange={setEditPrice}
+            price={editPrice}
             productName={editName || product.name}
+            settings={settings}
           />
           <DialogFooter>
             <Button
-              disabled={pending || editName.trim().length === 0}
+              disabled={
+                pending ||
+                editName.trim().length === 0 ||
+                editPrice.trim().length === 0 ||
+                Number(editPrice) < 0 ||
+                Number.isNaN(Number(editPrice))
+              }
               onClick={handleEditProduct}
               type="button"
             >

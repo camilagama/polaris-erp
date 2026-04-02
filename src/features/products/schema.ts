@@ -18,6 +18,7 @@ export const updateProductSchema = z.object({
   categoryId: z.string().min(1, "Categoria e obrigatoria."),
   description: z.string().trim().optional(),
   name: z.string().trim().min(1, "Nome e obrigatorio."),
+  price: z.coerce.number().min(0, "Preco invalido."),
 });
 
 export const stockAdditionSchema = z.object({

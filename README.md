@@ -34,6 +34,7 @@ Fluxos de dominio modelados hoje:
 - `categories`: categorias de produto, incluindo a categoria protegida `Outros`
 - `system_settings`: configuracoes globais de markup minimo, markup ideal e regras de taxa por pagamento
 - `products`: catalogo com custo medio, preco de venda, estoque e arquivamento
+- `product_price_changes`: trilha leve de alteracoes de preco por produto
 - `product_stock_entries`: entradas de estoque
 - `product_stock_write_offs`: baixas operacionais de estoque
 - `sales`: vendas concluidas e canceladas
@@ -78,10 +79,13 @@ Ainda nao implementado:
 - A categoria `Outros` e fixa, protegida e nao pode ser removida.
 - Todo produto precisa de categoria.
 - O cadastro de produto usa as margens globais para sugerir preco minimo e ideal a partir do custo.
+- A edicao de produto permite alterar o preco atual do catalogo sem reescrever vendas anteriores.
+- Cada alteracao de preco registra valor anterior, valor novo, usuario e data.
 - Preco abaixo do minimo gera alerta visual, mas continua permitido.
 - As baixas de estoque usam motivos simplificados (`adjustment` e `operational`) com detalhamento livre em observacoes.
 - Datas recebidas nas actions devem estar no formato ISO `YYYY-MM-DD`.
 - Vendas no MVP nascem como `completed`, com baixa imediata de estoque.
+- A venda valida se o preco visivel ainda corresponde ao preco atual do produto antes de concluir.
 - O mesmo produto nao pode se repetir dentro da mesma venda.
 - O total final da venda segue a formula oficial:
   - `subtotal dos itens + frete + adicional - desconto + taxa`

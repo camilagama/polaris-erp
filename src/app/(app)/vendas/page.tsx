@@ -39,6 +39,7 @@ export default async function VendasPage(props: PageProps<"/vendas">) {
     <SalesPanel
       analytics={analytics}
       dateBounds={bounds}
+      initialCursor={salesResult.nextCursor}
       saleProducts={saleProducts}
       sales={salesResult.items}
       selectedRange={selectedRange}

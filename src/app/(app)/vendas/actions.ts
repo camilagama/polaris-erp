@@ -7,6 +7,7 @@ import { products, saleItems, sales } from "@/db/schema";
 import { buildSaleSnapshot } from "@/features/sales/calculations";
 import { createSaleSchema } from "@/features/sales/schema";
 import { roundCurrency, toCurrencyString } from "@/lib/domain/currency";
+import { formatCurrency } from "@/lib/formatters";
 import { requireActionSession } from "@/lib/server-action-auth";
 
 interface LockedProductRow extends Record<string, unknown> {
@@ -63,6 +64,7 @@ export async function createSaleAction(data: {
   discountAmount?: number;
   freightAmount?: number;
   items: Array<{
+    expectedUnitPrice: number;
     productId: string;
     quantity: number;
   }>;
@@ -104,6 +106,12 @@ export async function createSaleAction(data: {
 
         if (item.quantity > product.stock) {
           throw new Error(`Estoque insuficiente para ${product.name}.`);
+        }
+
+        if (toCurrencyString(item.expectedUnitPrice) !== product.price) {
+          throw new Error(
+            `Preco do produto ${product.name} foi atualizado para ${formatCurrency(product.price)}. Revise a venda e tente novamente.`
+          );
         }
 
         return {

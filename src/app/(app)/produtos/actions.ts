@@ -4,6 +4,7 @@ import { eq, inArray, sql } from "drizzle-orm";
 import { refresh } from "next/cache";
 import { db } from "@/db";
 import {
+  productPriceChanges,
   productStockEntries,
   productStockWriteOffs,
   products,
@@ -46,6 +47,7 @@ interface LockedProductRow extends Record<string, unknown> {
   archivedAt: Date | null;
   costPrice: string;
   id: string;
+  price: string;
   stock: number;
 }
 
@@ -57,6 +59,7 @@ const lockProductForUpdate = async (
     select
       id,
       cost_price as "costPrice",
+      price,
       stock,
       archived_at as "archivedAt"
     from products
@@ -165,9 +168,10 @@ export async function updateProductAction(
     categoryId: string;
     description?: string;
     name: string;
+    price: string;
   }
 ) {
-  await requireActionSession();
+  const session = await requireActionSession();
   const parsed = updateProductSchema.parse(data);
   const category = await getProductCategoryById(parsed.categoryId);
 
@@ -175,14 +179,29 @@ export async function updateProductAction(
     throw new Error("Selecione uma categoria valida.");
   }
 
-  await db
-    .update(products)
-    .set({
-      categoryId: parsed.categoryId,
-      description: parsed.description || undefined,
-      name: parsed.name,
-    })
-    .where(eq(products.id, id));
+  await db.transaction(async (tx) => {
+    const product = await lockProductForUpdate(tx, id);
+    const nextPrice = toCurrencyString(parsed.price);
+
+    await tx
+      .update(products)
+      .set({
+        categoryId: parsed.categoryId,
+        description: parsed.description || undefined,
+        name: parsed.name,
+        price: nextPrice,
+      })
+      .where(eq(products.id, id));
+
+    if (product.price !== nextPrice) {
+      await tx.insert(productPriceChanges).values({
+        changedByUserId: session.user.id,
+        nextPrice,
+        previousPrice: product.price,
+        productId: id,
+      });
+    }
+  });
 
   revalidateProducts();
 }

@@ -28,6 +28,7 @@ export default async function ProdutosPage() {
         key: category.key,
         name: category.name,
       }))}
+      initialCursor={productsResult.nextCursor}
       products={productsResult.items}
       settings={settings}
     />

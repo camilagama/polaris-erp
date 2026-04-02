@@ -4,6 +4,8 @@ import { createRunLabel, login, selectOption } from "./helpers";
 const categoryProtectedRegex = /A categoria Outros e protegida/i;
 const productDetailRouteRegex = /\/produtos\/.+/;
 const productsRouteRegex = /\/produtos$/;
+const price40Regex = /R\$\s*40,00/;
+const price55Regex = /R\$\s*55,00/;
 const saleDetailRouteRegex = /\/vendas\/.+/;
 
 test("creates inventory, records a sale, cancels it, and requires typed confirmation before destructive deletion", async ({
@@ -120,4 +122,101 @@ test("shows the protected Outros category as non-removable in settings", async (
   await expect(
     page.locator('button[title="Categoria protegida pelo sistema."]').first()
   ).toBeDisabled();
+});
+
+test("updates the catalog price for future sales without changing past sale snapshots", async ({
+  page,
+}) => {
+  const categoryName = createRunLabel("Categoria Preco");
+  const productName = createRunLabel("Produto Preco");
+
+  await login(page);
+
+  await page.goto("/configuracoes");
+  await page.getByLabel("Nova categoria").fill(categoryName);
+  await page.getByRole("button", { name: "Adicionar" }).first().click();
+  await expect(page.getByText(categoryName)).toBeVisible();
+
+  await page.goto("/produtos");
+  await page.getByRole("button", { name: "Cadastrar Produto" }).click();
+
+  const productDialog = page.getByRole("dialog");
+
+  await productDialog.getByLabel("Nome do Produto").fill(productName);
+  await selectOption(
+    page,
+    productDialog.getByLabel("Categoria"),
+    new RegExp(categoryName)
+  );
+  await productDialog.getByLabel("Estoque Inicial").fill("3");
+  await productDialog.getByLabel("Custo Unitario").fill("25");
+  await productDialog.getByLabel("Preco de Venda").fill("40");
+  await productDialog.getByRole("button", { name: "Salvar Produto" }).click();
+  await expect(page.getByText("Produto cadastrado.")).toBeVisible();
+
+  await page.goto("/vendas");
+  await page.getByRole("button", { name: "Nova venda" }).click();
+
+  const firstSaleDialog = page.getByRole("dialog");
+
+  await firstSaleDialog.getByRole("combobox").nth(1).click();
+  await page
+    .getByRole("option", { name: new RegExp(productName) })
+    .click({ force: true });
+  await firstSaleDialog
+    .getByRole("button", { name: "Confirmar venda" })
+    .click();
+
+  await expect(page).toHaveURL(saleDetailRouteRegex);
+  await expect(page.getByText(price40Regex).first()).toBeVisible();
+  const firstSaleUrl = page.url();
+
+  await page.goto("/produtos");
+  await page
+    .getByPlaceholder("Buscar por nome ou categoria")
+    .first()
+    .fill(productName);
+  await page.getByRole("link", { name: productName }).click();
+  await expect(page).toHaveURL(productDetailRouteRegex);
+
+  await page.getByRole("button", { name: `Acoes para ${productName}` }).click();
+  await page.getByRole("menuitem", { name: "Editar" }).click();
+
+  const editDialog = page.getByRole("dialog");
+
+  await editDialog.getByLabel("Preco de venda").fill("55");
+  await editDialog.getByRole("button", { name: "Salvar alteracoes" }).click();
+
+  await expect(page.getByText(price55Regex).first()).toBeVisible();
+  await expect(page.getByText("Ultima alteracao")).toBeVisible();
+
+  await page.goto("/produtos");
+  await page
+    .getByPlaceholder("Buscar por nome ou categoria")
+    .first()
+    .fill(productName);
+  await expect(
+    page
+      .getByRole("row", { name: new RegExp(productName) })
+      .getByText(price55Regex)
+  ).toBeVisible();
+
+  await page.goto("/vendas");
+  await page.getByRole("button", { name: "Nova venda" }).click();
+
+  const secondSaleDialog = page.getByRole("dialog");
+
+  await secondSaleDialog.getByRole("combobox").nth(1).click();
+  await page
+    .getByRole("option", { name: new RegExp(productName) })
+    .click({ force: true });
+  await secondSaleDialog
+    .getByRole("button", { name: "Confirmar venda" })
+    .click();
+
+  await expect(page).toHaveURL(saleDetailRouteRegex);
+  await expect(page.getByText(price55Regex).first()).toBeVisible();
+
+  await page.goto(firstSaleUrl);
+  await expect(page.getByText(price40Regex).first()).toBeVisible();
 });

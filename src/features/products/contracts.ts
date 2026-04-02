@@ -53,6 +53,14 @@ export interface ProductSaleHistoryItem {
   unitCostSnapshot: string;
 }
 
+export interface ProductPriceChangeItem {
+  changedByUserName: string | null;
+  createdAt: Date;
+  id: string;
+  nextPrice: string;
+  previousPrice: string;
+}
+
 export interface ProductInventoryCategory {
   categoryName: string;
   inventoryValue: number;

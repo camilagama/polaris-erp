@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { loadMoreSalesAction } from "@/app/(app)/vendas/pagination";
 import { DashboardDateRangeFilter } from "@/components/dashboard/dashboard-date-range-filter";
 import {
   CreateSaleDialog,
@@ -65,8 +66,9 @@ const getPaymentMethodLabel = (paymentMethod: SaleListItem["paymentMethod"]) =>
 export function SalesPanel({
   analytics,
   dateBounds,
+  initialCursor,
   saleProducts,
-  sales,
+  sales: initialSales,
   selectedRange,
 }: {
   analytics: SalesAnalytics;
@@ -74,14 +76,31 @@ export function SalesPanel({
     from: string;
     to: string;
   };
+  initialCursor: string | null;
   saleProducts: SaleProductOption[];
   sales: SaleListItem[];
   selectedRange: SalesDateRange;
 }) {
+  const [sales, setSales] = useState(initialSales);
+  const [cursor, setCursor] = useState(initialCursor);
+  const [loadingMore, startLoadMore] = useTransition();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<
     "all" | SaleListItem["status"]
   >("all");
+
+  const handleLoadMore = () => {
+    if (!cursor) {
+      return;
+    }
+
+    startLoadMore(async () => {
+      const result = await loadMoreSalesAction(cursor);
+
+      setSales((current) => [...current, ...result.items]);
+      setCursor(result.nextCursor);
+    });
+  };
 
   const normalizedSearch = searchTerm.trim().toLowerCase();
   const visibleSales = sales.filter((sale) => {
@@ -263,6 +282,20 @@ export function SalesPanel({
               </TableBody>
             </Table>
           </div>
+
+          {cursor ? (
+            <div className="flex justify-center">
+              <Button
+                disabled={loadingMore}
+                onClick={handleLoadMore}
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                {loadingMore ? "Carregando..." : "Carregar mais vendas"}
+              </Button>
+            </div>
+          ) : null}
         </>
       )}
 

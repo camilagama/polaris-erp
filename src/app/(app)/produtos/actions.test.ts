@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  productPriceChanges,
   productStockEntries,
   productStockWriteOffs,
   products,
@@ -60,6 +61,12 @@ interface ProductDeletionHarness {
   transaction: <T>(callback: (tx: unknown) => Promise<T>) => Promise<T>;
 }
 
+interface ProductUpdateHarness {
+  priceChangeLog: Record<string, unknown>[];
+  productUpdateLog: Record<string, unknown>[];
+  transaction: <T>(callback: (tx: unknown) => Promise<T>) => Promise<T>;
+}
+
 type MockFn = ReturnType<typeof vi.fn>;
 
 const resolveMocks = async () => {
@@ -111,6 +118,7 @@ const createInventoryHarness = (initialState: {
             archivedAt: null,
             costPrice: state.costPrice.toFixed(2),
             id: "product-1",
+            price: "20.00",
             stock: state.stock,
           },
         ],
@@ -218,6 +226,79 @@ const createProductDeletionHarness = (
     deletedSales,
     productName,
     state,
+    transaction,
+  };
+};
+
+const createProductUpdateHarness = (initialState: {
+  categoryId: string;
+  description: string | null;
+  name: string;
+  price: number;
+}): ProductUpdateHarness => {
+  const state = { ...initialState };
+  const productUpdateLog: Record<string, unknown>[] = [];
+  const priceChangeLog: Record<string, unknown>[] = [];
+
+  const transaction = async <T>(callback: (tx: unknown) => Promise<T>) => {
+    const tx = {
+      execute: async () => ({
+        rows: [
+          {
+            archivedAt: null,
+            costPrice: "10.00",
+            id: "product-1",
+            price: state.price.toFixed(2),
+            stock: 4,
+          },
+        ],
+      }),
+      insert: (table: unknown) => ({
+        values: (payload: Record<string, unknown>) => {
+          if (table !== productPriceChanges) {
+            throw new Error("Tabela de insert nao suportada no teste.");
+          }
+
+          priceChangeLog.push(payload);
+          return Promise.resolve([]);
+        },
+      }),
+      update: (table: unknown) => ({
+        set: (payload: Record<string, unknown>) => ({
+          where: (_whereExpression: unknown) => {
+            if (table !== products) {
+              throw new Error("Tabela de update nao suportada no teste.");
+            }
+
+            productUpdateLog.push(payload);
+            state.categoryId =
+              typeof payload.categoryId === "string"
+                ? payload.categoryId
+                : state.categoryId;
+            state.description =
+              typeof payload.description === "string" ||
+              payload.description === undefined
+                ? (payload.description ?? null)
+                : state.description;
+            state.name =
+              typeof payload.name === "string" ? payload.name : state.name;
+            state.price =
+              typeof payload.price === "string"
+                ? Number(payload.price)
+                : state.price;
+
+            return Promise.resolve([]);
+          },
+        }),
+      }),
+    };
+
+    return await callback(tx);
+  };
+
+  return {
+    priceChangeLog,
+    productUpdateLog,
     transaction,
   };
 };
@@ -379,6 +460,91 @@ describe("product server actions", () => {
       imageWidth: 1200,
       name: "Produto com imagem",
     });
+  });
+
+  it("updates product price and records a price history row when the value changes", async () => {
+    const { updateProductAction } = await import(
+      "@/app/(app)/produtos/actions"
+    );
+    const { mockDb } = await resolveMocks();
+
+    const harness = createProductUpdateHarness({
+      categoryId: "category-1",
+      description: "Descricao antiga",
+      name: "Produto teste",
+      price: 20,
+    });
+
+    mockDb.transaction.mockImplementation(harness.transaction as never);
+
+    await updateProductAction("product-1", {
+      categoryId: "category-2",
+      description: "Descricao nova",
+      name: "Produto atualizado",
+      price: "35",
+    });
+
+    expect(harness.productUpdateLog[0]).toMatchObject({
+      categoryId: "category-2",
+      description: "Descricao nova",
+      name: "Produto atualizado",
+      price: "35.00",
+    });
+    expect(harness.priceChangeLog).toEqual([
+      expect.objectContaining({
+        changedByUserId: "user-1",
+        nextPrice: "35.00",
+        previousPrice: "20.00",
+        productId: "product-1",
+      }),
+    ]);
+  });
+
+  it("does not record price history when the product price remains the same", async () => {
+    const { updateProductAction } = await import(
+      "@/app/(app)/produtos/actions"
+    );
+    const { mockDb } = await resolveMocks();
+
+    const harness = createProductUpdateHarness({
+      categoryId: "category-1",
+      description: null,
+      name: "Produto teste",
+      price: 20,
+    });
+
+    mockDb.transaction.mockImplementation(harness.transaction as never);
+
+    await updateProductAction("product-1", {
+      categoryId: "category-1",
+      description: undefined,
+      name: "Produto teste",
+      price: "20",
+    });
+
+    expect(harness.productUpdateLog[0]).toMatchObject({
+      name: "Produto teste",
+      price: "20.00",
+    });
+    expect(harness.priceChangeLog).toEqual([]);
+  });
+
+  it("rejects negative product price updates at the action boundary", async () => {
+    const { updateProductAction } = await import(
+      "@/app/(app)/produtos/actions"
+    );
+    const { mockDb } = await resolveMocks();
+
+    await expect(
+      updateProductAction("product-1", {
+        categoryId: "category-1",
+        description: "Descricao",
+        name: "Produto teste",
+        price: "-1",
+      })
+    ).rejects.toThrowError("Preco invalido.");
+
+    expect(mockDb.transaction).not.toHaveBeenCalled();
   });
 
   it("removes the current product image and clears image metadata", async () => {

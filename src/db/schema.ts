@@ -215,6 +215,43 @@ export const products = pgTable(
   ]
 );
 
+export const productPriceChanges = pgTable(
+  "product_price_changes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    productId: uuid("product_id")
+      .notNull()
+      .references(() => products.id, { onDelete: "cascade" }),
+    previousPrice: decimal("previous_price", { precision: 12, scale: 2 })
+      .notNull()
+      .default("0"),
+    nextPrice: decimal("next_price", { precision: 12, scale: 2 })
+      .notNull()
+      .default("0"),
+    changedByUserId: text("changed_by_user_id")
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp("created_at", tz).defaultNow().notNull(),
+  },
+  (table) => [
+    check(
+      "product_price_changes_previous_price_non_negative",
+      sql`${table.previousPrice} >= 0`
+    ),
+    check(
+      "product_price_changes_next_price_non_negative",
+      sql`${table.nextPrice} >= 0`
+    ),
+    index("product_price_changes_product_created_at_idx").on(
+      table.productId,
+      table.createdAt
+    ),
+    index("product_price_changes_changed_by_user_id_idx").on(
+      table.changedByUserId
+    ),
+  ]
+);
+
 export const productStockEntries = pgTable(
   "product_stock_entries",
   {

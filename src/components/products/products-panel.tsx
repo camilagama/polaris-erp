@@ -16,6 +16,7 @@ import {
   unarchiveProductAction,
   updateProductAction,
 } from "@/app/(app)/produtos/actions";
+import { loadMoreProductsAction } from "@/app/(app)/produtos/pagination";
 import { ProductEditFields } from "@/components/products/product-edit-fields";
 import { ProductImageFrame } from "@/components/products/product-image-frame";
 import { uploadProductImageToStaging } from "@/components/products/product-image-upload";
@@ -131,11 +132,13 @@ function ProductRowActions({
 export function ProductsPanel({
   analytics,
   categories,
-  products,
+  initialCursor,
+  products: initialProducts,
   settings,
 }: {
   analytics: ProductAnalytics;
   categories: ProductCategoryOption[];
+  initialCursor: string | null;
   products: ProductListItem[];
   settings: {
     idealMarkupPercent: number;
@@ -143,6 +146,9 @@ export function ProductsPanel({
   };
 }) {
   const [pending, startTransition] = useTransition();
+  const [products, setProducts] = useState(initialProducts);
+  const [cursor, setCursor] = useState(initialCursor);
+  const [loadingMore, startLoadMore] = useTransition();
   const [showArchived, setShowArchived] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [editingProduct, setEditingProduct] = useState<ProductListItem | null>(
@@ -151,19 +157,29 @@ export function ProductsPanel({
   const [editName, setEditName] = useState("");
   const [editCategoryId, setEditCategoryId] = useState("");
   const [editDescription, setEditDescription] = useState("");
+  const [editPrice, setEditPrice] = useState("");
   const [editImageFile, setEditImageFile] = useState<File | null>(null);
   const [editImageMarkedForRemoval, setEditImageMarkedForRemoval] =
     useState(false);
+
+  const handleLoadMore = () => {
+    if (!cursor) {
+      return;
+    }
+
+    startLoadMore(async () => {
+      const result = await loadMoreProductsAction(cursor);
+
+      setProducts((current) => [...current, ...result.items]);
+      setCursor(result.nextCursor);
+    });
+  };
 
   const normalizedSearch = searchTerm.trim().toLowerCase();
   const visibleProducts = products.filter((product) => {
     const matchesArchive = showArchived
       ? Boolean(product.archivedAt)
       : !product.archivedAt;
-
-    if (!matchesArchive) {
-      return false;
-    }
 
     if (!matchesArchive) {
       return false;
@@ -184,6 +200,7 @@ export function ProductsPanel({
     setEditName(product.name);
     setEditCategoryId(product.categoryId);
     setEditDescription(product.description ?? "");
+    setEditPrice(product.price);
     setEditImageFile(null);
     setEditImageMarkedForRemoval(false);
   };
@@ -199,6 +216,7 @@ export function ProductsPanel({
           categoryId: editCategoryId,
           description: editDescription || undefined,
           name: editName,
+          price: editPrice,
         });
 
         if (editImageFile) {
@@ -419,6 +437,20 @@ export function ProductsPanel({
               </TableBody>
             </Table>
           </div>
+
+          {cursor ? (
+            <div className="flex justify-center">
+              <Button
+                disabled={loadingMore}
+                onClick={handleLoadMore}
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                {loadingMore ? "Carregando..." : "Carregar mais produtos"}
+              </Button>
+            </div>
+          ) : null}
         </>
       )}
 
@@ -508,6 +540,7 @@ export function ProductsPanel({
             setEditingProduct(null);
             setEditImageFile(null);
             setEditImageMarkedForRemoval(false);
+            setEditPrice("");
           }
         }}
         open={Boolean(editingProduct)}
@@ -522,6 +555,7 @@ export function ProductsPanel({
           <ProductEditFields
             categories={categories}
             categoryId={editCategoryId}
+            costPrice={editingProduct?.costPrice ?? "0"}
             description={editDescription}
             image={editingProduct?.image ?? null}
             imageDisabled={pending}
@@ -532,11 +566,20 @@ export function ProductsPanel({
             onImageFileChange={setEditImageFile}
             onImageRemovalChange={setEditImageMarkedForRemoval}
             onNameChange={setEditName}
+            onPriceChange={setEditPrice}
+            price={editPrice}
             productName={editName || editingProduct?.name || "produto"}
+            settings={settings}
           />
           <DialogFooter>
             <Button
-              disabled={pending || editName.trim().length === 0}
+              disabled={
+                pending ||
+                editName.trim().length === 0 ||
+                editPrice.trim().length === 0 ||
+                Number(editPrice) < 0 ||
+                Number.isNaN(Number(editPrice))
+              }
               onClick={handleEditProduct}
               type="button"
             >

@@ -5,12 +5,16 @@ import { ProductDetailActions } from "@/components/products/product-detail-actio
 import { ProductImageFrame } from "@/components/products/product-image-frame";
 import { ProductUnitsSoldChart } from "@/components/products/product-sales-chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { listCategoriesWithUsage } from "@/features/catalog/server";
+import {
+  getCatalogSettings,
+  listCategoriesWithUsage,
+} from "@/features/catalog/server";
 import { buildProductInventorySummary } from "@/features/products/history";
 import { getProductSalesHistoryMetrics } from "@/features/products/server";
-import { formatCurrency, formatDate } from "@/lib/formatters";
+import { formatCurrency, formatDate, formatDateTime } from "@/lib/formatters";
 import {
   getProductByIdQuery,
+  getProductPriceChangesByProductIdQuery,
   getProductSalesByProductIdQuery,
   getProductStockEntriesByProductIdQuery,
   getProductStockWriteOffsByProductIdQuery,
@@ -20,15 +24,25 @@ export default async function ProdutoDetalhePage(
   props: PageProps<"/produtos/[id]">
 ) {
   const { id } = await props.params;
-  const [product, stockEntries, writeOffs, sales, categories, salesMetrics] =
-    await Promise.all([
-      getProductByIdQuery(id),
-      getProductStockEntriesByProductIdQuery(id),
-      getProductStockWriteOffsByProductIdQuery(id),
-      getProductSalesByProductIdQuery(id),
-      listCategoriesWithUsage(),
-      getProductSalesHistoryMetrics(id),
-    ]);
+  const [
+    product,
+    stockEntries,
+    writeOffs,
+    sales,
+    categories,
+    settings,
+    salesMetrics,
+    priceChanges,
+  ] = await Promise.all([
+    getProductByIdQuery(id),
+    getProductStockEntriesByProductIdQuery(id),
+    getProductStockWriteOffsByProductIdQuery(id),
+    getProductSalesByProductIdQuery(id),
+    listCategoriesWithUsage(),
+    getCatalogSettings(),
+    getProductSalesHistoryMetrics(id),
+    getProductPriceChangesByProductIdQuery(id),
+  ]);
 
   if (!product) {
     notFound();
@@ -89,6 +103,7 @@ export default async function ProdutoDetalhePage(
           }))}
           linkedSalesCount={linkedSalesCount}
           product={product}
+          settings={settings}
         />
       </div>
 
@@ -170,6 +185,70 @@ export default async function ProdutoDetalhePage(
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Preco</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-3 text-xs">
+            <div className="rounded-md border border-border/50 px-3 py-2">
+              <p className="text-muted-foreground">Preco atual</p>
+              <p className="font-medium text-sm">
+                {formatCurrency(product.price)}
+              </p>
+            </div>
+            <div className="rounded-md border border-border/50 px-3 py-2">
+              <p className="text-muted-foreground">Ultima alteracao</p>
+              {priceChanges[0] ? (
+                <div className="space-y-1">
+                  <p className="font-medium text-sm">
+                    {formatCurrency(priceChanges[0].previousPrice)} para{" "}
+                    {formatCurrency(priceChanges[0].nextPrice)}
+                  </p>
+                  <p className="text-muted-foreground">
+                    {formatDateTime(priceChanges[0].createdAt)}
+                    {priceChanges[0].changedByUserName
+                      ? ` por ${priceChanges[0].changedByUserName}`
+                      : ""}
+                  </p>
+                </div>
+              ) : (
+                <p className="text-muted-foreground">
+                  Nenhuma alteracao registrada desde a implantacao deste
+                  historico.
+                </p>
+              )}
+            </div>
+            {priceChanges.length > 0 ? (
+              <div className="rounded-md border border-border/50 px-3 py-2">
+                <p className="mb-2 text-muted-foreground">Historico recente</p>
+                <div className="flex flex-col gap-2">
+                  {priceChanges.map((change) => (
+                    <div
+                      className="flex items-start justify-between gap-3 border-border/40 border-b pb-2 last:border-b-0 last:pb-0"
+                      key={change.id}
+                    >
+                      <div className="min-w-0">
+                        <p className="font-medium">
+                          {formatCurrency(change.previousPrice)} para{" "}
+                          {formatCurrency(change.nextPrice)}
+                        </p>
+                        <p className="text-muted-foreground">
+                          {formatDateTime(change.createdAt)}
+                        </p>
+                      </div>
+                      <p className="shrink-0 text-right text-muted-foreground">
+                        {change.changedByUserName ?? "Usuario"}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

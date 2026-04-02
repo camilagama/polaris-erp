@@ -28,7 +28,7 @@ A aplicacao permanece gerencial e nao fiscal/contabil.
 ### 2.2 Funcionalidades disponiveis
 
 - cadastro de produto com estoque inicial opcional
-- edicao de nome, categoria e observacoes do produto
+- edicao de nome, categoria, observacoes e preco atual do produto
 - arquivamento e desarquivamento de produto
 - exclusao fisica de produto
 - registro de entrada de estoque com custo unitario e data
@@ -58,6 +58,7 @@ Nao esta implementado neste momento:
 - uso em desktop e celular
 - estoque unico global
 - sem variacoes por produto
+- historico leve de alteracao de preco por produto
 
 ## 5. Modelo de dominio atual
 
@@ -173,6 +174,8 @@ Observacoes:
 
 - taxas de pagamento nao entram na sugestao de preco de catalogo
 - frete, adicional, desconto e taxa entram apenas no total final da venda
+- alterar o preco atual do produto impacta apenas vendas futuras
+- toda alteracao de preco registra valor anterior, valor novo, usuario e data
 
 ## 9. Regras de integridade
 

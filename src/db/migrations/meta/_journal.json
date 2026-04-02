@@ -120,6 +120,13 @@
       "when": 1775149801967,
       "tag": "20260402171001_aromatic_paladin",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1775151067540,
+      "tag": "20260402173107_sturdy_ultimates",
+      "breakpoints": true
     }
   ]
 }

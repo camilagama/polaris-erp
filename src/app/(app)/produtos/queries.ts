@@ -2,14 +2,17 @@ import { asc, desc, eq, lt } from "drizzle-orm";
 import { db } from "@/db";
 import {
   categories,
+  productPriceChanges,
   productStockEntries,
   productStockWriteOffs,
   products,
   saleItems,
   sales,
+  users,
 } from "@/db/schema";
 import type {
   ProductListItem,
+  ProductPriceChangeItem,
   ProductSaleHistoryItem,
   ProductStockEntryItem,
   ProductStockWriteOffItem,
@@ -232,4 +235,24 @@ export async function getProductSalesByProductIdQuery(
     quantity: Number(row.quantity),
     status: row.status as ProductSaleHistoryItem["status"],
   }));
+}
+
+export async function getProductPriceChangesByProductIdQuery(
+  productId: string
+): Promise<ProductPriceChangeItem[]> {
+  const rows = await db
+    .select({
+      changedByUserName: users.name,
+      createdAt: productPriceChanges.createdAt,
+      id: productPriceChanges.id,
+      nextPrice: productPriceChanges.nextPrice,
+      previousPrice: productPriceChanges.previousPrice,
+    })
+    .from(productPriceChanges)
+    .leftJoin(users, eq(productPriceChanges.changedByUserId, users.id))
+    .where(eq(productPriceChanges.productId, productId))
+    .orderBy(desc(productPriceChanges.createdAt))
+    .limit(10);
+
+  return rows;
 }
