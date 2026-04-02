@@ -51,14 +51,14 @@ export function RevenueResultChart({
 
   if (!hasData) {
     return (
-      <div className="flex h-56 items-center justify-center rounded-2xl border border-border/70 border-dashed bg-muted/10 px-4 text-center text-muted-foreground text-sm">
-        Sem vendas concluidas nos ultimos 6 meses para comparar vendas e custos.
+      <div className="flex h-48 items-center justify-center rounded-2xl border border-border/70 border-dashed bg-muted/10 px-4 text-center text-muted-foreground text-sm">
+        Sem dados no periodo para comparar vendas e custos.
       </div>
     );
   }
 
   return (
-    <ChartContainer className="h-56 w-full" config={chartConfig}>
+    <ChartContainer className="h-48 w-full" config={chartConfig}>
       <BarChart accessibilityLayer data={data}>
         <CartesianGrid vertical={false} />
         <XAxis
@@ -91,7 +91,7 @@ export function RevenueResultChart({
             />
           }
         />
-        <ChartLegend content={<ChartLegendContent />} />
+        <ChartLegend content={<ChartLegendContent className="gap-3 pt-2" />} />
         <Bar dataKey="sold" fill="var(--color-sold)" radius={6} />
         <Bar dataKey="costs" fill="var(--color-costs)" radius={6} />
       </BarChart>

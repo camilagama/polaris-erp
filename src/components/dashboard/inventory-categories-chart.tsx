@@ -28,8 +28,8 @@ export function InventoryCategoriesChart({
 }) {
   if (data.length === 0) {
     return (
-      <div className="flex h-56 items-center justify-center rounded-2xl border border-border/70 border-dashed bg-muted/10 px-4 text-center text-muted-foreground text-sm">
-        Sem valor de estoque disponivel para distribuir por categoria.
+      <div className="flex h-48 items-center justify-center rounded-2xl border border-border/70 border-dashed bg-muted/10 px-4 text-center text-muted-foreground text-sm">
+        Sem estoque para distribuir por categoria.
       </div>
     );
   }
@@ -51,7 +51,7 @@ export function InventoryCategoriesChart({
   }, {});
 
   return (
-    <ChartContainer className="h-56 w-full" config={chartConfig}>
+    <ChartContainer className="h-48 w-full" config={chartConfig}>
       <PieChart accessibilityLayer>
         <ChartTooltip
           content={
@@ -73,9 +73,9 @@ export function InventoryCategoriesChart({
         <Pie
           data={chartData}
           dataKey="inventoryValue"
-          innerRadius={55}
+          innerRadius={44}
           nameKey="categoryKey"
-          outerRadius={82}
+          outerRadius={68}
           paddingAngle={2}
           strokeWidth={4}
         >
@@ -86,7 +86,7 @@ export function InventoryCategoriesChart({
         <ChartLegend
           content={
             <ChartLegendContent
-              className="flex-wrap gap-3"
+              className="flex-wrap gap-2 pt-2 text-[11px]"
               nameKey="categoryKey"
             />
           }

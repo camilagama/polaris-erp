@@ -101,10 +101,11 @@ export function DateRangePicker({
       <PopoverTrigger asChild>
         <Button
           className={cn(
-            "min-w-56 justify-start text-left font-normal",
+            "min-w-56 justify-start text-left font-normal sm:min-w-72",
             disabled && "opacity-70"
           )}
           disabled={disabled}
+          size="sm"
           type="button"
           variant="outline"
         >
@@ -118,10 +119,10 @@ export function DateRangePicker({
           })}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-auto p-0">
-        <div className="grid gap-0 sm:grid-cols-[180px_1fr]">
+      <PopoverContent align="end" className="w-auto p-0">
+        <div className="grid gap-0 sm:grid-cols-[168px_1fr]">
           {presets.length > 0 ? (
-            <div className="flex flex-col gap-2 border-border/60 border-b p-3 sm:border-r sm:border-b-0">
+            <div className="flex flex-col gap-2 border-border/60 border-b bg-muted/10 p-3 sm:border-r sm:border-b-0">
               <p className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
                 Presets
               </p>
@@ -157,7 +158,7 @@ export function DateRangePicker({
 
           <div className="flex flex-col">
             <Calendar
-              className="rounded-none bg-muted/5 p-3"
+              className="rounded-none bg-background p-3"
               locale={ptBR}
               mode="range"
               onSelect={(rangeValue) => {
@@ -167,7 +168,7 @@ export function DateRangePicker({
               selected={draftRange}
             />
 
-            <div className="flex items-center justify-between border-border/60 border-t px-3 py-3">
+            <div className="flex flex-col gap-3 border-border/60 border-t px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-muted-foreground text-xs">{draftRangeLabel}</p>
 
               <div className="flex items-center gap-2">

@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import {
@@ -23,11 +23,10 @@ export function DashboardDateRangeFilter({
 }: DashboardDateRangeFilterProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [pending, startTransition] = useTransition();
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex w-full sm:justify-end">
       <DateRangePicker
         disabled={pending}
         onChange={({ from: nextFrom, preset: nextPreset, to: nextTo }) => {
@@ -51,13 +50,6 @@ export function DashboardDateRangeFilter({
           to,
         }}
       />
-
-      {searchParams.size > 0 ? (
-        <p className="text-muted-foreground text-xs">
-          O dashboard atualiza todos os cards e graficos com base no intervalo
-          selecionado.
-        </p>
-      ) : null}
     </div>
   );
 }

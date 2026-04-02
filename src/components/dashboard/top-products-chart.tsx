@@ -52,14 +52,14 @@ function TopProductsTooltip({
 export function TopProductsChart({ data }: { data: DashboardTopProduct[] }) {
   if (data.length === 0) {
     return (
-      <div className="flex h-56 items-center justify-center rounded-2xl border border-border/70 border-dashed bg-muted/10 px-4 text-center text-muted-foreground text-sm">
-        Sem vendas concluidas neste periodo para montar o ranking de produtos.
+      <div className="flex h-48 items-center justify-center rounded-2xl border border-border/70 border-dashed bg-muted/10 px-4 text-center text-muted-foreground text-sm">
+        Sem vendas no periodo para montar o ranking.
       </div>
     );
   }
 
   return (
-    <ChartContainer className="h-56 w-full" config={chartConfig}>
+    <ChartContainer className="h-48 w-full" config={chartConfig}>
       <BarChart
         accessibilityLayer
         data={data}
@@ -74,7 +74,7 @@ export function TopProductsChart({ data }: { data: DashboardTopProduct[] }) {
           tickLine={false}
           tickMargin={8}
           type="category"
-          width={120}
+          width={102}
         />
         <XAxis
           allowDecimals={false}
