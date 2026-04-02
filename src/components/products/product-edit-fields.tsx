@@ -92,12 +92,7 @@ export function ProductEditFields({
           id="product-edit-image"
           isMarkedForRemoval={imageMarkedForRemoval}
           label="Imagem"
-          onFileChange={(file) => {
-            onImageFileChange(file);
-            if (file) {
-              onImageRemovalChange(false);
-            }
-          }}
+          onFileChange={onImageFileChange}
           onRemoveCurrentImageToggle={onImageRemovalChange}
         />
       </div>
