@@ -1,8 +1,12 @@
-import { ArrowDown01Icon, PackageIcon } from "@hugeicons/core-free-icons";
+import {
+  ArrowDown01Icon,
+  Image01Icon,
+  PackageIcon,
+} from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { notFound } from "next/navigation";
 import { ProductDetailActions } from "@/components/products/product-detail-actions";
-import { ProductImageManager } from "@/components/products/product-image-manager";
+import { ProductImageFrame } from "@/components/products/product-image-frame";
 import { ProductUnitsSoldChart } from "@/components/products/product-sales-chart";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -98,7 +102,7 @@ export default async function ProdutoDetalhePage(
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <Card>
           <CardHeader>
             <CardTitle>Resumo</CardTitle>
@@ -123,6 +127,29 @@ export default async function ProdutoDetalhePage(
           </CardContent>
         </Card>
 
+        <Card className="h-fit">
+          <CardHeader>
+            <CardTitle>Imagem</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex justify-center xl:justify-start">
+              <div className="w-full max-w-80">
+                <div className="relative aspect-[4/3]">
+                  <ProductImageFrame
+                    alt={`Imagem do produto ${product.name}`}
+                    image={product.image}
+                    priority
+                    shape="wide"
+                    sizes="(max-width: 1280px) 50vw, 320px"
+                  />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.2fr_0.8fr]">
         <Card>
           <CardHeader>
             <CardTitle>Custos</CardTitle>
@@ -162,20 +189,25 @@ export default async function ProdutoDetalhePage(
             </div>
           </CardContent>
         </Card>
-      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Imagem</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ProductImageManager
-            image={product.image}
-            productId={product.id}
-            productName={product.name}
-          />
-        </CardContent>
-      </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Midia</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-md border border-border/50 px-3 py-2">
+              <p className="flex items-center gap-2 text-muted-foreground text-xs">
+                <HugeiconsIcon icon={Image01Icon} strokeWidth={2} />
+                Visualizacao da imagem
+              </p>
+              <p className="mt-1 text-sm">
+                Ajustes e troca de imagem ficam disponiveis no formulario de
+                edicao do produto.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       <Card>
         <CardHeader>

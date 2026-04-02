@@ -18,12 +18,15 @@ import {
   addProductStockAction,
   archiveProductAction,
   deleteProductAction,
+  removeProductImageAction,
+  replaceProductImageAction,
   unarchiveProductAction,
   updateProductAction,
   writeOffProductStockAction,
 } from "@/app/(app)/produtos/actions";
 import { ProductDatePicker } from "@/components/products/product-date-picker";
 import { ProductEditFields } from "@/components/products/product-edit-fields";
+import { uploadProductImageToStaging } from "@/components/products/product-image-upload";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -88,6 +91,9 @@ export function ProductDetailActions({
   const [editDescription, setEditDescription] = useState(
     product.description ?? ""
   );
+  const [editImageFile, setEditImageFile] = useState<File | null>(null);
+  const [editImageMarkedForRemoval, setEditImageMarkedForRemoval] =
+    useState(false);
   const [stockQuantity, setStockQuantity] = useState("1");
   const [stockedOn, setStockedOn] = useState(() => formatDateInputValue());
   const [stockUnitCost, setStockUnitCost] = useState(product.costPrice ?? "0");
@@ -109,8 +115,18 @@ export function ProductDetailActions({
           description: editDescription || undefined,
           name: editName,
         });
+
+        if (editImageFile) {
+          const stagedImage = await uploadProductImageToStaging(editImageFile);
+          await replaceProductImageAction(product.id, stagedImage);
+        } else if (editImageMarkedForRemoval && product.image) {
+          await removeProductImageAction(product.id);
+        }
+
         toast.success("Produto atualizado.");
         setEditing(false);
+        setEditImageFile(null);
+        setEditImageMarkedForRemoval(false);
       } catch (error) {
         toast.error(
           error instanceof Error
@@ -244,22 +260,39 @@ export function ProductDetailActions({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <Dialog onOpenChange={setEditing} open={editing}>
+      <Dialog
+        onOpenChange={(open) => {
+          setEditing(open);
+
+          if (!open) {
+            setEditImageFile(null);
+            setEditImageMarkedForRemoval(false);
+          }
+        }}
+        open={editing}
+      >
         <DialogContent className="sm:max-w-105">
           <DialogHeader>
             <DialogTitle>Editar produto</DialogTitle>
             <DialogDescription>
-              Edite apenas nome, categoria e observacoes.
+              Edite dados principais e ajuste a imagem sem sair desta tela.
             </DialogDescription>
           </DialogHeader>
           <ProductEditFields
             categories={categories}
             categoryId={editCategoryId}
             description={editDescription}
+            image={product.image}
+            imageDisabled={pending}
+            imageMarkedForRemoval={editImageMarkedForRemoval}
             name={editName}
             onCategoryIdChange={setEditCategoryId}
             onDescriptionChange={setEditDescription}
+            onImageFileChange={setEditImageFile}
+            onImageRemovalChange={setEditImageMarkedForRemoval}
             onNameChange={setEditName}
+            productName={editName || product.name}
+            selectedImageFile={editImageFile}
           />
           <DialogFooter>
             <Button

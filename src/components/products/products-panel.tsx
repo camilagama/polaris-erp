@@ -6,16 +6,19 @@ import {
   Menu03Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import Image from "next/image";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
   archiveProductAction,
+  removeProductImageAction,
+  replaceProductImageAction,
   unarchiveProductAction,
   updateProductAction,
 } from "@/app/(app)/produtos/actions";
 import { ProductEditFields } from "@/components/products/product-edit-fields";
+import { ProductImageFrame } from "@/components/products/product-image-frame";
+import { uploadProductImageToStaging } from "@/components/products/product-image-upload";
 import { ProductCatalogPerformanceChart } from "@/components/products/product-sales-chart";
 import { RegisterProductDialog } from "@/components/products/register-product-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -83,25 +86,12 @@ const getProductStatus = (product: ProductListItem) =>
       };
 
 function ProductTableThumbnail({ product }: { product: ProductListItem }) {
-  if (!product.image) {
-    return (
-      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-muted/20 text-[10px] text-muted-foreground uppercase tracking-[0.14em]">
-        Sem
-      </div>
-    );
-  }
-
   return (
-    <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg border border-border/60 bg-muted/20">
-      <Image
+    <div className="size-11 shrink-0">
+      <ProductImageFrame
         alt={`Miniatura de ${product.name}`}
-        blurDataURL={product.image.blurDataURL}
-        className="object-contain"
-        fill
-        placeholder="blur"
+        image={product.image}
         sizes="44px"
-        src={product.image.tableUrl}
-        unoptimized
       />
     </div>
   );
@@ -169,6 +159,9 @@ export function ProductsPanel({
   const [editName, setEditName] = useState("");
   const [editCategoryId, setEditCategoryId] = useState("");
   const [editDescription, setEditDescription] = useState("");
+  const [editImageFile, setEditImageFile] = useState<File | null>(null);
+  const [editImageMarkedForRemoval, setEditImageMarkedForRemoval] =
+    useState(false);
 
   const normalizedSearch = searchTerm.trim().toLowerCase();
   const visibleProducts = products.filter((product) => {
@@ -202,6 +195,8 @@ export function ProductsPanel({
     setEditName(product.name);
     setEditCategoryId(product.categoryId);
     setEditDescription(product.description ?? "");
+    setEditImageFile(null);
+    setEditImageMarkedForRemoval(false);
   };
 
   const handleEditProduct = () => {
@@ -216,8 +211,18 @@ export function ProductsPanel({
           description: editDescription || undefined,
           name: editName,
         });
+
+        if (editImageFile) {
+          const stagedImage = await uploadProductImageToStaging(editImageFile);
+          await replaceProductImageAction(editingProduct.id, stagedImage);
+        } else if (editImageMarkedForRemoval && editingProduct.image) {
+          await removeProductImageAction(editingProduct.id);
+        }
+
         toast.success("Produto atualizado.");
         setEditingProduct(null);
+        setEditImageFile(null);
+        setEditImageMarkedForRemoval(false);
       } catch (error) {
         toast.error(
           error instanceof Error
@@ -527,6 +532,8 @@ export function ProductsPanel({
         onOpenChange={(open) => {
           if (!open) {
             setEditingProduct(null);
+            setEditImageFile(null);
+            setEditImageMarkedForRemoval(false);
           }
         }}
         open={Boolean(editingProduct)}
@@ -535,17 +542,24 @@ export function ProductsPanel({
           <DialogHeader>
             <DialogTitle>Editar produto</DialogTitle>
             <DialogDescription>
-              Atualize nome, categoria e observacoes operacionais.
+              Atualize dados principais e ajuste a imagem quando necessario.
             </DialogDescription>
           </DialogHeader>
           <ProductEditFields
             categories={categories}
             categoryId={editCategoryId}
             description={editDescription}
+            image={editingProduct?.image ?? null}
+            imageDisabled={pending}
+            imageMarkedForRemoval={editImageMarkedForRemoval}
             name={editName}
             onCategoryIdChange={setEditCategoryId}
             onDescriptionChange={setEditDescription}
+            onImageFileChange={setEditImageFile}
+            onImageRemovalChange={setEditImageMarkedForRemoval}
             onNameChange={setEditName}
+            productName={editName || editingProduct?.name || "produto"}
+            selectedImageFile={editImageFile}
           />
           <DialogFooter>
             <Button

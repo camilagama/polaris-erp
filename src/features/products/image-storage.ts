@@ -64,7 +64,9 @@ const createStorageClient = () => {
       secretAccessKey: env.secretAccessKey,
     },
     endpoint: `https://${env.accountId}.r2.cloudflarestorage.com`,
+    requestChecksumCalculation: "WHEN_REQUIRED",
     region: "auto",
+    responseChecksumValidation: "WHEN_REQUIRED",
   });
 };
 

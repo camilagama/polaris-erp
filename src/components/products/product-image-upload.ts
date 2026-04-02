@@ -53,11 +53,23 @@ export const uploadProductImageToStaging = async (
     );
   }
 
-  const uploadResponse = await fetch(presignPayload.uploadUrl, {
-    body: file,
-    headers: presignPayload.requiredHeaders,
-    method: "PUT",
-  });
+  let uploadResponse: Response;
+
+  try {
+    uploadResponse = await fetch(presignPayload.uploadUrl, {
+      body: file,
+      headers: presignPayload.requiredHeaders,
+      method: "PUT",
+    });
+  } catch (error) {
+    if (error instanceof TypeError) {
+      throw new Error(
+        "O navegador nao conseguiu enviar a imagem ao R2. Verifique o CORS do bucket de staging para o origin atual."
+      );
+    }
+
+    throw error;
+  }
 
   if (!uploadResponse.ok) {
     throw new Error("Nao foi possivel enviar a imagem para o armazenamento.");

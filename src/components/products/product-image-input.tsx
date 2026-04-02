@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useState } from "react";
+import { ProductImageFrame } from "@/components/products/product-image-frame";
 import { validateProductImageFile } from "@/components/products/product-image-upload";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -98,14 +98,21 @@ export function ProductImageInput({
         <p className="text-[11px] text-muted-foreground">{description}</p>
       ) : null}
       {previewUrl ? (
-        <div className="relative h-28 w-28 overflow-hidden rounded-lg border border-border/60 bg-muted/20">
-          <Image
-            alt="Preview da imagem selecionada"
-            className="object-contain"
-            fill
-            src={previewUrl}
-            unoptimized
-          />
+        <div className="size-28">
+          <div className="relative aspect-square">
+            <ProductImageFrame
+              alt="Preview da imagem selecionada"
+              image={{
+                blurDataURL: previewUrl,
+                detailUrl: previewUrl,
+                height: 1,
+                tableUrl: previewUrl,
+                version: 0,
+                width: 1,
+              }}
+              sizes="112px"
+            />
+          </div>
         </div>
       ) : null}
       {error ? <p className="text-[11px] text-destructive">{error}</p> : null}
