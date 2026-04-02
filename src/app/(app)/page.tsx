@@ -141,7 +141,7 @@ export default async function DashboardPage(props: PageProps<"/">) {
         <Card>
           <CardHeader className="gap-1 pb-2">
             <CardTitle className="text-base">Vendas x custos</CardTitle>
-            <CardDescription>{selectedRange.label}</CardDescription>
+            <CardDescription>Fluxo financeiro no periodo</CardDescription>
           </CardHeader>
           <CardContent className="pt-0">
             <RevenueResultChart data={metrics.periodComparison} />
@@ -154,7 +154,9 @@ export default async function DashboardPage(props: PageProps<"/">) {
               <CardTitle className="text-base">
                 Produtos mais vendidos
               </CardTitle>
-              <CardDescription>{selectedRange.label}</CardDescription>
+              <CardDescription>
+                Ranking de performance do catalogo
+              </CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
               {metrics.topProducts.length === 0 ? (
@@ -163,10 +165,6 @@ export default async function DashboardPage(props: PageProps<"/">) {
                 </div>
               ) : (
                 <div className="rounded-xl border border-border/60">
-                  <div className="grid grid-cols-[1fr_auto] gap-3 border-border/60 border-b bg-muted/5 px-4 py-2 font-medium text-[10px] text-muted-foreground uppercase tracking-[0.12em]">
-                    <span>Produto</span>
-                    <span className="text-right">Vendidos</span>
-                  </div>
                   <div className="divide-y divide-border/50">
                     {metrics.topProducts.slice(0, 5).map((product) => {
                       const hasImage =
@@ -184,7 +182,7 @@ export default async function DashboardPage(props: PageProps<"/">) {
 
                       return (
                         <div
-                          className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-4 py-2.5"
+                          className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-4 py-1.5"
                           key={product.id}
                         >
                           <div className="relative flex size-8 items-center justify-center overflow-hidden rounded-lg border border-border/40 bg-muted/10 text-muted-foreground/50">
