@@ -888,14 +888,6 @@ export function CreateSaleDialog({
                   </div>
                 ) : null}
 
-                {paymentMethod === "card" && isCardFeePayer(paymentFeePayer) ? (
-                  <div className="rounded-lg border border-border/60 bg-background/70 px-3 py-2 text-muted-foreground text-xs">
-                    {paymentFeePayer === "seller"
-                      ? "Valor recebido = valor da venda - frete - taxa paga pelo vendedor."
-                      : "Valor recebido = valor da venda - frete. O acrescimo do cartao fica fora da receita da venda."}
-                  </div>
-                ) : null}
-
                 <div className="mt-1 flex items-center justify-between rounded-md border border-border px-2 py-2">
                   <strong className="font-bold text-muted-foreground">
                     {paymentMethod === "card" && customerFeeAmount > 0

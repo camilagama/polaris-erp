@@ -247,13 +247,6 @@ export default async function VendaDetalhePage(
                 <span>Valor da venda</span>
                 <span>{formatCurrency(sale.totalAmount)}</span>
               </div>
-
-              <p className="text-muted-foreground text-xs">
-                Valor recebido = valor da venda - frete
-                {sale.paymentFeePayer === "seller"
-                  ? " - taxa paga pelo vendedor."
-                  : "."}
-              </p>
             </div>
           </div>
         </div>
