@@ -154,6 +154,12 @@ export function RegisterProductDialog({
           }}
         >
           <div className="flex flex-col gap-6 py-6">
+            <ProductImageInput
+              description="Opcional. Aceita JPG, PNG ou WebP com ate 10 MB."
+              id="register-product-image"
+              label="Imagem do produto"
+              onFileChange={setSelectedImage}
+            />
             <form.Field
               name="name"
               validators={{
@@ -274,13 +280,6 @@ export function RegisterProductDialog({
                 </div>
               )}
             </form.Field>
-
-            <ProductImageInput
-              description="Opcional. Aceita JPG, PNG ou WebP com ate 10 MB."
-              id="register-product-image"
-              label="Imagem do produto"
-              onFileChange={setSelectedImage}
-            />
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <form.Field

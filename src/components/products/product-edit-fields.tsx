@@ -50,6 +50,20 @@ export function ProductEditFields({
 }) {
   return (
     <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3">
+        <ProductImageInput
+          currentImage={image}
+          currentImageAlt={`Imagem de ${productName}`}
+          description="Opcional. Aceita JPG, PNG ou WebP com ate 10 MB."
+          disabled={imageDisabled}
+          id="product-edit-image"
+          isMarkedForRemoval={imageMarkedForRemoval}
+          label="Imagem"
+          onFileChange={onImageFileChange}
+          onRemoveCurrentImageToggle={onImageRemovalChange}
+        />
+      </div>
+
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="product-edit-name">Nome</Label>
         <Input
@@ -80,20 +94,6 @@ export function ProductEditFields({
           id="product-edit-description"
           onChange={(event) => onDescriptionChange(event.target.value)}
           value={description}
-        />
-      </div>
-
-      <div className="flex flex-col gap-3">
-        <ProductImageInput
-          currentImage={image}
-          currentImageAlt={`Imagem de ${productName}`}
-          description="Opcional. Aceita JPG, PNG ou WebP com ate 10 MB."
-          disabled={imageDisabled}
-          id="product-edit-image"
-          isMarkedForRemoval={imageMarkedForRemoval}
-          label="Imagem"
-          onFileChange={onImageFileChange}
-          onRemoveCurrentImageToggle={onImageRemovalChange}
         />
       </div>
     </div>

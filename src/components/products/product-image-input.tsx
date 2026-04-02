@@ -2,7 +2,7 @@
 
 import {
   Cancel01Icon,
-  Image01Icon,
+  Delete02Icon,
   ImageUploadIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -10,8 +10,7 @@ import Image from "next/image";
 import { useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import type { ProductImageAsset } from "@/features/products/contracts";
-import { formatBytes, useFileUpload } from "@/hooks/use-file-upload";
-import { cn } from "@/lib/utils";
+import { useFileUpload } from "@/hooks/use-file-upload";
 
 interface ProductImageInputProps {
   currentImage?: ProductImageAsset | null;
@@ -80,21 +79,17 @@ function ProductImagePreview({
   visibleImage: { alt: string; src: string } | null;
 }) {
   return (
-    <div className="relative size-24 overflow-hidden rounded-3xl border border-border/60 bg-muted/20 sm:size-28">
+    <div className="relative size-20 overflow-hidden rounded-2xl border border-border/40 bg-muted/20 sm:size-24">
       {visibleImage ? (
         <Image
           alt={visibleImage.alt}
           className="object-cover"
           fill
-          sizes="112px"
+          sizes="96px"
           src={visibleImage.src}
           unoptimized={previewUrl !== null}
         />
-      ) : (
-        <div className="flex size-full items-center justify-center text-muted-foreground">
-          <HugeiconsIcon icon={Image01Icon} strokeWidth={1.8} />
-        </div>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -114,41 +109,35 @@ function ProductImageSecondaryActions({
   onRemoveCurrentImageToggle?: (value: boolean) => void;
   previewUrl: string | null;
 }) {
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      {previewUrl ? (
-        <Button
-          aria-label="Remover imagem selecionada"
-          disabled={disabled}
-          onClick={onClearSelectedFile}
-          type="button"
-          variant="secondary"
-        >
-          <HugeiconsIcon
-            data-icon="inline-start"
-            icon={Cancel01Icon}
-            strokeWidth={2}
-          />
-          Descartar nova
-        </Button>
-      ) : null}
+  const isDeletable =
+    previewUrl || (currentImage && !previewUrl && onRemoveCurrentImageToggle);
 
-      {currentImage && !previewUrl && onRemoveCurrentImageToggle ? (
-        <Button
-          disabled={disabled}
-          onClick={() => onRemoveCurrentImageToggle(!isMarkedForRemoval)}
-          type="button"
-          variant="outline"
-        >
-          <HugeiconsIcon
-            data-icon="inline-start"
-            icon={Cancel01Icon}
-            strokeWidth={2}
-          />
-          {isMarkedForRemoval ? "Manter atual" : "Remover atual"}
-        </Button>
-      ) : null}
-    </div>
+  if (!isDeletable) {
+    return null;
+  }
+
+  return (
+    <Button
+      aria-label="Remover imagem"
+      disabled={disabled}
+      onClick={() => {
+        if (previewUrl) {
+          onClearSelectedFile();
+        } else if (onRemoveCurrentImageToggle) {
+          onRemoveCurrentImageToggle(!isMarkedForRemoval);
+        }
+      }}
+      type="button"
+      variant="destructive"
+    >
+      <HugeiconsIcon
+        className="size-3.5"
+        data-icon="inline-start"
+        icon={isMarkedForRemoval ? Cancel01Icon : Delete02Icon}
+        strokeWidth={2}
+      />
+      {previewUrl || isMarkedForRemoval ? "Descartar" : "Excluir atual"}
+    </Button>
   );
 }
 
@@ -195,19 +184,9 @@ export function ProductImageInput({
 
   const hasVisibleImage = Boolean(displayImage);
   const visibleImage = hasVisibleImage ? displayImage : null;
-  const fileLabel = selectedFile
-    ? `${selectedFile.name} - ${formatBytes(selectedFile.size)}`
-    : null;
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-1">
-        <p className="font-medium text-sm">{label}</p>
-        {description ? (
-          <p className="text-[11px] text-muted-foreground">{description}</p>
-        ) : null}
-      </div>
-
       <input
         {...actions.getInputProps({
           accept: PRODUCT_IMAGE_ACCEPT,
@@ -217,62 +196,52 @@ export function ProductImageInput({
         className="sr-only"
       />
 
-      <div
-        className={cn(
-          "rounded-3xl border border-border/60 bg-card p-4 transition-colors",
-          state.isDragging && "border-primary bg-primary/5",
-          disabled && "opacity-60"
-        )}
-      >
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-          <div className="flex shrink-0 items-center">
-            <ProductImagePreview
-              previewUrl={previewUrl}
-              visibleImage={visibleImage}
-            />
-          </div>
+      <div className="flex items-center gap-4">
+        <div className="flex shrink-0 items-center">
+          <ProductImagePreview
+            previewUrl={previewUrl}
+            visibleImage={visibleImage}
+          />
+        </div>
 
-          <div className="flex min-w-0 flex-1 flex-col gap-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                className={cn(
-                  "min-h-14 justify-start rounded-2xl border border-border/70 border-dashed bg-muted/15 px-4 text-left hover:bg-muted/25",
-                  state.isDragging && "border-primary bg-primary/5"
-                )}
-                disabled={disabled}
-                onClick={actions.openFileDialog}
-                onDragEnter={actions.handleDragEnter}
-                onDragLeave={actions.handleDragLeave}
-                onDragOver={actions.handleDragOver}
-                onDrop={actions.handleDrop}
-                type="button"
-                variant="ghost"
-              >
-                <HugeiconsIcon
-                  data-icon="inline-start"
-                  icon={ImageUploadIcon}
-                  strokeWidth={2}
-                />
-                {hasVisibleImage
-                  ? "Trocar imagem por outro arquivo"
-                  : "Escolher imagem do produto"}
-              </Button>
-
-              <ProductImageSecondaryActions
-                currentImage={currentImage}
-                disabled={disabled}
-                isMarkedForRemoval={isMarkedForRemoval}
-                onClearSelectedFile={actions.clearFiles}
-                onRemoveCurrentImageToggle={onRemoveCurrentImageToggle}
-                previewUrl={previewUrl}
-              />
-            </div>
-
-            {fileLabel ? (
-              <p className="truncate text-muted-foreground text-xs">
-                {fileLabel}
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <div className="mb-1 flex flex-col gap-0.5">
+            <p className="font-semibold text-sm leading-tight">{label}</p>
+            {description ? (
+              <p className="text-[10px] text-muted-foreground/80 leading-tight">
+                {description}
               </p>
             ) : null}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              disabled={disabled}
+              onClick={actions.openFileDialog}
+              onDragEnter={actions.handleDragEnter}
+              onDragLeave={actions.handleDragLeave}
+              onDragOver={actions.handleDragOver}
+              onDrop={actions.handleDrop}
+              type="button"
+              variant="outline"
+            >
+              <HugeiconsIcon
+                className="size-3.5"
+                data-icon="inline-start"
+                icon={ImageUploadIcon}
+                strokeWidth={2}
+              />
+              Adicionar
+            </Button>
+
+            <ProductImageSecondaryActions
+              currentImage={currentImage}
+              disabled={disabled}
+              isMarkedForRemoval={isMarkedForRemoval}
+              onClearSelectedFile={actions.clearFiles}
+              onRemoveCurrentImageToggle={onRemoveCurrentImageToggle}
+              previewUrl={previewUrl}
+            />
           </div>
         </div>
       </div>
