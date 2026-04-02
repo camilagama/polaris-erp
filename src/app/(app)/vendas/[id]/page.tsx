@@ -216,21 +216,16 @@ export default async function VendaDetalhePage(
                 <span>Adicional</span>
                 <span>{formatCurrency(sale.additionalAmount)}</span>
               </div>
-              {totalFeeAmount > 0 && (
-                <div className="flex items-center justify-between text-red-400">
-                  <span>
-                    Taxa do cartao
-                    {sale.paymentFeePayer === "seller"
-                      ? " (vendedor)"
-                      : " (cliente)"}
-                  </span>
-                  <span>{formatCurrency(totalFeeAmount)}</span>
-                </div>
-              )}
               {Number(sale.discountAmount) > 0 && (
                 <div className="flex items-center justify-between text-primary">
                   <span>Desconto</span>
                   <span>-{formatCurrency(sale.discountAmount)}</span>
+                </div>
+              )}
+              {customerChargedFeeAmount > 0 && (
+                <div className="flex items-center justify-between text-muted-foreground">
+                  <span>Taxa do cartao (cliente)</span>
+                  <span>{formatCurrency(customerChargedFeeAmount)}</span>
                 </div>
               )}
 
@@ -240,6 +235,21 @@ export default async function VendaDetalhePage(
                 <span>Valor total:</span>
                 <span>{formatCurrency(sale.chargedAmount)}</span>
               </div>
+
+              {Number(sale.feeAmount) > 0 && (
+                <div className="flex items-center justify-between text-red-400">
+                  <span>Taxa do cartao (vendedor)</span>
+                  <span>-{formatCurrency(sale.feeAmount)}</span>
+                </div>
+              )}
+
+              {Number(sale.freightAmount) > 0 && (
+                <div className="flex items-center justify-between text-red-400">
+                  <span>Frete</span>
+                  <span>-{formatCurrency(sale.freightAmount)}</span>
+                </div>
+              )}
+
               <div className="flex items-center justify-between font-medium text-emerald-500">
                 <span>Valor recebido</span>
                 <span>{formatCurrency(receivedAmount)}</span>

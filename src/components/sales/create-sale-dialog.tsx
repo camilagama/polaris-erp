@@ -847,35 +847,6 @@ export function CreateSaleDialog({
 
                 <div className="-mx-5 my-0.5 h-px bg-border/40" />
 
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium text-muted-foreground">
-                    Valor da venda
-                  </span>
-                  <span className="font-medium">
-                    {formatCurrency(displayChargedAmount)}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium text-muted-foreground">
-                    Valor recebido
-                  </span>
-                  <span className="font-medium">
-                    {formatCurrency(displayReceivedAmount)}
-                  </span>
-                </div>
-
-                {paymentMethod === "card" && sellerFeeAmount > 0 ? (
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium text-muted-foreground">
-                      Taxa do cartao (custo)
-                    </span>
-                    <span className="font-medium">
-                      {formatCurrency(sellerFeeAmount)}
-                    </span>
-                  </div>
-                ) : null}
-
                 {paymentMethod === "card" && customerFeeAmount > 0 ? (
                   <div className="flex items-center justify-between text-sm">
                     <span className="font-medium text-muted-foreground">
@@ -894,6 +865,33 @@ export function CreateSaleDialog({
                   <strong className="text-xl tracking-tight">
                     {formatCurrency(displayChargedAmount)}
                   </strong>
+                </div>
+
+                {paymentMethod === "card" && sellerFeeAmount > 0 ? (
+                  <div className="flex items-center justify-between text-red-400 text-sm">
+                    <span className="font-medium">
+                      Taxa do cartao (vendedor)
+                    </span>
+                    <span className="font-medium">
+                      -{formatCurrency(sellerFeeAmount)}
+                    </span>
+                  </div>
+                ) : null}
+
+                {parsedFreightAmount > 0 ? (
+                  <div className="flex items-center justify-between text-red-400 text-sm">
+                    <span className="font-medium">Frete</span>
+                    <span className="font-medium">
+                      -{formatCurrency(parsedFreightAmount)}
+                    </span>
+                  </div>
+                ) : null}
+
+                <div className="flex items-center justify-between text-emerald-500 text-sm">
+                  <span className="font-medium">Valor recebido</span>
+                  <span className="font-medium">
+                    {formatCurrency(displayReceivedAmount)}
+                  </span>
                 </div>
               </div>
             </div>
