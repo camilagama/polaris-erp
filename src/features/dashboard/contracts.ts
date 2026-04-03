@@ -10,6 +10,7 @@ export interface DashboardPeriodComparisonPoint {
   costs: number;
   label: string;
   result: number;
+  salesCount: number;
   sold: number;
 }
 

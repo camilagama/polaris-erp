@@ -265,6 +265,7 @@ export const buildDashboardMetrics = ({
   const { buckets, granularity } = buildPeriodBuckets(range);
   const soldByBucket = new Map<string, number>();
   const costByBucket = new Map<string, number>();
+  const salesCountByBucket = new Map<string, number>();
   let totalProductCosts = 0;
   let totalShippingAndSellerFees = 0;
   let totalSold = 0;
@@ -304,6 +305,10 @@ export const buildDashboardMetrics = ({
     costByBucket.set(
       bucketKey,
       roundCurrency((costByBucket.get(bucketKey) ?? 0) + shippingAndSellerFees)
+    );
+    salesCountByBucket.set(
+      bucketKey,
+      (salesCountByBucket.get(bucketKey) ?? 0) + 1
     );
 
     totalSold = roundCurrency(totalSold + soldAmount);
@@ -347,11 +352,13 @@ export const buildDashboardMetrics = ({
     (bucket) => {
       const sold = soldByBucket.get(bucket.key) ?? 0;
       const costs = costByBucket.get(bucket.key) ?? 0;
+      const salesCount = salesCountByBucket.get(bucket.key) ?? 0;
 
       return {
         costs,
         label: bucket.label,
         result: roundCurrency(sold - costs),
+        salesCount,
         sold,
       };
     }

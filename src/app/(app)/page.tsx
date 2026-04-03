@@ -8,6 +8,7 @@ import { OperationalCostsChart } from "@/components/dashboard/operational-costs-
 import { ProfitMarginChart } from "@/components/dashboard/profit-margin-chart";
 import { RevenueProfitChart } from "@/components/dashboard/revenue-profit-chart";
 import { RevenueResultChart } from "@/components/dashboard/revenue-result-chart";
+import { SalesCountChart } from "@/components/dashboard/sales-count-chart";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -134,7 +135,7 @@ export default async function DashboardPage(props: PageProps<"/">) {
               </CardHeader>
             )}
             <CardContent className="flex flex-col gap-1.5 pt-0">
-              {card.id !== "revenue" && (
+              {card.id !== "revenue" && card.id !== "count" && (
                 <strong className="font-mono text-2xl leading-none tracking-tight">
                   {card.value}
                 </strong>
@@ -164,12 +165,26 @@ export default async function DashboardPage(props: PageProps<"/">) {
                         profit={globalStats.profit}
                       />
                     );
-                  default:
+                  case "count":
                     return (
-                      <span className="text-[11px] text-muted-foreground">
-                        {card.note}
-                      </span>
+                      <div className="flex items-end justify-between gap-4">
+                        <div className="flex flex-col gap-1">
+                          <strong className="font-mono text-2xl leading-none tracking-tight">
+                            {card.value}
+                          </strong>
+                          {card.note && (
+                            <span className="text-[11px] text-muted-foreground">
+                              {card.note}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex h-14 max-w-[60%] flex-1 justify-end pb-1 pl-2">
+                          <SalesCountChart data={metrics.periodComparison} />
+                        </div>
+                      </div>
                     );
+                  default:
+                    return null;
                 }
               })()}
             </CardContent>
