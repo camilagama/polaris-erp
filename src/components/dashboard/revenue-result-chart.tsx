@@ -24,30 +24,24 @@ const chartConfig = {
     color: "var(--chart-2)",
     label: "Custos",
   },
+  result: {
+    color: "var(--chart-3)",
+    label: "Lucro",
+  },
   sold: {
     color: "var(--chart-1)",
     label: "Total vendido",
   },
 } satisfies ChartConfig;
 
-const getSeriesLabel = (name: number | string | undefined) => {
-  if (name === "sold") {
-    return chartConfig.sold.label;
-  }
-
-  if (name === "costs") {
-    return chartConfig.costs.label;
-  }
-
-  return String(name);
-};
-
 export function RevenueResultChart({
   data,
 }: {
   data: DashboardPeriodComparisonPoint[];
 }) {
-  const hasData = data.some((point) => point.sold > 0 || point.costs > 0);
+  const hasData = data.some(
+    (point) => point.sold > 0 || point.costs > 0 || point.result !== 0
+  );
 
   if (!hasData) {
     return (
@@ -78,16 +72,30 @@ export function RevenueResultChart({
         <ChartTooltip
           content={
             <ChartTooltipContent
-              formatter={(value, name) => (
-                <div className="flex flex-1 items-center justify-between gap-4">
-                  <span className="text-muted-foreground">
-                    {getSeriesLabel(name)}
-                  </span>
-                  <span className="font-medium font-mono text-foreground">
-                    {formatCurrency(Number(value))}
-                  </span>
-                </div>
-              )}
+              formatter={(value, name, item) => {
+                const config = chartConfig[name as keyof typeof chartConfig];
+                return (
+                  <>
+                    <div
+                      className="size-2.5 shrink-0 rounded-[2px] border-[--color-border] bg-[--color-bg]"
+                      style={
+                        {
+                          "--color-bg": config?.color || item.color,
+                          "--color-border": config?.color || item.color,
+                        } as React.CSSProperties
+                      }
+                    />
+                    <div className="flex flex-1 items-center justify-between gap-4 leading-none">
+                      <span className="text-muted-foreground">
+                        {config?.label || name}
+                      </span>
+                      <span className="font-medium font-mono text-foreground tabular-nums">
+                        {formatCurrency(Number(value))}
+                      </span>
+                    </div>
+                  </>
+                );
+              }}
             />
           }
         />
@@ -96,13 +104,19 @@ export function RevenueResultChart({
           dataKey="sold"
           fill="var(--color-sold)"
           isAnimationActive={true}
-          radius={6}
+          radius={4}
         />
         <Bar
           dataKey="costs"
           fill="var(--color-costs)"
           isAnimationActive={true}
-          radius={6}
+          radius={4}
+        />
+        <Bar
+          dataKey="result"
+          fill="var(--color-result)"
+          isAnimationActive={true}
+          radius={4}
         />
       </BarChart>
     </ChartContainer>
