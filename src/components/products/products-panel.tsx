@@ -173,7 +173,7 @@ function MobileAnalyticsSection({
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[0.85fr_0.95fr_1.8fr]">
           <div className="flex flex-col gap-4">
             <Card className="flex flex-1 flex-col justify-center">
-              <CardHeader className="gap-1 pb-2">
+              <CardHeader className="gap-1">
                 <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
                   Total em estoque
                 </CardTitle>
@@ -195,7 +195,7 @@ function MobileAnalyticsSection({
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
-                <strong className="font-heading text-[1.8rem] leading-none tracking-tight">
+                <strong className="font-mono text-[1.8rem] leading-none tracking-tight">
                   {formatCurrency(analytics.totalInventoryInvestment)}
                 </strong>
                 <CardDescription className="mt-1 text-xs">
@@ -533,7 +533,7 @@ export function ProductsPanel({
                     <p className="text-[11px] text-muted-foreground uppercase tracking-[0.16em]">
                       Preco
                     </p>
-                    <p className="mt-1 font-medium text-sm">
+                    <p className="mt-1 font-medium font-mono text-sm">
                       {formatCurrency(product.price)}
                     </p>
                   </div>
@@ -541,7 +541,7 @@ export function ProductsPanel({
                     <p className="text-[11px] text-muted-foreground uppercase tracking-[0.16em]">
                       Estoque
                     </p>
-                    <p className="mt-1 font-medium text-sm">
+                    <p className="mt-1 font-medium font-mono text-sm">
                       {product.stock} un.
                     </p>
                   </div>
@@ -600,8 +600,10 @@ export function ProductsPanel({
                         {product.categoryName}
                       </span>
                     </TableCell>
-                    <TableCell>{formatCurrency(product.price)}</TableCell>
-                    <TableCell className="text-center font-semibold tabular-nums">
+                    <TableCell className="font-mono">
+                      {formatCurrency(product.price)}
+                    </TableCell>
+                    <TableCell className="text-center font-mono font-semibold tabular-nums">
                       {product.stock}
                     </TableCell>
                     <TableCell className="pr-4 sm:pr-6">

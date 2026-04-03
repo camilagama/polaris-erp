@@ -113,7 +113,7 @@ export default async function DashboardPage(props: PageProps<"/">) {
         {summaryCards.map((card) => (
           <Card key={card.id}>
             {card.id !== "revenue" && (
-              <CardHeader className="gap-1 pb-2">
+              <CardHeader className="gap-1">
                 <div className="flex items-center justify-between gap-3">
                   <CardTitle className="font-medium text-[10px] text-muted-foreground uppercase leading-none tracking-[0.14em]">
                     {card.label}
@@ -135,7 +135,7 @@ export default async function DashboardPage(props: PageProps<"/">) {
             )}
             <CardContent className="flex flex-col gap-1.5 pt-0">
               {card.id !== "revenue" && (
-                <strong className="font-heading text-2xl leading-none tracking-tight">
+                <strong className="font-mono text-2xl leading-none tracking-tight">
                   {card.value}
                 </strong>
               )}
@@ -179,7 +179,7 @@ export default async function DashboardPage(props: PageProps<"/">) {
 
       <div className="grid gap-4 xl:grid-cols-[1.35fr_0.95fr]">
         <Card>
-          <CardHeader className="gap-1 pb-2">
+          <CardHeader className="gap-1">
             <CardTitle className="text-base">Vendas x custos</CardTitle>
             <CardDescription>Fluxo financeiro no periodo</CardDescription>
           </CardHeader>
@@ -246,7 +246,7 @@ export default async function DashboardPage(props: PageProps<"/">) {
                           <span className="truncate font-medium text-sm hover:underline">
                             {product.name}
                           </span>
-                          <span className="font-semibold text-sm tabular-nums">
+                          <span className="font-mono font-semibold text-sm tabular-nums">
                             {product.quantitySold}
                           </span>
                         </Link>

@@ -165,7 +165,7 @@ function MobileAnalyticsSection({
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
-                <strong className="font-heading text-[1.8rem] leading-none tracking-tight">
+                <strong className="font-mono text-[1.8rem] leading-none tracking-tight">
                   {formatCurrency(analytics.totalSold)}
                 </strong>
                 <CardDescription className="mt-1 text-xs">
@@ -181,7 +181,7 @@ function MobileAnalyticsSection({
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
-                <strong className="font-heading text-[1.8rem] leading-none tracking-tight">
+                <strong className="font-mono text-[1.8rem] leading-none tracking-tight">
                   {formatCurrency(analytics.totalProfit)}
                 </strong>
                 <CardDescription className="mt-1 text-xs">
