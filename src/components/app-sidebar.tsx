@@ -5,7 +5,6 @@ import {
   Logout01Icon,
   Settings01Icon,
   ShoppingBag01Icon,
-  UserCircleIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
@@ -17,7 +16,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -190,16 +188,7 @@ export function AppSidebar({ onSignOut, user, ...props }: AppSidebarProps) {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuGroup>
-                  <DropdownMenuItem>
-                    <HugeiconsIcon
-                      className="mr-2 size-4"
-                      icon={UserCircleIcon}
-                    />
-                    Area interna
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
+
                 <DropdownMenuItem
                   onSelect={() => {
                     onSignOut();

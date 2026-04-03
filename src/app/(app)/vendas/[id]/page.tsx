@@ -148,18 +148,20 @@ export default async function VendaDetalhePage(
                 {formatCurrency(productCostAmount)}
               </p>
             </div>
-            <div>
-              <p className="mb-1 text-[11px] text-muted-foreground uppercase tracking-wider">
-                Lucro
-              </p>
-              <p
-                className={`font-medium text-sm ${
-                  profitAmount < 0 ? "text-red-400" : "text-emerald-500"
-                }`}
-              >
-                {formatCurrency(profitAmount)}
-              </p>
-            </div>
+            {!isCancelled && (
+              <div>
+                <p className="mb-1 text-[11px] text-muted-foreground uppercase tracking-wider">
+                  Lucro
+                </p>
+                <p
+                  className={`font-medium text-sm ${
+                    profitAmount < 0 ? "text-red-400" : "text-emerald-500"
+                  }`}
+                >
+                  {formatCurrency(profitAmount)}
+                </p>
+              </div>
+            )}
             {isCancelled ? (
               <div>
                 <p className="mb-1 text-[11px] text-muted-foreground uppercase tracking-wider">

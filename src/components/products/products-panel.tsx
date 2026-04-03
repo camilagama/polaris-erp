@@ -25,7 +25,6 @@ import { ProductImageFrame } from "@/components/products/product-image-frame";
 import { uploadProductImageToStaging } from "@/components/products/product-image-upload";
 import { ProductCatalogPerformanceChart } from "@/components/products/product-sales-chart";
 import { RegisterProductDialog } from "@/components/products/register-product-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -71,17 +70,6 @@ interface ProductCategoryOption {
   key: string;
   name: string;
 }
-
-const getProductStatus = (product: ProductListItem) =>
-  product.archivedAt
-    ? {
-        label: "Arquivado",
-        variant: "outline" as const,
-      }
-    : {
-        label: "Ativo",
-        variant: "secondary" as const,
-      };
 
 const getProductsEmptyStateTitle = ({
   appliedQuery,
@@ -514,74 +502,65 @@ export function ProductsPanel({
       ) : (
         <>
           <div className="grid gap-3 md:hidden">
-            {products.map((product) => {
-              const statusBadge = getProductStatus(product);
-
-              return (
-                <article
-                  className="rounded-xl border border-border/60 bg-card p-4"
-                  key={product.id}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex min-w-0 items-start gap-3">
-                      <ProductTableThumbnail product={product} />
-                      <div className="min-w-0">
-                        <Link
-                          className="block truncate font-medium text-sm transition-colors hover:text-primary hover:underline"
-                          href={`/produtos/${product.id}`}
-                          title={product.name}
-                        >
-                          {product.name}
-                        </Link>
-                        <p
-                          className="mt-1 truncate text-muted-foreground text-xs"
-                          title={product.categoryName}
-                        >
-                          {product.categoryName}
-                        </p>
-                      </div>
-                    </div>
-                    <Badge variant={statusBadge.variant}>
-                      {statusBadge.label}
-                    </Badge>
-                  </div>
-
-                  <div className="mt-4 grid grid-cols-2 gap-3">
-                    <div className="rounded-lg border border-border/50 px-3 py-2">
-                      <p className="text-[11px] text-muted-foreground uppercase tracking-[0.16em]">
-                        Preco
-                      </p>
-                      <p className="mt-1 font-medium text-sm">
-                        {formatCurrency(product.price)}
-                      </p>
-                    </div>
-                    <div className="rounded-lg border border-border/50 px-3 py-2">
-                      <p className="text-[11px] text-muted-foreground uppercase tracking-[0.16em]">
-                        Estoque
-                      </p>
-                      <p className="mt-1 font-medium text-sm">
-                        {product.stock} un.
-                      </p>
-                    </div>
-                  </div>
-
-                  <Separator className="my-4" />
-
-                  <div className="flex items-center justify-between gap-3">
-                    <Button asChild size="xs" variant="outline">
-                      <Link href={`/produtos/${product.id}`}>
-                        Abrir detalhe
+            {products.map((product) => (
+              <article
+                className="rounded-xl border border-border/60 bg-card p-4"
+                key={product.id}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <ProductTableThumbnail product={product} />
+                    <div className="min-w-0">
+                      <Link
+                        className="block truncate font-medium text-sm transition-colors hover:text-primary hover:underline"
+                        href={`/produtos/${product.id}`}
+                        title={product.name}
+                      >
+                        {product.name}
                       </Link>
-                    </Button>
-                    <ProductRowActions
-                      onArchiveToggle={handleArchiveToggle}
-                      onEdit={openEditDialog}
-                      product={product}
-                    />
+                      <p
+                        className="mt-1 truncate text-muted-foreground text-xs"
+                        title={product.categoryName}
+                      >
+                        {product.categoryName}
+                      </p>
+                    </div>
                   </div>
-                </article>
-              );
-            })}
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  <div className="rounded-lg border border-border/50 px-3 py-2">
+                    <p className="text-[11px] text-muted-foreground uppercase tracking-[0.16em]">
+                      Preco
+                    </p>
+                    <p className="mt-1 font-medium text-sm">
+                      {formatCurrency(product.price)}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-border/50 px-3 py-2">
+                    <p className="text-[11px] text-muted-foreground uppercase tracking-[0.16em]">
+                      Estoque
+                    </p>
+                    <p className="mt-1 font-medium text-sm">
+                      {product.stock} un.
+                    </p>
+                  </div>
+                </div>
+
+                <Separator className="my-4" />
+
+                <div className="flex items-center justify-between gap-3">
+                  <Button asChild size="xs" variant="outline">
+                    <Link href={`/produtos/${product.id}`}>Abrir detalhe</Link>
+                  </Button>
+                  <ProductRowActions
+                    onArchiveToggle={handleArchiveToggle}
+                    onEdit={openEditDialog}
+                    product={product}
+                  />
+                </div>
+              </article>
+            ))}
           </div>
 
           <div className="hidden overflow-hidden rounded-lg border border-border/50 md:block">
@@ -590,7 +569,7 @@ export function ProductsPanel({
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="pl-4 sm:pl-6">Produto</TableHead>
                   <TableHead>Categoria</TableHead>
-                  <TableHead>Status</TableHead>
+
                   <TableHead>Preco</TableHead>
                   <TableHead className="text-center">Estoque</TableHead>
                   <TableHead className="pr-4 text-right sm:pr-6">
@@ -599,55 +578,46 @@ export function ProductsPanel({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {products.map((product) => {
-                  const statusBadge = getProductStatus(product);
-
-                  return (
-                    <TableRow className="border-border/40" key={product.id}>
-                      <TableCell className="max-w-[240px] pl-4 sm:pl-6">
-                        <div className="flex items-center gap-3">
-                          <ProductTableThumbnail product={product} />
-                          <Link
-                            className="block truncate font-medium text-sm transition-colors hover:text-primary hover:underline"
-                            href={`/produtos/${product.id}`}
-                            title={product.name}
-                          >
-                            {product.name}
-                          </Link>
-                        </div>
-                      </TableCell>
-                      <TableCell className="max-w-[170px]">
-                        <span
-                          className="block truncate text-muted-foreground text-sm"
-                          title={product.categoryName}
+                {products.map((product) => (
+                  <TableRow className="border-border/40" key={product.id}>
+                    <TableCell className="max-w-[240px] pl-4 sm:pl-6">
+                      <div className="flex items-center gap-3">
+                        <ProductTableThumbnail product={product} />
+                        <Link
+                          className="block truncate font-medium text-sm transition-colors hover:text-primary hover:underline"
+                          href={`/produtos/${product.id}`}
+                          title={product.name}
                         >
-                          {product.categoryName}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={statusBadge.variant}>
-                          {statusBadge.label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{formatCurrency(product.price)}</TableCell>
-                      <TableCell className="text-center font-semibold tabular-nums">
-                        {product.stock}
-                      </TableCell>
-                      <TableCell className="pr-4 sm:pr-6">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button asChild size="xs" variant="outline">
-                            <Link href={`/produtos/${product.id}`}>Abrir</Link>
-                          </Button>
-                          <ProductRowActions
-                            onArchiveToggle={handleArchiveToggle}
-                            onEdit={openEditDialog}
-                            product={product}
-                          />
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
+                          {product.name}
+                        </Link>
+                      </div>
+                    </TableCell>
+                    <TableCell className="max-w-[170px]">
+                      <span
+                        className="block truncate text-muted-foreground text-sm"
+                        title={product.categoryName}
+                      >
+                        {product.categoryName}
+                      </span>
+                    </TableCell>
+                    <TableCell>{formatCurrency(product.price)}</TableCell>
+                    <TableCell className="text-center font-semibold tabular-nums">
+                      {product.stock}
+                    </TableCell>
+                    <TableCell className="pr-4 sm:pr-6">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button asChild size="xs" variant="outline">
+                          <Link href={`/produtos/${product.id}`}>Abrir</Link>
+                        </Button>
+                        <ProductRowActions
+                          onArchiveToggle={handleArchiveToggle}
+                          onEdit={openEditDialog}
+                          product={product}
+                        />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </div>
