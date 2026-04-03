@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { DashboardDateRangeFilter } from "@/components/dashboard/dashboard-date-range-filter";
+import { OperationalCostsChart } from "@/components/dashboard/operational-costs-chart";
 import { RevenueResultChart } from "@/components/dashboard/revenue-result-chart";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -67,27 +68,27 @@ export default async function DashboardPage(props: PageProps<"/">) {
 
   const summaryCards = [
     {
+      id: "sold",
       label: "Total vendido",
       note: "Valor cobrado no periodo",
       value: formatCurrency(metrics.totalSold),
     },
     {
       badge: resultBadge,
+      id: "result",
       label: resultLabel,
       note: "Lucro ou prejuizo",
       value: formatCurrency(metrics.totalResult),
     },
     {
-      label: "Custo dos produtos",
-      note: "Custo dos itens vendidos no periodo",
-      value: formatCurrency(metrics.totalProductCosts),
+      id: "costs",
+      label: "Custos operacionais",
+      value: formatCurrency(
+        metrics.totalProductCosts + metrics.totalShippingAndSellerFees
+      ),
     },
     {
-      label: "Custo de Frete + taxas",
-      note: "Frete e taxas pagas pelo vendedor",
-      value: formatCurrency(metrics.totalShippingAndSellerFees),
-    },
-    {
+      id: "count",
       label: "Vendas concluidas",
       note: "Quantidade no periodo",
       value: `${metrics.totalSalesCount}`,
@@ -118,9 +119,9 @@ export default async function DashboardPage(props: PageProps<"/">) {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {summaryCards.map((card) => (
-          <Card key={card.label}>
+          <Card key={card.id}>
             <CardHeader className="gap-1 pb-1.5">
               <div className="flex items-center justify-between gap-3">
                 <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
@@ -135,9 +136,18 @@ export default async function DashboardPage(props: PageProps<"/">) {
               <strong className="font-heading text-[1.65rem] leading-none tracking-tight">
                 {card.value}
               </strong>
-              <span className="text-[11px] text-muted-foreground">
-                {card.note}
-              </span>
+              {card.id === "costs" ? (
+                <OperationalCostsChart
+                  totalProductCosts={metrics.totalProductCosts}
+                  totalShippingAndSellerFees={
+                    metrics.totalShippingAndSellerFees
+                  }
+                />
+              ) : (
+                <span className="text-[11px] text-muted-foreground">
+                  {card.note}
+                </span>
+              )}
             </CardContent>
           </Card>
         ))}
