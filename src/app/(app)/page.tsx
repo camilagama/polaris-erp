@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { DashboardDateRangeFilter } from "@/components/dashboard/dashboard-date-range-filter";
 import { OperationalCostsChart } from "@/components/dashboard/operational-costs-chart";
+import { ProfitMarginChart } from "@/components/dashboard/profit-margin-chart";
 import { RevenueResultChart } from "@/components/dashboard/revenue-result-chart";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -20,6 +21,7 @@ import {
 } from "@/features/dashboard/date-range";
 import {
   getDashboardDateBounds,
+  getDashboardGlobalStats,
   getDashboardMetrics,
 } from "@/features/dashboard/server";
 import { buildProductImageUrl } from "@/features/products/image-urls";
@@ -41,6 +43,12 @@ export default async function DashboardPage(props: PageProps<"/">) {
     from: selectedRange.from,
     to: selectedRange.to,
   });
+  const globalStats = await getDashboardGlobalStats();
+  const marginPercentage =
+    globalStats.investment > 0
+      ? (globalStats.profit / globalStats.investment) * 100
+      : 0;
+
   let resultBadge: {
     label: string;
     variant: "destructive" | "outline" | "secondary";
@@ -88,6 +96,11 @@ export default async function DashboardPage(props: PageProps<"/">) {
       ),
     },
     {
+      id: "margin",
+      label: "Lucro / Investimento",
+      value: `${marginPercentage.toFixed(1)}%`,
+    },
+    {
       id: "count",
       label: "Vendas concluidas",
       note: "Quantidade no periodo",
@@ -119,16 +132,25 @@ export default async function DashboardPage(props: PageProps<"/">) {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {summaryCards.map((card) => (
           <Card key={card.id}>
-            <CardHeader className="gap-1 pb-1.5">
+            <CardHeader className="gap-1">
               <div className="flex items-center justify-between gap-3">
                 <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
                   {card.label}
                 </CardTitle>
                 {card.badge ? (
-                  <Badge variant={card.badge.variant}>{card.badge.label}</Badge>
+                  <Badge
+                    variant={
+                      card.badge.variant as
+                        | "destructive"
+                        | "outline"
+                        | "secondary"
+                    }
+                  >
+                    {card.badge.label}
+                  </Badge>
                 ) : null}
               </div>
             </CardHeader>
@@ -136,18 +158,32 @@ export default async function DashboardPage(props: PageProps<"/">) {
               <strong className="font-heading text-[1.65rem] leading-none tracking-tight">
                 {card.value}
               </strong>
-              {card.id === "costs" ? (
-                <OperationalCostsChart
-                  totalProductCosts={metrics.totalProductCosts}
-                  totalShippingAndSellerFees={
-                    metrics.totalShippingAndSellerFees
-                  }
-                />
-              ) : (
-                <span className="text-[11px] text-muted-foreground">
-                  {card.note}
-                </span>
-              )}
+              {(() => {
+                switch (card.id) {
+                  case "costs":
+                    return (
+                      <OperationalCostsChart
+                        totalProductCosts={metrics.totalProductCosts}
+                        totalShippingAndSellerFees={
+                          metrics.totalShippingAndSellerFees
+                        }
+                      />
+                    );
+                  case "margin":
+                    return (
+                      <ProfitMarginChart
+                        cost={globalStats.investment}
+                        profit={globalStats.profit}
+                      />
+                    );
+                  default:
+                    return (
+                      <span className="text-[11px] text-muted-foreground">
+                        {card.note}
+                      </span>
+                    );
+                }
+              })()}
             </CardContent>
           </Card>
         ))}

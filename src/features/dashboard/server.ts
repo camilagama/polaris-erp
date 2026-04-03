@@ -129,3 +129,41 @@ export const getDashboardMetrics = async (
     })),
   });
 };
+
+export const getDashboardGlobalStats = async () => {
+  const [investmentRows, salesRows, saleItemsRows] = await Promise.all([
+    db
+      .select({
+        total: sql<string>`coalesce(sum(${productStockEntries.quantity} * ${productStockEntries.unitCost}), '0')`,
+      })
+      .from(productStockEntries),
+    db
+      .select({
+        totalAmount: sql<string>`coalesce(sum(${sales.totalAmount}), '0')`,
+        totalFreight: sql<string>`coalesce(sum(${sales.freightAmount}), '0')`,
+        totalFee: sql<string>`coalesce(sum(case when ${sales.paymentFeePayer} = 'seller' then ${sales.feeAmount} else 0 end), '0')`,
+      })
+      .from(sales)
+      .where(eq(sales.status, "completed")),
+    db
+      .select({
+        totalCost: sql<string>`coalesce(sum(${saleItems.quantity} * ${saleItems.unitCostSnapshot}), '0')`,
+      })
+      .from(saleItems)
+      .innerJoin(sales, eq(sales.id, saleItems.saleId))
+      .where(eq(sales.status, "completed")),
+  ]);
+
+  const investment = Number(investmentRows[0]?.total ?? 0);
+  const totalAmount = Number(salesRows[0]?.totalAmount ?? 0);
+  const totalFreight = Number(salesRows[0]?.totalFreight ?? 0);
+  const totalFee = Number(salesRows[0]?.totalFee ?? 0);
+  const totalItemCost = Number(saleItemsRows[0]?.totalCost ?? 0);
+
+  const profit = totalAmount - totalFreight - totalFee - totalItemCost;
+
+  return {
+    investment,
+    profit,
+  };
+};
