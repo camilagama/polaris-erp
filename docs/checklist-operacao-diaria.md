@@ -2,9 +2,10 @@
 
 ## Inicio do dia
 
-- Confirmar acesso aos modulos `Produtos` e `Vendas`.
-- Revisar rapidamente produtos ativos e arquivados.
-- Validar se os parametros em `Configuracoes` continuam corretos.
+- Confirmar acesso com usuario aprovado ao painel.
+- Revisar rapidamente os modulos `Produtos`, `Vendas` e `Configuracoes`.
+- Validar se categorias, markup e regras de cartao continuam corretos.
+- Conferir se o bucket publico de imagens e a reconciliacao diaria nao apresentaram inconsistencias.
 
 ## Durante a operacao
 
@@ -12,23 +13,24 @@
 - Registrar entrada sempre pelo fluxo de reposicao.
 - Registrar baixa sempre pelo fluxo de baixa.
 - Registrar venda sempre pelo fluxo de `Vendas`.
-- Antes de concluir venda, confirmar meio de pagamento, frete e taxa.
+- Antes de concluir a venda, confirmar meio de pagamento, parcelas, taxa, frete, desconto e itens.
 - Em erro de venda, usar `Cancelar venda` para estornar estoque.
 - Em baixas operacionais, detalhar o motivo em observacoes.
 - Usar data no formato ISO (`YYYY-MM-DD`) nos fluxos de estoque.
-- Em caso de erro operacional, preferir corrigir por nova movimentacao em vez de sobrescrever dados no banco.
+- Se um item sair da operacao diaria, arquivar o produto em vez de tentar remover historico.
 
 ## Fechamento do dia
 
 - Revisar historico de movimentacoes dos produtos alterados no dia.
-- Revisar vendas concluidas e vendas canceladas no periodo.
+- Revisar vendas concluidas e canceladas no periodo.
 - Conferir se as baixas operacionais ficaram com observacoes claras.
-- Revisar itens arquivados e exclusoes definitivas realizadas no periodo.
+- Revisar produtos arquivados que precisem voltar a operar.
+- Confirmar que nao ha imagens orfas ou uploads travados em staging fora do esperado.
 
 ## Regras de disciplina
 
 - Nao editar historico diretamente no banco.
 - Nao usar planilha paralela para controle de estoque.
-- Usar exclusao fisica apenas quando realmente necessario.
+- Nao usar exclusao fisica de produto como rotina operacional.
 - Nao deletar venda para corrigir operacao; usar cancelamento.
-- Antes de deletar produto, confirmar impacto em vendas vinculadas.
+- Nao provisionar usuarios por endpoint publico; usar apenas fluxo administrativo autorizado.

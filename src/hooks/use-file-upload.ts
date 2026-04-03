@@ -9,7 +9,7 @@ import {
   useState,
 } from "react";
 
-export interface FileMetadata {
+interface FileMetadata {
   id: string;
   name: string;
   size: number;
@@ -17,13 +17,13 @@ export interface FileMetadata {
   url: string;
 }
 
-export interface FileWithPreview {
+interface FileWithPreview {
   file: File | FileMetadata;
   id: string;
   preview?: string;
 }
 
-export interface FileUploadOptions {
+interface FileUploadOptions {
   accept?: string;
   initialFiles?: FileMetadata[];
   maxFiles?: number;
@@ -33,13 +33,13 @@ export interface FileUploadOptions {
   onFilesChange?: (files: FileWithPreview[]) => void;
 }
 
-export interface FileUploadState {
+interface FileUploadState {
   errors: string[];
   files: FileWithPreview[];
   isDragging: boolean;
 }
 
-export interface FileUploadActions {
+interface FileUploadActions {
   addFiles: (files: FileList | File[]) => void;
   clearErrors: () => void;
   clearFiles: () => void;
@@ -446,7 +446,7 @@ export const useFileUpload = (
   ];
 };
 
-export const formatBytes = (bytes: number, decimals = 2) => {
+const formatBytes = (bytes: number, decimals = 2) => {
   if (bytes === 0) {
     return "0 Bytes";
   }

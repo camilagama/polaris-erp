@@ -7,7 +7,7 @@ import {
   Tick01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
   createCategoryAction,
@@ -100,6 +100,12 @@ export function CatalogSettingsPanel({
   const [cardInstallmentRules, setCardInstallmentRules] = useState(() =>
     toRuleDrafts(settings.cardInstallmentRules)
   );
+
+  useEffect(() => {
+    setMinimumMarkupPercent(settings.minimumMarkupPercent.toString());
+    setIdealMarkupPercent(settings.idealMarkupPercent.toString());
+    setCardInstallmentRules(toRuleDrafts(settings.cardInstallmentRules));
+  }, [settings]);
 
   const minimum = Number(minimumMarkupPercent) || 0;
   const ideal = Number(idealMarkupPercent) || 0;

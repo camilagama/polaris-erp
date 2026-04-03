@@ -21,7 +21,7 @@ import { formatDateInputValue } from "@/lib/domain/date";
 const MAX_CATEGORY_SLICES = 5;
 const MAX_DAY_BUCKETS = 31;
 
-export interface DashboardSaleRecord {
+interface DashboardSaleRecord {
   feeAmount: number;
   freightAmount: number;
   occurredOn: string;
@@ -30,7 +30,7 @@ export interface DashboardSaleRecord {
   totalAmount: number;
 }
 
-export interface DashboardSaleItemRecord {
+interface DashboardSaleItemRecord {
   imageBlurDataUrl: string | null;
   imageHeight: number | null;
   imageVersion: number | null;
@@ -44,7 +44,7 @@ export interface DashboardSaleItemRecord {
   unitCostSnapshot: number;
 }
 
-export interface DashboardInventoryRecord {
+interface DashboardInventoryRecord {
   categoryName: string;
   inventoryValue: number;
 }

@@ -9,7 +9,7 @@ export const categorySchema = z.object({
   name: z.string().trim().min(1, "Informe um nome para a categoria.").max(80),
 });
 
-export const cardInstallmentRuleSchema = z.object({
+const cardInstallmentRuleSchema = z.object({
   feePercent: z.coerce
     .number()
     .min(0, "A taxa da parcela deve ser maior ou igual a zero."),

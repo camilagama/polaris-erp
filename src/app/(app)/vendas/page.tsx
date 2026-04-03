@@ -3,8 +3,7 @@ import { SalesPanel } from "@/components/sales/sales-panel";
 import { getCatalogSettings } from "@/features/catalog/server";
 import { resolveSalesDateRange } from "@/features/sales/date-range";
 import { getSalesAnalytics, getSalesDateBounds } from "@/features/sales/server";
-import { getProductsQuery } from "../produtos/queries";
-import { getSalesQuery } from "./queries";
+import { getSaleProductsQuery, getSalesQuery } from "./queries";
 
 export const metadata: Metadata = {
   title: "Vendas | DG Imports",
@@ -18,25 +17,16 @@ export default async function VendasPage(props: PageProps<"/vendas">) {
     bounds,
     searchParams,
   });
-  const [salesResult, productsResult, analytics, catalogSettings] =
+  const [salesResult, saleProducts, analytics, catalogSettings] =
     await Promise.all([
       getSalesQuery(),
-      getProductsQuery(),
+      getSaleProductsQuery(),
       getSalesAnalytics({
         from: selectedRange.from,
         to: selectedRange.to,
       }),
       getCatalogSettings(),
     ]);
-
-  const saleProducts = productsResult.items
-    .filter((product) => !product.archivedAt && product.stock > 0)
-    .map((product) => ({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      stock: product.stock,
-    }));
 
   return (
     <SalesPanel

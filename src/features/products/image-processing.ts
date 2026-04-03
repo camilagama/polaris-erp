@@ -6,7 +6,7 @@ import {
   PRODUCT_IMAGE_TABLE_DIMENSION,
 } from "@/features/products/image-schema";
 
-export interface ProcessedProductImage {
+interface ProcessedProductImage {
   blurDataURL: string;
   detail: {
     buffer: Buffer;

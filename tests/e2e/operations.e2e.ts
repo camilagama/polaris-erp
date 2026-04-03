@@ -6,14 +6,19 @@ const productDetailRouteRegex = /\/produtos\/.+/;
 const productsRouteRegex = /\/produtos$/;
 const price40Regex = /R\$\s*40,00/;
 const price55Regex = /R\$\s*55,00/;
+const price97Regex = /R\$\s*97,00/;
 const price100Regex = /R\$\s*100,00/;
 const price103Regex = /R\$\s*103,00/;
 const price3Regex = /R\$\s*3,00/;
-const productComboboxRegex = /buscar produto/i;
-const threeInstallmentsRegex = /^3x$/;
+const priceTabRegex = /pre/i;
+const productComboboxRegex = /selecionar produto da venda/i;
+const salePaymentFeePayerRegex = /responsavel pela taxa do cartao/i;
+const salePaymentMethodRegex = /metodo de pagamento da venda/i;
 const saleDetailRouteRegex = /\/vendas\/.+/;
+const settingsThreeInstallmentsRegex = /^3x$/;
+const saleThreeInstallmentsRegex = /^3x no cartao$/i;
 
-test("creates inventory, records a sale, cancels it, and requires typed confirmation before destructive deletion", async ({
+test("creates inventory, records a sale, cancels it, and archives the product without deleting history", async ({
   page,
 }) => {
   const categoryName = createRunLabel("Categoria E2E");
@@ -91,29 +96,24 @@ test("creates inventory, records a sale, cancels it, and requires typed confirma
   await expect(page.getByText("Cancelada").first()).toBeVisible();
 
   await page.goto("/produtos");
-  await page.getByPlaceholder("Buscar por nome ou categoria").fill(productName);
+  await page
+    .getByPlaceholder("Buscar por nome ou categoria")
+    .first()
+    .fill(productName);
   await page.getByRole("link", { name: productName }).click();
   await expect(page).toHaveURL(productDetailRouteRegex);
   await expect(page.getByRole("heading", { name: productName })).toBeVisible();
 
   await page.getByRole("button", { name: `Acoes para ${productName}` }).click();
-  await page.getByRole("menuitem", { name: "Deletar" }).click();
-
-  const deleteDialog = page.getByRole("alertdialog");
-  const deleteButton = deleteDialog.getByRole("button", {
-    name: "Deletar produto e vendas",
-  });
-
-  await expect(deleteButton).toBeDisabled();
-  await deleteDialog
-    .getByLabel("Digite o nome do produto para confirmar")
-    .fill(productName);
-  await expect(deleteButton).toBeEnabled();
-  await deleteButton.click();
-
+  await page.getByRole("menuitem", { name: "Arquivar" }).click();
   await expect(page).toHaveURL(productsRouteRegex);
-  await page.getByPlaceholder("Buscar por nome ou categoria").fill(productName);
+  await page
+    .getByPlaceholder("Buscar por nome ou categoria")
+    .first()
+    .fill(productName);
   await expect(page.getByText("Nenhum produto encontrado.")).toBeVisible();
+  await page.getByRole("button", { name: "Ver arquivados" }).click();
+  await expect(page.getByRole("link", { name: productName })).toBeVisible();
 });
 
 test("shows the protected Outros category as non-removable in settings", async ({
@@ -164,13 +164,13 @@ test("updates the catalog price for future sales without changing past sale snap
 
   const firstSaleDialog = page.getByRole("dialog");
 
-  await firstSaleDialog
-    .getByRole("combobox", { name: productComboboxRegex })
-    .first()
-    .click();
-  await page.getByRole("option", { name: new RegExp(productName) }).click({
-    force: true,
-  });
+  await selectOption(
+    page,
+    firstSaleDialog
+      .getByRole("combobox", { name: productComboboxRegex })
+      .first(),
+    new RegExp(productName)
+  );
   await firstSaleDialog
     .getByRole("button", { name: "Confirmar venda" })
     .click();
@@ -196,7 +196,8 @@ test("updates the catalog price for future sales without changing past sale snap
   await editDialog.getByRole("button", { name: "Salvar alteracoes" }).click();
 
   await expect(page.getByText(price55Regex).first()).toBeVisible();
-  await expect(page.getByText("Ultima alteracao")).toBeVisible();
+  await page.getByRole("tab", { name: priceTabRegex }).click();
+  await expect(page.getByText(price40Regex).first()).toBeVisible();
 
   await page.goto("/produtos");
   await page
@@ -214,13 +215,13 @@ test("updates the catalog price for future sales without changing past sale snap
 
   const secondSaleDialog = page.getByRole("dialog");
 
-  await secondSaleDialog
-    .getByRole("combobox", { name: productComboboxRegex })
-    .first()
-    .click();
-  await page.getByRole("option", { name: new RegExp(productName) }).click({
-    force: true,
-  });
+  await selectOption(
+    page,
+    secondSaleDialog
+      .getByRole("combobox", { name: productComboboxRegex })
+      .first(),
+    new RegExp(productName)
+  );
   await secondSaleDialog
     .getByRole("button", { name: "Confirmar venda" })
     .click();
@@ -248,7 +249,7 @@ test("configures card installments and records customer-paid and seller-paid fee
   await selectOption(
     page,
     page.getByLabel("Maximo de parcelas"),
-    threeInstallmentsRegex
+    settingsThreeInstallmentsRegex
   );
   await page.getByLabel("Taxa 2x (%)").fill("1.5");
   await page.getByLabel("Taxa 3x (%)").fill("3");
@@ -277,25 +278,27 @@ test("configures card installments and records customer-paid and seller-paid fee
 
   const customerFeeDialog = page.getByRole("dialog");
 
-  await customerFeeDialog.getByLabel("Metodo de pagamento").click();
-  await page.getByRole("option", { name: "Cartao" }).click();
   await selectOption(
     page,
-    customerFeeDialog.getByLabel("Parcelamento"),
-    threeInstallmentsRegex
+    customerFeeDialog.getByRole("combobox", {
+      name: salePaymentMethodRegex,
+    }),
+    saleThreeInstallmentsRegex
   );
   await selectOption(
     page,
-    customerFeeDialog.getByLabel("Quem paga a taxa"),
+    customerFeeDialog.getByRole("combobox", {
+      name: salePaymentFeePayerRegex,
+    }),
     "Cliente"
   );
-  await customerFeeDialog
-    .getByRole("combobox", { name: productComboboxRegex })
-    .first()
-    .click();
-  await page.getByRole("option", { name: new RegExp(productName) }).click({
-    force: true,
-  });
+  await selectOption(
+    page,
+    customerFeeDialog
+      .getByRole("combobox", { name: productComboboxRegex })
+      .first(),
+    new RegExp(productName)
+  );
   await customerFeeDialog
     .getByLabel("Nome do cliente (opcional)")
     .fill("Cliente Cartao");
@@ -305,9 +308,8 @@ test("configures card installments and records customer-paid and seller-paid fee
     .click();
 
   await expect(page).toHaveURL(saleDetailRouteRegex);
-  await expect(page.getByText("Cartao 3x")).toBeVisible();
-  await expect(page.getByText("Cliente")).toBeVisible();
-  await expect(page.getByText("Cobrado do cliente")).toBeVisible();
+  await expect(page.getByText("Cartao 3x (cliente)")).toBeVisible();
+  await expect(page.getByText("Taxa do cartao (cliente)")).toBeVisible();
   await expect(page.getByText(price103Regex).first()).toBeVisible();
   await expect(page.getByText(price100Regex).first()).toBeVisible();
 
@@ -316,33 +318,34 @@ test("configures card installments and records customer-paid and seller-paid fee
 
   const sellerFeeDialog = page.getByRole("dialog");
 
-  await sellerFeeDialog.getByLabel("Metodo de pagamento").click();
-  await page.getByRole("option", { name: "Cartao" }).click();
   await selectOption(
     page,
-    sellerFeeDialog.getByLabel("Parcelamento"),
-    threeInstallmentsRegex
+    sellerFeeDialog.getByRole("combobox", {
+      name: salePaymentMethodRegex,
+    }),
+    saleThreeInstallmentsRegex
   );
   await selectOption(
     page,
-    sellerFeeDialog.getByLabel("Quem paga a taxa"),
+    sellerFeeDialog.getByRole("combobox", {
+      name: salePaymentFeePayerRegex,
+    }),
     "Vendedor"
   );
-  await sellerFeeDialog
-    .getByRole("combobox", { name: productComboboxRegex })
-    .first()
-    .click();
-  await page.getByRole("option", { name: new RegExp(productName) }).click({
-    force: true,
-  });
+  await selectOption(
+    page,
+    sellerFeeDialog
+      .getByRole("combobox", { name: productComboboxRegex })
+      .first(),
+    new RegExp(productName)
+  );
   await sellerFeeDialog
     .getByRole("button", { name: "Confirmar venda" })
     .click();
 
   await expect(page).toHaveURL(saleDetailRouteRegex);
-  await expect(page.getByText("Cartao 3x")).toBeVisible();
-  await expect(page.getByText("Vendedor")).toBeVisible();
-  await expect(page.getByText("Taxa do cartao")).toBeVisible();
+  await expect(page.getByText("Cartao 3x (vendedor)")).toBeVisible();
+  await expect(page.getByText("Taxa do cartao (vendedor)")).toBeVisible();
   await expect(page.getByText(price3Regex).first()).toBeVisible();
-  await expect(page.getByText(price100Regex).first()).toBeVisible();
+  await expect(page.getByText(price97Regex).first()).toBeVisible();
 });

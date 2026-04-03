@@ -46,10 +46,9 @@ export const dashboardDatePresetOptions = [
   },
 ] as const satisfies readonly DateRangePresetOption[];
 
-export type DashboardDatePreset =
-  (typeof dashboardDatePresetOptions)[number]["value"];
+type DashboardDatePreset = (typeof dashboardDatePresetOptions)[number]["value"];
 
-export type DashboardDateRange = ResolvedDateRange<DashboardDatePreset>;
+type DashboardDateRange = ResolvedDateRange<DashboardDatePreset>;
 
 export const createDatePresetValues = <TPreset extends string>(
   presets: readonly DateRangePresetOption<TPreset>[]
@@ -233,27 +232,6 @@ export const resolveDashboardDateRange = ({
     presetValues: dashboardDatePresetValues,
     referenceDate,
     searchParams,
-  });
-};
-
-export const getDashboardPreviousDateRange = ({
-  from,
-  to,
-}: Pick<DashboardDateRange, "from" | "to">): DashboardDateRange => {
-  const fromDate = parseISO(`${from}T00:00:00`);
-  const toDate = parseISO(`${to}T00:00:00`);
-  const rangeLength =
-    Math.max(
-      1,
-      Math.round((toDate.getTime() - fromDate.getTime()) / 86_400_000) + 1
-    ) - 1;
-  const previousTo = subDays(fromDate, 1);
-  const previousFrom = subDays(previousTo, rangeLength);
-
-  return normalizeDateRange({
-    from: formatDateInputValue(previousFrom),
-    preset: null as DashboardDatePreset | null,
-    to: formatDateInputValue(previousTo),
   });
 };
 

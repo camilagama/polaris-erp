@@ -1,9 +1,46 @@
-import { asc, desc, eq, lt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, isNull, lt, or, sql } from "drizzle-orm";
+import { z } from "zod";
 import { db } from "@/db";
-import { saleItems, sales } from "@/db/schema";
-import type { SaleDetail, SaleListItem } from "@/features/sales/contracts";
+import { products, saleItems, sales } from "@/db/schema";
+import type {
+  SaleDetail,
+  SaleListItem,
+  SaleProductOption,
+} from "@/features/sales/contracts";
+import { decodeOpaqueCursor, encodeOpaqueCursor } from "@/lib/opaque-cursor";
 
 const DEFAULT_PAGE_SIZE = 50;
+const salesCursorSchema = z.object({
+  createdAt: z.string().min(1),
+  id: z.string().min(1),
+  occurredOn: z.string().min(1),
+  version: z.literal(1),
+});
+
+const buildSalesCursor = (row: {
+  createdAt: Date;
+  id: string;
+  occurredOn: string;
+}) =>
+  encodeOpaqueCursor({
+    createdAt: row.createdAt.toISOString(),
+    id: row.id,
+    occurredOn: row.occurredOn,
+    version: 1,
+  });
+
+const parseSalesCursor = (cursor: string) => {
+  const parsedCursor = decodeOpaqueCursor(
+    cursor,
+    salesCursorSchema,
+    "Cursor de vendas invalido."
+  );
+
+  return {
+    ...parsedCursor,
+    createdAt: new Date(parsedCursor.createdAt),
+  };
+};
 
 export interface PaginatedSalesList {
   items: SaleListItem[];
@@ -15,8 +52,9 @@ export async function getSalesQuery(
   pageSize = DEFAULT_PAGE_SIZE
 ): Promise<PaginatedSalesList> {
   const limit = pageSize + 1;
+  const parsedCursor = cursor ? parseSalesCursor(cursor) : null;
 
-  const baseQuery = db
+  const rows = await db
     .select({
       additionalAmount: sales.additionalAmount,
       cancelledAt: sales.cancelledAt,
@@ -41,16 +79,28 @@ export async function getSalesQuery(
       totalAmount: sales.totalAmount,
     })
     .from(sales)
-    .orderBy(desc(sales.occurredOn), desc(sales.createdAt))
+    .where(
+      parsedCursor
+        ? or(
+            lt(sales.occurredOn, parsedCursor.occurredOn),
+            and(
+              eq(sales.occurredOn, parsedCursor.occurredOn),
+              lt(sales.createdAt, parsedCursor.createdAt)
+            ),
+            and(
+              eq(sales.occurredOn, parsedCursor.occurredOn),
+              eq(sales.createdAt, parsedCursor.createdAt),
+              lt(sales.id, parsedCursor.id)
+            )
+          )
+        : undefined
+    )
+    .orderBy(desc(sales.occurredOn), desc(sales.createdAt), desc(sales.id))
     .limit(limit);
 
-  if (cursor) {
-    baseQuery.where(lt(sales.createdAt, new Date(cursor)));
-  }
-
-  const rows = await baseQuery;
   const hasMore = rows.length > pageSize;
   const items = hasMore ? rows.slice(0, pageSize) : rows;
+  const lastItem = items.at(-1);
 
   return {
     items: items.map((row) => ({
@@ -60,10 +110,21 @@ export async function getSalesQuery(
       paymentMethod: row.paymentMethod as SaleListItem["paymentMethod"],
       status: row.status as SaleListItem["status"],
     })),
-    nextCursor: hasMore
-      ? (items.at(-1)?.createdAt.toISOString() ?? null)
-      : null,
+    nextCursor: hasMore && lastItem ? buildSalesCursor(lastItem) : null,
   };
+}
+
+export function getSaleProductsQuery(): Promise<SaleProductOption[]> {
+  return db
+    .select({
+      id: products.id,
+      name: products.name,
+      price: products.price,
+      stock: products.stock,
+    })
+    .from(products)
+    .where(and(isNull(products.archivedAt), gt(products.stock, 0)))
+    .orderBy(asc(products.name), asc(products.createdAt), asc(products.id));
 }
 
 export async function getSaleByIdQuery(

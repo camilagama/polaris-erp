@@ -8,6 +8,7 @@ import {
 const e2eBaseUrl = process.env.E2E_BASE_URL ?? "http://127.0.0.1:3001";
 const e2ePassword = process.env.E2E_PASSWORD ?? "CodexE2E!12345";
 const e2eUserName = process.env.E2E_NAME ?? "DG Imports E2E";
+const e2eBootstrapSecret = process.env.CRON_SECRET ?? "dgimports-e2e-bootstrap";
 
 const createE2EUser = () => {
   const runId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -24,11 +25,11 @@ const ensureE2EUser = async (
   user: ReturnType<typeof createE2EUser>
 ) => {
   const signUpResponse = await request.post(
-    `${e2eBaseUrl}/api/auth/sign-up/email`,
+    `${e2eBaseUrl}/api/internal/auth/bootstrap-user`,
     {
       data: user,
       headers: {
-        origin: e2eBaseUrl,
+        authorization: `Bearer ${e2eBootstrapSecret}`,
       },
     }
   );
@@ -40,7 +41,7 @@ const ensureE2EUser = async (
   const signUpBody = await signUpResponse.text();
 
   throw new Error(
-    `Nao foi possivel preparar o usuario E2E. sign-up: ${signUpResponse.status()} ${signUpBody}`
+    `Nao foi possivel preparar o usuario E2E. bootstrap: ${signUpResponse.status()} ${signUpBody}`
   );
 };
 

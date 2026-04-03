@@ -16,7 +16,7 @@ import {
 import { formatDateInputValue } from "@/lib/domain/date";
 import { cn } from "@/lib/utils";
 
-export interface DateRangePickerPreset {
+interface DateRangePickerPreset {
   label: string;
   value: string;
 }

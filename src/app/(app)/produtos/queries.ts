@@ -1,4 +1,5 @@
-import { asc, desc, eq, lt } from "drizzle-orm";
+import { and, asc, desc, eq, gt, or } from "drizzle-orm";
+import { z } from "zod";
 import { db } from "@/db";
 import {
   categories,
@@ -18,8 +19,15 @@ import type {
   ProductStockWriteOffItem,
 } from "@/features/products/contracts";
 import { buildProductImageUrl } from "@/features/products/image-urls";
+import { decodeOpaqueCursor, encodeOpaqueCursor } from "@/lib/opaque-cursor";
 
 const DEFAULT_PAGE_SIZE = 50;
+const productCursorSchema = z.object({
+  createdAt: z.string().min(1),
+  id: z.string().min(1),
+  name: z.string(),
+  version: z.literal(1),
+});
 
 const mapProductImage = (row: {
   id: string;
@@ -47,6 +55,62 @@ const mapProductImage = (row: {
   };
 };
 
+const mapProductListItem = (row: {
+  archivedAt: Date | null;
+  categoryId: string;
+  categoryName: string;
+  costPrice: string;
+  createdAt: Date;
+  description: string | null;
+  id: string;
+  imageBlurDataUrl: string | null;
+  imageHeight: number | null;
+  imageVersion: number | null;
+  imageWidth: number | null;
+  name: string;
+  price: string;
+  purchasedOn: string;
+  stock: number;
+}): ProductListItem => ({
+  archivedAt: row.archivedAt,
+  categoryId: row.categoryId,
+  categoryName: row.categoryName,
+  costPrice: row.costPrice,
+  createdAt: row.createdAt,
+  description: row.description,
+  id: row.id,
+  image: mapProductImage(row),
+  name: row.name,
+  price: row.price,
+  purchasedOn: row.purchasedOn,
+  stock: row.stock,
+});
+
+const buildProductsCursor = (row: {
+  createdAt: Date;
+  id: string;
+  name: string;
+}) =>
+  encodeOpaqueCursor({
+    createdAt: row.createdAt.toISOString(),
+    id: row.id,
+    name: row.name,
+    version: 1,
+  });
+
+const parseProductsCursor = (cursor: string) => {
+  const parsedCursor = decodeOpaqueCursor(
+    cursor,
+    productCursorSchema,
+    "Cursor de produtos invalido."
+  );
+
+  return {
+    ...parsedCursor,
+    createdAt: new Date(parsedCursor.createdAt),
+  };
+};
+
 export interface PaginatedProductsList {
   items: ProductListItem[];
   nextCursor: string | null;
@@ -57,8 +121,9 @@ export async function getProductsQuery(
   pageSize = DEFAULT_PAGE_SIZE
 ): Promise<PaginatedProductsList> {
   const limit = pageSize + 1;
+  const parsedCursor = cursor ? parseProductsCursor(cursor) : null;
 
-  const baseQuery = db
+  const rows = await db
     .select({
       archivedAt: products.archivedAt,
       categoryId: products.categoryId,
@@ -78,35 +143,32 @@ export async function getProductsQuery(
     })
     .from(products)
     .innerJoin(categories, eq(products.categoryId, categories.id))
-    .orderBy(asc(products.name), asc(products.createdAt))
+    .where(
+      parsedCursor
+        ? or(
+            gt(products.name, parsedCursor.name),
+            and(
+              eq(products.name, parsedCursor.name),
+              gt(products.createdAt, parsedCursor.createdAt)
+            ),
+            and(
+              eq(products.name, parsedCursor.name),
+              eq(products.createdAt, parsedCursor.createdAt),
+              gt(products.id, parsedCursor.id)
+            )
+          )
+        : undefined
+    )
+    .orderBy(asc(products.name), asc(products.createdAt), asc(products.id))
     .limit(limit);
 
-  if (cursor) {
-    baseQuery.where(lt(products.createdAt, new Date(cursor)));
-  }
-
-  const rows = await baseQuery;
   const hasMore = rows.length > pageSize;
   const items = hasMore ? rows.slice(0, pageSize) : rows;
+  const lastItem = items.at(-1);
 
   return {
-    items: items.map((row) => ({
-      archivedAt: row.archivedAt,
-      categoryId: row.categoryId,
-      categoryName: row.categoryName,
-      costPrice: row.costPrice,
-      createdAt: row.createdAt,
-      description: row.description,
-      id: row.id,
-      image: mapProductImage(row),
-      name: row.name,
-      price: row.price,
-      purchasedOn: row.purchasedOn,
-      stock: row.stock,
-    })),
-    nextCursor: hasMore
-      ? (items.at(-1)?.createdAt.toISOString() ?? null)
-      : null,
+    items: items.map(mapProductListItem),
+    nextCursor: hasMore && lastItem ? buildProductsCursor(lastItem) : null,
   };
 }
 
@@ -140,20 +202,7 @@ export async function getProductByIdQuery(
     return undefined;
   }
 
-  return {
-    archivedAt: row.archivedAt,
-    categoryId: row.categoryId,
-    categoryName: row.categoryName,
-    costPrice: row.costPrice,
-    createdAt: row.createdAt,
-    description: row.description,
-    id: row.id,
-    image: mapProductImage(row),
-    name: row.name,
-    price: row.price,
-    purchasedOn: row.purchasedOn,
-    stock: row.stock,
-  };
+  return mapProductListItem(row);
 }
 
 export async function getProductStockEntriesByProductIdQuery(

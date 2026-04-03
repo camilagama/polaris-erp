@@ -10,7 +10,7 @@ import {
 } from "@/features/products/image-storage";
 import { serverEnv } from "@/lib/env";
 
-export interface StoredProductImageResult {
+interface StoredProductImageResult {
   blurDataURL: string;
   height: number;
   version: number;

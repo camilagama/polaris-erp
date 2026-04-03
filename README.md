@@ -1,23 +1,25 @@
 # DG Imports
 
-Aplicacao interna em Next.js 16 para operacao de revenda, com autenticacao, catalogo de produtos, estoque, vendas e configuracoes operacionais.
+Aplicacao interna em `Next.js 16` para operacao de revenda com autenticacao fechada, catalogo, estoque, vendas e configuracoes operacionais.
 
 ## Stack
 
-- Next.js 16 com App Router
-- React 19
-- Better Auth com email/senha, Google e One Tap
-- Drizzle ORM com PostgreSQL
-- Tailwind CSS 4 e shadcn/ui
-- Vitest para testes unitarios e de integracao
-- Playwright para cobertura E2E principal
+- `Next.js 16` com App Router
+- `React 19`
+- `Better Auth` com email/senha e Google
+- `Drizzle ORM` com PostgreSQL
+- `Tailwind CSS 4` e `shadcn/ui`
+- `Vitest` para testes unitarios e de integracao
+- `Playwright` para fluxos E2E principais
+- `Cloudflare R2` para staging e variantes finais de imagem
 
 ## Scripts
 
 ```bash
 bun dev
 bun run build
-bun test
+bun run test
+bun run test:e2e
 bun run check
 bun run fix
 bun run knip
@@ -25,73 +27,63 @@ bun run db:generate
 bun run db:migrate
 ```
 
-## Banco de dados
+## Modelo de acesso
+
+- O app e interno e fechado.
+- O endpoint publico de cadastro por email nao faz parte do contrato suportado.
+- O login aceita apenas usuarios previamente provisionados.
+- Em desenvolvimento e E2E existe um bootstrap interno de usuario em `/api/internal/auth/bootstrap-user`, protegido por `CRON_SECRET`.
+- O login com Google continua disponivel para usuarios aprovados.
+- O One Tap nao e inicializado em `localhost` para evitar prompts invalidos e ruido operacional.
+
+## Dominio atual
 
 O schema principal fica em `src/db/schema.ts` e as migracoes em `src/db/migrations/`.
 
-Fluxos de dominio modelados hoje:
+Entidades principais:
 
-- `categories`: categorias de produto, incluindo a categoria protegida `Outros`
-- `system_settings`: configuracoes globais de markup minimo, markup ideal e regras de taxa por pagamento
-- `products`: catalogo com custo medio, preco de venda, estoque e arquivamento
-- `product_price_changes`: trilha leve de alteracoes de preco por produto
+- `categories`: categorias de produto, com `Outros` protegida pelo sistema
+- `system_settings`: markup e regras de parcelamento/taxa
+- `products`: catalogo com custo medio, preco atual, estoque e `archivedAt`
+- `product_price_changes`: historico de mudanca de preco
 - `product_stock_entries`: entradas de estoque
-- `product_stock_write_offs`: baixas operacionais de estoque
+- `product_stock_write_offs`: baixas operacionais
 - `sales`: vendas concluidas e canceladas
-- `sale_items`: itens por venda com snapshots de preco e custo
+- `sale_items`: snapshots de preco e custo por item
 
-## Escopo atual
+## Contratos operacionais
 
-Disponivel hoje:
-
-- autenticacao e shell protegida
-- produtos
-- estoque com entrada e baixa
-- vendas com cancelamento e estorno
-- configuracoes de catalogo, markup e taxas de pagamento
-
-Ainda nao implementado:
-
-- modulo de recebimentos
-- dashboard financeiro consolidado
-
-## Arquitetura de autenticacao
-
-- `proxy.ts` atua como barreira otimista de borda para rotas protegidas e publicas.
-- `requireSession()` protege layouts e paginas server-side.
-- `requireActionSession()` protege todas as Server Actions mutantes.
-- O app assume `proxy` para UX e redirecionamento rapido, mas a autorizacao real sempre acontece novamente na camada server.
-
-## Notas operacionais
-
-- Login com email/senha permanece o caminho principal em qualquer ambiente.
-- Google One Tap e SSO social dependem de origem autorizada pelo Google; em localhost o app reduz comportamento automatico para evitar prompts invalidos.
-- Exclusao de produto continua destrutiva por decisao operacional, mas requer confirmacao forte quando houver vendas vinculadas.
-- O fluxo de imagem de produto usa Cloudflare R2 com upload temporario em staging e duas variantes finais (`detail` e `table`). Veja `docs/product-images-r2.md`.
-
-## Testes E2E
-
-- O Playwright deve rodar contra um servidor previsivel e isolado na porta `3001`.
-- A suite cobre redirecionamento publico/protegido, login, produtos, vendas, configuracoes basicas e `not-found`.
-
-## Regras operacionais importantes
-
-- A categoria `Outros` e fixa, protegida e nao pode ser removida.
-- Todo produto precisa de categoria.
-- O cadastro de produto usa as margens globais para sugerir preco minimo e ideal a partir do custo.
-- A edicao de produto permite alterar o preco atual do catalogo sem reescrever vendas anteriores.
-- Cada alteracao de preco registra valor anterior, valor novo, usuario e data.
-- Preco abaixo do minimo gera alerta visual, mas continua permitido.
-- As baixas de estoque usam motivos simplificados (`adjustment` e `operational`) com detalhamento livre em observacoes.
-- Datas recebidas nas actions devem estar no formato ISO `YYYY-MM-DD`.
-- Vendas no MVP nascem como `completed`, com baixa imediata de estoque.
-- A venda valida se o preco visivel ainda corresponde ao preco atual do produto antes de concluir.
+- Produto e `archive-only`: arquivar e desarquivar sao suportados; exclusao fisica nao faz parte do contrato operacional.
+- Venda nasce como `completed`, baixa estoque imediatamente e pode ser corrigida apenas por cancelamento.
 - O mesmo produto nao pode se repetir dentro da mesma venda.
-- O valor operacional da venda segue a formula oficial:
-  - `subtotal dos itens + frete + adicional - desconto`
-- Em cartao, o operador escolhe parcelas e quem paga a taxa.
-- Quando o vendedor absorve a taxa, ela vira custo em `feeAmount`.
-- Quando o cliente absorve a taxa, o acrescimo aparece em `chargedAmount`, sem inflar receita ou lucro.
-- Cancelamento de venda estorna estoque e exige consistencia entre `status` e `cancelledAt`.
-- Excluir um produto continua sendo uma operacao fisica destrutiva.
-- Se houver vendas vinculadas ao produto excluido, essas vendas tambem sao removidas por decisao operacional atual.
+- A tela de vendas consulta uma lista dedicada de produtos vendaveis, sem depender da pagina atual de produtos.
+- Listagens usam cursor opaco composto, alinhado com a ordenacao real.
+- Alteracoes server-side devem refletir imediatamente na UI apos `refresh()`.
+
+## Imagens de produto
+
+- Upload vai primeiro para o bucket de staging do R2.
+- O app gera as variantes finais `detail` e `table`.
+- A reconciliacao diaria limpa objetos orfaos e mantem o bucket publico consistente com o banco.
+- Detalhes operacionais e de CORS: `docs/product-images-r2.md`.
+
+## Qualidade atual
+
+Baseline esperado:
+
+- `bun run check`
+- `bun run build`
+- `bun run test`
+- `bun run test:e2e`
+- `bun run knip`
+
+Fluxos E2E cobertos hoje:
+
+- redirecionamento publico/protegido
+- login interno
+- cadastro de produto
+- entrada e baixa de estoque
+- venda, cancelamento e estorno
+- alteracao de preco com preservacao de snapshot
+- cartao com taxa no cliente e no vendedor
+- arquivamento de produto

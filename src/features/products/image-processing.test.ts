@@ -1,11 +1,13 @@
 import sharp from "sharp";
 import { describe, expect, it, vi } from "vitest";
-import { processProductImage } from "@/features/products/image-processing";
 
 vi.mock("server-only", () => ({}));
 
 describe("processProductImage", () => {
   it("creates exactly the detail and table variants in webp", async () => {
+    const { processProductImage } = await import(
+      "@/features/products/image-processing"
+    );
     const source = await sharp({
       create: {
         background: { alpha: 1, b: 90, g: 120, r: 240 },
@@ -33,6 +35,9 @@ describe("processProductImage", () => {
   });
 
   it("rejects unsupported image formats", async () => {
+    const { processProductImage } = await import(
+      "@/features/products/image-processing"
+    );
     const svgBuffer = Buffer.from(
       '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"><rect width="12" height="12" fill="#ff6600" /></svg>'
     );

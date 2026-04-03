@@ -7,7 +7,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
   archiveProductAction,
@@ -161,6 +161,11 @@ export function ProductsPanel({
   const [editImageFile, setEditImageFile] = useState<File | null>(null);
   const [editImageMarkedForRemoval, setEditImageMarkedForRemoval] =
     useState(false);
+
+  useEffect(() => {
+    setProducts(initialProducts);
+    setCursor(initialCursor);
+  }, [initialCursor, initialProducts]);
 
   const handleLoadMore = () => {
     if (!cursor) {

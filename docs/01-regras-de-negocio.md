@@ -1,11 +1,12 @@
 # Documento de Regras de Negocio
 ## Plataforma Web de Gestao de Produtos para Revenda
-### Versao: V1.4 (estado atual em 02/04/2026)
+### Versao: V1.5 (estado atual em 02/04/2026)
 
 ## 1. Objetivo atual do sistema
 
-O sistema atual tem foco operacional em:
+O sistema tem foco operacional em:
 
+- autenticacao fechada para uso interno
 - cadastro e manutencao de produtos
 - controle de entradas e baixas de estoque
 - controle de custo medio por produto
@@ -13,7 +14,7 @@ O sistema atual tem foco operacional em:
 - cancelamento de vendas com estorno de estoque
 - configuracao de margens e taxas de pagamento
 
-A aplicacao permanece gerencial e nao fiscal/contabil.
+A aplicacao continua gerencial e nao fiscal/contabil.
 
 ## 2. Escopo implementado hoje
 
@@ -27,10 +28,11 @@ A aplicacao permanece gerencial e nao fiscal/contabil.
 
 ### 2.2 Funcionalidades disponiveis
 
+- login com email/senha e Google para usuarios aprovados
+- bootstrap interno de usuario para dev/E2E com segredo administrativo
 - cadastro de produto com estoque inicial opcional
 - edicao de nome, categoria, observacoes e preco atual do produto
 - arquivamento e desarquivamento de produto
-- exclusao fisica de produto
 - registro de entrada de estoque com custo unitario e data
 - registro de baixa de estoque com motivo simplificado e observacoes
 - registro de venda com multiplos itens
@@ -44,16 +46,16 @@ A aplicacao permanece gerencial e nao fiscal/contabil.
 
 Nao esta implementado neste momento:
 
+- cadastro publico de usuario
+- exclusao fisica de produto como fluxo operacional suportado
 - compras como modulo dedicado
 - recebimentos como modulo dedicado
-- dashboard com indicadores financeiros consolidados
-- anexos de documentos e fotos
 - importacao em massa via CSV
 - auditoria avancada de alteracoes
 
 ## 4. Contexto operacional
 
-- uso previsto por 2 pessoas
+- uso interno e fechado
 - operacao pequena de revenda
 - uso em desktop e celular
 - estoque unico global
@@ -72,7 +74,12 @@ Campos operacionais principais:
 - custo medio atual
 - preco de venda atual
 - estoque atual
-- status (`ativo` ou `arquivado`)
+- status derivado de `archivedAt`
+
+Regra oficial:
+
+- o ciclo de vida do produto e `ativo` ou `arquivado`
+- produto arquivado sai da operacao diaria, mas preserva historico, vendas e vinculos
 
 ### 5.2 Entrada de estoque
 
@@ -87,6 +94,7 @@ Impactos:
 
 - aumenta estoque
 - recalcula custo medio movel
+- reativa produto arquivado quando houver nova entrada
 
 ### 5.3 Baixa de estoque
 
@@ -115,13 +123,13 @@ Evento de saida comercial com:
 - 1 ou mais itens
 - um produto por item, sem repeticao dentro da mesma venda
 - quantidade inteira por item
-- preco unitario por item capturado automaticamente do produto no momento da venda
-- snapshots de custo por item no momento da venda
+- preco unitario por item capturado do catalogo no momento da venda
+- snapshot de custo por item no momento da venda
 - frete opcional
 - adicional opcional
 - desconto opcional
-- `totalAmount` como valor operacional da venda
-- `chargedAmount` como valor efetivamente cobrado do cliente
+- `totalAmount` como valor operacional
+- `chargedAmount` como valor cobrado do cliente
 - taxa calculada a partir da parcela selecionada quando o pagamento for cartao
 
 Formula oficial:
@@ -147,7 +155,7 @@ Regras do modulo:
 - correcao operacional ocorre por cancelamento
 - cancelamento muda status para `cancelled`
 - cancelamento registra `cancelledAt`
-- venda cancelada estorna estoque
+- cancelamento estorna estoque
 - `totalAmount` nao pode ser negativo
 - `chargedAmount` nao pode ser menor que `totalAmount`
 
@@ -159,8 +167,9 @@ Regras do modulo:
 4. Nao ha sobrescrita manual de saldo fora desses fluxos.
 5. Quantidade de entrada, baixa e venda deve ser inteira.
 6. Datas recebidas na borda devem estar no formato ISO `YYYY-MM-DD`.
-7. Venda concluida reduz estoque; cancelamento de venda estorna estoque.
+7. Venda concluida reduz estoque; cancelamento estorna estoque.
 8. Produto arquivado nao pode ser vendido.
+9. A tela de vendas deve usar apenas produtos ativos com estoque disponivel.
 
 ## 7. Regra de custo medio
 
@@ -172,7 +181,7 @@ Regras:
 
 1. O recalculo ocorre apenas em entrada valida.
 2. Baixa de estoque nao recalcula custo medio.
-3. Venda tambem nao recalcula custo medio; usa snapshot do custo atual.
+3. Venda nao recalcula custo medio; usa snapshot do custo atual.
 
 ## 8. Regra de precificacao
 
@@ -201,27 +210,25 @@ Observacoes:
 - `paymentMethod`, `paymentInstallments` e `paymentFeePayer` precisam refletir a escolha capturada na venda
 - `feeAmount` so representa custo quando a taxa for absorvida pelo vendedor
 - `chargedAmount` pode superar `totalAmount`, mas nunca compoe receita operacional ou lucro
+- listagens devem usar cursor opaco composto, coerente com a ordenacao da consulta
 
-## 10. Regra de exclusao fisica
+## 10. Regra de acesso
 
 Decisao operacional atual:
 
-- a exclusao fisica de produto permanece habilitada
-- essa operacao e destrutiva e irreversivel
-- se houver vendas vinculadas ao produto, essas vendas e seus itens tambem sao removidos
-
-Implicacao operacional:
-
-- preferir arquivamento quando o objetivo for apenas retirar o produto da operacao diaria
-- usar exclusao definitiva apenas quando a remocao historica for intencional
+- o sistema e fechado
+- o cadastro publico por email nao faz parte do contrato suportado
+- usuarios precisam ser provisionados previamente
+- o bootstrap interno de usuario existe apenas para desenvolvimento e automacao autorizada
 
 ## 11. Regras de interface operacional
 
 1. Listagens devem expor navegacao por link ou botao explicito, nao por clique invisivel na linha inteira.
-2. Fluxos destrutivos devem usar confirmacao explicita.
-3. Dialogs precisam manter foco previsivel e feedback claro.
+2. Dialogs precisam manter foco previsivel e feedback claro.
+3. Mutacoes devem refletir imediatamente na interface apos `refresh()`.
 4. O sistema deve permanecer minimalista, com prioridade para legibilidade e velocidade operacional.
 5. No mobile, listagens devem degradar para cards ou blocos mais faceis de tocar.
+6. Controles customizados precisam ter nome acessivel estavel para operador e automacao.
 
 ## 12. Estado atual de qualidade
 
@@ -232,23 +239,14 @@ Implicacao operacional:
 - validacoes compartilhadas com Zod
 - historico de movimentacoes por produto
 - regras de pagamento parametrizadas
+- suite Vitest e Playwright cobrindo fluxos centrais
 
 ### Pendencias atuais
 
-- ampliar a cobertura E2E para fluxos autenticados completos
-- ampliar testes de integracao para exclusao destrutiva de produto
-- construir dashboard financeiro consolidado
-
-## 13. Criterio para iniciar planejamento de recebimentos
-
-Antes do modulo de recebimentos, manter a base atual com:
-
-1. regras e documentacao alinhadas
-2. validacoes de borda estaveis
-3. testes de integracao para criacao e cancelamento de venda
-4. protecao clara para fluxos destrutivos
-5. historico de produto exibindo venda, baixa, entrada e estorno
+- dashboard financeiro consolidado mais profundo
+- modulo de recebimentos
+- observabilidade adicional
 
 ---
 
-Este documento reflete o estado implementado hoje e substitui premissas antigas que descreviam formulas ou modulos ainda nao presentes no produto.
+Este documento reflete o estado implementado hoje e substitui premissas antigas de exclusao destrutiva e cadastro publico.

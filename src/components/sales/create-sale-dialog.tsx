@@ -43,18 +43,14 @@ import {
   calculateSaleReceivedAmount,
   type SaleFinancials,
 } from "@/features/sales/calculations";
-import type { SalePaymentFeePayer } from "@/features/sales/contracts";
+import type {
+  SalePaymentFeePayer,
+  SaleProductOption,
+} from "@/features/sales/contracts";
 import { createSaleSchema } from "@/features/sales/schema";
 import { roundCurrency } from "@/lib/domain/currency";
 import { formatDateInputValue } from "@/lib/domain/date";
 import { formatCurrency, formatPercent } from "@/lib/formatters";
-
-export interface SaleProductOption {
-  id: string;
-  name: string;
-  price: string;
-  stock: number;
-}
 
 interface SaleRowDraft {
   id: string;
@@ -270,6 +266,7 @@ function SaleProductRow({
           Produto
         </Label>
         <ProductCombobox
+          label="Selecionar produto da venda"
           onSelect={(productId) => {
             updateItem(item.id, (currentItem) => ({
               ...currentItem,
@@ -598,6 +595,7 @@ export function CreateSaleDialog({
                       }
                     >
                       <SelectTrigger
+                        aria-label="Metodo de pagamento da venda"
                         className="w-full"
                         id="sale-payment-method"
                       >
@@ -635,6 +633,7 @@ export function CreateSaleDialog({
                             value={paymentFeePayer}
                           >
                             <SelectTrigger
+                              aria-label="Responsavel pela taxa do cartao"
                               className="w-full"
                               id="sale-payment-fee-payer"
                             >

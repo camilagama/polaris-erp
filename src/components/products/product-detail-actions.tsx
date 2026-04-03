@@ -10,7 +10,8 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
   addProductStockAction,
@@ -70,6 +71,7 @@ export function ProductDetailActions({
     minimumMarkupPercent: number;
   };
 }) {
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [editing, setEditing] = useState(false);
   const [stocking, setStocking] = useState(false);
@@ -94,6 +96,22 @@ export function ProductDetailActions({
     "adjustment" | "operational"
   >("operational");
   const [writeOffNotes, setWriteOffNotes] = useState("");
+
+  useEffect(() => {
+    setEditName(product.name);
+    setEditCategoryId(product.categoryId);
+    setEditDescription(product.description ?? "");
+    setEditPrice(product.price);
+    setEditImageFile(null);
+    setEditImageMarkedForRemoval(false);
+    setStockUnitCost(product.costPrice ?? "0");
+  }, [
+    product.categoryId,
+    product.costPrice,
+    product.description,
+    product.name,
+    product.price,
+  ]);
 
   const handleEditProduct = () => {
     startTransition(async () => {
@@ -176,6 +194,7 @@ export function ProductDetailActions({
         } else {
           await archiveProductAction(product.id);
           toast.success("Produto arquivado.");
+          router.push("/produtos");
         }
       } catch (error) {
         toast.error(

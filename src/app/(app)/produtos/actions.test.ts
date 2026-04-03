@@ -1,11 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  productPriceChanges,
-  productStockEntries,
-  productStockWriteOffs,
-  products,
-  sales,
-} from "@/db/schema";
 
 vi.mock("server-only", () => ({}));
 
@@ -50,15 +43,6 @@ interface InventoryHarness {
   };
   transaction: <T>(callback: (tx: unknown) => Promise<T>) => Promise<T>;
   writeOffLog: Record<string, unknown>[];
-}
-
-interface ProductDeletionHarness {
-  deletedSales: string[];
-  productName: string;
-  state: {
-    deletedProduct: boolean;
-  };
-  transaction: <T>(callback: (tx: unknown) => Promise<T>) => Promise<T>;
 }
 
 interface ProductUpdateHarness {
@@ -123,14 +107,14 @@ const createInventoryHarness = (initialState: {
           },
         ],
       }),
-      insert: (table: unknown) => ({
+      insert: (_table: unknown) => ({
         values: (payload: Record<string, unknown>) => {
-          if (table === productStockEntries) {
+          if ("stockedOn" in payload && "unitCost" in payload) {
             entryLog.push(payload);
             return Promise.resolve([]);
           }
 
-          if (table === productStockWriteOffs) {
+          if ("happenedOn" in payload && "reason" in payload) {
             writeOffLog.push(payload);
             return Promise.resolve([]);
           }
@@ -138,10 +122,10 @@ const createInventoryHarness = (initialState: {
           throw new Error("Tabela de insert nao suportada no teste.");
         },
       }),
-      update: (table: unknown) => ({
+      update: (_table: unknown) => ({
         set: (payload: Record<string, unknown>) => ({
           where: (_whereExpression: unknown) => {
-            if (table !== products) {
+            if (!("stock" in payload || "costPrice" in payload)) {
               throw new Error("Tabela de update nao suportada no teste.");
             }
 
@@ -174,62 +158,6 @@ const createInventoryHarness = (initialState: {
   };
 };
 
-const createProductDeletionHarness = (
-  linkedSaleIds: string[],
-  productName = "Produto de teste"
-): ProductDeletionHarness => {
-  const deletedSales: string[] = [];
-  const state = {
-    deletedProduct: false,
-  };
-
-  const transaction = async <T>(callback: (tx: unknown) => Promise<T>) => {
-    const tx = {
-      delete: (table: unknown) => ({
-        where: (_whereExpression: unknown) => {
-          if (table === sales) {
-            deletedSales.push(...linkedSaleIds);
-            return Promise.resolve([]);
-          }
-
-          if (table === products) {
-            state.deletedProduct = true;
-            return Promise.resolve([]);
-          }
-
-          throw new Error("Tabela de delete nao suportada no teste.");
-        },
-      }),
-      select: () => ({
-        from: () => ({
-          where: async () => [
-            {
-              name: productName,
-            },
-          ],
-        }),
-      }),
-      selectDistinct: () => ({
-        from: () => ({
-          where: async () =>
-            linkedSaleIds.map((saleId) => ({
-              saleId,
-            })),
-        }),
-      }),
-    };
-
-    return await callback(tx);
-  };
-
-  return {
-    deletedSales,
-    productName,
-    state,
-    transaction,
-  };
-};
-
 const createProductUpdateHarness = (initialState: {
   categoryId: string;
   description: string | null;
@@ -253,9 +181,9 @@ const createProductUpdateHarness = (initialState: {
           },
         ],
       }),
-      insert: (table: unknown) => ({
+      insert: (_table: unknown) => ({
         values: (payload: Record<string, unknown>) => {
-          if (table !== productPriceChanges) {
+          if (!("previousPrice" in payload && "nextPrice" in payload)) {
             throw new Error("Tabela de insert nao suportada no teste.");
           }
 
@@ -263,10 +191,17 @@ const createProductUpdateHarness = (initialState: {
           return Promise.resolve([]);
         },
       }),
-      update: (table: unknown) => ({
+      update: (_table: unknown) => ({
         set: (payload: Record<string, unknown>) => ({
           where: (_whereExpression: unknown) => {
-            if (table !== products) {
+            if (
+              !(
+                "categoryId" in payload ||
+                "description" in payload ||
+                "name" in payload ||
+                "price" in payload
+              )
+            ) {
               throw new Error("Tabela de update nao suportada no teste.");
             }
 
@@ -589,37 +524,47 @@ describe("product server actions", () => {
     });
   });
 
-  it("requires typed confirmation before deleting a product with linked sales", async () => {
-    const { deleteProductAction } = await import(
+  it("archives a product by stamping archivedAt", async () => {
+    const { archiveProductAction } = await import(
       "@/app/(app)/produtos/actions"
     );
     const { mockDb } = await resolveMocks();
+    const updatePayloads: Record<string, unknown>[] = [];
 
-    const harness = createProductDeletionHarness(["sale-1", "sale-2"]);
+    mockDb.update.mockReturnValue({
+      set: (payload: Record<string, unknown>) => ({
+        where: () => {
+          updatePayloads.push(payload);
+          return Promise.resolve([]);
+        },
+      }),
+    });
 
-    mockDb.transaction.mockImplementation(harness.transaction as never);
+    await archiveProductAction("product-1");
 
-    await expect(deleteProductAction("product-1")).rejects.toThrowError(
-      `Digite exatamente "${harness.productName}" para confirmar a exclusao com vendas vinculadas.`
-    );
-
-    expect(harness.deletedSales).toEqual([]);
-    expect(harness.state.deletedProduct).toBe(false);
+    expect(updatePayloads[0]?.archivedAt).toBeInstanceOf(Date);
   });
 
-  it("deletes linked sales before permanently deleting a product", async () => {
-    const { deleteProductAction } = await import(
+  it("unarchives a product by clearing archivedAt", async () => {
+    const { unarchiveProductAction } = await import(
       "@/app/(app)/produtos/actions"
     );
     const { mockDb } = await resolveMocks();
+    const updatePayloads: Record<string, unknown>[] = [];
 
-    const harness = createProductDeletionHarness(["sale-1", "sale-2"]);
+    mockDb.update.mockReturnValue({
+      set: (payload: Record<string, unknown>) => ({
+        where: () => {
+          updatePayloads.push(payload);
+          return Promise.resolve([]);
+        },
+      }),
+    });
 
-    mockDb.transaction.mockImplementation(harness.transaction as never);
+    await unarchiveProductAction("product-1");
 
-    await deleteProductAction("product-1", harness.productName);
-
-    expect(harness.deletedSales).toEqual(["sale-1", "sale-2"]);
-    expect(harness.state.deletedProduct).toBe(true);
+    expect(updatePayloads[0]).toMatchObject({
+      archivedAt: null,
+    });
   });
 });

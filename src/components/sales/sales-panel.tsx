@@ -1,13 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { loadMoreSalesAction } from "@/app/(app)/vendas/pagination";
 import { DashboardDateRangeFilter } from "@/components/dashboard/dashboard-date-range-filter";
-import {
-  CreateSaleDialog,
-  type SaleProductOption,
-} from "@/components/sales/create-sale-dialog";
+import { CreateSaleDialog } from "@/components/sales/create-sale-dialog";
 import { PaymentMethodChart } from "@/components/sales/payment-method-chart";
 import { SalesPerformanceChart } from "@/components/sales/sales-performance-chart";
 import { SalesStatusChart } from "@/components/sales/sales-status-chart";
@@ -38,7 +35,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { CardInstallmentRule } from "@/features/catalog/payment-rules";
-import type { SaleListItem, SalesAnalytics } from "@/features/sales/contracts";
+import type {
+  SaleListItem,
+  SaleProductOption,
+  SalesAnalytics,
+} from "@/features/sales/contracts";
 import {
   type SalesDateRange,
   salesDatePresetOptions,
@@ -98,6 +99,11 @@ export function SalesPanel({
   const [statusFilter, setStatusFilter] = useState<
     "all" | SaleListItem["status"]
   >("all");
+
+  useEffect(() => {
+    setSales(initialSales);
+    setCursor(initialCursor);
+  }, [initialCursor, initialSales]);
 
   const handleLoadMore = () => {
     if (!cursor) {

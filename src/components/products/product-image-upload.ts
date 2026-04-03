@@ -8,7 +8,7 @@ import {
 
 const supportedMimeTypes = new Set<string>(productImageMimeTypes);
 
-export const validateProductImageFile = (file: File) => {
+const validateProductImageFile = (file: File) => {
   if (!supportedMimeTypes.has(file.type)) {
     throw new Error("Use uma imagem JPG, PNG ou WebP.");
   }

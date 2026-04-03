@@ -25,10 +25,12 @@ interface ProductComboboxOption {
 }
 
 export function ProductCombobox({
+  label,
   onSelect,
   options,
   value,
 }: {
+  label: string;
   onSelect: (productId: string) => void;
   options: ProductComboboxOption[];
   value: string;
@@ -41,6 +43,7 @@ export function ProductCombobox({
       <PopoverTrigger asChild>
         <button
           aria-expanded={open}
+          aria-label={label}
           className={cn(
             "flex h-8 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-1 text-left text-xs shadow-xs transition-colors",
             "hover:bg-accent hover:text-accent-foreground",
@@ -68,7 +71,7 @@ export function ProductCombobox({
         className="w-[--radix-popover-trigger-width] p-0"
       >
         <Command>
-          <CommandInput placeholder="Buscar produto..." />
+          <CommandInput aria-label={label} placeholder="Buscar produto..." />
           <CommandList>
             <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
             <CommandGroup>

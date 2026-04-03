@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { products, saleItems, sales } from "@/db/schema";
 
 vi.mock("server-only", () => ({}));
 
@@ -104,11 +103,11 @@ const createSalesHarness = (productsState: ProductState[]): SalesHarness => {
 
         return { rows };
       },
-      insert: (table: unknown) => ({
+      insert: (_table: unknown) => ({
         values: (
           payload: Record<string, unknown> | Record<string, unknown>[]
         ) => {
-          if (table === sales) {
+          if (!Array.isArray(payload) && "paymentMethod" in payload) {
             salesLog.push(payload as Record<string, unknown>);
 
             return {
@@ -116,7 +115,11 @@ const createSalesHarness = (productsState: ProductState[]): SalesHarness => {
             };
           }
 
-          if (table === saleItems) {
+          if (
+            (Array.isArray(payload) &&
+              payload.every((row) => "saleId" in row)) ||
+            (!Array.isArray(payload) && "saleId" in payload)
+          ) {
             const rows = Array.isArray(payload) ? payload : [payload];
             saleItemsLog.push(...rows);
             return Promise.resolve([]);
@@ -125,10 +128,10 @@ const createSalesHarness = (productsState: ProductState[]): SalesHarness => {
           throw new Error("Tabela de insert nao suportada no teste.");
         },
       }),
-      update: (table: unknown) => ({
+      update: (_table: unknown) => ({
         set: (payload: Record<string, unknown>) => ({
           where: (_whereExpression: unknown) => {
-            if (table !== products) {
+            if (!("stock" in payload)) {
               throw new Error("Tabela de update nao suportada no teste.");
             }
 
@@ -219,10 +222,10 @@ const createCancelSaleHarness = (params: {
             })),
         }),
       }),
-      update: (table: unknown) => ({
+      update: (_table: unknown) => ({
         set: (payload: Record<string, unknown>) => ({
           where: (_whereExpression: unknown) => {
-            if (table === products) {
+            if ("stock" in payload) {
               const productId = params.items[productUpdateCount]?.productId;
 
               if (!productId) {
@@ -246,7 +249,7 @@ const createCancelSaleHarness = (params: {
               return Promise.resolve([]);
             }
 
-            if (table === sales) {
+            if ("status" in payload || "cancelledAt" in payload) {
               state.saleStatus = payload.status as "cancelled" | "completed";
               state.cancelledAt =
                 payload.cancelledAt instanceof Date

@@ -1,4 +1,4 @@
-# Sprint 1 - Snapshot Atual (31/03/2026)
+# Sprint 1 - Snapshot Atual (02/04/2026)
 
 ## Status Geral
 
@@ -7,46 +7,59 @@
 - [x] Fase 2, remodelagem do banco para produtos/estoque
 - [x] Fase 3, produtos e estoque base
 - [x] Fase 4, configuracoes de catalogo e markup
-- [~] Fase 5, polimento operacional
+- [x] Fase 5, polimento operacional
 - [x] Fase 6, planejamento do modulo de vendas
 - [x] Fase 7, implementacao minima de vendas
+- [x] Fase 8, hardening e refinamento do baseline
 
 ## Entregas confirmadas
 
 - [x] Shell `(app)` protegida com autenticacao
-- [x] Better Auth com email/senha, Google e One Tap
-- [x] Modulo `Produtos` com cadastro, edicao e status (ativo/arquivado)
+- [x] Better Auth com email/senha e Google para usuarios aprovados
+- [x] Cadastro publico por email removido do contrato suportado
+- [x] Bootstrap interno de usuario para dev/E2E protegido por `CRON_SECRET`
+- [x] Modulo `Produtos` com cadastro, edicao e ciclo `ativo/arquivado`
+- [x] Exclusao fisica retirada do fluxo operacional documentado
 - [x] Fluxo de entrada de estoque com recalculo de custo medio
 - [x] Fluxo de baixa de estoque com motivo simplificado e observacoes
 - [x] Historico de movimentacoes no detalhe do produto
-- [x] Configuracoes de margem minima e ideal
+- [x] Configuracoes de margem minima, ideal e parcelamento de cartao
 - [x] Busca por nome e categoria na listagem de produtos
 - [x] Validacao de data ISO na borda das server actions de estoque
-- [x] Testes unitarios de regras matematicas centrais
-- [x] Modulo `Vendas` com listagem e detalhe
+- [x] Modulo `Vendas` com listagem, detalhe e cancelamento
 - [x] Registro de venda multi-item com baixa imediata de estoque
+- [x] Query dedicada de produtos vendaveis para a tela de venda
 - [x] Preco do item travado pelo catalogo no momento da venda
-- [x] Venda com pagamento (`Pix`/`Cartao`) e composicao de total por frete/taxa
-- [x] Cancelamento de venda com estorno automatico de estoque
-- [x] Testes iniciais de dominio e integracao para vendas
-- [x] Integracao de venda e estorno no historico de produtos
-- [x] Hardening de exclusao de produto com alerta de impacto em vendas
-- [x] Revisao da documentacao para estado real
+- [x] Cursor opaco composto em produtos e vendas
+- [x] Ressincronizacao de paineis client-side apos `refresh()`
+- [x] One Tap desativado em localhost com mensagem explicita
+- [x] Suite Vitest verde
+- [x] Suite Playwright verde
+- [x] `check`, `build` e `knip` tratados como baseline obrigatorio
 
-## Pontos em andamento
+## Validacoes concluídas
 
-- [~] Smoke test operacional com dados reais para fluxo de venda e cancelamento
+- [x] login interno
+- [x] cadastro de produto
+- [x] entrada de estoque
+- [x] baixa operacional
+- [x] venda
+- [x] cancelamento com estorno
+- [x] alteracao de preco preservando snapshots antigos
+- [x] cartao com taxa no cliente
+- [x] cartao com taxa no vendedor
+- [x] arquivamento de produto
 
-## Pendencias para proxima fase
+## Proxima fase
 
-- [ ] Dashboard operacional consolidado (alem de placeholder)
-- [ ] E2E completo cobrindo fluxos principais
-- [ ] Modulo de recebimentos (proxima etapa)
+- [ ] Dashboard financeiro mais profundo
+- [ ] Modulo de recebimentos
+- [ ] Observabilidade adicional
 
 ## Proximo passo ativo
 
-Concluir validacao final antes de iniciar recebimentos:
+Iniciar o planejamento do modulo de recebimentos sobre uma base ja estabilizada:
 
-1. Executar smoke test com dados reais de operacao para venda e cancelamento.
-2. Confirmar consistencia entre relatorio operacional e historico por produto.
-3. Definir backlog minimo do modulo de recebimentos.
+1. mapear o contrato minimo de recebimento sem reabrir a modelagem de vendas
+2. definir conciliacao operacional diaria
+3. manter o baseline tecnico verde antes de cada incremento

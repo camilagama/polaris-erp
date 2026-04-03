@@ -21,7 +21,7 @@ interface SaleSnapshotResult {
   totalAmount: number;
 }
 
-export interface CalculateSaleFinancialsInput {
+interface CalculateSaleFinancialsInput {
   additionalAmount: number;
   discountAmount: number;
   freightAmount: number;

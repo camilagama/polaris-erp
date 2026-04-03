@@ -1,6 +1,13 @@
 export type SalePaymentMethod = "card" | "pix";
 export type SalePaymentFeePayer = "customer" | "not_applicable" | "seller";
 
+export interface SaleProductOption {
+  id: string;
+  name: string;
+  price: string;
+  stock: number;
+}
+
 export interface SaleListItem {
   additionalAmount: string;
   cancelledAt: Date | null;
