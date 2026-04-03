@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Google } from "@/components/ui/svgs/google";
 import { authClient, hasGoogleAuthClient } from "@/lib/auth-client";
 
 const isLocalHostEnvironment = () => {
@@ -9,77 +10,6 @@ const isLocalHostEnvironment = () => {
 
   return hostname === "127.0.0.1" || hostname === "localhost";
 };
-
-function GoogleBadge() {
-  return (
-    <span className="flex size-5 items-center justify-center rounded-full border border-border/70 bg-background font-semibold text-[10px] text-foreground">
-      G
-    </span>
-  );
-}
-
-function LoginShowcase() {
-  return (
-    <div className="relative hidden overflow-hidden lg:block">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(185,28,28,0.34),transparent_38%),linear-gradient(180deg,rgba(18,18,18,0.9),rgba(10,10,10,1))]" />
-      <div className="absolute inset-0 bg-[linear-gradient(135deg,transparent_0%,transparent_48%,rgba(255,255,255,0.04)_48%,rgba(255,255,255,0.04)_52%,transparent_52%,transparent_100%)] opacity-40" />
-      <div className="absolute inset-y-12 right-12 left-12 rounded-[2rem] border border-white/10 bg-white/5 shadow-[0_30px_120px_rgba(0,0,0,0.45)] backdrop-blur-md" />
-
-      <div className="relative z-10 flex h-full flex-col justify-between p-12">
-        <div className="max-w-md space-y-5">
-          <p className="font-semibold text-[11px] text-white/60 uppercase tracking-[0.28em]">
-            DG Imports
-          </p>
-          <h2 className="font-heading text-4xl text-white leading-tight tracking-tight">
-            Operacao interna desenhada para giro rapido, clareza e controle.
-          </h2>
-          <p className="max-w-sm text-sm text-white/70 leading-relaxed">
-            Produtos, estoque, vendas e configuracoes em um fluxo enxuto para
-            uso diario, com baixa friccao e leitura operacional imediata.
-          </p>
-        </div>
-
-        <div className="grid gap-4">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl border border-white/10 bg-white/6 p-4">
-              <p className="text-[11px] text-white/55 uppercase tracking-[0.18em]">
-                Catalogo
-              </p>
-              <strong className="mt-3 block font-heading text-2xl text-white">
-                1 fluxo
-              </strong>
-              <p className="mt-2 text-white/65 text-xs">
-                Cadastro, imagem e status sem sair da operacao.
-              </p>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-white/6 p-4">
-              <p className="text-[11px] text-white/55 uppercase tracking-[0.18em]">
-                Estoque
-              </p>
-              <strong className="mt-3 block font-heading text-2xl text-white">
-                100%
-              </strong>
-              <p className="mt-2 text-white/65 text-xs">
-                Entradas, baixas e historico preservado por evento.
-              </p>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-white/6 p-4">
-              <p className="text-[11px] text-white/55 uppercase tracking-[0.18em]">
-                Vendas
-              </p>
-              <strong className="mt-3 block font-heading text-2xl text-white">
-                2 modos
-              </strong>
-              <p className="mt-2 text-white/65 text-xs">
-                Pix e cartao com taxa modelada no proprio fluxo.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export function SignInForm() {
   const [googlePending, setGooglePending] = useState(false);
@@ -141,7 +71,7 @@ export function SignInForm() {
   };
 
   return (
-    <div className="grid min-h-svh lg:grid-cols-2">
+    <div className="grid min-h-svh lg:grid-cols-[0.8fr_2fr]">
       <div className="flex flex-col gap-4 p-6 md:p-10">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 font-medium">
@@ -160,40 +90,43 @@ export function SignInForm() {
               <p className="mt-2 text-muted-foreground text-sm">
                 Use sua conta Google aprovada para acessar o painel
               </p>
-              {isLocalhost ? (
-                <p className="mt-2 text-muted-foreground text-xs">
-                  One Tap fica desativado localmente. Use o botao do Google.
-                </p>
-              ) : null}
             </div>
 
             <div className="flex flex-col gap-4">
               <Button
-                className="h-11 w-full gap-3"
+                className="relative h-11 w-full gap-3"
                 disabled={googlePending || !hasGoogleAuthClient}
                 onClick={handleGoogleSignIn}
                 type="button"
                 variant="outline"
               >
-                <GoogleBadge />
+                {googlePending ? null : <Google className="size-4" />}
                 {googlePending ? "Redirecionando..." : "Continuar com Google"}
               </Button>
 
               {googleError ? (
-                <div className="mt-1 rounded-md bg-destructive/10 p-3 text-destructive text-sm">
+                <div className="mt-1 rounded-md bg-destructive/10 p-3 text-center text-destructive text-sm">
                   {googleError}
                 </div>
               ) : null}
 
-              <p className="text-center text-muted-foreground text-xs leading-relaxed">
-                O acesso e liberado apenas para usuarios previamente
-                provisionados na operacao.
+              <p className="mt-8 text-center text-muted-foreground/70 text-xs leading-relaxed">
+                O acesso é liberado apenas para usuários previamente
+                provisionados na operação.
               </p>
             </div>
           </div>
         </div>
       </div>
-      <LoginShowcase />
+      <div className="relative hidden bg-muted lg:block">
+        <div
+          className="absolute inset-0 h-full w-full bg-center bg-cover brightness-[0.3] grayscale"
+          style={{
+            backgroundImage:
+              'url("https://images.unsplash.com/photo-1497436072909-60f360e1d4b1?auto=format&fit=crop&q=80&w=2560")',
+          }}
+        />
+      </div>
     </div>
   );
 }
