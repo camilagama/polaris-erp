@@ -12,7 +12,9 @@ test("redirects unauthenticated protected routes to sign-in", async ({
   await page.goto("/produtos");
 
   await expect(page).toHaveURL(signInRouteRegex);
-  await expect(page.getByLabel("Email")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Continuar com Google" })
+  ).toBeVisible();
 });
 
 test("keeps the local sign-in screen usable without Google One Tap noise", async ({
@@ -30,7 +32,9 @@ test("keeps the local sign-in screen usable without Google One Tap noise", async
 
   await page.goto("/sign-in");
 
-  await expect(page.getByLabel("Email")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Continuar com Google" })
+  ).toBeVisible();
   await expect(page.getByText(localOneTapDisabledRegex)).toBeVisible();
   expect(gsiMessages).toEqual([]);
 });

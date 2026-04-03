@@ -15,6 +15,12 @@ const hasGoogleAuth =
   typeof googleClientSecret === "string" &&
   typeof publicGoogleClientId === "string";
 
+if (!hasGoogleAuth && serverEnv.NODE_ENV === "production") {
+  throw new Error(
+    "Google auth must be configured in production and staging environments."
+  );
+}
+
 const getTrustedOrigins = () => {
   const origins = new Set<string>([
     new URL(serverEnv.BETTER_AUTH_URL).origin,
@@ -53,7 +59,7 @@ export const auth = betterAuth({
   secret: serverEnv.BETTER_AUTH_SECRET,
   baseURL: serverEnv.BETTER_AUTH_URL,
   basePath: "/api/auth",
-  disabledPaths: ["/sign-up/email"],
+  disabledPaths: ["/sign-in/email", "/sign-up/email"],
   trustedOrigins: getTrustedOrigins(),
   database: drizzleAdapter(db, {
     provider: "pg",
@@ -66,13 +72,13 @@ export const auth = betterAuth({
     usePlural: true,
   }),
   emailAndPassword: {
-    enabled: true,
-    minPasswordLength: 8,
-    autoSignIn: true,
+    enabled: false,
   },
   account: {
     accountLinking: {
       enabled: true,
+      allowDifferentEmails: false,
+      disableImplicitLinking: false,
       trustedProviders: ["google"],
     },
   },

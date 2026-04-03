@@ -6,7 +6,7 @@ Aplicacao interna em `Next.js 16` para operacao de revenda com autenticacao fech
 
 - `Next.js 16` com App Router
 - `React 19`
-- `Better Auth` com email/senha e Google
+- `Better Auth` com login fechado via Google
 - `Drizzle ORM` com PostgreSQL
 - `Tailwind CSS 4` e `shadcn/ui`
 - `Vitest` para testes unitarios e de integracao
@@ -30,11 +30,12 @@ bun run db:migrate
 ## Modelo de acesso
 
 - O app e interno e fechado.
-- O endpoint publico de cadastro por email nao faz parte do contrato suportado.
+- O produto nao oferece cadastro publico nem login por email e senha.
 - O login aceita apenas usuarios previamente provisionados.
-- Em `development` e `test` existe um bootstrap interno de usuario em `/api/internal/auth/bootstrap-user`, protegido por `INTERNAL_BOOTSTRAP_SECRET`.
-- O login com Google continua disponivel para usuarios aprovados.
+- Em `development` e `test` existe um bootstrap interno de sessao em `/api/auth/dev/bootstrap-session`, protegido por `INTERNAL_BOOTSTRAP_SECRET`.
+- O login com Google continua disponivel apenas para usuarios aprovados na tabela `users`.
 - O One Tap nao e inicializado em `localhost` para evitar prompts invalidos e ruido operacional.
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` e `NEXT_PUBLIC_GOOGLE_CLIENT_ID` devem existir nos ambientes reais.
 
 ## Dominio atual
 
@@ -81,7 +82,7 @@ Baseline esperado:
 Fluxos E2E cobertos hoje:
 
 - redirecionamento publico/protegido
-- login interno
+- login tecnico de dev/test com sessao bootstrapada
 - cadastro de produto
 - entrada e baixa de estoque
 - venda, cancelamento e estorno

@@ -1,15 +1,8 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
-import { signInAction } from "@/app/(auth)/sign-in/actions";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { authClient, hasGoogleAuthClient } from "@/lib/auth-client";
-
-const authInitialState = {
-  error: null,
-};
 
 const isLocalHostEnvironment = () => {
   const hostname = window.location.hostname;
@@ -89,10 +82,6 @@ function LoginShowcase() {
 }
 
 export function SignInForm() {
-  const [signInState, signInFormAction, signInPending] = useActionState(
-    signInAction,
-    authInitialState
-  );
   const [googlePending, setGooglePending] = useState(false);
   const [googleError, setGoogleError] = useState<string | null>(null);
   const [isLocalhost, setIsLocalhost] = useState(false);
@@ -133,9 +122,7 @@ export function SignInForm() {
     setGoogleError(null);
 
     if (!hasGoogleAuthClient) {
-      setGoogleError(
-        "Login com Google indisponivel neste ambiente. Use email e senha."
-      );
+      setGoogleError("Login com Google indisponivel neste ambiente.");
       setGooglePending(false);
       return;
     }
@@ -171,17 +158,16 @@ export function SignInForm() {
                 Entrar na sua conta
               </h1>
               <p className="mt-2 text-muted-foreground text-sm">
-                Entre com Google ou use seu email e senha
+                Use sua conta Google aprovada para acessar o painel
               </p>
               {isLocalhost ? (
                 <p className="mt-2 text-muted-foreground text-xs">
-                  One Tap fica desativado localmente. Use o botao do Google ou
-                  entre com email e senha.
+                  One Tap fica desativado localmente. Use o botao do Google.
                 </p>
               ) : null}
             </div>
 
-            <form action={signInFormAction} className="flex flex-col gap-4">
+            <div className="flex flex-col gap-4">
               <Button
                 className="h-11 w-full gap-3"
                 disabled={googlePending || !hasGoogleAuthClient}
@@ -193,64 +179,17 @@ export function SignInForm() {
                 {googlePending ? "Redirecionando..." : "Continuar com Google"}
               </Button>
 
-              <div className="relative my-2 py-4">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-border/70 border-t" />
-                </div>
-                <div className="relative flex justify-center">
-                  <span className="bg-background px-3 text-[10px] text-muted-foreground/60 uppercase tracking-widest">
-                    Ou use seu email
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <Label
-                  className="font-medium text-foreground/80 text-sm"
-                  htmlFor="email"
-                >
-                  Email
-                </Label>
-                <Input
-                  className="h-10"
-                  id="email"
-                  name="email"
-                  required
-                  type="email"
-                />
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <Label
-                  className="font-medium text-foreground/80 text-sm"
-                  htmlFor="password"
-                >
-                  Senha
-                </Label>
-                <Input
-                  className="h-10"
-                  id="password"
-                  minLength={8}
-                  name="password"
-                  required
-                  type="password"
-                />
-              </div>
-
-              {signInState.error || googleError ? (
+              {googleError ? (
                 <div className="mt-1 rounded-md bg-destructive/10 p-3 text-destructive text-sm">
-                  {signInState.error || googleError}
+                  {googleError}
                 </div>
               ) : null}
 
-              <Button
-                className="mt-2 h-11 w-full"
-                disabled={signInPending}
-                type="submit"
-              >
-                {signInPending ? "Entrando..." : "Entrar no painel"}
-              </Button>
-            </form>
+              <p className="text-center text-muted-foreground text-xs leading-relaxed">
+                O acesso e liberado apenas para usuarios previamente
+                provisionados na operacao.
+              </p>
+            </div>
           </div>
         </div>
       </div>
