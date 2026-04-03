@@ -155,7 +155,7 @@ export default async function VendaDetalhePage(
                 </p>
                 <p
                   className={`font-medium text-sm ${
-                    profitAmount < 0 ? "text-red-400" : "text-emerald-500"
+                    profitAmount < 0 ? "text-red-400" : "text-chart-6"
                   }`}
                 >
                   {formatCurrency(profitAmount)}
@@ -282,7 +282,7 @@ export default async function VendaDetalhePage(
                 </div>
               ) : null}
 
-              <div className="flex items-center justify-between font-medium text-emerald-500">
+              <div className="flex items-center justify-between font-medium text-chart-6">
                 <span>
                   {isCancelled ? "Valor recebido original" : "Valor recebido"}
                 </span>

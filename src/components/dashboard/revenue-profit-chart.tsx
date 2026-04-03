@@ -11,28 +11,30 @@ import {
 import { formatCurrency } from "@/lib/formatters";
 
 const chartConfig = {
-  products: {
+  costs: {
     color: "var(--chart-1)",
-    label: "Produtos",
+    label: "Receita",
   },
-  shipping: {
-    color: "var(--chart-2)",
-    label: "Fretes e taxas",
+  profit: {
+    color: "var(--chart-6)",
+    label: "Lucro",
   },
 } satisfies ChartConfig;
 
-export function OperationalCostsChart({
-  totalProductCosts,
-  totalShippingAndSellerFees,
+export function RevenueProfitChart({
+  revenue,
+  profit,
 }: {
-  totalProductCosts: number;
-  totalShippingAndSellerFees: number;
+  revenue: number;
+  profit: number;
 }) {
   const chartData = [
     {
-      group: "costs",
-      products: totalProductCosts,
-      shipping: totalShippingAndSellerFees,
+      group: "metrics",
+      costs: revenue - Math.max(0, profit),
+      profit: Math.max(0, profit),
+      actualProfit: profit,
+      actualRevenue: revenue,
     },
   ];
 
@@ -45,17 +47,21 @@ export function OperationalCostsChart({
           layout="vertical"
           margin={{ top: 0, right: 0, bottom: 0, left: 0 }}
         >
-          <XAxis
-            domain={[0, totalProductCosts + totalShippingAndSellerFees]}
-            hide
-            type="number"
-          />
+          <XAxis domain={[0, revenue]} hide type="number" />
           <YAxis dataKey="group" hide type="category" />
           <ChartTooltip
             content={
               <ChartTooltipContent
                 formatter={(value, name, item) => {
                   const config = chartConfig[name as keyof typeof chartConfig];
+                  const label =
+                    name === "costs" ? "Recebido" : config?.label || name;
+                  let displayValue = value;
+                  if (name === "costs") {
+                    displayValue = item.payload.actualRevenue;
+                  } else if (name === "profit") {
+                    displayValue = item.payload.actualProfit;
+                  }
                   return (
                     <>
                       <div
@@ -68,11 +74,9 @@ export function OperationalCostsChart({
                         }
                       />
                       <div className="flex flex-1 items-center justify-between gap-4 leading-none">
-                        <span className="text-muted-foreground">
-                          {config?.label || name}
-                        </span>
+                        <span className="text-muted-foreground">{label}</span>
                         <span className="font-medium font-mono text-foreground tabular-nums">
-                          {formatCurrency(Number(value))}
+                          {formatCurrency(Number(displayValue))}
                         </span>
                       </div>
                     </>
@@ -84,15 +88,15 @@ export function OperationalCostsChart({
             cursor={false}
           />
           <Bar
-            dataKey="products"
-            fill="var(--color-products)"
+            dataKey="costs"
+            fill="var(--color-costs)"
             isAnimationActive={true}
             radius={[4, 0, 0, 4]}
             stackId="a"
           />
           <Bar
-            dataKey="shipping"
-            fill="var(--color-shipping)"
+            dataKey="profit"
+            fill="var(--color-profit)"
             isAnimationActive={true}
             radius={[0, 4, 4, 0]}
             stackId="a"
@@ -103,13 +107,11 @@ export function OperationalCostsChart({
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
         <div className="flex items-center gap-1.5">
           <div className="size-2 shrink-0 rounded-full bg-chart-1" />
-          <span>Produtos ({formatCurrency(totalProductCosts)})</span>
+          <span>Recebido ({formatCurrency(revenue)})</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="size-2 shrink-0 rounded-full bg-chart-2" />
-          <span>
-            Fretes e taxas ({formatCurrency(totalShippingAndSellerFees)})
-          </span>
+          <div className="size-2 shrink-0 rounded-full bg-chart-6" />
+          <span>Lucro ({formatCurrency(profit)})</span>
         </div>
       </div>
     </div>

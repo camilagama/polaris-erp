@@ -6,6 +6,7 @@ import Link from "next/link";
 import { DashboardDateRangeFilter } from "@/components/dashboard/dashboard-date-range-filter";
 import { OperationalCostsChart } from "@/components/dashboard/operational-costs-chart";
 import { ProfitMarginChart } from "@/components/dashboard/profit-margin-chart";
+import { RevenueProfitChart } from "@/components/dashboard/revenue-profit-chart";
 import { RevenueResultChart } from "@/components/dashboard/revenue-result-chart";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -49,44 +50,20 @@ export default async function DashboardPage(props: PageProps<"/">) {
       ? (globalStats.profit / globalStats.investment) * 100
       : 0;
 
-  let resultBadge: {
+  const summaryCards: Array<{
+    id: "revenue" | "costs" | "margin" | "count";
     label: string;
-    variant: "destructive" | "outline" | "secondary";
-  };
-  let resultLabel = "Resultado no periodo";
-
-  if (metrics.resultStatus === "profit") {
-    resultBadge = {
-      label: "Lucro",
-      variant: "secondary",
+    value: string;
+    note?: string;
+    badge?: {
+      label: string;
+      variant: "destructive" | "outline" | "secondary";
     };
-    resultLabel = "Lucro no periodo";
-  } else if (metrics.resultStatus === "loss") {
-    resultBadge = {
-      label: "Prejuizo",
-      variant: "destructive",
-    };
-    resultLabel = "Prejuizo no periodo";
-  } else {
-    resultBadge = {
-      label: "Empatado",
-      variant: "outline",
-    };
-  }
-
-  const summaryCards = [
+  }> = [
     {
-      id: "sold",
-      label: "Total vendido",
-      note: "Valor cobrado no periodo",
+      id: "revenue",
+      label: "Receita e Resultado",
       value: formatCurrency(metrics.totalSold),
-    },
-    {
-      badge: resultBadge,
-      id: "result",
-      label: resultLabel,
-      note: "Lucro ou prejuizo",
-      value: formatCurrency(metrics.totalResult),
     },
     {
       id: "costs",
@@ -160,6 +137,13 @@ export default async function DashboardPage(props: PageProps<"/">) {
               </strong>
               {(() => {
                 switch (card.id) {
+                  case "revenue":
+                    return (
+                      <RevenueProfitChart
+                        profit={metrics.totalResult}
+                        revenue={metrics.totalSold}
+                      />
+                    );
                   case "costs":
                     return (
                       <OperationalCostsChart

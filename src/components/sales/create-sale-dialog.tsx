@@ -886,7 +886,7 @@ export function CreateSaleDialog({
                   </div>
                 ) : null}
 
-                <div className="flex items-center justify-between text-emerald-500 text-sm">
+                <div className="flex items-center justify-between text-chart-6 text-sm">
                   <span className="font-medium">Valor recebido</span>
                   <span className="font-medium">
                     {formatCurrency(displayReceivedAmount)}

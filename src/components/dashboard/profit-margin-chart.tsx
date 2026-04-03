@@ -12,7 +12,7 @@ import { formatCurrency } from "@/lib/formatters";
 
 const chartConfig = {
   profit: {
-    color: "#10b981",
+    color: "var(--chart-6)",
     label: "Lucro total",
   },
   cost: {
@@ -62,7 +62,7 @@ export function ProfitMarginChart({
 
                   return (
                     <>
-                      <div className="size-2.5 shrink-0 rounded-[2px] bg-emerald-500" />
+                      <div className="size-2.5 shrink-0 rounded-[2px] bg-chart-6" />
                       <div className="flex flex-1 items-center justify-between gap-4 leading-none">
                         <span className="text-muted-foreground">Progresso</span>
                         <div className="flex items-center gap-1.5 font-mono tabular-nums">
@@ -95,7 +95,7 @@ export function ProfitMarginChart({
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
         <div className="flex items-center gap-1.5">
-          <div className="size-2 shrink-0 rounded-full bg-emerald-500" />
+          <div className="size-2 shrink-0 rounded-full bg-chart-6" />
           <span>Lucro ({formatCurrency(profit)})</span>
         </div>
         <div className="flex items-center gap-1.5">
