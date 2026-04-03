@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { loadMoreSalesAction } from "@/app/(app)/vendas/pagination";
 import type { SaleStatusFilter } from "@/app/(app)/vendas/queries";
 import { DashboardDateRangeFilter } from "@/components/dashboard/dashboard-date-range-filter";
@@ -261,7 +261,8 @@ export function SalesPanel({
   const router = useRouter();
   const [sales, setSales] = useState(initialSales);
   const [cursor, setCursor] = useState(initialCursor);
-  const [loadingMore, startLoadMore] = useTransition();
+  const cursorRef = useRef(initialCursor);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [pending, startTransition] = useTransition();
   const [searchTerm, setSearchTerm] = useState(appliedQuery);
   const emptyStateTitle = getSalesEmptyStateTitle({
@@ -270,10 +271,12 @@ export function SalesPanel({
   });
   const summarySuffix = getSalesSummarySuffix(status);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset state only on filter change, not on RSC revalidation
   useEffect(() => {
     setSales(initialSales);
     setCursor(initialCursor);
-  }, [initialCursor, initialSales]);
+    cursorRef.current = initialCursor;
+  }, [appliedQuery, status]);
 
   useEffect(() => {
     setSearchTerm(appliedQuery);
@@ -316,14 +319,16 @@ export function SalesPanel({
     });
   };
 
-  const handleLoadMore = () => {
-    if (!cursor) {
+  const handleLoadMore = useCallback(async () => {
+    const currentCursor = cursorRef.current;
+    if (!currentCursor || loadingMore) {
       return;
     }
 
-    startLoadMore(async () => {
+    setLoadingMore(true);
+    try {
       const result = await loadMoreSalesAction({
-        cursor,
+        cursor: currentCursor,
         query: appliedQuery,
         status,
       });
@@ -336,8 +341,11 @@ export function SalesPanel({
         return [...current, ...uniqueNewItems];
       });
       setCursor(result.nextCursor);
-    });
-  };
+      cursorRef.current = result.nextCursor;
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [appliedQuery, loadingMore, status]);
 
   return (
     <div className="flex flex-col gap-6 px-6 pb-6">

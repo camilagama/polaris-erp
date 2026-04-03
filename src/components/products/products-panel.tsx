@@ -8,7 +8,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
   archiveProductAction,
@@ -276,7 +276,8 @@ export function ProductsPanel({
   const [pending, startTransition] = useTransition();
   const [products, setProducts] = useState(initialProducts);
   const [cursor, setCursor] = useState(initialCursor);
-  const [loadingMore, startLoadMore] = useTransition();
+  const cursorRef = useRef(initialCursor);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [searchTerm, setSearchTerm] = useState(appliedQuery);
   const [editingProduct, setEditingProduct] = useState<ProductListItem | null>(
     null
@@ -294,10 +295,12 @@ export function ProductsPanel({
   });
   const summaryScope = getProductsSummaryScope(status);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset state only on filter change, not on RSC revalidation
   useEffect(() => {
     setProducts(initialProducts);
     setCursor(initialCursor);
-  }, [initialCursor, initialProducts]);
+    cursorRef.current = initialCursor;
+  }, [appliedQuery, status]);
 
   useEffect(() => {
     setSearchTerm(appliedQuery);
@@ -330,14 +333,16 @@ export function ProductsPanel({
     });
   };
 
-  const handleLoadMore = () => {
-    if (!cursor) {
+  const handleLoadMore = useCallback(async () => {
+    const currentCursor = cursorRef.current;
+    if (!currentCursor || loadingMore) {
       return;
     }
 
-    startLoadMore(async () => {
+    setLoadingMore(true);
+    try {
       const result = await loadMoreProductsAction({
-        cursor,
+        cursor: currentCursor,
         query: appliedQuery,
         status,
       });
@@ -350,8 +355,11 @@ export function ProductsPanel({
         return [...current, ...uniqueNewItems];
       });
       setCursor(result.nextCursor);
-    });
-  };
+      cursorRef.current = result.nextCursor;
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [appliedQuery, loadingMore, status]);
 
   const openEditDialog = (product: ProductListItem) => {
     setEditingProduct(product);
