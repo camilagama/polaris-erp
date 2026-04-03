@@ -42,7 +42,7 @@ export function ProfitMarginChart({
   ];
 
   return (
-    <div className="mt-2 flex flex-col gap-3">
+    <div className="mt-1 flex flex-col gap-3">
       <ChartContainer className="h-3 w-full" config={chartConfig}>
         <BarChart
           accessibilityLayer
@@ -65,7 +65,7 @@ export function ProfitMarginChart({
                       <div className="size-2.5 shrink-0 rounded-[2px] bg-chart-6" />
                       <div className="flex flex-1 items-center justify-between gap-4 leading-none">
                         <span className="text-muted-foreground">Progresso</span>
-                        <div className="flex items-center gap-1.5 font-mono tabular-nums">
+                        <div className="flex items-center gap-1.5 font-heading tabular-nums">
                           <span className="font-medium text-foreground">
                             {actualPercentage.toFixed(1)}%
                           </span>
@@ -93,13 +93,13 @@ export function ProfitMarginChart({
         </BarChart>
       </ChartContainer>
 
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 whitespace-nowrap text-[10px] text-muted-foreground">
         <div className="flex items-center gap-1.5">
-          <div className="size-2 shrink-0 rounded-full bg-chart-6" />
+          <div className="size-1.5 shrink-0 rounded-full bg-chart-6" />
           <span>Lucro ({formatCurrency(profit)})</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="size-2 shrink-0 rounded-full bg-muted-foreground/30" />
+          <div className="size-1.5 shrink-0 rounded-full bg-muted-foreground/30" />
           <span>Investimento ({formatCurrency(cost)})</span>
         </div>
       </div>

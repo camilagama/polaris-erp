@@ -113,9 +113,9 @@ export default async function DashboardPage(props: PageProps<"/">) {
         {summaryCards.map((card) => (
           <Card key={card.id}>
             {card.id !== "revenue" && (
-              <CardHeader className="gap-1">
+              <CardHeader className="gap-1 pb-2">
                 <div className="flex items-center justify-between gap-3">
-                  <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
+                  <CardTitle className="font-medium text-[10px] text-muted-foreground uppercase leading-none tracking-[0.14em]">
                     {card.label}
                   </CardTitle>
                   {card.badge ? (
@@ -133,9 +133,9 @@ export default async function DashboardPage(props: PageProps<"/">) {
                 </div>
               </CardHeader>
             )}
-            <CardContent className="flex flex-col gap-1 pt-0">
+            <CardContent className="flex flex-col gap-1.5 pt-0">
               {card.id !== "revenue" && (
-                <strong className="font-heading text-[1.65rem] leading-none tracking-tight">
+                <strong className="font-heading text-2xl leading-none tracking-tight">
                   {card.value}
                 </strong>
               )}

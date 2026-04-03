@@ -41,28 +41,28 @@ export function RevenueProfitChart({
   ];
 
   return (
-    <div className="flex items-center justify-between gap-4">
+    <div className="flex items-center justify-between gap-4 pb-1">
       <div className="flex flex-col gap-3">
         <span className="font-medium text-[10px] text-muted-foreground uppercase leading-none tracking-[0.14em]">
           Receita / Lucro
         </span>
-        <div className="flex flex-col gap-1.5">
-          <strong className="font-heading text-[1.65rem] leading-none tracking-tight">
+        <div className="flex flex-col gap-2">
+          <strong className="font-heading text-2xl leading-none tracking-tight">
             {formatCurrency(revenue)}
           </strong>
-          <span className="font-heading font-medium text-[1.12rem] text-muted-foreground tabular-nums leading-none tracking-tight">
+          <span className="font-heading font-medium text-lg text-muted-foreground tabular-nums leading-none tracking-tight">
             {formatCurrency(profit)}
           </span>
         </div>
       </div>
 
       <div className="flex flex-col items-center gap-2.5">
-        <ChartContainer className="size-[92px] shrink-0" config={chartConfig}>
+        <ChartContainer className="size-[84px] shrink-0" config={chartConfig}>
           <RadialBarChart
             data={chartData}
             endAngle={-270}
-            innerRadius={34}
-            outerRadius={44}
+            innerRadius={32}
+            outerRadius={40}
             startAngle={90}
           >
             <PolarAngleAxis

@@ -37,7 +37,7 @@ export function OperationalCostsChart({
   ];
 
   return (
-    <div className="mt-2 flex flex-col gap-3">
+    <div className="mt-1 flex flex-col gap-3">
       <ChartContainer className="h-3 w-full" config={chartConfig}>
         <BarChart
           accessibilityLayer
@@ -96,13 +96,13 @@ export function OperationalCostsChart({
         </BarChart>
       </ChartContainer>
 
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 whitespace-nowrap text-[10px] text-muted-foreground">
         <div className="flex items-center gap-1.5">
-          <div className="size-2 shrink-0 rounded-full bg-chart-1" />
+          <div className="size-1.5 shrink-0 rounded-full bg-chart-1" />
           <span>Produtos ({formatCurrency(totalProductCosts)})</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="size-2 shrink-0 rounded-full bg-chart-2" />
+          <div className="size-1.5 shrink-0 rounded-full bg-chart-2" />
           <span>
             Fretes e taxas ({formatCurrency(totalShippingAndSellerFees)})
           </span>
