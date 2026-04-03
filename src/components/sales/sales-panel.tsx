@@ -445,9 +445,6 @@ export function SalesPanel({
                     >
                       {sale.customerName || "Sem cliente"}
                     </Link>
-                    <p className="mt-1 text-muted-foreground text-xs">
-                      #{sale.id.slice(0, 8)}
-                    </p>
                   </div>
                   <Badge variant={getStatusVariant(sale.status)}>
                     {getStatusLabel(sale.status)}
@@ -515,9 +512,6 @@ export function SalesPanel({
                       >
                         {sale.customerName || "Sem cliente"}
                       </Link>
-                      <span className="block text-muted-foreground text-xs">
-                        #{sale.id.slice(0, 8)}
-                      </span>
                     </TableCell>
                     <TableCell>{formatDate(sale.occurredOn)}</TableCell>
                     <TableCell>{getPaymentMethodLabel(sale)}</TableCell>

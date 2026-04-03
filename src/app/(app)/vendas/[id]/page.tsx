@@ -150,7 +150,7 @@ export default async function VendaDetalhePage(
             </div>
             <div>
               <p className="mb-1 text-[11px] text-muted-foreground uppercase tracking-wider">
-                Resultado da venda
+                Lucro
               </p>
               <p
                 className={`font-medium text-sm ${
