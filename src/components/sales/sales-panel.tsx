@@ -336,72 +336,62 @@ export function SalesPanel({
   return (
     <div className="flex flex-col gap-6 p-4 pb-20 sm:p-6 sm:pb-6">
       <div className="flex flex-col gap-3">
-        <div className="flex flex-col gap-1">
-          <h1 className="font-heading font-semibold text-2xl tracking-tight">
-            Vendas
-          </h1>
-          <p className="max-w-2xl text-muted-foreground text-sm">
-            Registre vendas concluidas com baixa imediata de estoque e abra o
-            detalhe para revisar composicao financeira, itens e cancelamento.
-          </p>
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-col gap-1">
+            <h1 className="font-heading font-semibold text-2xl tracking-tight">
+              Vendas
+            </h1>
+            <p className="max-w-2xl text-muted-foreground text-sm">
+              Registre vendas concluidas com baixa imediata de estoque e abra o
+              detalhe para revisar composicao financeira, itens e cancelamento.
+            </p>
+          </div>
+
+          <CreateSaleDialog
+            cardInstallmentRules={cardInstallmentRules}
+            products={saleProducts}
+          />
         </div>
 
-        <div className="rounded-2xl border border-border/60 bg-card/70 p-3">
-          <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-            <div>
-              <p className="font-medium text-sm">Filtros da listagem</p>
-              <p className="text-muted-foreground text-xs">
-                A busca consulta o historico inteiro com filtros reais no
-                servidor.
-              </p>
-            </div>
-
-            <CreateSaleDialog
-              cardInstallmentRules={cardInstallmentRules}
-              products={saleProducts}
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <form
+            className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center"
+            onSubmit={(event) => {
+              event.preventDefault();
+              applyFilters({});
+            }}
+          >
+            <Input
+              className="w-full sm:w-80"
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Buscar por cliente ou ID da venda"
+              value={searchTerm}
             />
-          </div>
-
-          <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-            <form
-              className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center"
-              onSubmit={(event) => {
-                event.preventDefault();
-                applyFilters({});
-              }}
+            <Button
+              disabled={pending}
+              size="sm"
+              type="submit"
+              variant="outline"
             >
-              <Input
-                className="w-full sm:w-96"
-                onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Buscar por cliente ou ID da venda"
-                value={searchTerm}
-              />
-              <Button
-                disabled={pending}
-                size="sm"
-                type="submit"
-                variant="outline"
-              >
-                Aplicar busca
-              </Button>
-            </form>
+              Aplicar busca
+            </Button>
+          </form>
 
-            <Select
-              onValueChange={(value: SaleStatusFilter) =>
-                applyFilters({ nextStatus: value })
-              }
-              value={status}
-            >
-              <SelectTrigger className="w-full sm:w-56">
-                <SelectValue placeholder="Filtrar status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos status</SelectItem>
-                <SelectItem value="completed">Concluidas</SelectItem>
-                <SelectItem value="cancelled">Canceladas</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <Select
+            onValueChange={(value: SaleStatusFilter) =>
+              applyFilters({ nextStatus: value })
+            }
+            value={status}
+          >
+            <SelectTrigger className="w-full sm:w-48">
+              <SelectValue placeholder="Filtrar status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos status</SelectItem>
+              <SelectItem value="completed">Concluidas</SelectItem>
+              <SelectItem value="cancelled">Canceladas</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {appliedQuery ? (
