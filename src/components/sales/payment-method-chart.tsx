@@ -82,6 +82,7 @@ export function PaymentMethodChart({
           data={chartData}
           dataKey="salesCount"
           innerRadius={44}
+          isAnimationActive={true}
           nameKey="paymentMethod"
           outerRadius={68}
           paddingAngle={3}

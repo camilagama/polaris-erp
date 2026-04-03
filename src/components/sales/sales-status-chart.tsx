@@ -70,6 +70,7 @@ export function SalesStatusChart({ data }: { data: SalesStatusSummary[] }) {
           data={chartData}
           dataKey="count"
           innerRadius={44}
+          isAnimationActive={true}
           nameKey="status"
           outerRadius={68}
           paddingAngle={3}

@@ -80,6 +80,7 @@ export function SalesPerformanceChart({
           dataKey="sold"
           fill="url(#salesSoldGradient)"
           fillOpacity={1}
+          isAnimationActive={true}
           stroke="var(--color-sold)"
           strokeWidth={2}
           type="monotone"

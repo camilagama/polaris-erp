@@ -124,6 +124,7 @@ export function ProductCatalogPerformanceChart({
           dataKey="soldAmount"
           fill="url(#catalogSoldGradient)"
           fillOpacity={1}
+          isAnimationActive={true}
           stroke="var(--color-soldAmount)"
           strokeWidth={2}
           type="monotone"
@@ -132,6 +133,7 @@ export function ProductCatalogPerformanceChart({
           dataKey="purchaseAmount"
           fill="url(#catalogPurchaseGradient)"
           fillOpacity={1}
+          isAnimationActive={true}
           stroke="var(--color-purchaseAmount)"
           strokeWidth={2}
           type="monotone"
@@ -209,6 +211,7 @@ export function ProductUnitsSoldChart({
           dataKey="quantitySold"
           fill="url(#unitsSoldGradient)"
           fillOpacity={1}
+          isAnimationActive={true}
           stroke="var(--color-quantitySold)"
           strokeWidth={2}
           type="monotone"

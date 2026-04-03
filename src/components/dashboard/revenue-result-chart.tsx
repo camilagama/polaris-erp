@@ -92,8 +92,18 @@ export function RevenueResultChart({
           }
         />
         <ChartLegend content={<ChartLegendContent className="gap-3 pt-2" />} />
-        <Bar dataKey="sold" fill="var(--color-sold)" radius={6} />
-        <Bar dataKey="costs" fill="var(--color-costs)" radius={6} />
+        <Bar
+          dataKey="sold"
+          fill="var(--color-sold)"
+          isAnimationActive={true}
+          radius={6}
+        />
+        <Bar
+          dataKey="costs"
+          fill="var(--color-costs)"
+          isAnimationActive={true}
+          radius={6}
+        />
       </BarChart>
     </ChartContainer>
   );

@@ -101,7 +101,7 @@ export function InventoryCategoriesChart({
           }
           cursor={false}
         />
-        <Bar dataKey="inventoryValue" radius={4}>
+        <Bar dataKey="inventoryValue" isAnimationActive={true} radius={4}>
           {chartData.map((item) => (
             <Cell fill={item.fill} key={item.categoryKey} />
           ))}
