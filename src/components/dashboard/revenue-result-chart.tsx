@@ -21,15 +21,15 @@ import { formatCompactCurrency, formatCurrency } from "@/lib/formatters";
 
 const chartConfig = {
   costs: {
-    color: "var(--chart-2)",
+    color: "var(--chart-1)",
     label: "Custos",
   },
   result: {
-    color: "var(--chart-3)",
+    color: "var(--chart-6)",
     label: "Lucro",
   },
   sold: {
-    color: "var(--chart-1)",
+    color: "var(--chart-5)",
     label: "Total vendido",
   },
 } satisfies ChartConfig;

@@ -12,7 +12,7 @@ import { formatCurrency } from "@/lib/formatters";
 
 const chartConfig = {
   costs: {
-    color: "var(--chart-1)",
+    color: "var(--chart-5)",
     label: "Receita",
   },
   profit: {
@@ -106,7 +106,7 @@ export function RevenueProfitChart({
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
         <div className="flex items-center gap-1.5">
-          <div className="size-2 shrink-0 rounded-full bg-chart-1" />
+          <div className="size-2 shrink-0 rounded-full bg-chart-5" />
           <span>Recebido ({formatCurrency(revenue)})</span>
         </div>
         <div className="flex items-center gap-1.5">
