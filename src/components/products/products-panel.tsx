@@ -7,6 +7,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
@@ -17,6 +18,7 @@ import {
   updateProductAction,
 } from "@/app/(app)/produtos/actions";
 import { loadMoreProductsAction } from "@/app/(app)/produtos/pagination";
+import type { ProductStatusFilter } from "@/app/(app)/produtos/queries";
 import { ProductEditFields } from "@/components/products/product-edit-fields";
 import { ProductImageFrame } from "@/components/products/product-image-frame";
 import { uploadProductImageToStaging } from "@/components/products/product-image-upload";
@@ -79,6 +81,25 @@ const getProductStatus = (product: ProductListItem) =>
         variant: "secondary" as const,
       };
 
+const getProductsEmptyStateTitle = ({
+  appliedQuery,
+  status,
+}: {
+  appliedQuery: string;
+  status: ProductStatusFilter;
+}) => {
+  if (appliedQuery) {
+    return "Nenhum produto corresponde aos filtros atuais.";
+  }
+
+  return status === "archived"
+    ? "Nenhum produto arquivado encontrado."
+    : "Nenhum produto ativo encontrado.";
+};
+
+const getProductsSummaryScope = (status: ProductStatusFilter) =>
+  status === "archived" ? "produtos arquivados" : "produtos ativos";
+
 function ProductTableThumbnail({ product }: { product: ProductListItem }) {
   return (
     <div className="size-11 shrink-0">
@@ -129,14 +150,118 @@ function ProductRowActions({
   );
 }
 
+function MobileAnalyticsSection({
+  analytics,
+}: {
+  analytics: ProductAnalytics;
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-col gap-1">
+          <h2 className="font-heading font-semibold text-xl tracking-tight">
+            Analytics
+          </h2>
+          <p className="text-muted-foreground text-sm">
+            Leitura consolidada de estoque, categorias e desempenho recente.
+          </p>
+        </div>
+        <Button
+          className="md:hidden"
+          onClick={() => setExpanded((current) => !current)}
+          size="sm"
+          type="button"
+          variant="outline"
+        >
+          {expanded ? "Ocultar" : "Mostrar"}
+        </Button>
+      </div>
+
+      <div className={expanded ? "grid gap-4" : "hidden md:grid md:gap-4"}>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[0.85fr_0.95fr_1.8fr]">
+          <div className="flex flex-col gap-4">
+            <Card className="flex flex-1 flex-col justify-center">
+              <CardHeader className="gap-1 pb-2">
+                <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
+                  Total em estoque
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <strong className="font-heading text-[1.8rem] leading-none tracking-tight">
+                  {analytics.totalUnitsInStock} un.
+                </strong>
+                <CardDescription className="mt-1 text-xs">
+                  Soma das unidades dos produtos ativos.
+                </CardDescription>
+              </CardContent>
+            </Card>
+
+            <Card className="flex flex-1 flex-col justify-center">
+              <CardHeader className="gap-1 pb-2">
+                <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
+                  Compras acumuladas
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <strong className="font-heading text-[1.8rem] leading-none tracking-tight">
+                  {formatCurrency(analytics.totalInventoryInvestment)}
+                </strong>
+                <CardDescription className="mt-1 text-xs">
+                  Soma historica de todas as compras registradas.
+                </CardDescription>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="flex flex-col">
+            <CardHeader className="gap-1 pb-2">
+              <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
+                Categorias no estoque
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Distribuicao do inventario atual
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-1 items-center pt-0">
+              <InventoryCategoriesChart data={analytics.inventoryByCategory} />
+            </CardContent>
+          </Card>
+
+          <Card className="flex flex-col">
+            <CardHeader className="gap-1 pb-2">
+              <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
+                Faturamento x compras
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Ultimos 30 dias
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-1 items-center pt-0">
+              <ProductCatalogPerformanceChart
+                data={analytics.recentPerformance}
+                emptyLabel="Sem movimentacao recente para exibir faturamento e compras."
+              />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function ProductsPanel({
   analytics,
+  appliedQuery,
   categories,
   initialCursor,
   products: initialProducts,
   settings,
+  status,
 }: {
   analytics: ProductAnalytics;
+  appliedQuery: string;
   categories: ProductCategoryOption[];
   initialCursor: string | null;
   products: ProductListItem[];
@@ -144,13 +269,15 @@ export function ProductsPanel({
     idealMarkupPercent: number;
     minimumMarkupPercent: number;
   };
+  status: ProductStatusFilter;
 }) {
+  const pathname = usePathname();
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [products, setProducts] = useState(initialProducts);
   const [cursor, setCursor] = useState(initialCursor);
   const [loadingMore, startLoadMore] = useTransition();
-  const [showArchived, setShowArchived] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState(appliedQuery);
   const [editingProduct, setEditingProduct] = useState<ProductListItem | null>(
     null
   );
@@ -161,11 +288,47 @@ export function ProductsPanel({
   const [editImageFile, setEditImageFile] = useState<File | null>(null);
   const [editImageMarkedForRemoval, setEditImageMarkedForRemoval] =
     useState(false);
+  const emptyStateTitle = getProductsEmptyStateTitle({
+    appliedQuery,
+    status,
+  });
+  const summaryScope = getProductsSummaryScope(status);
 
   useEffect(() => {
     setProducts(initialProducts);
     setCursor(initialCursor);
   }, [initialCursor, initialProducts]);
+
+  useEffect(() => {
+    setSearchTerm(appliedQuery);
+  }, [appliedQuery]);
+
+  const applyFilters = ({
+    nextQuery = searchTerm,
+    nextStatus = status,
+  }: {
+    nextQuery?: string;
+    nextStatus?: ProductStatusFilter;
+  }) => {
+    const params = new URLSearchParams();
+    const normalizedQuery = nextQuery.trim();
+
+    if (normalizedQuery.length > 0) {
+      params.set("q", normalizedQuery);
+    }
+
+    if (nextStatus !== "active") {
+      params.set("status", nextStatus);
+    }
+
+    const nextUrl = params.toString()
+      ? `${pathname}?${params.toString()}`
+      : pathname;
+
+    startTransition(() => {
+      router.replace(nextUrl, { scroll: false });
+    });
+  };
 
   const handleLoadMore = () => {
     if (!cursor) {
@@ -173,32 +336,16 @@ export function ProductsPanel({
     }
 
     startLoadMore(async () => {
-      const result = await loadMoreProductsAction(cursor);
+      const result = await loadMoreProductsAction({
+        cursor,
+        query: appliedQuery,
+        status,
+      });
 
       setProducts((current) => [...current, ...result.items]);
       setCursor(result.nextCursor);
     });
   };
-
-  const normalizedSearch = searchTerm.trim().toLowerCase();
-  const visibleProducts = products.filter((product) => {
-    const matchesArchive = showArchived
-      ? Boolean(product.archivedAt)
-      : !product.archivedAt;
-
-    if (!matchesArchive) {
-      return false;
-    }
-
-    if (normalizedSearch.length === 0) {
-      return true;
-    }
-
-    return (
-      product.name.toLowerCase().includes(normalizedSearch) ||
-      product.categoryName.toLowerCase().includes(normalizedSearch)
-    );
-  });
 
   const openEditDialog = (product: ProductListItem) => {
     setEditingProduct(product);
@@ -274,49 +421,96 @@ export function ProductsPanel({
           </h1>
           <p className="max-w-2xl text-muted-foreground text-sm">
             Abra o detalhe para ver historico, custo medio e movimentacoes. A
-            listagem concentra filtro rapido, status e acoes operacionais.
+            listagem agora consulta o catalogo inteiro com filtros reais no
+            servidor.
           </p>
         </div>
 
-        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center">
-            <Input
-              className="w-full sm:w-80"
-              onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Buscar por nome ou categoria"
-              value={searchTerm}
-            />
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={() => setShowArchived((current) => !current)}
-              size="xs"
-              type="button"
-              variant="ghost"
-            >
-              {showArchived ? "Ver ativos" : "Ver arquivados"}
-            </Button>
+        <div className="rounded-2xl border border-border/60 bg-card/70 p-3">
+          <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <p className="font-medium text-sm">Filtros da listagem</p>
+              <p className="text-muted-foreground text-xs">
+                Busca por nome ou categoria com paginacao coerente ao filtro
+                atual.
+              </p>
+            </div>
             <RegisterProductDialog
               categories={categories}
               settings={settings}
             />
           </div>
+
+          <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+            <form
+              className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center"
+              onSubmit={(event) => {
+                event.preventDefault();
+                applyFilters({});
+              }}
+            >
+              <Input
+                className="w-full sm:w-96"
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Buscar por nome ou categoria"
+                value={searchTerm}
+              />
+              <Button
+                disabled={pending}
+                size="sm"
+                type="submit"
+                variant="outline"
+              >
+                Aplicar busca
+              </Button>
+            </form>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                onClick={() => applyFilters({ nextStatus: "active" })}
+                size="xs"
+                type="button"
+                variant={status === "active" ? "default" : "ghost"}
+              >
+                Ativos
+              </Button>
+              <Button
+                onClick={() => applyFilters({ nextStatus: "archived" })}
+                size="xs"
+                type="button"
+                variant={status === "archived" ? "default" : "ghost"}
+              >
+                Arquivados
+              </Button>
+            </div>
+          </div>
         </div>
+
+        {appliedQuery ? (
+          <p className="text-muted-foreground text-xs">
+            Resultado para{" "}
+            <span className="font-medium text-foreground">
+              "{appliedQuery}"
+            </span>{" "}
+            em {summaryScope}.
+          </p>
+        ) : null}
       </div>
 
-      {visibleProducts.length === 0 ? (
+      {products.length === 0 ? (
         <div className="rounded-xl border border-border/60 bg-card px-4 py-10 text-center">
-          <p className="font-medium">Nenhum produto encontrado.</p>
+          <p className="font-medium">{emptyStateTitle}</p>
           <p className="mt-2 text-muted-foreground text-sm">
-            Ajuste os filtros ou cadastre um novo item para continuar.
+            {appliedQuery
+              ? "Ajuste a busca ou troque o status para ampliar a consulta."
+              : "Ajuste os filtros ou cadastre um novo item para continuar."}
           </p>
         </div>
       ) : (
         <>
           <div className="grid gap-3 md:hidden">
-            {visibleProducts.map((product) => {
-              const status = getProductStatus(product);
+            {products.map((product) => {
+              const statusBadge = getProductStatus(product);
 
               return (
                 <article
@@ -328,7 +522,7 @@ export function ProductsPanel({
                       <ProductTableThumbnail product={product} />
                       <div className="min-w-0">
                         <Link
-                          className="block truncate font-medium text-sm hover:underline"
+                          className="block truncate font-medium text-sm transition-colors hover:text-primary hover:underline"
                           href={`/produtos/${product.id}`}
                           title={product.name}
                         >
@@ -342,7 +536,9 @@ export function ProductsPanel({
                         </p>
                       </div>
                     </div>
-                    <Badge variant={status.variant}>{status.label}</Badge>
+                    <Badge variant={statusBadge.variant}>
+                      {statusBadge.label}
+                    </Badge>
                   </div>
 
                   <div className="mt-4 grid grid-cols-2 gap-3">
@@ -389,6 +585,7 @@ export function ProductsPanel({
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="pl-4 sm:pl-6">Produto</TableHead>
                   <TableHead>Categoria</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Preco</TableHead>
                   <TableHead className="text-center">Estoque</TableHead>
                   <TableHead className="pr-4 text-right sm:pr-6">
@@ -397,14 +594,16 @@ export function ProductsPanel({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {visibleProducts.map((product) => {
+                {products.map((product) => {
+                  const statusBadge = getProductStatus(product);
+
                   return (
                     <TableRow className="border-border/40" key={product.id}>
-                      <TableCell className="max-w-[200px] pl-4 sm:pl-6">
+                      <TableCell className="max-w-[240px] pl-4 sm:pl-6">
                         <div className="flex items-center gap-3">
                           <ProductTableThumbnail product={product} />
                           <Link
-                            className="block truncate font-medium hover:underline"
+                            className="block truncate font-medium text-sm transition-colors hover:text-primary hover:underline"
                             href={`/produtos/${product.id}`}
                             title={product.name}
                           >
@@ -412,13 +611,18 @@ export function ProductsPanel({
                           </Link>
                         </div>
                       </TableCell>
-                      <TableCell className="max-w-[150px]">
+                      <TableCell className="max-w-[170px]">
                         <span
                           className="block truncate text-muted-foreground text-sm"
                           title={product.categoryName}
                         >
                           {product.categoryName}
                         </span>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={statusBadge.variant}>
+                          {statusBadge.label}
+                        </Badge>
                       </TableCell>
                       <TableCell>{formatCurrency(product.price)}</TableCell>
                       <TableCell className="text-center font-semibold tabular-nums">
@@ -461,83 +665,7 @@ export function ProductsPanel({
 
       <Separator />
 
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1">
-          <h2 className="font-heading font-semibold text-xl tracking-tight">
-            Analytics
-          </h2>
-          <p className="text-muted-foreground text-sm">
-            Leitura consolidada de estoque, categorias e desempenho recente.
-          </p>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[0.85fr_0.95fr_1.8fr]">
-          <div className="flex flex-col gap-4">
-            <Card className="flex flex-1 flex-col justify-center">
-              <CardHeader className="gap-1 pb-1.5">
-                <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
-                  Total em estoque
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <strong className="font-heading text-[1.65rem] leading-none tracking-tight">
-                  {analytics.totalUnitsInStock} un.
-                </strong>
-                <CardDescription className="mt-1 text-[11px]">
-                  Soma das unidades dos produtos ativos.
-                </CardDescription>
-              </CardContent>
-            </Card>
-
-            <Card className="flex flex-1 flex-col justify-center">
-              <CardHeader className="gap-1 pb-1.5">
-                <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
-                  Valor investido
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <strong className="font-heading text-[1.65rem] leading-none tracking-tight">
-                  {formatCurrency(analytics.totalInventoryInvestment)}
-                </strong>
-                <CardDescription className="mt-1 text-[11px]">
-                  Soma historica de todas as compras de estoque.
-                </CardDescription>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card className="flex flex-col">
-            <CardHeader className="gap-1 pb-2">
-              <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
-                Categorias no estoque
-              </CardTitle>
-              <CardDescription className="text-[11px]">
-                Distribuicao do inventario atual
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-1 items-center pt-0">
-              <InventoryCategoriesChart data={analytics.inventoryByCategory} />
-            </CardContent>
-          </Card>
-
-          <Card className="flex flex-col">
-            <CardHeader className="gap-1 pb-2">
-              <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
-                Faturamento x compras
-              </CardTitle>
-              <CardDescription className="text-[11px]">
-                Ultimos 30 dias
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-1 items-center pt-0">
-              <ProductCatalogPerformanceChart
-                data={analytics.recentPerformance}
-                emptyLabel="Sem movimentacao recente para exibir faturamento e compras."
-              />
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+      <MobileAnalyticsSection analytics={analytics} />
 
       <Dialog
         onOpenChange={(open) => {

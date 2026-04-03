@@ -19,10 +19,22 @@ const getErrorMessage = (error: unknown) => {
 };
 
 export async function POST(request: Request) {
-  const expectedAuthorization = serverEnv.CRON_SECRET
-    ? `Bearer ${serverEnv.CRON_SECRET}`
+  const isBootstrapEnabled =
+    ["development", "test"].includes(serverEnv.NODE_ENV) ||
+    serverEnv.ENABLE_INTERNAL_BOOTSTRAP === "true";
+  const expectedAuthorization = serverEnv.INTERNAL_BOOTSTRAP_SECRET
+    ? `Bearer ${serverEnv.INTERNAL_BOOTSTRAP_SECRET}`
     : null;
   const authorization = request.headers.get("authorization");
+
+  if (!isBootstrapEnabled) {
+    return Response.json(
+      {
+        error: "Bootstrap interno disponivel apenas fora de producao.",
+      },
+      { status: 403 }
+    );
+  }
 
   if (!expectedAuthorization) {
     return Response.json(

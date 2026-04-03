@@ -147,16 +147,16 @@ export default async function ProdutoDetalhePage(
                       </p>
                       <p className="font-medium text-sm">{product.stock} un.</p>
                     </div>
-                    {product.description && (
+                    {product.description ? (
                       <div className="col-span-2 mt-2 sm:col-span-3">
                         <p className="mb-1 text-[11px] text-muted-foreground uppercase tracking-wider">
-                          Observações
+                          Observacoes
                         </p>
                         <p className="text-foreground/80 text-sm">
                           {product.description.trim()}
                         </p>
                       </div>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               </div>
@@ -186,7 +186,7 @@ export default async function ProdutoDetalhePage(
             <CardContent>
               <ProductUnitsSoldChart
                 data={salesMetrics.trend}
-                emptyLabel="Nenhuma venda concluída."
+                emptyLabel="Nenhuma venda concluida."
               />
             </CardContent>
           </Card>
@@ -202,7 +202,7 @@ export default async function ProdutoDetalhePage(
             <CardContent className="space-y-3">
               <div className="flex items-center justify-between border-border/40 border-b pb-3">
                 <span className="text-muted-foreground text-sm">
-                  Preço de Venda
+                  Preco de Venda
                 </span>
                 <span className="font-medium text-sm">
                   {formatCurrency(product.price)}
@@ -210,7 +210,7 @@ export default async function ProdutoDetalhePage(
               </div>
               <div className="flex items-center justify-between border-border/40 border-b pb-3">
                 <span className="text-muted-foreground text-sm">
-                  Custo Médio
+                  Custo Medio
                 </span>
                 <span className="font-medium text-sm">
                   {formatCurrency(averageCost)}
@@ -218,7 +218,7 @@ export default async function ProdutoDetalhePage(
               </div>
               <div className="flex items-center justify-between border-border/40 border-b pb-3">
                 <span className="text-muted-foreground text-sm">
-                  Custo de Investimento
+                  Valor do estoque atual
                 </span>
                 <span className="font-medium text-sm">
                   {formatCurrency(inventorySummary.totalCost)}
@@ -231,7 +231,7 @@ export default async function ProdutoDetalhePage(
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground text-sm">Prejuízo</span>
+                <span className="text-muted-foreground text-sm">Prejuizo</span>
                 <span className="font-medium text-destructive text-sm">
                   {formatCurrency(inventorySummary.totalWriteOffLoss)}
                 </span>

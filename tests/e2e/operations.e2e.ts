@@ -100,6 +100,7 @@ test("creates inventory, records a sale, cancels it, and archives the product wi
     .getByPlaceholder("Buscar por nome ou categoria")
     .first()
     .fill(productName);
+  await page.getByRole("button", { name: "Aplicar busca" }).click();
   await page.getByRole("link", { name: productName }).click();
   await expect(page).toHaveURL(productDetailRouteRegex);
   await expect(page.getByRole("heading", { name: productName })).toBeVisible();
@@ -111,8 +112,11 @@ test("creates inventory, records a sale, cancels it, and archives the product wi
     .getByPlaceholder("Buscar por nome ou categoria")
     .first()
     .fill(productName);
-  await expect(page.getByText("Nenhum produto encontrado.")).toBeVisible();
-  await page.getByRole("button", { name: "Ver arquivados" }).click();
+  await page.getByRole("button", { name: "Aplicar busca" }).click();
+  await expect(
+    page.getByText("Nenhum produto corresponde aos filtros atuais.")
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Arquivados" }).click();
   await expect(page.getByRole("link", { name: productName })).toBeVisible();
 });
 
@@ -184,6 +188,7 @@ test("updates the catalog price for future sales without changing past sale snap
     .getByPlaceholder("Buscar por nome ou categoria")
     .first()
     .fill(productName);
+  await page.getByRole("button", { name: "Aplicar busca" }).click();
   await page.getByRole("link", { name: productName }).click();
   await expect(page).toHaveURL(productDetailRouteRegex);
 
@@ -204,6 +209,7 @@ test("updates the catalog price for future sales without changing past sale snap
     .getByPlaceholder("Buscar por nome ou categoria")
     .first()
     .fill(productName);
+  await page.getByRole("button", { name: "Aplicar busca" }).click();
   await expect(
     page
       .getByRole("row", { name: new RegExp(productName) })

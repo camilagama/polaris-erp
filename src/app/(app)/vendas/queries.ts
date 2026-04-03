@@ -1,4 +1,16 @@
-import { and, asc, desc, eq, gt, isNull, lt, or, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gt,
+  ilike,
+  isNull,
+  lt,
+  or,
+  type SQL,
+  sql,
+} from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { products, saleItems, sales } from "@/db/schema";
@@ -10,12 +22,22 @@ import type {
 import { decodeOpaqueCursor, encodeOpaqueCursor } from "@/lib/opaque-cursor";
 
 const DEFAULT_PAGE_SIZE = 50;
+const saleStatusFilterSchema = z.enum(["all", "cancelled", "completed"]);
 const salesCursorSchema = z.object({
   createdAt: z.string().min(1),
   id: z.string().min(1),
   occurredOn: z.string().min(1),
   version: z.literal(1),
 });
+
+export type SaleStatusFilter = z.infer<typeof saleStatusFilterSchema>;
+
+interface SalesQueryInput {
+  cursor?: string;
+  pageSize?: number;
+  query?: string;
+  status?: SaleStatusFilter;
+}
 
 const buildSalesCursor = (row: {
   createdAt: Date;
@@ -47,12 +69,54 @@ export interface PaginatedSalesList {
   nextCursor: string | null;
 }
 
-export async function getSalesQuery(
-  cursor?: string,
-  pageSize = DEFAULT_PAGE_SIZE
-): Promise<PaginatedSalesList> {
+export async function getSalesQuery({
+  cursor,
+  pageSize = DEFAULT_PAGE_SIZE,
+  query,
+  status = "all",
+}: SalesQueryInput = {}): Promise<PaginatedSalesList> {
   const limit = pageSize + 1;
   const parsedCursor = cursor ? parseSalesCursor(cursor) : null;
+  const normalizedQuery = query?.trim();
+  const searchPattern =
+    normalizedQuery && normalizedQuery.length > 0
+      ? `%${normalizedQuery}%`
+      : null;
+  const filters: SQL[] = [];
+
+  if (status !== "all") {
+    filters.push(eq(sales.status, status));
+  }
+
+  if (searchPattern) {
+    const searchFilter = or(
+      ilike(sql<string>`${sales.id}::text`, searchPattern),
+      ilike(sql<string>`coalesce(${sales.customerName}, '')`, searchPattern)
+    );
+
+    if (searchFilter) {
+      filters.push(searchFilter);
+    }
+  }
+
+  if (parsedCursor) {
+    const cursorFilter = or(
+      lt(sales.occurredOn, parsedCursor.occurredOn),
+      and(
+        eq(sales.occurredOn, parsedCursor.occurredOn),
+        lt(sales.createdAt, parsedCursor.createdAt)
+      ),
+      and(
+        eq(sales.occurredOn, parsedCursor.occurredOn),
+        eq(sales.createdAt, parsedCursor.createdAt),
+        lt(sales.id, parsedCursor.id)
+      )
+    );
+
+    if (cursorFilter) {
+      filters.push(cursorFilter);
+    }
+  }
 
   const rows = await db
     .select({
@@ -79,22 +143,7 @@ export async function getSalesQuery(
       totalAmount: sales.totalAmount,
     })
     .from(sales)
-    .where(
-      parsedCursor
-        ? or(
-            lt(sales.occurredOn, parsedCursor.occurredOn),
-            and(
-              eq(sales.occurredOn, parsedCursor.occurredOn),
-              lt(sales.createdAt, parsedCursor.createdAt)
-            ),
-            and(
-              eq(sales.occurredOn, parsedCursor.occurredOn),
-              eq(sales.createdAt, parsedCursor.createdAt),
-              lt(sales.id, parsedCursor.id)
-            )
-          )
-        : undefined
-    )
+    .where(filters.length > 0 ? and(...filters) : undefined)
     .orderBy(desc(sales.occurredOn), desc(sales.createdAt), desc(sales.id))
     .limit(limit);
 

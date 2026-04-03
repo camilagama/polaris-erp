@@ -1,4 +1,15 @@
-import { and, asc, desc, eq, gt, or } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gt,
+  ilike,
+  isNotNull,
+  isNull,
+  or,
+  type SQL,
+} from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import {
@@ -22,12 +33,22 @@ import { buildProductImageUrl } from "@/features/products/image-urls";
 import { decodeOpaqueCursor, encodeOpaqueCursor } from "@/lib/opaque-cursor";
 
 const DEFAULT_PAGE_SIZE = 50;
+const productStatusFilterSchema = z.enum(["active", "archived"]);
 const productCursorSchema = z.object({
   createdAt: z.string().min(1),
   id: z.string().min(1),
   name: z.string(),
   version: z.literal(1),
 });
+
+export type ProductStatusFilter = z.infer<typeof productStatusFilterSchema>;
+
+interface ProductsQueryInput {
+  cursor?: string;
+  pageSize?: number;
+  query?: string;
+  status?: ProductStatusFilter;
+}
 
 const mapProductImage = (row: {
   id: string;
@@ -116,12 +137,54 @@ export interface PaginatedProductsList {
   nextCursor: string | null;
 }
 
-export async function getProductsQuery(
-  cursor?: string,
-  pageSize = DEFAULT_PAGE_SIZE
-): Promise<PaginatedProductsList> {
+export async function getProductsQuery({
+  cursor,
+  pageSize = DEFAULT_PAGE_SIZE,
+  query,
+  status = "active",
+}: ProductsQueryInput = {}): Promise<PaginatedProductsList> {
   const limit = pageSize + 1;
   const parsedCursor = cursor ? parseProductsCursor(cursor) : null;
+  const normalizedQuery = query?.trim();
+  const searchPattern =
+    normalizedQuery && normalizedQuery.length > 0
+      ? `%${normalizedQuery}%`
+      : null;
+  const filters: SQL[] = [
+    status === "archived"
+      ? isNotNull(products.archivedAt)
+      : isNull(products.archivedAt),
+  ];
+
+  if (searchPattern) {
+    const searchFilter = or(
+      ilike(products.name, searchPattern),
+      ilike(categories.name, searchPattern)
+    );
+
+    if (searchFilter) {
+      filters.push(searchFilter);
+    }
+  }
+
+  if (parsedCursor) {
+    const cursorFilter = or(
+      gt(products.name, parsedCursor.name),
+      and(
+        eq(products.name, parsedCursor.name),
+        gt(products.createdAt, parsedCursor.createdAt)
+      ),
+      and(
+        eq(products.name, parsedCursor.name),
+        eq(products.createdAt, parsedCursor.createdAt),
+        gt(products.id, parsedCursor.id)
+      )
+    );
+
+    if (cursorFilter) {
+      filters.push(cursorFilter);
+    }
+  }
 
   const rows = await db
     .select({
@@ -143,22 +206,7 @@ export async function getProductsQuery(
     })
     .from(products)
     .innerJoin(categories, eq(products.categoryId, categories.id))
-    .where(
-      parsedCursor
-        ? or(
-            gt(products.name, parsedCursor.name),
-            and(
-              eq(products.name, parsedCursor.name),
-              gt(products.createdAt, parsedCursor.createdAt)
-            ),
-            and(
-              eq(products.name, parsedCursor.name),
-              eq(products.createdAt, parsedCursor.createdAt),
-              gt(products.id, parsedCursor.id)
-            )
-          )
-        : undefined
-    )
+    .where(and(...filters))
     .orderBy(asc(products.name), asc(products.createdAt), asc(products.id))
     .limit(limit);
 

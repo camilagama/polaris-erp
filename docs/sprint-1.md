@@ -17,7 +17,7 @@
 - [x] Shell `(app)` protegida com autenticacao
 - [x] Better Auth com email/senha e Google para usuarios aprovados
 - [x] Cadastro publico por email removido do contrato suportado
-- [x] Bootstrap interno de usuario para dev/E2E protegido por `CRON_SECRET`
+- [x] Bootstrap interno de usuario para dev/E2E protegido por `INTERNAL_BOOTSTRAP_SECRET` e bloqueado fora de `development/test`
 - [x] Modulo `Produtos` com cadastro, edicao e ciclo `ativo/arquivado`
 - [x] Exclusao fisica retirada do fluxo operacional documentado
 - [x] Fluxo de entrada de estoque com recalculo de custo medio
@@ -25,6 +25,7 @@
 - [x] Historico de movimentacoes no detalhe do produto
 - [x] Configuracoes de margem minima, ideal e parcelamento de cartao
 - [x] Busca por nome e categoria na listagem de produtos
+- [x] Busca e filtros server-driven em produtos e vendas com URL coerente
 - [x] Validacao de data ISO na borda das server actions de estoque
 - [x] Modulo `Vendas` com listagem, detalhe e cancelamento
 - [x] Registro de venda multi-item com baixa imediata de estoque
@@ -32,6 +33,7 @@
 - [x] Preco do item travado pelo catalogo no momento da venda
 - [x] Cursor opaco composto em produtos e vendas
 - [x] Ressincronizacao de paineis client-side apos `refresh()`
+- [x] Server actions auxiliares de paginacao protegidas por sessao
 - [x] One Tap desativado em localhost com mensagem explicita
 - [x] Suite Vitest verde
 - [x] Suite Playwright verde

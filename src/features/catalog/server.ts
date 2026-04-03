@@ -7,35 +7,9 @@ import {
   catalogSettingsSchema,
   categorySchema,
 } from "@/features/catalog/schema";
-import {
-  GLOBAL_SETTINGS_ID,
-  OTHERS_CATEGORY_KEY,
-  OTHERS_CATEGORY_NAME,
-} from "./constants";
+import { GLOBAL_SETTINGS_ID } from "./constants";
 import { canDeleteCategory, canRenameCategory } from "./guards";
 import { normalizeCardInstallmentRules } from "./payment-rules";
-
-const ensureOthersCategory = async () => {
-  const existing = await db.query.categories.findFirst({
-    where: eq(categories.key, OTHERS_CATEGORY_KEY),
-  });
-
-  if (existing) {
-    return existing;
-  }
-
-  const [created] = await db
-    .insert(categories)
-    .values({
-      description: "Categoria padrao protegida pelo sistema.",
-      isSystem: true,
-      key: OTHERS_CATEGORY_KEY,
-      name: OTHERS_CATEGORY_NAME,
-    })
-    .returning();
-
-  return created;
-};
 
 export interface CatalogCategory {
   description: string | null;
@@ -60,35 +34,22 @@ export const getCatalogSettings = async (): Promise<CatalogSettings> => {
     where: eq(systemSettings.id, GLOBAL_SETTINGS_ID),
   });
 
-  if (existing) {
-    return {
-      cardInstallmentRules: normalizeCardInstallmentRules(
-        existing.paymentFeeRules
-      ),
-      idealMarkupPercent: Number(existing.idealMarkupPercent),
-      minimumMarkupPercent: Number(existing.minimumMarkupPercent),
-    };
+  if (!existing) {
+    throw new Error(
+      "Configuracoes globais nao encontradas. Execute as migracoes antes de iniciar a operacao."
+    );
   }
-
-  const [created] = await db
-    .insert(systemSettings)
-    .values({
-      id: GLOBAL_SETTINGS_ID,
-    })
-    .returning();
 
   return {
     cardInstallmentRules: normalizeCardInstallmentRules(
-      created.paymentFeeRules
+      existing.paymentFeeRules
     ),
-    idealMarkupPercent: Number(created.idealMarkupPercent),
-    minimumMarkupPercent: Number(created.minimumMarkupPercent),
+    idealMarkupPercent: Number(existing.idealMarkupPercent),
+    minimumMarkupPercent: Number(existing.minimumMarkupPercent),
   };
 };
 
 export const listCategoriesWithUsage = async (): Promise<CatalogCategory[]> => {
-  await ensureOthersCategory();
-
   const rows = await db
     .select({
       description: categories.description,

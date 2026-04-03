@@ -13,13 +13,21 @@ export const metadata: Metadata = {
 export default async function VendasPage(props: PageProps<"/vendas">) {
   const searchParams = await props.searchParams;
   const bounds = await getSalesDateBounds();
+  const query = typeof searchParams.q === "string" ? searchParams.q.trim() : "";
+  const status =
+    searchParams.status === "completed" || searchParams.status === "cancelled"
+      ? searchParams.status
+      : "all";
   const selectedRange = resolveSalesDateRange({
     bounds,
     searchParams,
   });
   const [salesResult, saleProducts, analytics, catalogSettings] =
     await Promise.all([
-      getSalesQuery(),
+      getSalesQuery({
+        query,
+        status,
+      }),
       getSaleProductsQuery(),
       getSalesAnalytics({
         from: selectedRange.from,
@@ -31,12 +39,14 @@ export default async function VendasPage(props: PageProps<"/vendas">) {
   return (
     <SalesPanel
       analytics={analytics}
+      appliedQuery={query}
       cardInstallmentRules={catalogSettings.cardInstallmentRules}
       dateBounds={bounds}
       initialCursor={salesResult.nextCursor}
       saleProducts={saleProducts}
       sales={salesResult.items}
       selectedRange={selectedRange}
+      status={status}
     />
   );
 }

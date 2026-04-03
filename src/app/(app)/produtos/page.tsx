@@ -12,9 +12,15 @@ export const metadata: Metadata = {
   description: "Catalogo, estoque atual e operacoes de produto do DG Imports.",
 };
 
-export default async function ProdutosPage() {
+export default async function ProdutosPage(props: PageProps<"/produtos">) {
+  const searchParams = await props.searchParams;
+  const query = typeof searchParams.q === "string" ? searchParams.q.trim() : "";
+  const status = searchParams.status === "archived" ? "archived" : "active";
   const [productsResult, categories, settings, analytics] = await Promise.all([
-    getProductsQuery(),
+    getProductsQuery({
+      query,
+      status,
+    }),
     listCategoriesWithUsage(),
     getCatalogSettings(),
     getProductAnalytics(),
@@ -23,6 +29,7 @@ export default async function ProdutosPage() {
   return (
     <ProductsPanel
       analytics={analytics}
+      appliedQuery={query}
       categories={categories.map((category) => ({
         id: category.id,
         key: category.key,
@@ -31,6 +38,7 @@ export default async function ProdutosPage() {
       initialCursor={productsResult.nextCursor}
       products={productsResult.items}
       settings={settings}
+      status={status}
     />
   );
 }

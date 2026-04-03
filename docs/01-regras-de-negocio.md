@@ -211,6 +211,7 @@ Observacoes:
 - `feeAmount` so representa custo quando a taxa for absorvida pelo vendedor
 - `chargedAmount` pode superar `totalAmount`, mas nunca compoe receita operacional ou lucro
 - listagens devem usar cursor opaco composto, coerente com a ordenacao da consulta
+- busca e filtros de listagem devem ser aplicados no servidor e refletidos na URL quando fizerem parte da navegacao operacional
 
 ## 10. Regra de acesso
 
@@ -229,6 +230,7 @@ Decisao operacional atual:
 4. O sistema deve permanecer minimalista, com prioridade para legibilidade e velocidade operacional.
 5. No mobile, listagens devem degradar para cards ou blocos mais faceis de tocar.
 6. Controles customizados precisam ter nome acessivel estavel para operador e automacao.
+7. Detalhes de venda cancelada devem separar valores historicos da venda original do efeito operacional atual.
 
 ## 12. Estado atual de qualidade
 

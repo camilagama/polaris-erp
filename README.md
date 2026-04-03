@@ -32,7 +32,7 @@ bun run db:migrate
 - O app e interno e fechado.
 - O endpoint publico de cadastro por email nao faz parte do contrato suportado.
 - O login aceita apenas usuarios previamente provisionados.
-- Em desenvolvimento e E2E existe um bootstrap interno de usuario em `/api/internal/auth/bootstrap-user`, protegido por `CRON_SECRET`.
+- Em `development` e `test` existe um bootstrap interno de usuario em `/api/internal/auth/bootstrap-user`, protegido por `INTERNAL_BOOTSTRAP_SECRET`.
 - O login com Google continua disponivel para usuarios aprovados.
 - O One Tap nao e inicializado em `localhost` para evitar prompts invalidos e ruido operacional.
 
@@ -57,7 +57,8 @@ Entidades principais:
 - Venda nasce como `completed`, baixa estoque imediatamente e pode ser corrigida apenas por cancelamento.
 - O mesmo produto nao pode se repetir dentro da mesma venda.
 - A tela de vendas consulta uma lista dedicada de produtos vendaveis, sem depender da pagina atual de produtos.
-- Listagens usam cursor opaco composto, alinhado com a ordenacao real.
+- Produtos e vendas usam busca e filtros server-driven via URL, com cursor opaco composto alinhado com a ordenacao real.
+- Detalhe de venda cancelada preserva os valores historicos e explicita impacto operacional atual zerado.
 - Alteracoes server-side devem refletir imediatamente na UI apos `refresh()`.
 
 ## Imagens de produto

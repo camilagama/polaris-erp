@@ -1,6 +1,8 @@
 import { defineConfig } from "@playwright/test";
 
 const e2eBootstrapSecret = process.env.CRON_SECRET ?? "dgimports-e2e-bootstrap";
+const e2eInternalBootstrapSecret =
+  process.env.INTERNAL_BOOTSTRAP_SECRET ?? "dgimports-e2e-bootstrap";
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -16,6 +18,8 @@ export default defineConfig({
     env: {
       ...process.env,
       CRON_SECRET: e2eBootstrapSecret,
+      ENABLE_INTERNAL_BOOTSTRAP: "true",
+      INTERNAL_BOOTSTRAP_SECRET: e2eInternalBootstrapSecret,
     },
     port: 3001,
     reuseExistingServer: false,

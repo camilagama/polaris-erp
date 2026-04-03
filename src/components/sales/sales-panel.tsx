@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { loadMoreSalesAction } from "@/app/(app)/vendas/pagination";
+import type { SaleStatusFilter } from "@/app/(app)/vendas/queries";
 import { DashboardDateRangeFilter } from "@/components/dashboard/dashboard-date-range-filter";
 import { CreateSaleDialog } from "@/components/sales/create-sale-dialog";
 import { PaymentMethodChart } from "@/components/sales/payment-method-chart";
@@ -72,16 +74,178 @@ const getPaymentMethodLabel = (
   return `Cartao ${sale.paymentInstallments}x`;
 };
 
+const getSalesEmptyStateTitle = ({
+  appliedQuery,
+  status,
+}: {
+  appliedQuery: string;
+  status: SaleStatusFilter;
+}) => {
+  if (appliedQuery) {
+    return "Nenhuma venda corresponde aos filtros atuais.";
+  }
+
+  if (status === "cancelled") {
+    return "Nenhuma venda cancelada encontrada.";
+  }
+
+  if (status === "completed") {
+    return "Nenhuma venda concluida encontrada.";
+  }
+
+  return "Nenhuma venda encontrada.";
+};
+
+const getSalesSummarySuffix = (status: SaleStatusFilter) => {
+  if (status === "all") {
+    return ".";
+  }
+
+  return ` em vendas ${status === "completed" ? "concluidas" : "canceladas"}.`;
+};
+
+function MobileAnalyticsSection({
+  analytics,
+  dateBounds,
+  selectedRange,
+}: {
+  analytics: SalesAnalytics;
+  dateBounds: {
+    from: string;
+    to: string;
+  };
+  selectedRange: SalesDateRange;
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-col gap-1">
+            <h2 className="font-heading font-semibold text-xl tracking-tight">
+              Analytics
+            </h2>
+            <p className="text-muted-foreground text-sm">
+              Indicadores e distribuicoes do periodo selecionado.
+            </p>
+          </div>
+          <Button
+            className="lg:hidden"
+            onClick={() => setExpanded((current) => !current)}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            {expanded ? "Ocultar" : "Mostrar"}
+          </Button>
+        </div>
+
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-80">
+          <DashboardDateRangeFilter
+            bounds={dateBounds}
+            from={selectedRange.from}
+            preset={selectedRange.preset}
+            presets={salesDatePresetOptions}
+            to={selectedRange.to}
+            variant="sales"
+          />
+        </div>
+      </div>
+
+      <div className={expanded ? "grid gap-4" : "hidden lg:grid lg:gap-4"}>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[0.85fr_0.95fr_0.95fr_1.8fr]">
+          <div className="flex flex-col gap-4">
+            <Card className="flex flex-1 flex-col justify-center">
+              <CardHeader className="gap-1 pb-2">
+                <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
+                  Total vendido
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <strong className="font-heading text-[1.8rem] leading-none tracking-tight">
+                  {formatCurrency(analytics.totalSold)}
+                </strong>
+                <CardDescription className="mt-1 text-xs">
+                  Total vendido no periodo selecionado.
+                </CardDescription>
+              </CardContent>
+            </Card>
+
+            <Card className="flex flex-1 flex-col justify-center">
+              <CardHeader className="gap-1 pb-2">
+                <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
+                  Lucro total
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <strong className="font-heading text-[1.8rem] leading-none tracking-tight">
+                  {formatCurrency(analytics.totalProfit)}
+                </strong>
+                <CardDescription className="mt-1 text-xs">
+                  Margem de {formatPercent(analytics.profitMarginPercent)}%.
+                </CardDescription>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="flex flex-col">
+            <CardHeader className="gap-1 pb-2">
+              <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
+                Status das vendas
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Ticket medio de {formatCurrency(analytics.averageTicket)}.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-1 items-center pt-0">
+              <SalesStatusChart data={analytics.statusSummary} />
+            </CardContent>
+          </Card>
+
+          <Card className="flex flex-col">
+            <CardHeader className="gap-1 pb-2">
+              <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
+                Mix de pagamentos
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-1 items-center pt-0">
+              <PaymentMethodChart data={analytics.paymentMethods} />
+            </CardContent>
+          </Card>
+
+          <Card className="flex flex-col">
+            <CardHeader className="gap-1 pb-2">
+              <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
+                Vendas no periodo
+              </CardTitle>
+              <CardDescription className="text-xs">
+                {selectedRange.label}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-1 items-center pt-0">
+              <SalesPerformanceChart data={analytics.performance} />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function SalesPanel({
   analytics,
+  appliedQuery,
   cardInstallmentRules,
   dateBounds,
   initialCursor,
   saleProducts,
   sales: initialSales,
   selectedRange,
+  status,
 }: {
   analytics: SalesAnalytics;
+  appliedQuery: string;
   cardInstallmentRules: CardInstallmentRule[];
   dateBounds: {
     from: string;
@@ -91,19 +255,66 @@ export function SalesPanel({
   saleProducts: SaleProductOption[];
   sales: SaleListItem[];
   selectedRange: SalesDateRange;
+  status: SaleStatusFilter;
 }) {
+  const pathname = usePathname();
+  const router = useRouter();
   const [sales, setSales] = useState(initialSales);
   const [cursor, setCursor] = useState(initialCursor);
   const [loadingMore, startLoadMore] = useTransition();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<
-    "all" | SaleListItem["status"]
-  >("all");
+  const [pending, startTransition] = useTransition();
+  const [searchTerm, setSearchTerm] = useState(appliedQuery);
+  const emptyStateTitle = getSalesEmptyStateTitle({
+    appliedQuery,
+    status,
+  });
+  const summarySuffix = getSalesSummarySuffix(status);
 
   useEffect(() => {
     setSales(initialSales);
     setCursor(initialCursor);
   }, [initialCursor, initialSales]);
+
+  useEffect(() => {
+    setSearchTerm(appliedQuery);
+  }, [appliedQuery]);
+
+  const applyFilters = ({
+    nextQuery = searchTerm,
+    nextStatus = status,
+  }: {
+    nextQuery?: string;
+    nextStatus?: SaleStatusFilter;
+  }) => {
+    const params = new URLSearchParams();
+    const normalizedQuery = nextQuery.trim();
+
+    if (normalizedQuery.length > 0) {
+      params.set("q", normalizedQuery);
+    }
+
+    if (nextStatus !== "all") {
+      params.set("status", nextStatus);
+    }
+
+    if (selectedRange.preset) {
+      params.set("preset", selectedRange.preset);
+    }
+
+    if (selectedRange.from) {
+      params.set("from", selectedRange.from);
+    }
+
+    if (selectedRange.to) {
+      params.set("to", selectedRange.to);
+    }
+
+    const nextUrl = `${pathname}?${params.toString()}`;
+
+    startTransition(() => {
+      router.replace(nextUrl, { scroll: false });
+    });
+  };
 
   const handleLoadMore = () => {
     if (!cursor) {
@@ -111,92 +322,112 @@ export function SalesPanel({
     }
 
     startLoadMore(async () => {
-      const result = await loadMoreSalesAction(cursor);
+      const result = await loadMoreSalesAction({
+        cursor,
+        query: appliedQuery,
+        status,
+      });
 
       setSales((current) => [...current, ...result.items]);
       setCursor(result.nextCursor);
     });
   };
 
-  const normalizedSearch = searchTerm.trim().toLowerCase();
-  const visibleSales = sales.filter((sale) => {
-    const matchesStatus =
-      statusFilter === "all" || sale.status === statusFilter;
-
-    if (!matchesStatus) {
-      return false;
-    }
-
-    if (normalizedSearch.length === 0) {
-      return true;
-    }
-
-    const customerName = sale.customerName?.toLowerCase() || "";
-
-    return (
-      customerName.includes(normalizedSearch) ||
-      sale.id.includes(normalizedSearch)
-    );
-  });
-
   return (
     <div className="flex flex-col gap-6 p-4 pb-20 sm:p-6 sm:pb-6">
       <div className="flex flex-col gap-3">
         <div className="flex flex-col gap-1">
-          <div className="flex flex-col gap-1">
-            <h1 className="font-heading font-semibold text-2xl tracking-tight">
-              Vendas
-            </h1>
-            <p className="max-w-2xl text-muted-foreground text-sm">
-              Registre vendas concluidas com baixa imediata de estoque e abra o
-              detalhe para revisar composicao financeira, itens e cancelamento.
-            </p>
-          </div>
+          <h1 className="font-heading font-semibold text-2xl tracking-tight">
+            Vendas
+          </h1>
+          <p className="max-w-2xl text-muted-foreground text-sm">
+            Registre vendas concluidas com baixa imediata de estoque e abra o
+            detalhe para revisar composicao financeira, itens e cancelamento.
+          </p>
         </div>
 
-        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <Input
-              className="w-full sm:w-80"
-              onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Buscar por cliente"
-              value={searchTerm}
+        <div className="rounded-2xl border border-border/60 bg-card/70 p-3">
+          <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <p className="font-medium text-sm">Filtros da listagem</p>
+              <p className="text-muted-foreground text-xs">
+                A busca consulta o historico inteiro com filtros reais no
+                servidor.
+              </p>
+            </div>
+
+            <CreateSaleDialog
+              cardInstallmentRules={cardInstallmentRules}
+              products={saleProducts}
             />
-            <Select
-              onValueChange={(value: "all" | SaleListItem["status"]) =>
-                setStatusFilter(value)
-              }
-              value={statusFilter}
+          </div>
+
+          <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+            <form
+              className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center"
+              onSubmit={(event) => {
+                event.preventDefault();
+                applyFilters({});
+              }}
             >
-              <SelectTrigger className="w-full sm:w-52">
+              <Input
+                className="w-full sm:w-96"
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Buscar por cliente ou ID da venda"
+                value={searchTerm}
+              />
+              <Button
+                disabled={pending}
+                size="sm"
+                type="submit"
+                variant="outline"
+              >
+                Aplicar busca
+              </Button>
+            </form>
+
+            <Select
+              onValueChange={(value: SaleStatusFilter) =>
+                applyFilters({ nextStatus: value })
+              }
+              value={status}
+            >
+              <SelectTrigger className="w-full sm:w-56">
                 <SelectValue placeholder="Filtrar status" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos status</SelectItem>
-                <SelectItem value="completed">Concluida</SelectItem>
-                <SelectItem value="cancelled">Cancelada</SelectItem>
+                <SelectItem value="completed">Concluidas</SelectItem>
+                <SelectItem value="cancelled">Canceladas</SelectItem>
               </SelectContent>
             </Select>
           </div>
-
-          <CreateSaleDialog
-            cardInstallmentRules={cardInstallmentRules}
-            products={saleProducts}
-          />
         </div>
+
+        {appliedQuery ? (
+          <p className="text-muted-foreground text-xs">
+            Resultado para{" "}
+            <span className="font-medium text-foreground">
+              "{appliedQuery}"
+            </span>
+            {summarySuffix}
+          </p>
+        ) : null}
       </div>
 
-      {visibleSales.length === 0 ? (
+      {sales.length === 0 ? (
         <div className="rounded-xl border border-border/60 bg-card px-4 py-10 text-center">
-          <p className="font-medium">Nenhuma venda encontrada.</p>
+          <p className="font-medium">{emptyStateTitle}</p>
           <p className="mt-2 text-muted-foreground text-sm">
-            Ajuste os filtros ou registre uma nova venda para continuar.
+            {appliedQuery
+              ? "Ajuste a busca ou troque o status para ampliar a consulta."
+              : "Ajuste os filtros ou registre uma nova venda para continuar."}
           </p>
         </div>
       ) : (
         <>
           <div className="grid gap-3 md:hidden">
-            {visibleSales.map((sale) => (
+            {sales.map((sale) => (
               <article
                 className="rounded-xl border border-border/60 bg-card p-4"
                 key={sale.id}
@@ -204,12 +435,15 @@ export function SalesPanel({
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <Link
-                      className="block truncate font-medium text-sm hover:underline"
+                      className="block truncate font-medium text-sm transition-colors hover:text-primary hover:underline"
                       href={`/vendas/${sale.id}`}
                       title={sale.customerName || "Sem cliente"}
                     >
                       {sale.customerName || "Sem cliente"}
                     </Link>
+                    <p className="mt-1 text-muted-foreground text-xs">
+                      #{sale.id.slice(0, 8)}
+                    </p>
                   </div>
                   <Badge variant={getStatusVariant(sale.status)}>
                     {getStatusLabel(sale.status)}
@@ -259,7 +493,7 @@ export function SalesPanel({
                   <TableHead>Data</TableHead>
                   <TableHead>Pagamento</TableHead>
                   <TableHead className="text-center">Itens</TableHead>
-                  <TableHead>Total</TableHead>
+                  <TableHead>Total operacional</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="pr-4 text-right sm:pr-6">
                     Acoes
@@ -267,16 +501,19 @@ export function SalesPanel({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {visibleSales.map((sale) => (
+                {sales.map((sale) => (
                   <TableRow className="border-border/40" key={sale.id}>
-                    <TableCell className="max-w-[200px] pl-4 sm:pl-6">
+                    <TableCell className="max-w-[220px] pl-4 sm:pl-6">
                       <Link
-                        className="block truncate font-medium hover:underline"
+                        className="block truncate font-medium text-sm transition-colors hover:text-primary hover:underline"
                         href={`/vendas/${sale.id}`}
                         title={sale.customerName || "Sem cliente"}
                       >
                         {sale.customerName || "Sem cliente"}
                       </Link>
+                      <span className="block text-muted-foreground text-xs">
+                        #{sale.id.slice(0, 8)}
+                      </span>
                     </TableCell>
                     <TableCell>{formatDate(sale.occurredOn)}</TableCell>
                     <TableCell>{getPaymentMethodLabel(sale)}</TableCell>
@@ -318,104 +555,11 @@ export function SalesPanel({
 
       <Separator />
 
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex flex-col gap-1">
-            <h2 className="font-heading font-semibold text-xl tracking-tight">
-              Analytics
-            </h2>
-            <p className="text-muted-foreground text-sm">
-              Indicadores e distribuicoes do periodo selecionado.
-            </p>
-          </div>
-
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-80">
-            <DashboardDateRangeFilter
-              bounds={dateBounds}
-              from={selectedRange.from}
-              preset={selectedRange.preset}
-              presets={salesDatePresetOptions}
-              to={selectedRange.to}
-              variant="sales"
-            />
-          </div>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[0.85fr_0.95fr_0.95fr_1.8fr]">
-          <div className="flex flex-col gap-4">
-            <Card className="flex flex-1 flex-col justify-center">
-              <CardHeader className="gap-1 pb-1.5">
-                <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
-                  Total vendido
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <strong className="font-heading text-[1.65rem] leading-none tracking-tight">
-                  {formatCurrency(analytics.totalSold)}
-                </strong>
-                <CardDescription className="mt-1 text-[11px]">
-                  Total vendido no período.
-                </CardDescription>
-              </CardContent>
-            </Card>
-
-            <Card className="flex flex-1 flex-col justify-center">
-              <CardHeader className="gap-1 pb-1.5">
-                <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
-                  Lucro total
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <strong className="font-heading text-[1.65rem] leading-none tracking-tight">
-                  {formatCurrency(analytics.totalProfit)}
-                </strong>
-                <CardDescription className="mt-1 text-[11px]">
-                  Margem de {formatPercent(analytics.profitMarginPercent)}%.
-                </CardDescription>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card className="flex flex-col">
-            <CardHeader className="gap-1 pb-2">
-              <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
-                Status das vendas
-              </CardTitle>
-              <CardDescription className="text-[11px]">
-                Ticket medio de {formatCurrency(analytics.averageTicket)}.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-1 items-center pt-0">
-              <SalesStatusChart data={analytics.statusSummary} />
-            </CardContent>
-          </Card>
-
-          <Card className="flex flex-col">
-            <CardHeader className="gap-1 pb-2">
-              <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
-                Mix de pagamentos
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-1 items-center pt-0">
-              <PaymentMethodChart data={analytics.paymentMethods} />
-            </CardContent>
-          </Card>
-
-          <Card className="flex flex-col">
-            <CardHeader className="gap-1 pb-2">
-              <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
-                Vendas no periodo
-              </CardTitle>
-              <CardDescription className="text-[11px]">
-                {selectedRange.label}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-1 items-center pt-0">
-              <SalesPerformanceChart data={analytics.performance} />
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+      <MobileAnalyticsSection
+        analytics={analytics}
+        dateBounds={dateBounds}
+        selectedRange={selectedRange}
+      />
     </div>
   );
 }

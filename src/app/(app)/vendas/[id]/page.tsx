@@ -76,6 +76,7 @@ export default async function VendaDetalhePage(
     saleAmount: Number(sale.chargedAmount),
   });
   const profitAmount = receivedAmount - productCostAmount;
+  const isCancelled = sale.status === "cancelled";
   const saleTitle = sale.customerName
     ? `Venda para ${sale.customerName}`
     : "Detalhes da venda";
@@ -91,6 +92,18 @@ export default async function VendaDetalhePage(
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
         <div className="space-y-8 lg:col-span-2">
+          {isCancelled ? (
+            <div className="rounded-2xl border border-destructive/40 bg-destructive/5 px-4 py-3">
+              <p className="font-medium text-destructive text-sm">
+                Venda cancelada com estoque estornado.
+              </p>
+              <p className="mt-1 text-muted-foreground text-sm">
+                Os valores abaixo representam o registro historico da venda
+                original. Eles nao contam mais como operacao vigente.
+              </p>
+            </div>
+          ) : null}
+
           <div className="grid grid-cols-2 gap-6 sm:grid-cols-3">
             <div>
               <p className="mb-1 text-[11px] text-muted-foreground uppercase tracking-wider">
@@ -137,7 +150,7 @@ export default async function VendaDetalhePage(
             </div>
             <div>
               <p className="mb-1 text-[11px] text-muted-foreground uppercase tracking-wider">
-                Lucro
+                Resultado da venda
               </p>
               <p
                 className={`font-medium text-sm ${
@@ -147,7 +160,7 @@ export default async function VendaDetalhePage(
                 {formatCurrency(profitAmount)}
               </p>
             </div>
-            {sale.status === "cancelled" && (
+            {isCancelled ? (
               <div>
                 <p className="mb-1 text-[11px] text-muted-foreground uppercase tracking-wider">
                   Cancelada em
@@ -156,15 +169,15 @@ export default async function VendaDetalhePage(
                   {formatDateTime(sale.cancelledAt)}
                 </p>
               </div>
-            )}
-            {sale.notes && (
+            ) : null}
+            {sale.notes ? (
               <div className="col-span-2 sm:col-span-3">
                 <p className="mb-1 text-[11px] text-muted-foreground uppercase tracking-wider">
                   Observacoes
                 </p>
                 <p className="text-foreground/80 text-sm">{sale.notes}</p>
               </div>
-            )}
+            ) : null}
           </div>
 
           <div>
@@ -211,6 +224,14 @@ export default async function VendaDetalhePage(
           <div className="sticky top-6 rounded-xl border border-border/50 bg-card p-6 shadow-sm">
             <h3 className="mb-4 font-medium text-base">Resumo financeiro</h3>
             <div className="space-y-3 text-sm">
+              {isCancelled ? (
+                <div className="rounded-xl border border-border/60 bg-muted/20 px-3 py-2 text-muted-foreground text-xs">
+                  Resumo historico da venda original. O efeito operacional atual
+                  apos o cancelamento e estoque devolvido e receita operacional
+                  zerada.
+                </div>
+              ) : null}
+
               <div className="flex items-center justify-between text-muted-foreground">
                 <span>Subtotal ({sale.items.length} itens)</span>
                 <span>{formatCurrency(itemSubtotal)}</span>
@@ -223,44 +244,55 @@ export default async function VendaDetalhePage(
                 <span>Adicional</span>
                 <span>{formatCurrency(sale.additionalAmount)}</span>
               </div>
-              {Number(sale.discountAmount) > 0 && (
+              {Number(sale.discountAmount) > 0 ? (
                 <div className="flex items-center justify-between text-primary">
                   <span>Desconto</span>
                   <span>-{formatCurrency(sale.discountAmount)}</span>
                 </div>
-              )}
-              {customerChargedFeeAmount > 0 && (
+              ) : null}
+              {customerChargedFeeAmount > 0 ? (
                 <div className="flex items-center justify-between text-muted-foreground">
                   <span>Taxa do cartao (cliente)</span>
                   <span>{formatCurrency(customerChargedFeeAmount)}</span>
                 </div>
-              )}
+              ) : null}
 
               <div className="my-4 border-border/40 border-t border-dashed" />
 
               <div className="flex items-center justify-between font-semibold text-lg">
-                <span>Valor total:</span>
+                <span>
+                  {isCancelled ? "Valor total original:" : "Valor total:"}
+                </span>
                 <span>{formatCurrency(sale.chargedAmount)}</span>
               </div>
 
-              {Number(sale.feeAmount) > 0 && (
+              {Number(sale.feeAmount) > 0 ? (
                 <div className="flex items-center justify-between text-red-400">
                   <span>Taxa do cartao (vendedor)</span>
                   <span>-{formatCurrency(sale.feeAmount)}</span>
                 </div>
-              )}
+              ) : null}
 
-              {Number(sale.freightAmount) > 0 && (
+              {Number(sale.freightAmount) > 0 ? (
                 <div className="flex items-center justify-between text-red-400">
                   <span>Frete</span>
                   <span>-{formatCurrency(sale.freightAmount)}</span>
                 </div>
-              )}
+              ) : null}
 
               <div className="flex items-center justify-between font-medium text-emerald-500">
-                <span>Valor recebido</span>
+                <span>
+                  {isCancelled ? "Valor recebido original" : "Valor recebido"}
+                </span>
                 <span>{formatCurrency(receivedAmount)}</span>
               </div>
+
+              {isCancelled ? (
+                <div className="flex items-center justify-between font-medium text-foreground">
+                  <span>Impacto operacional atual</span>
+                  <span>R$ 0,00</span>
+                </div>
+              ) : null}
             </div>
           </div>
         </div>

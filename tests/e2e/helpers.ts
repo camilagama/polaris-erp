@@ -8,7 +8,8 @@ import {
 const e2eBaseUrl = process.env.E2E_BASE_URL ?? "http://127.0.0.1:3001";
 const e2ePassword = process.env.E2E_PASSWORD ?? "CodexE2E!12345";
 const e2eUserName = process.env.E2E_NAME ?? "DG Imports E2E";
-const e2eBootstrapSecret = process.env.CRON_SECRET ?? "dgimports-e2e-bootstrap";
+const e2eBootstrapSecret =
+  process.env.INTERNAL_BOOTSTRAP_SECRET ?? "dgimports-e2e-bootstrap";
 
 const createE2EUser = () => {
   const runId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;

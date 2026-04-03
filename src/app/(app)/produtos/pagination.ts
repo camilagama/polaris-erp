@@ -1,11 +1,13 @@
 "use server";
 
+import { requireActionSession } from "@/lib/server-action-auth";
 import { getProductsQuery, type PaginatedProductsList } from "./queries";
 
 export async function loadMoreProductsAction(
-  cursor: string
+  input: Parameters<typeof getProductsQuery>[0]
 ): Promise<PaginatedProductsList> {
-  const result = await getProductsQuery(cursor);
+  await requireActionSession();
+  const result = await getProductsQuery(input);
 
   return result;
 }
