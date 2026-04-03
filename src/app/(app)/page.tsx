@@ -156,7 +156,7 @@ export default async function DashboardPage(props: PageProps<"/">) {
 
         <div className="grid gap-4">
           <Card>
-            <CardHeader className="gap-1 pb-2">
+            <CardHeader>
               <CardTitle className="text-base">
                 Produtos mais vendidos
               </CardTitle>

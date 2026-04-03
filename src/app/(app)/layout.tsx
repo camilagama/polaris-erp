@@ -17,6 +17,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         onSignOut={signOutAction}
         user={{
           email: session.user.email,
+          image: session.user.image,
           name: session.user.name,
         }}
       />

@@ -70,6 +70,15 @@ export const auth = betterAuth({
     minPasswordLength: 8,
     autoSignIn: true,
   },
+  account: {
+    accountLinking: {
+      enabled: true,
+      trustedProviders: ["google"],
+    },
+  },
+  user: {
+    // Tenta atualizar se dados vierem da rede social depois:
+  },
   socialProviders,
   // Better Auth recommends nextCookies() as the final plugin so
   // Server Actions always receive the final Set-Cookie handling.
