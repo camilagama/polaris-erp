@@ -1,8 +1,8 @@
 "use client";
 
 import {
-  Bar,
-  BarChart,
+  Area,
+  AreaChart,
   CartesianGrid,
   ReferenceLine,
   XAxis,
@@ -53,7 +53,41 @@ export function RevenueResultChart({
 
   return (
     <ChartContainer className="h-48 w-full" config={chartConfig}>
-      <BarChart accessibilityLayer data={data}>
+      <AreaChart accessibilityLayer data={data}>
+        <defs>
+          <linearGradient id="fillSold" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="5%" stopColor="var(--color-sold)" stopOpacity={0.8} />
+            <stop
+              offset="95%"
+              stopColor="var(--color-sold)"
+              stopOpacity={0.1}
+            />
+          </linearGradient>
+          <linearGradient id="fillCosts" x1="0" x2="0" y1="0" y2="1">
+            <stop
+              offset="5%"
+              stopColor="var(--color-costs)"
+              stopOpacity={0.8}
+            />
+            <stop
+              offset="95%"
+              stopColor="var(--color-costs)"
+              stopOpacity={0.1}
+            />
+          </linearGradient>
+          <linearGradient id="fillResult" x1="0" x2="0" y1="0" y2="1">
+            <stop
+              offset="5%"
+              stopColor="var(--color-result)"
+              stopOpacity={0.8}
+            />
+            <stop
+              offset="95%"
+              stopColor="var(--color-result)"
+              stopOpacity={0.1}
+            />
+          </linearGradient>
+        </defs>
         <CartesianGrid vertical={false} />
         <XAxis
           axisLine={false}
@@ -100,25 +134,31 @@ export function RevenueResultChart({
           }
         />
         <ChartLegend content={<ChartLegendContent className="gap-3 pt-2" />} />
-        <Bar
+        <Area
           dataKey="sold"
-          fill="var(--color-sold)"
+          fill="url(#fillSold)"
+          fillOpacity={0.4}
           isAnimationActive={true}
-          radius={4}
+          stroke="var(--color-sold)"
+          type="monotone"
         />
-        <Bar
+        <Area
           dataKey="costs"
-          fill="var(--color-costs)"
+          fill="url(#fillCosts)"
+          fillOpacity={0.4}
           isAnimationActive={true}
-          radius={4}
+          stroke="var(--color-costs)"
+          type="monotone"
         />
-        <Bar
+        <Area
           dataKey="result"
-          fill="var(--color-result)"
+          fill="url(#fillResult)"
+          fillOpacity={0.4}
           isAnimationActive={true}
-          radius={4}
+          stroke="var(--color-result)"
+          type="monotone"
         />
-      </BarChart>
+      </AreaChart>
     </ChartContainer>
   );
 }
