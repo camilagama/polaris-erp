@@ -1,5 +1,6 @@
 "use client";
 
+import { Search02Icon } from "@hugeicons/core-free-icons";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
@@ -19,6 +20,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Empty } from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -420,14 +422,15 @@ export function SalesPanel({
       </div>
 
       {sales.length === 0 ? (
-        <div className="rounded-xl border border-border/60 bg-card px-4 py-10 text-center">
-          <p className="font-medium">{emptyStateTitle}</p>
-          <p className="mt-2 text-muted-foreground text-sm">
-            {appliedQuery
+        <Empty
+          description={
+            appliedQuery
               ? "Ajuste a busca ou troque o status para ampliar a consulta."
-              : "Ajuste os filtros ou registre uma nova venda para continuar."}
-          </p>
-        </div>
+              : "Ajuste os filtros ou registre uma nova venda para continuar."
+          }
+          icon={Search02Icon}
+          title={emptyStateTitle}
+        />
       ) : (
         <>
           <div className="grid gap-3 md:hidden">

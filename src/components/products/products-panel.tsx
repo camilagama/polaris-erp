@@ -4,6 +4,7 @@ import {
   Archive01Icon,
   Edit01Icon,
   Menu03Icon,
+  Search02Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
@@ -47,6 +48,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Empty } from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -500,14 +502,15 @@ export function ProductsPanel({
       </div>
 
       {products.length === 0 ? (
-        <div className="rounded-xl border border-border/60 bg-card px-4 py-10 text-center">
-          <p className="font-medium">{emptyStateTitle}</p>
-          <p className="mt-2 text-muted-foreground text-sm">
-            {appliedQuery
+        <Empty
+          description={
+            appliedQuery
               ? "Ajuste a busca ou troque o status para ampliar a consulta."
-              : "Ajuste os filtros ou cadastre um novo item para continuar."}
-          </p>
-        </div>
+              : "Ajuste os filtros ou cadastre um novo item para continuar."
+          }
+          icon={Search02Icon}
+          title={emptyStateTitle}
+        />
       ) : (
         <>
           <div className="grid gap-3 md:hidden">

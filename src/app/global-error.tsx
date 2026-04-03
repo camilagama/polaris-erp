@@ -1,5 +1,7 @@
 "use client";
 
+import { Alert02Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
@@ -12,18 +14,21 @@ export default function GlobalError({
   return (
     <html lang="pt-BR">
       <body className="flex min-h-screen items-center justify-center bg-background px-6 py-16 text-foreground">
-        <div className="w-full max-w-3xl rounded-3xl border border-border/60 bg-card p-8 shadow-sm">
-          <p className="font-semibold text-primary text-xs uppercase tracking-[0.22em]">
+        <div className="w-full max-w-2xl rounded-3xl border border-border/60 bg-card p-8 shadow-sm">
+          <div className="mb-6 inline-flex size-12 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+            <HugeiconsIcon icon={Alert02Icon} size={24} strokeWidth={2} />
+          </div>
+          <p className="font-medium text-destructive text-xs uppercase tracking-[0.22em]">
             Falha global
           </p>
           <h1 className="mt-3 font-heading font-semibold text-3xl tracking-tight">
             A aplicacao interceptou um erro fora do fluxo protegido.
           </h1>
-          <p className="mt-3 max-w-2xl text-muted-foreground">
+          <p className="mt-3 text-muted-foreground text-sm">
             Tente reiniciar a renderizacao. Se o erro persistir, revise a ultima
             alteracao estrutural ou a configuracao de ambiente.
           </p>
-          <div className="mt-6 flex gap-3">
+          <div className="mt-8 flex flex-wrap gap-3">
             <Button onClick={reset} type="button">
               Tentar novamente
             </Button>
