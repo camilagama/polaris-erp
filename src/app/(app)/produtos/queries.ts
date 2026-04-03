@@ -32,7 +32,7 @@ import type {
 import { buildProductImageUrl } from "@/features/products/image-urls";
 import { decodeOpaqueCursor, encodeOpaqueCursor } from "@/lib/opaque-cursor";
 
-const DEFAULT_PAGE_SIZE = 50;
+const DEFAULT_PAGE_SIZE = 15;
 const productStatusFilterSchema = z.enum(["active", "archived"]);
 const productCursorSchema = z.object({
   createdAt: z.string().min(1),

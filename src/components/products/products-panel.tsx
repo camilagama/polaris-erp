@@ -342,7 +342,13 @@ export function ProductsPanel({
         status,
       });
 
-      setProducts((current) => [...current, ...result.items]);
+      setProducts((current) => {
+        const existingIds = new Set(current.map((p) => p.id));
+        const uniqueNewItems = result.items.filter(
+          (item) => !existingIds.has(item.id)
+        );
+        return [...current, ...uniqueNewItems];
+      });
       setCursor(result.nextCursor);
     });
   };
@@ -413,7 +419,7 @@ export function ProductsPanel({
   };
 
   return (
-    <div className="flex flex-col gap-6 p-4 pb-20 sm:p-6 sm:pb-6">
+    <div className="flex flex-col gap-6 px-6 pb-6">
       <div className="flex flex-col gap-3">
         <div className="flex items-start justify-between gap-4">
           <div className="flex flex-col gap-1">

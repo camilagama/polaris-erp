@@ -21,7 +21,7 @@ import type {
 } from "@/features/sales/contracts";
 import { decodeOpaqueCursor, encodeOpaqueCursor } from "@/lib/opaque-cursor";
 
-const DEFAULT_PAGE_SIZE = 50;
+const DEFAULT_PAGE_SIZE = 15;
 const saleStatusFilterSchema = z.enum(["all", "cancelled", "completed"]);
 const salesCursorSchema = z.object({
   createdAt: z.string().min(1),
