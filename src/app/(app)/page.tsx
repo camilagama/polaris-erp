@@ -2,6 +2,7 @@ import { Image01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { Metadata } from "next";
 import Image from "next/image";
+import Link from "next/link";
 import { DashboardDateRangeFilter } from "@/components/dashboard/dashboard-date-range-filter";
 import { RevenueResultChart } from "@/components/dashboard/revenue-result-chart";
 import { Badge } from "@/components/ui/badge";
@@ -186,8 +187,9 @@ export default async function DashboardPage(props: PageProps<"/">) {
                         : null;
 
                       return (
-                        <div
+                        <Link
                           className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-4 py-1.5"
+                          href={`/produtos/${product.id}`}
                           key={product.id}
                         >
                           <div className="relative flex size-8 items-center justify-center overflow-hidden rounded-lg border border-border/40 bg-muted/10 text-muted-foreground/50">
@@ -207,13 +209,13 @@ export default async function DashboardPage(props: PageProps<"/">) {
                               />
                             )}
                           </div>
-                          <span className="truncate font-medium text-sm">
+                          <span className="truncate font-medium text-sm hover:underline">
                             {product.name}
                           </span>
                           <span className="font-semibold text-sm tabular-nums">
                             {product.quantitySold}
                           </span>
-                        </div>
+                        </Link>
                       );
                     })}
                   </div>
