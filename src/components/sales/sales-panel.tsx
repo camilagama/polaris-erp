@@ -536,17 +536,15 @@ export function SalesPanel({
           </div>
 
           {cursor ? (
-            <div className="flex justify-center">
-              <Button
-                disabled={loadingMore}
-                onClick={handleLoadMore}
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                {loadingMore ? "Carregando..." : "Carregar mais vendas"}
-              </Button>
-            </div>
+            <Button
+              className="w-full"
+              disabled={loadingMore}
+              onClick={handleLoadMore}
+              type="button"
+              variant="outline"
+            >
+              {loadingMore ? "Carregando..." : "Carregar mais vendas"}
+            </Button>
           ) : null}
         </>
       )}

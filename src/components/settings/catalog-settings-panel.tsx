@@ -402,7 +402,7 @@ export function CatalogSettingsPanel({
                 }}
                 value={selectedMaxInstallments}
               >
-                <SelectTrigger id="card-max-installments">
+                <SelectTrigger className="w-full" id="card-max-installments">
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
@@ -418,7 +418,7 @@ export function CatalogSettingsPanel({
               </Select>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-3">
               {cardInstallmentRules.map((rule) => (
                 <div className="space-y-1" key={rule.installments}>
                   <Label htmlFor={`card-fee-${rule.installments}`}>

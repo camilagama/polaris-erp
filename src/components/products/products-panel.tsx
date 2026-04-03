@@ -650,17 +650,15 @@ export function ProductsPanel({
           </div>
 
           {cursor ? (
-            <div className="flex justify-center">
-              <Button
-                disabled={loadingMore}
-                onClick={handleLoadMore}
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                {loadingMore ? "Carregando..." : "Carregar mais produtos"}
-              </Button>
-            </div>
+            <Button
+              className="w-full"
+              disabled={loadingMore}
+              onClick={handleLoadMore}
+              type="button"
+              variant="outline"
+            >
+              {loadingMore ? "Carregando..." : "Carregar mais produtos"}
+            </Button>
           ) : null}
         </>
       )}
