@@ -54,24 +54,20 @@ export function OperationalCostsChart({
           <ChartTooltip
             content={
               <ChartTooltipContent
-                formatter={(value, name, item) => {
+                formatter={(value, name, _item) => {
                   const config = chartConfig[name as keyof typeof chartConfig];
                   return (
                     <>
                       <div
-                        className="size-2.5 shrink-0 rounded-[2px] border-[--color-border] bg-[--color-bg]"
-                        style={
-                          {
-                            "--color-bg": config?.color || item.color,
-                            "--color-border": config?.color || item.color,
-                          } as React.CSSProperties
-                        }
+                        className={`size-2.5 shrink-0 rounded-[2px] ${
+                          name === "products" ? "bg-chart-1" : "bg-chart-2"
+                        }`}
                       />
                       <div className="flex flex-1 items-center justify-between gap-4 leading-none">
                         <span className="text-muted-foreground">
                           {config?.label || name}
                         </span>
-                        <span className="font-medium font-mono text-foreground tabular-nums">
+                        <span className="font-heading font-medium tabular-nums">
                           {formatCurrency(Number(value))}
                         </span>
                       </div>

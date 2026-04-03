@@ -1,6 +1,12 @@
 "use client";
 
-import { Bar, BarChart, XAxis, YAxis } from "recharts";
+import {
+  Label,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  RadialBar,
+  RadialBarChart,
+} from "recharts";
 
 import {
   type ChartConfig,
@@ -11,13 +17,9 @@ import {
 import { formatCurrency } from "@/lib/formatters";
 
 const chartConfig = {
-  costs: {
-    color: "var(--chart-5)",
-    label: "Receita",
-  },
   profit: {
     color: "var(--chart-6)",
-    label: "Lucro",
+    label: "Lucro Líquido",
   },
 } satisfies ChartConfig;
 
@@ -28,90 +30,104 @@ export function RevenueProfitChart({
   revenue: number;
   profit: number;
 }) {
+  const percentage = revenue > 0 ? (Math.max(0, profit) / revenue) * 100 : 0;
+
   const chartData = [
     {
-      group: "metrics",
-      costs: revenue - Math.max(0, profit),
+      name: "metrics",
       profit: Math.max(0, profit),
-      actualProfit: profit,
-      actualRevenue: revenue,
+      fill: "var(--color-profit)",
     },
   ];
 
   return (
-    <div className="mt-2 flex flex-col gap-3">
-      <ChartContainer className="h-3 w-full" config={chartConfig}>
-        <BarChart
-          accessibilityLayer
-          data={chartData}
-          layout="vertical"
-          margin={{ top: 0, right: 0, bottom: 0, left: 0 }}
-        >
-          <XAxis domain={[0, revenue]} hide type="number" />
-          <YAxis dataKey="group" hide type="category" />
-          <ChartTooltip
-            content={
-              <ChartTooltipContent
-                formatter={(value, name, item) => {
-                  const config = chartConfig[name as keyof typeof chartConfig];
-                  const label =
-                    name === "costs" ? "Recebido" : config?.label || name;
-                  let displayValue = value;
-                  if (name === "costs") {
-                    displayValue = item.payload.actualRevenue;
-                  } else if (name === "profit") {
-                    displayValue = item.payload.actualProfit;
+    <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-col gap-3">
+        <span className="font-medium text-[10px] text-muted-foreground uppercase leading-none tracking-[0.14em]">
+          Receita / Lucro
+        </span>
+        <div className="flex flex-col gap-1.5">
+          <strong className="font-heading text-[1.65rem] leading-none tracking-tight">
+            {formatCurrency(revenue)}
+          </strong>
+          <span className="font-heading font-medium text-[1.12rem] text-muted-foreground tabular-nums leading-none tracking-tight">
+            {formatCurrency(profit)}
+          </span>
+        </div>
+      </div>
+
+      <div className="flex flex-col items-center gap-2.5">
+        <ChartContainer className="size-[92px] shrink-0" config={chartConfig}>
+          <RadialBarChart
+            data={chartData}
+            endAngle={-270}
+            innerRadius={34}
+            outerRadius={44}
+            startAngle={90}
+          >
+            <PolarAngleAxis
+              angleAxisId={0}
+              domain={[0, Math.max(revenue, 1)]}
+              tick={false}
+              type="number"
+            />
+            <RadialBar
+              background={{
+                className: "fill-muted hover:fill-muted transition-colors",
+              }}
+              cornerRadius={10}
+              dataKey="profit"
+              isAnimationActive={true}
+            />
+            <PolarRadiusAxis axisLine={false} tick={false} tickLine={false}>
+              <Label
+                content={({ viewBox }) => {
+                  if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                    return (
+                      <text
+                        dominantBaseline="middle"
+                        textAnchor="middle"
+                        x={viewBox.cx}
+                        y={viewBox.cy}
+                      >
+                        <tspan
+                          className="fill-foreground font-semibold text-[14px] tabular-nums"
+                          x={viewBox.cx}
+                          y={viewBox.cy}
+                        >
+                          {percentage.toFixed(0)}%
+                        </tspan>
+                      </text>
+                    );
                   }
-                  return (
+                }}
+              />
+            </PolarRadiusAxis>
+            <ChartTooltip
+              content={
+                <ChartTooltipContent
+                  className="min-w-32 -translate-x-full"
+                  formatter={(value) => (
                     <>
-                      <div
-                        className="size-2.5 shrink-0 rounded-[2px] border-[--color-border] bg-[--color-bg]"
-                        style={
-                          {
-                            "--color-bg": config?.color || item.color,
-                            "--color-border": config?.color || item.color,
-                          } as React.CSSProperties
-                        }
-                      />
+                      <div className="size-2.5 shrink-0 rounded-[2px] bg-chart-6" />
                       <div className="flex flex-1 items-center justify-between gap-4 leading-none">
-                        <span className="text-muted-foreground">{label}</span>
-                        <span className="font-medium font-mono text-foreground tabular-nums">
-                          {formatCurrency(Number(displayValue))}
+                        <span className="font-heading font-medium tabular-nums">
+                          {formatCurrency(Number(value))}
                         </span>
                       </div>
                     </>
-                  );
-                }}
-                hideLabel
-              />
-            }
-            cursor={false}
-          />
-          <Bar
-            dataKey="costs"
-            fill="var(--color-costs)"
-            isAnimationActive={true}
-            radius={[4, 0, 0, 4]}
-            stackId="a"
-          />
-          <Bar
-            dataKey="profit"
-            fill="var(--color-profit)"
-            isAnimationActive={true}
-            radius={[0, 4, 4, 0]}
-            stackId="a"
-          />
-        </BarChart>
-      </ChartContainer>
+                  )}
+                  hideLabel
+                />
+              }
+              cursor={false}
+            />
+          </RadialBarChart>
+        </ChartContainer>
 
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
-        <div className="flex items-center gap-1.5">
-          <div className="size-2 shrink-0 rounded-full bg-chart-5" />
-          <span>Recebido ({formatCurrency(revenue)})</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="size-2 shrink-0 rounded-full bg-chart-6" />
-          <span>Lucro ({formatCurrency(profit)})</span>
+        <div className="flex items-center gap-1.5 whitespace-nowrap text-[10px] text-muted-foreground">
+          <div className="size-1.5 shrink-0 rounded-full bg-chart-6" />
+          <span>Lucro no período</span>
         </div>
       </div>
     </div>

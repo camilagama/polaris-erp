@@ -62,7 +62,7 @@ export default async function DashboardPage(props: PageProps<"/">) {
   }> = [
     {
       id: "revenue",
-      label: "Receita e Resultado",
+      label: "Receita / Lucro",
       value: formatCurrency(metrics.totalSold),
     },
     {
@@ -112,29 +112,33 @@ export default async function DashboardPage(props: PageProps<"/">) {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {summaryCards.map((card) => (
           <Card key={card.id}>
-            <CardHeader className="gap-1">
-              <div className="flex items-center justify-between gap-3">
-                <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
-                  {card.label}
-                </CardTitle>
-                {card.badge ? (
-                  <Badge
-                    variant={
-                      card.badge.variant as
-                        | "destructive"
-                        | "outline"
-                        | "secondary"
-                    }
-                  >
-                    {card.badge.label}
-                  </Badge>
-                ) : null}
-              </div>
-            </CardHeader>
+            {card.id !== "revenue" && (
+              <CardHeader className="gap-1">
+                <div className="flex items-center justify-between gap-3">
+                  <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
+                    {card.label}
+                  </CardTitle>
+                  {card.badge ? (
+                    <Badge
+                      variant={
+                        card.badge.variant as
+                          | "destructive"
+                          | "outline"
+                          | "secondary"
+                      }
+                    >
+                      {card.badge.label}
+                    </Badge>
+                  ) : null}
+                </div>
+              </CardHeader>
+            )}
             <CardContent className="flex flex-col gap-1 pt-0">
-              <strong className="font-heading text-[1.65rem] leading-none tracking-tight">
-                {card.value}
-              </strong>
+              {card.id !== "revenue" && (
+                <strong className="font-heading text-[1.65rem] leading-none tracking-tight">
+                  {card.value}
+                </strong>
+              )}
               {(() => {
                 switch (card.id) {
                   case "revenue":
