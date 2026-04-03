@@ -97,7 +97,7 @@ export default async function DashboardPage(props: PageProps<"/">) {
     },
     {
       id: "margin",
-      label: "Lucro / Investimento",
+      label: "Retorno / Investimento",
       value: `${marginPercentage.toFixed(1)}%`,
     },
     {
