@@ -103,12 +103,9 @@ export default async function DashboardPage(props: PageProps<"/">) {
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-col gap-1.5">
-          <p className="font-semibold text-[11px] text-primary uppercase tracking-[0.18em]">
+          <h1 className="font-heading font-semibold text-xl tracking-tight">
             Dashboard
-          </p>
-          <h2 className="font-heading font-semibold text-2xl tracking-tight">
-            Visao geral
-          </h2>
+          </h1>
         </div>
       </div>
 
