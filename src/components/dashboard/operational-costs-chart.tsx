@@ -67,7 +67,7 @@ export function OperationalCostsChart({
                         <span className="text-muted-foreground">
                           {config?.label || name}
                         </span>
-                        <span className="font-heading font-medium tabular-nums">
+                        <span className="font-medium font-mono tabular-nums">
                           {formatCurrency(Number(value))}
                         </span>
                       </div>

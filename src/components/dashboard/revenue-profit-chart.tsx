@@ -46,11 +46,11 @@ export function RevenueProfitChart({
         <span className="font-medium text-[10px] text-muted-foreground uppercase leading-none tracking-[0.14em]">
           Receita / Lucro
         </span>
-        <div className="flex flex-col gap-2">
-          <strong className="font-heading text-2xl leading-none tracking-tight">
+        <div className="flex flex-col gap-1.5">
+          <strong className="font-mono text-2xl leading-none tracking-tight">
             {formatCurrency(revenue)}
           </strong>
-          <span className="font-heading font-medium text-lg text-muted-foreground tabular-nums leading-none tracking-tight">
+          <span className="font-mono text-lg text-muted-foreground tabular-nums leading-none tracking-tight">
             {formatCurrency(profit)}
           </span>
         </div>
@@ -61,7 +61,7 @@ export function RevenueProfitChart({
           <RadialBarChart
             data={chartData}
             endAngle={-270}
-            innerRadius={32}
+            innerRadius={30}
             outerRadius={40}
             startAngle={90}
           >
@@ -75,7 +75,7 @@ export function RevenueProfitChart({
               background={{
                 className: "fill-muted hover:fill-muted transition-colors",
               }}
-              cornerRadius={10}
+              cornerRadius={12}
               dataKey="profit"
               isAnimationActive={true}
             />
@@ -91,7 +91,7 @@ export function RevenueProfitChart({
                         y={viewBox.cy}
                       >
                         <tspan
-                          className="fill-foreground font-semibold text-[14px] tabular-nums"
+                          className="fill-foreground font-mono font-semibold text-[14px] tabular-nums"
                           x={viewBox.cx}
                           y={viewBox.cy}
                         >
@@ -111,7 +111,7 @@ export function RevenueProfitChart({
                     <>
                       <div className="size-2.5 shrink-0 rounded-[2px] bg-chart-6" />
                       <div className="flex flex-1 items-center justify-between gap-4 leading-none">
-                        <span className="font-heading font-medium tabular-nums">
+                        <span className="font-medium font-mono tabular-nums">
                           {formatCurrency(Number(value))}
                         </span>
                       </div>

@@ -65,8 +65,8 @@ export function ProfitMarginChart({
                       <div className="size-2.5 shrink-0 rounded-[2px] bg-chart-6" />
                       <div className="flex flex-1 items-center justify-between gap-4 leading-none">
                         <span className="text-muted-foreground">Progresso</span>
-                        <div className="flex items-center gap-1.5 font-heading tabular-nums">
-                          <span className="font-medium text-foreground">
+                        <div className="flex items-center gap-1.5 font-mono tabular-nums">
+                          <span className="font-semibold text-foreground">
                             {actualPercentage.toFixed(1)}%
                           </span>
                           <span className="text-muted-foreground">
