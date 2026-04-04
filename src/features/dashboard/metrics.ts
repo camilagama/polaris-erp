@@ -411,8 +411,10 @@ const soldToContributionLevel = (sold: number): DashboardContributionLevel => {
 };
 
 /**
- * Janela fixa de 6 meses corridos (do 1º dia do mês há 5 meses até `graphTo`).
- * Não limita o início à primeira venda no banco — dias anteriores aparecem como zero.
+ * Janela de 18 meses corridos (do 1º dia do mês há 17 meses até `graphTo`).
+ * O componente client recorta dinamicamente esse período de acordo com a
+ * largura disponível do card — containers estreitos mostram menos meses,
+ * containers largos mostram mais.
  */
 export const resolveContributionGraphRange = (bounds: {
   to: string;
@@ -420,7 +422,7 @@ export const resolveContributionGraphRange = (bounds: {
   const today = formatDateInputValue(new Date());
   const graphTo = today <= bounds.to ? today : bounds.to;
   const graphToDate = parseISO(`${graphTo}T00:00:00`);
-  const graphFromDate = startOfMonth(subMonths(graphToDate, 5));
+  const graphFromDate = startOfMonth(subMonths(graphToDate, 17));
 
   return {
     from: formatDateInputValue(graphFromDate),

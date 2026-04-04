@@ -317,11 +317,11 @@ describe("buildDashboardMetrics", () => {
 });
 
 describe("resolveContributionGraphRange", () => {
-  it("covers 12 calendar months ending at bounds.to when today is after bounds.to", () => {
+  it("covers 18 calendar months ending at bounds.to when today is after bounds.to", () => {
     const range = resolveContributionGraphRange({ to: "2020-01-15" });
 
     expect(range.to).toBe("2020-01-15");
-    expect(range.from).toBe("2019-02-01");
+    expect(range.from).toBe("2018-08-01");
   });
 });
 
