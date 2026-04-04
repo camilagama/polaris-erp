@@ -34,7 +34,10 @@ import {
   dashboardDatePresetOptions,
   getDashboardPresetDateRangeWithBounds,
 } from "@/features/dashboard/date-range";
-import type { DashboardGoalCard } from "@/features/goals/contracts";
+import {
+  type DashboardGoalCard,
+  MAX_ACTIVE_GOALS,
+} from "@/features/goals/contracts";
 import {
   createGoalSchema,
   goalDisplayModeSchema,
@@ -153,10 +156,14 @@ export function GoalFormDialog({
   }, [defaults, form, open]);
 
   const title = mode === "edit" ? "Editar meta" : "Nova meta";
+  const createModeDescription =
+    MAX_ACTIVE_GOALS === 1
+      ? "Uma meta ativa por vez no dashboard (receita, lucro operacional ou vendas no periodo)."
+      : `Defina ate ${MAX_ACTIVE_GOALS} metas ativas para acompanhar receita, lucro operacional ou quantidade de vendas no periodo.`;
   const description =
     mode === "edit"
       ? "Ajuste nome, tipo, periodo ou valor alvo. O periodo deve incluir hoje enquanto a meta estiver ativa."
-      : "Defina ate 3 metas ativas para acompanhar receita, lucro operacional ou quantidade de vendas no periodo.";
+      : createModeDescription;
 
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>

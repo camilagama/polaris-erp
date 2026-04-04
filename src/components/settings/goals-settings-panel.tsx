@@ -137,7 +137,9 @@ export function GoalsSettingsPanel({
             <div className="space-y-1.5">
               <CardTitle>Metas</CardTitle>
               <CardDescription>
-                Resumo no dashboard. Ate {MAX_ACTIVE_GOALS} ativas.
+                {MAX_ACTIVE_GOALS === 1
+                  ? "Resumo no dashboard. Limite: 1 meta ativa por vez."
+                  : `Resumo no dashboard. Ate ${MAX_ACTIVE_GOALS} ativas.`}
               </CardDescription>
             </div>
             <Button
@@ -282,7 +284,9 @@ export function GoalsSettingsPanel({
           <AlertDialogHeader>
             <AlertDialogTitle>Arquivar meta</AlertDialogTitle>
             <AlertDialogDescription>
-              Sai das ativas. Pode desarquivar depois se houver vaga.
+              {MAX_ACTIVE_GOALS === 1
+                ? "Sai das ativas. Para desarquivar, primeiro arquive ou encerre a meta que estiver ativa."
+                : "Sai das ativas. Pode desarquivar depois se houver vaga."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

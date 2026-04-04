@@ -26,6 +26,16 @@ import { formatDateInputValue } from "@/lib/domain/date";
 
 const SETTINGS_HISTORY_LIMIT = 40;
 
+const createGoalCapacityErrorMessage = (): string =>
+  MAX_ACTIVE_GOALS === 1
+    ? "Permitido apenas 1 meta ativa por vez. Arquive ou encerre a meta atual antes de criar outra."
+    : `Voce pode ter no maximo ${MAX_ACTIVE_GOALS} metas ativas. Encerre ou arquive uma meta antes de criar outra.`;
+
+const unarchiveCapacityErrorMessage = (): string =>
+  MAX_ACTIVE_GOALS === 1
+    ? "Ja existe uma meta ativa. Arquive ou encerre ela antes de reativar esta."
+    : `Ja existem ${MAX_ACTIVE_GOALS} metas ativas. Arquive ou conclua outra antes de reativar esta.`;
+
 const toTargetDecimalString = (metric: GoalMetric, value: number): string => {
   if (metric === "sales_count") {
     return `${Math.round(value)}.00`;
@@ -208,9 +218,7 @@ export const createGoal = async (
   const activeCount = await countActiveGoals();
 
   if (activeCount >= MAX_ACTIVE_GOALS) {
-    throw new Error(
-      `Voce pode ter no maximo ${MAX_ACTIVE_GOALS} metas ativas. Encerre ou arquive uma meta antes de criar outra.`
-    );
+    throw new Error(createGoalCapacityErrorMessage());
   }
 
   await db.insert(goals).values({
@@ -323,9 +331,7 @@ export const unarchiveGoal = async (goalId: string): Promise<void> => {
   const activeCount = await countActiveGoals();
 
   if (activeCount >= MAX_ACTIVE_GOALS) {
-    throw new Error(
-      `Ja existem ${MAX_ACTIVE_GOALS} metas ativas. Arquive ou conclua outra antes de reativar esta.`
-    );
+    throw new Error(unarchiveCapacityErrorMessage());
   }
 
   await db

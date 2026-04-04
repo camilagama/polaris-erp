@@ -1,4 +1,5 @@
-export const MAX_ACTIVE_GOALS = 3;
+/** Only one active goal at a time (dashboard + create/unarchive enforcement). */
+export const MAX_ACTIVE_GOALS = 1;
 
 export type GoalMetric = "revenue" | "profit" | "sales_count";
 
