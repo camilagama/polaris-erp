@@ -32,6 +32,7 @@ import {
 import { getGoalsDashboardData } from "@/features/goals/server";
 import { buildProductImageUrl } from "@/features/products/image-urls";
 import { formatCurrency } from "@/lib/formatters";
+import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Dashboard | DG Imports",
@@ -88,12 +89,16 @@ export default async function DashboardPage(props: PageProps<"/">) {
         metrics.totalProductCosts + metrics.totalShippingAndSellerFees
       ),
     },
-    {
-      id: "margin",
-      label: "Retorno / Investimento",
-      value: `${marginPercentage.toFixed(1)}%`,
-    },
   ];
+
+  let bottomGridCols = "lg:grid-cols-1";
+  if (summaryCards.length === 4) {
+    bottomGridCols = "lg:grid-cols-4";
+  } else if (summaryCards.length === 3) {
+    bottomGridCols = "lg:grid-cols-3";
+  } else if (summaryCards.length === 2) {
+    bottomGridCols = "lg:grid-cols-2";
+  }
 
   return (
     <div className="flex flex-col gap-5">
@@ -119,9 +124,56 @@ export default async function DashboardPage(props: PageProps<"/">) {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="flex h-full flex-col">
+          <SalesContributionGraphCard
+            className="h-full"
+            graph={contributionGraph}
+          />
+        </div>
+
+        {goalsPayload.active.length > 0 && (
+          <div className="flex h-full flex-col gap-3">
+            {goalsPayload.active.map((goal) => (
+              <GoalDashboardCompactCard
+                className="h-full"
+                goal={goal}
+                key={goal.id}
+              />
+            ))}
+          </div>
+        )}
+
+        <div
+          className={cn(
+            "flex h-full flex-col",
+            goalsPayload.active.length === 0 && "lg:col-span-2"
+          )}
+        >
+          <Card className="flex h-full flex-col">
+            <CardHeader className="gap-1">
+              <div className="flex items-center justify-between gap-3">
+                <CardTitle className="font-medium text-[10px] text-muted-foreground uppercase leading-none tracking-[0.14em]">
+                  Retorno / Investimento
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="flex flex-1 flex-col gap-1.5 pt-0">
+              <strong className="font-mono text-2xl leading-none tracking-tight">
+                {marginPercentage.toFixed(1)}%
+              </strong>
+              <ProfitMarginChart
+                cost={globalStats.investment}
+                profit={globalStats.profit}
+              />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      <div className={`grid gap-4 md:grid-cols-2 ${bottomGridCols}`}>
         {summaryCards.map((card) => (
-          <Card key={card.id}>
+          <Card className="flex h-full flex-col" key={card.id}>
             {card.id !== "revenue" && (
               <CardHeader className="gap-1">
                 <div className="flex items-center justify-between gap-3">
@@ -143,7 +195,7 @@ export default async function DashboardPage(props: PageProps<"/">) {
                 </div>
               </CardHeader>
             )}
-            <CardContent className="flex flex-col gap-1.5 pt-0">
+            <CardContent className="flex flex-1 flex-col gap-1.5 pt-0">
               {card.id !== "revenue" && card.id !== "count" && (
                 <strong className="font-mono text-2xl leading-none tracking-tight">
                   {card.value}
@@ -165,13 +217,6 @@ export default async function DashboardPage(props: PageProps<"/">) {
                         totalShippingAndSellerFees={
                           metrics.totalShippingAndSellerFees
                         }
-                      />
-                    );
-                  case "margin":
-                    return (
-                      <ProfitMarginChart
-                        cost={globalStats.investment}
-                        profit={globalStats.profit}
                       />
                     );
                   case "count":
@@ -200,19 +245,6 @@ export default async function DashboardPage(props: PageProps<"/">) {
           </Card>
         ))}
       </div>
-
-      {goalsPayload.active.length > 0 ? (
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(260px,340px)]">
-          <SalesContributionGraphCard graph={contributionGraph} />
-          <div className="flex flex-col gap-3">
-            {goalsPayload.active.map((goal) => (
-              <GoalDashboardCompactCard goal={goal} key={goal.id} />
-            ))}
-          </div>
-        </div>
-      ) : (
-        <SalesContributionGraphCard graph={contributionGraph} />
-      )}
 
       <div className="grid gap-4 xl:grid-cols-[1.35fr_0.95fr]">
         <Card>

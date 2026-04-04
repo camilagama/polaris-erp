@@ -6,10 +6,8 @@ import {
   ContributionGraph,
   ContributionGraphBlock,
   ContributionGraphCalendar,
-  ContributionGraphFooter,
-  ContributionGraphLegend,
 } from "@/components/kibo-ui/contribution-graph";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Tooltip,
   TooltipContent,
@@ -18,6 +16,7 @@ import {
 } from "@/components/ui/tooltip";
 import type { DashboardContributionGraph } from "@/features/dashboard/contracts";
 import { formatCurrency } from "@/lib/formatters";
+import { cn } from "@/lib/utils";
 
 const levelBandLabel = (level: number) => {
   switch (level) {
@@ -40,22 +39,19 @@ const levelBandLabel = (level: number) => {
 };
 
 interface SalesContributionGraphCardProps {
+  className?: string;
   graph: DashboardContributionGraph;
 }
 
 export function SalesContributionGraphCard({
   graph,
+  className,
 }: SalesContributionGraphCardProps) {
   if (graph.days.length === 0) {
     return (
-      <Card>
-        <CardHeader className="gap-1">
-          <CardTitle className="font-medium text-[10px] text-muted-foreground uppercase leading-none tracking-[0.14em]">
-            Mapa de vendas diarias
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <div className="flex h-48 items-center justify-center rounded-2xl border border-border/70 border-dashed bg-muted/10 px-4 text-center text-muted-foreground text-sm">
+      <Card className={cn("flex flex-col", className)}>
+        <CardContent className="flex flex-1 items-center justify-center pt-0">
+          <div className="flex h-48 w-full items-center justify-center rounded-2xl border border-border/70 border-dashed bg-muted/10 px-4 text-center text-muted-foreground text-sm">
             Sem dados suficientes para montar o mapa no periodo.
           </div>
         </CardContent>
@@ -72,13 +68,8 @@ export function SalesContributionGraphCard({
   }));
 
   return (
-    <Card>
-      <CardHeader className="gap-1">
-        <CardTitle className="font-medium text-[10px] text-muted-foreground uppercase leading-none tracking-[0.14em]">
-          Mapa de vendas diarias
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4 pt-0">
+    <Card className={cn("flex flex-col", className)}>
+      <CardContent className="flex flex-1 flex-col justify-center gap-4 pt-4">
         <TooltipProvider delayDuration={200}>
           <ContributionGraph
             blockMargin={3}
@@ -132,10 +123,6 @@ export function SalesContributionGraphCard({
                 );
               }}
             </ContributionGraphCalendar>
-
-            <ContributionGraphFooter className="flex items-center justify-end">
-              <ContributionGraphLegend />
-            </ContributionGraphFooter>
           </ContributionGraph>
         </TooltipProvider>
       </CardContent>

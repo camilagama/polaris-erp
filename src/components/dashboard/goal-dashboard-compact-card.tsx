@@ -29,8 +29,10 @@ const formatGoalAmount = (
 
 export function GoalDashboardCompactCard({
   goal,
+  className,
 }: {
   goal: DashboardGoalCard;
+  className?: string;
 }) {
   const chartData = [
     {
@@ -51,7 +53,7 @@ export function GoalDashboardCompactCard({
   })}`;
 
   return (
-    <Card>
+    <Card className={cn("flex flex-col", className)}>
       <CardHeader className="gap-0 space-y-0">
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="min-w-0 flex-1 font-medium text-[10px] text-muted-foreground uppercase leading-tight tracking-[0.14em]">
@@ -65,7 +67,7 @@ export function GoalDashboardCompactCard({
           </span>
         </div>
       </CardHeader>
-      <CardContent className="flex flex-col gap-2.5 pt-0">
+      <CardContent className="flex flex-1 flex-col gap-2.5 pt-0">
         {goal.displayMode === "percentage" ? (
           <strong className="font-mono text-2xl tabular-nums leading-none tracking-tight">
             {goal.progressPercent.toFixed(1)}%
