@@ -132,7 +132,7 @@ export default async function DashboardPage(props: PageProps<"/">) {
         )}
 
         <div className="flex h-full flex-col">
-          <Card className="flex h-full flex-col">
+          <Card className="flex h-full flex-col justify-center">
             <CardHeader className="gap-1">
               <div className="flex items-center justify-between gap-3">
                 <CardTitle className="font-medium text-[10px] text-muted-foreground uppercase leading-none tracking-[0.14em]">
@@ -140,7 +140,7 @@ export default async function DashboardPage(props: PageProps<"/">) {
                 </CardTitle>
               </div>
             </CardHeader>
-            <CardContent className="flex flex-1 flex-col gap-1.5 pt-0">
+            <CardContent className="flex flex-col gap-1.5">
               <strong className="font-mono text-2xl leading-none tracking-tight">
                 {marginPercentage.toFixed(1)}%
               </strong>
@@ -171,7 +171,7 @@ export default async function DashboardPage(props: PageProps<"/">) {
 
       <div className={`grid gap-4 md:grid-cols-2 ${bottomGridCols}`}>
         {summaryCards.map((card) => (
-          <Card className="flex h-full flex-col" key={card.id}>
+          <Card className="flex h-full flex-col justify-center" key={card.id}>
             {card.id !== "revenue" && (
               <CardHeader className="gap-1">
                 <div className="flex items-center justify-between gap-3">
@@ -193,7 +193,7 @@ export default async function DashboardPage(props: PageProps<"/">) {
                 </div>
               </CardHeader>
             )}
-            <CardContent className="flex flex-1 flex-col gap-1.5 pt-0">
+            <CardContent className="flex flex-col gap-1.5">
               {card.id !== "revenue" && card.id !== "count" && (
                 <strong className="font-mono text-2xl leading-none tracking-tight">
                   {card.value}
@@ -245,18 +245,18 @@ export default async function DashboardPage(props: PageProps<"/">) {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[1.35fr_0.95fr]">
-        <Card>
+        <Card className="flex h-full flex-col justify-center">
           <CardHeader className="gap-1">
             <CardTitle className="text-base">Vendas x custos</CardTitle>
             <CardDescription>Fluxo financeiro no periodo</CardDescription>
           </CardHeader>
-          <CardContent className="pt-0">
+          <CardContent className="flex flex-col">
             <RevenueResultChart data={metrics.periodComparison} />
           </CardContent>
         </Card>
 
         <div className="grid gap-4">
-          <Card>
+          <Card className="flex h-full flex-col justify-center">
             <CardHeader>
               <CardTitle className="text-base">
                 Produtos mais vendidos
@@ -265,7 +265,7 @@ export default async function DashboardPage(props: PageProps<"/">) {
                 Ranking de performance do catalogo
               </CardDescription>
             </CardHeader>
-            <CardContent className="pt-0">
+            <CardContent className="flex flex-col">
               {metrics.topProducts.length === 0 ? (
                 <div className="flex h-48 items-center justify-center rounded-2xl border border-border/70 border-dashed bg-muted/10 px-4 text-center text-muted-foreground text-sm">
                   Sem vendas no periodo para montar o ranking.

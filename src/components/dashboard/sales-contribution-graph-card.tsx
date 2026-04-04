@@ -126,8 +126,8 @@ export function SalesContributionGraphCard({
   }
 
   return (
-    <Card className={cn("flex flex-col", className)}>
-      <CardContent className="flex flex-1 flex-col pt-0">
+    <Card className={cn("flex flex-col justify-center", className)}>
+      <CardContent className="flex flex-col">
         <div className="w-full" ref={containerRef}>
           {visibleData && visibleData.activities.length > 0 && (
             <TooltipProvider delayDuration={200}>
