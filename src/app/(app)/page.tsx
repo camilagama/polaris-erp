@@ -32,7 +32,6 @@ import {
 import { getGoalsDashboardData } from "@/features/goals/server";
 import { buildProductImageUrl } from "@/features/products/image-urls";
 import { formatCurrency } from "@/lib/formatters";
-import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Dashboard | DG Imports",
@@ -107,24 +106,15 @@ export default async function DashboardPage(props: PageProps<"/">) {
           <p className="font-semibold text-[11px] text-primary uppercase tracking-[0.18em]">
             Dashboard
           </p>
-          <h1 className="font-heading font-semibold text-2xl tracking-tight">
+          <h2 className="font-heading font-semibold text-2xl tracking-tight">
             Visao geral
-          </h1>
-        </div>
-
-        <div className="flex flex-wrap gap-2 sm:min-w-72 sm:justify-end">
-          <DashboardDateRangeFilter
-            bounds={bounds}
-            from={selectedRange.from}
-            preset={selectedRange.preset}
-            presets={dashboardDatePresetOptions}
-            to={selectedRange.to}
-            variant="dashboard"
-          />
+          </h2>
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div
+        className={`grid gap-4 md:grid-cols-2 ${goalsPayload.active.length > 0 ? "lg:grid-cols-3" : "lg:grid-cols-2"}`}
+      >
         <div className="flex h-full flex-col">
           <SalesContributionGraphCard
             className="h-full"
@@ -144,12 +134,7 @@ export default async function DashboardPage(props: PageProps<"/">) {
           </div>
         )}
 
-        <div
-          className={cn(
-            "flex h-full flex-col",
-            goalsPayload.active.length === 0 && "lg:col-span-2"
-          )}
-        >
+        <div className="flex h-full flex-col">
           <Card className="flex h-full flex-col">
             <CardHeader className="gap-1">
               <div className="flex items-center justify-between gap-3">
@@ -168,6 +153,22 @@ export default async function DashboardPage(props: PageProps<"/">) {
               />
             </CardContent>
           </Card>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between pt-2">
+        <h2 className="font-heading font-medium text-foreground/80 text-lg tracking-tight">
+          Visão por período
+        </h2>
+        <div className="flex flex-wrap gap-2 sm:min-w-72 sm:justify-end">
+          <DashboardDateRangeFilter
+            bounds={bounds}
+            from={selectedRange.from}
+            preset={selectedRange.preset}
+            presets={dashboardDatePresetOptions}
+            to={selectedRange.to}
+            variant="dashboard"
+          />
         </div>
       </div>
 

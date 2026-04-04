@@ -69,7 +69,7 @@ export function SalesContributionGraphCard({
 
   return (
     <Card className={cn("flex flex-col", className)}>
-      <CardContent className="flex flex-1 flex-col justify-center gap-4 pt-4">
+      <CardContent className="flex flex-1 flex-col pt-0">
         <TooltipProvider delayDuration={200}>
           <ContributionGraph
             blockMargin={3}
