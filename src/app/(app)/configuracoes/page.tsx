@@ -31,9 +31,10 @@ export default async function ConfiguracoesPage() {
         </p>
       </div>
 
-      <GoalsSettingsPanel dateBounds={dateBounds} payload={goalsPayload} />
-
-      <CatalogSettingsPanel categories={categories} settings={settings} />
+      <div className="grid gap-4 lg:grid-cols-2">
+        <GoalsSettingsPanel dateBounds={dateBounds} payload={goalsPayload} />
+        <CatalogSettingsPanel categories={categories} settings={settings} />
+      </div>
     </div>
   );
 }

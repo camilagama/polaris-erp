@@ -23,6 +23,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   InputGroup,
@@ -38,6 +45,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   canDeleteCategory,
   canRenameCategory,
@@ -91,6 +106,8 @@ export function CatalogSettingsPanel({
   const [newCategoryName, setNewCategoryName] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
+  const [categoriesOpen, setCategoriesOpen] = useState(false);
+  const [ratesOpen, setRatesOpen] = useState(false);
   const [minimumMarkupPercent, setMinimumMarkupPercent] = useState(
     settings.minimumMarkupPercent.toString()
   );
@@ -188,14 +205,26 @@ export function CatalogSettingsPanel({
   };
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-      <Card>
+    <>
+      <Card className="h-full">
         <CardHeader>
-          <CardTitle>Categorias</CardTitle>
-          <CardDescription>
-            Organize o catalogo fora do fluxo de cadastro. A categoria Outros e
-            protegida e sempre permanece disponivel.
-          </CardDescription>
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div className="space-y-1">
+              <CardTitle>Categorias</CardTitle>
+              <CardDescription>
+                Organize o catalogo fora do fluxo de cadastro. A categoria
+                Outros e protegida e sempre permanece disponivel.
+              </CardDescription>
+            </div>
+            <Button
+              onClick={() => setCategoriesOpen(true)}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
+              Gerenciar categorias
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex items-end gap-2">
@@ -222,177 +251,83 @@ export function CatalogSettingsPanel({
               Adicionar
             </Button>
           </div>
-
-          <div className="rounded-lg border border-border/60 bg-muted/10">
-            {categories.map((category) => {
-              const deleteAllowed = canDeleteCategory(
-                category,
-                category.productCount
-              );
-              const renameAllowed = canRenameCategory(category);
-              const statusLabel = category.isSystem
-                ? "fixa"
-                : `${category.productCount} prod.`;
-              let deleteTitle = "Remover categoria";
-
-              if (!deleteAllowed) {
-                deleteTitle = category.isSystem
-                  ? "Categoria protegida pelo sistema."
-                  : "Remocao bloqueada enquanto houver produtos vinculados.";
-              }
-
-              return (
-                <div
-                  className="flex min-h-10 items-center justify-between gap-3 border-border/50 border-b px-3 py-2 last:border-b-0"
-                  key={category.id}
-                >
-                  {editingId === category.id ? (
-                    <div className="flex w-full items-center gap-2">
-                      <Input
-                        autoFocus
-                        className="h-6"
-                        onChange={(event) => setEditingName(event.target.value)}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter") {
-                            event.preventDefault();
-                            handleUpdateCategory(category.id);
-                          }
-                        }}
-                        value={editingName}
-                      />
-                      <Button
-                        disabled={pending || editingName.trim().length === 0}
-                        onClick={() => handleUpdateCategory(category.id)}
-                        size="icon-sm"
-                        type="button"
-                      >
-                        <HugeiconsIcon icon={Tick01Icon} />
-                      </Button>
-                      <Button
-                        onClick={() => {
-                          setEditingId(null);
-                          setEditingName("");
-                        }}
-                        size="icon-sm"
-                        type="button"
-                        variant="ghost"
-                      >
-                        <HugeiconsIcon icon={Cancel01Icon} />
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="flex w-full items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="font-medium text-sm">{category.name}</p>
-                        <p className="text-[11px] text-muted-foreground">
-                          {statusLabel}
-                        </p>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-0.5">
-                        <Button
-                          disabled={!renameAllowed || pending}
-                          onClick={() => {
-                            setEditingId(category.id);
-                            setEditingName(category.name);
-                          }}
-                          size="icon-sm"
-                          title={
-                            renameAllowed
-                              ? "Editar categoria"
-                              : "Categoria protegida pelo sistema."
-                          }
-                          type="button"
-                          variant="ghost"
-                        >
-                          <HugeiconsIcon icon={PencilEdit02Icon} />
-                        </Button>
-                        <Button
-                          disabled={!deleteAllowed || pending}
-                          onClick={() => handleDeleteCategory(category.id)}
-                          size="icon-sm"
-                          title={deleteTitle}
-                          type="button"
-                          variant="ghost"
-                        >
-                          <HugeiconsIcon icon={Delete02Icon} />
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
         </CardContent>
       </Card>
 
-      <div className="flex flex-col gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Precificacao</CardTitle>
-            <CardDescription>
-              Defina os percentuais globais usados para sugerir preco minimo e
-              ideal no cadastro de produtos.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1">
-                <Label htmlFor="minimum-markup-percent">
-                  Margem minima (%)
-                </Label>
-                <InputGroup>
-                  <InputGroupInput
-                    id="minimum-markup-percent"
-                    min="0"
-                    onChange={(event) =>
-                      setMinimumMarkupPercent(event.target.value)
-                    }
-                    step="0.01"
-                    type="number"
-                    value={minimumMarkupPercent}
-                  />
-                  <InputGroupAddon align="inline-end">
-                    <InputGroupText>%</InputGroupText>
-                  </InputGroupAddon>
-                </InputGroup>
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="ideal-markup-percent">Margem ideal (%)</Label>
-                <InputGroup>
-                  <InputGroupInput
-                    id="ideal-markup-percent"
-                    min="0"
-                    onChange={(event) =>
-                      setIdealMarkupPercent(event.target.value)
-                    }
-                    step="0.01"
-                    type="number"
-                    value={idealMarkupPercent}
-                  />
-                  <InputGroupAddon align="inline-end">
-                    <InputGroupText>%</InputGroupText>
-                  </InputGroupAddon>
-                </InputGroup>
-              </div>
-            </div>
-
-            <div className="rounded-lg border border-border/60 bg-muted/20 p-3 text-muted-foreground text-xs">
-              {pricingHint}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Cartao</CardTitle>
-            <CardDescription>
-              Configure uma sequencia continua de 1x ate o maximo desejado. A
-              taxa de cada parcela e aplicada sobre o valor total da transacao.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+      <Card className="h-full">
+        <CardHeader>
+          <CardTitle>Precificacao</CardTitle>
+          <CardDescription>
+            Defina os percentuais globais usados para sugerir preco minimo e
+            ideal no cadastro de produtos.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1">
+              <Label htmlFor="minimum-markup-percent">Margem minima (%)</Label>
+              <InputGroup>
+                <InputGroupInput
+                  id="minimum-markup-percent"
+                  min="0"
+                  onChange={(event) =>
+                    setMinimumMarkupPercent(event.target.value)
+                  }
+                  step="0.01"
+                  type="number"
+                  value={minimumMarkupPercent}
+                />
+                <InputGroupAddon align="inline-end">
+                  <InputGroupText>%</InputGroupText>
+                </InputGroupAddon>
+              </InputGroup>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="ideal-markup-percent">Margem ideal (%)</Label>
+              <InputGroup>
+                <InputGroupInput
+                  id="ideal-markup-percent"
+                  min="0"
+                  onChange={(event) =>
+                    setIdealMarkupPercent(event.target.value)
+                  }
+                  step="0.01"
+                  type="number"
+                  value={idealMarkupPercent}
+                />
+                <InputGroupAddon align="inline-end">
+                  <InputGroupText>%</InputGroupText>
+                </InputGroupAddon>
+              </InputGroup>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-border/60 bg-muted/20 p-3 text-muted-foreground text-xs">
+            {pricingHint}
+          </div>
+
+          <Button
+            className="w-full sm:w-auto"
+            disabled={pending}
+            onClick={handleSaveSettings}
+            type="button"
+          >
+            Salvar configuracoes
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card className="h-full">
+        <CardHeader>
+          <CardTitle>Cartao</CardTitle>
+          <CardDescription>
+            Configure uma sequencia continua de 1x ate o maximo desejado. A taxa
+            de cada parcela e aplicada sobre o valor total da transacao.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-end gap-2">
+            <div className="flex-1 space-y-1">
               <Label htmlFor="card-max-installments">Maximo de parcelas</Label>
               <Select
                 onValueChange={(value) => {
@@ -417,60 +352,197 @@ export function CatalogSettingsPanel({
                 </SelectContent>
               </Select>
             </div>
-
-            <div className="grid gap-3 sm:grid-cols-3">
-              {cardInstallmentRules.map((rule) => (
-                <div className="space-y-1" key={rule.installments}>
-                  <Label htmlFor={`card-fee-${rule.installments}`}>
-                    Taxa {rule.installments}x (%)
-                  </Label>
-                  <InputGroup>
-                    <InputGroupInput
-                      id={`card-fee-${rule.installments}`}
-                      min="0"
-                      onChange={(event) => {
-                        const nextValue = event.target.value;
-
-                        setCardInstallmentRules((currentRules) =>
-                          currentRules.map((currentRule) =>
-                            currentRule.installments === rule.installments
-                              ? {
-                                  ...currentRule,
-                                  feePercent: nextValue,
-                                }
-                              : currentRule
-                          )
-                        );
-                      }}
-                      step="0.01"
-                      type="number"
-                      value={rule.feePercent}
-                    />
-                    <InputGroupAddon align="inline-end">
-                      <InputGroupText>%</InputGroupText>
-                    </InputGroupAddon>
-                  </InputGroup>
-                </div>
-              ))}
-            </div>
-
-            <div className="rounded-lg border border-border/60 bg-muted/20 p-3 text-muted-foreground text-xs">
-              Quando o vendedor absorver a taxa, ela entra como custo da venda.
-              Quando o cliente pagar, o sistema aumenta apenas o valor cobrado,
-              sem registrar essa diferenca como receita.
-            </div>
-
             <Button
-              className="w-full sm:w-auto"
-              disabled={pending}
-              onClick={handleSaveSettings}
+              onClick={() => setRatesOpen(true)}
+              size="sm"
               type="button"
+              variant="outline"
             >
-              Salvar configuracoes
+              Editar taxas
             </Button>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+          </div>
+
+          <Button
+            className="w-full sm:w-auto"
+            disabled={pending}
+            onClick={handleSaveSettings}
+            type="button"
+          >
+            Salvar cartao
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Dialog onOpenChange={setCategoriesOpen} open={categoriesOpen}>
+        <DialogContent className="max-h-[85vh] sm:max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Tabela de categorias</DialogTitle>
+            <DialogDescription>
+              Visualize, edite e remova categorias sem poluir o painel
+              principal.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="max-h-[65vh] overflow-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Categoria</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Produtos</TableHead>
+                  <TableHead className="text-right">Acoes</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {categories.map((category) => {
+                  const deleteAllowed = canDeleteCategory(
+                    category,
+                    category.productCount
+                  );
+                  const renameAllowed = canRenameCategory(category);
+                  let deleteTitle = "Remover categoria";
+
+                  if (!deleteAllowed) {
+                    deleteTitle = category.isSystem
+                      ? "Categoria protegida pelo sistema."
+                      : "Remocao bloqueada enquanto houver produtos vinculados.";
+                  }
+
+                  return (
+                    <TableRow key={category.id}>
+                      <TableCell>
+                        {editingId === category.id ? (
+                          <div className="flex items-center gap-2">
+                            <Input
+                              autoFocus
+                              className="h-7"
+                              onChange={(event) =>
+                                setEditingName(event.target.value)
+                              }
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter") {
+                                  event.preventDefault();
+                                  handleUpdateCategory(category.id);
+                                }
+                              }}
+                              value={editingName}
+                            />
+                            <Button
+                              disabled={
+                                pending || editingName.trim().length === 0
+                              }
+                              onClick={() => handleUpdateCategory(category.id)}
+                              size="icon-sm"
+                              type="button"
+                            >
+                              <HugeiconsIcon icon={Tick01Icon} />
+                            </Button>
+                            <Button
+                              onClick={() => {
+                                setEditingId(null);
+                                setEditingName("");
+                              }}
+                              size="icon-sm"
+                              type="button"
+                              variant="ghost"
+                            >
+                              <HugeiconsIcon icon={Cancel01Icon} />
+                            </Button>
+                          </div>
+                        ) : (
+                          <span className="font-medium">{category.name}</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {category.isSystem ? "Sistema" : "Custom"}
+                      </TableCell>
+                      <TableCell>{category.productCount}</TableCell>
+                      <TableCell className="text-right">
+                        {editingId === category.id ? null : (
+                          <div className="inline-flex items-center gap-1">
+                            <Button
+                              disabled={!renameAllowed || pending}
+                              onClick={() => {
+                                setEditingId(category.id);
+                                setEditingName(category.name);
+                              }}
+                              size="icon-sm"
+                              title={
+                                renameAllowed
+                                  ? "Editar categoria"
+                                  : "Categoria protegida pelo sistema."
+                              }
+                              type="button"
+                              variant="ghost"
+                            >
+                              <HugeiconsIcon icon={PencilEdit02Icon} />
+                            </Button>
+                            <Button
+                              disabled={!deleteAllowed || pending}
+                              onClick={() => handleDeleteCategory(category.id)}
+                              size="icon-sm"
+                              title={deleteTitle}
+                              type="button"
+                              variant="ghost"
+                            >
+                              <HugeiconsIcon icon={Delete02Icon} />
+                            </Button>
+                          </div>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog onOpenChange={setRatesOpen} open={ratesOpen}>
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Taxas por parcela</DialogTitle>
+            <DialogDescription>
+              Defina as taxas em grade compacta por parcela.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            {cardInstallmentRules.map((rule) => (
+              <InputGroup key={rule.installments}>
+                <InputGroupAddon align="inline-start">
+                  <InputGroupText>{rule.installments}x</InputGroupText>
+                </InputGroupAddon>
+                <InputGroupInput
+                  id={`card-fee-${rule.installments}`}
+                  min="0"
+                  onChange={(event) => {
+                    const nextValue = event.target.value;
+
+                    setCardInstallmentRules((currentRules) =>
+                      currentRules.map((currentRule) =>
+                        currentRule.installments === rule.installments
+                          ? {
+                              ...currentRule,
+                              feePercent: nextValue,
+                            }
+                          : currentRule
+                      )
+                    );
+                  }}
+                  step="0.01"
+                  type="number"
+                  value={rule.feePercent}
+                />
+                <InputGroupAddon align="inline-end">
+                  <InputGroupText>%</InputGroupText>
+                </InputGroupAddon>
+              </InputGroup>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

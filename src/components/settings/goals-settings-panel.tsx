@@ -28,6 +28,21 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
   type DashboardGoalCard,
   type DashboardGoalHistoryItem,
   type GoalsSettingsPayload,
@@ -90,6 +105,7 @@ export function GoalsSettingsPanel({
   const [createOpen, setCreateOpen] = useState(false);
   const [editGoal, setEditGoal] = useState<DashboardGoalCard | null>(null);
   const [archiveId, setArchiveId] = useState<string | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
   const atCapacity = payload.active.length >= MAX_ACTIVE_GOALS;
@@ -142,18 +158,28 @@ export function GoalsSettingsPanel({
                   : `Resumo no dashboard. Ate ${MAX_ACTIVE_GOALS} ativas.`}
               </CardDescription>
             </div>
-            <Button
-              disabled={atCapacity}
-              onClick={() => setCreateOpen(true)}
-              size="sm"
-              type="button"
-              variant="secondary"
-            >
-              Nova meta
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={() => setHistoryOpen(true)}
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                Ver historico
+              </Button>
+              <Button
+                disabled={atCapacity}
+                onClick={() => setCreateOpen(true)}
+                size="sm"
+                type="button"
+                variant="secondary"
+              >
+                Nova meta
+              </Button>
+            </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-4">
           <div className="divide-y divide-border/60">
             {payload.active.length === 0 ? (
               <p className="py-3 text-muted-foreground text-sm">
@@ -162,93 +188,122 @@ export function GoalsSettingsPanel({
             ) : (
               payload.active.map((goal) => (
                 <div
-                  className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 py-3 first:pt-0"
+                  className="flex flex-col gap-2 py-3 first:pt-0"
                   key={goal.id}
                 >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium text-sm">{goal.name}</p>
-                    <p className="truncate text-muted-foreground text-xs">
-                      {metricShort(goal.metric)} ·{" "}
-                      {periodShort(goal.period.from, goal.period.to)} ·{" "}
-                      {fmtAmt(goal.metric, goal.targetValue)} ·{" "}
-                      {goal.progressPercent.toFixed(0)}%
-                    </p>
+                  <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium text-sm">
+                        {goal.name}
+                      </p>
+                      <p className="truncate text-muted-foreground text-xs">
+                        {metricShort(goal.metric)} ·{" "}
+                        {periodShort(goal.period.from, goal.period.to)}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 gap-1">
+                      <Button
+                        onClick={() => setEditGoal(goal)}
+                        size="xs"
+                        type="button"
+                        variant="ghost"
+                      >
+                        Editar
+                      </Button>
+                      <Button
+                        onClick={() => setArchiveId(goal.id)}
+                        size="xs"
+                        type="button"
+                        variant="ghost"
+                      >
+                        Arquivar
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex shrink-0 gap-1">
-                    <Button
-                      onClick={() => setEditGoal(goal)}
-                      size="xs"
-                      type="button"
-                      variant="ghost"
-                    >
-                      Editar
-                    </Button>
-                    <Button
-                      onClick={() => setArchiveId(goal.id)}
-                      size="xs"
-                      type="button"
-                      variant="ghost"
-                    >
-                      Arquivar
-                    </Button>
+
+                  <div className="space-y-1">
+                    <div className="h-2 overflow-hidden rounded-full bg-secondary">
+                      <div
+                        className="h-full rounded-full bg-chart-6 transition-[width]"
+                        style={{
+                          width: `${Math.max(0, Math.min(100, goal.barPercent))}%`,
+                        }}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
+                      <span>
+                        {fmtAmt(goal.metric, goal.actualValue)} /{" "}
+                        {fmtAmt(goal.metric, goal.targetValue)}
+                      </span>
+                      <span className="font-medium text-foreground">
+                        {goal.progressPercent.toFixed(0)}%
+                      </span>
+                    </div>
                   </div>
                 </div>
               ))
             )}
           </div>
-
-          <div className="space-y-2">
-            <p className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
-              Historico
-            </p>
-            {payload.history.length === 0 ? (
-              <p className="text-muted-foreground text-sm">Vazio.</p>
-            ) : (
-              <div className="divide-y divide-border/60">
-                {payload.history.map((item) => (
-                  <div
-                    className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2 py-2.5 first:pt-0"
-                    key={item.id}
-                  >
-                    <div className="min-w-0 flex-1 space-y-0.5">
-                      <p className="truncate text-sm">
-                        <span className="font-medium">{item.name}</span>
-                        <span className="text-muted-foreground">
-                          {" "}
-                          · {historyStatusShort(item.status)}
-                        </span>
-                      </p>
-                      <p className="line-clamp-2 text-[11px] text-muted-foreground leading-snug">
-                        {item.resolvedAt
-                          ? `${format(parseISO(item.resolvedAt), "dd/MM/yy", { locale: ptBR })}`
-                          : "—"}
-                        {item.resolutionElapsedLabel
-                          ? ` · ${item.resolutionElapsedLabel}`
-                          : null}
-                        {item.resolvedValue === null
-                          ? null
-                          : ` · ${fmtAmt(item.metric, item.resolvedValue)} / ${fmtAmt(item.metric, item.targetValue)}`}
-                      </p>
-                    </div>
-                    {item.status === "archived" ? (
-                      <Button
-                        className="shrink-0"
-                        disabled={pending || atCapacity}
-                        onClick={() => handleUnarchive(item.id)}
-                        size="xs"
-                        type="button"
-                        variant="outline"
-                      >
-                        Desarquivar
-                      </Button>
-                    ) : null}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
         </CardContent>
       </Card>
+
+      <Dialog onOpenChange={setHistoryOpen} open={historyOpen}>
+        <DialogContent className="max-h-[85vh] sm:max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Historico de metas</DialogTitle>
+            <DialogDescription>
+              Lista de metas concluidas, expiradas e arquivadas.
+            </DialogDescription>
+          </DialogHeader>
+
+          {payload.history.length === 0 ? (
+            <p className="text-muted-foreground text-sm">Vazio.</p>
+          ) : (
+            <div className="max-h-[65vh] overflow-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Meta</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Periodo</TableHead>
+                    <TableHead>Resultado</TableHead>
+                    <TableHead className="text-right">Acao</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {payload.history.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell className="font-medium">{item.name}</TableCell>
+                      <TableCell>{historyStatusShort(item.status)}</TableCell>
+                      <TableCell>
+                        {periodShort(item.period.from, item.period.to)}
+                      </TableCell>
+                      <TableCell>
+                        {item.resolvedValue === null
+                          ? "-"
+                          : `${fmtAmt(item.metric, item.resolvedValue)} / ${fmtAmt(item.metric, item.targetValue)}`}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {item.status === "archived" ? (
+                          <Button
+                            disabled={pending || atCapacity}
+                            onClick={() => handleUnarchive(item.id)}
+                            size="xs"
+                            type="button"
+                            variant="outline"
+                          >
+                            Desarquivar
+                          </Button>
+                        ) : null}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <GoalFormDialog
         dateBounds={dateBounds}

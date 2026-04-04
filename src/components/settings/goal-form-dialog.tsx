@@ -296,89 +296,91 @@ export function GoalFormDialog({
               </form.Field>
             </div>
 
-            <form.Subscribe selector={(state) => state.values.metric}>
-              {(metric) => (
-                <form.Field
-                  name="targetValue"
-                  validators={{
-                    onChange: ({ value }) =>
-                      validateGoalTargetValue(metric, value),
-                  }}
-                >
-                  {(field) => (
-                    <div className="flex flex-col gap-1.5">
-                      <Label htmlFor={field.name}>Valor alvo</Label>
-                      <InputGroup>
-                        {metric === "sales_count" ? null : (
-                          <InputGroupAddon>
-                            <InputGroupText>R$</InputGroupText>
-                          </InputGroupAddon>
-                        )}
-                        <InputGroupInput
-                          id={field.name}
-                          min={metric === "sales_count" ? 1 : 0.01}
-                          name={field.name}
-                          onBlur={field.handleBlur}
-                          onChange={(event) =>
-                            field.handleChange(Number(event.target.value))
-                          }
-                          placeholder={
-                            metric === "sales_count" ? "50" : "10000.00"
-                          }
-                          step={metric === "sales_count" ? 1 : 0.01}
-                          type="number"
-                          value={field.state.value}
-                        />
-                        {metric === "sales_count" ? (
-                          <InputGroupAddon align="inline-end">
-                            <InputGroupText>vendas</InputGroupText>
-                          </InputGroupAddon>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <form.Subscribe selector={(state) => state.values.metric}>
+                {(metric) => (
+                  <form.Field
+                    name="targetValue"
+                    validators={{
+                      onChange: ({ value }) =>
+                        validateGoalTargetValue(metric, value),
+                    }}
+                  >
+                    {(field) => (
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor={field.name}>Valor alvo</Label>
+                        <InputGroup>
+                          {metric === "sales_count" ? null : (
+                            <InputGroupAddon>
+                              <InputGroupText>R$</InputGroupText>
+                            </InputGroupAddon>
+                          )}
+                          <InputGroupInput
+                            id={field.name}
+                            min={metric === "sales_count" ? 1 : 0.01}
+                            name={field.name}
+                            onBlur={field.handleBlur}
+                            onChange={(event) =>
+                              field.handleChange(Number(event.target.value))
+                            }
+                            placeholder={
+                              metric === "sales_count" ? "50" : "10000.00"
+                            }
+                            step={metric === "sales_count" ? 1 : 0.01}
+                            type="number"
+                            value={field.state.value}
+                          />
+                          {metric === "sales_count" ? (
+                            <InputGroupAddon align="inline-end">
+                              <InputGroupText>vendas</InputGroupText>
+                            </InputGroupAddon>
+                          ) : null}
+                        </InputGroup>
+                        {field.state.meta.errors.length > 0 ? (
+                          <em className="text-[11px] text-destructive">
+                            {field.state.meta.errors.join(", ")}
+                          </em>
                         ) : null}
-                      </InputGroup>
-                      {field.state.meta.errors.length > 0 ? (
-                        <em className="text-[11px] text-destructive">
-                          {field.state.meta.errors.join(", ")}
-                        </em>
-                      ) : null}
-                    </div>
-                  )}
-                </form.Field>
-              )}
-            </form.Subscribe>
+                      </div>
+                    )}
+                  </form.Field>
+                )}
+              </form.Subscribe>
 
-            <form.Subscribe
-              selector={(state) => ({
-                from: state.values.periodStart,
-                preset: state.values.rangePreset,
-                to: state.values.periodEnd,
-              })}
-            >
-              {(range) => (
-                <div className="flex flex-col gap-1.5">
-                  <Label>Periodo da meta</Label>
-                  <DateRangePicker
-                    onChange={({ from, preset, to }) => {
-                      form.setFieldValue("periodStart", from);
-                      form.setFieldValue("periodEnd", to);
-                      form.setFieldValue("rangePreset", preset);
-                    }}
-                    presets={dashboardDatePresetOptions}
-                    resolvePresetRange={(presetValue) =>
-                      getDashboardPresetDateRangeWithBounds({
-                        bounds: dateBounds,
-                        preset:
-                          presetValue as (typeof dashboardDatePresetOptions)[number]["value"],
-                      })
-                    }
-                    value={{
-                      from: range.from,
-                      preset: range.preset,
-                      to: range.to,
-                    }}
-                  />
-                </div>
-              )}
-            </form.Subscribe>
+              <form.Subscribe
+                selector={(state) => ({
+                  from: state.values.periodStart,
+                  preset: state.values.rangePreset,
+                  to: state.values.periodEnd,
+                })}
+              >
+                {(range) => (
+                  <div className="flex flex-col gap-1.5">
+                    <Label>Periodo da meta</Label>
+                    <DateRangePicker
+                      onChange={({ from, preset, to }) => {
+                        form.setFieldValue("periodStart", from);
+                        form.setFieldValue("periodEnd", to);
+                        form.setFieldValue("rangePreset", preset);
+                      }}
+                      presets={dashboardDatePresetOptions}
+                      resolvePresetRange={(presetValue) =>
+                        getDashboardPresetDateRangeWithBounds({
+                          bounds: dateBounds,
+                          preset:
+                            presetValue as (typeof dashboardDatePresetOptions)[number]["value"],
+                        })
+                      }
+                      value={{
+                        from: range.from,
+                        preset: range.preset,
+                        to: range.to,
+                      }}
+                    />
+                  </div>
+                )}
+              </form.Subscribe>
+            </div>
 
             <p className="text-[11px] text-muted-foreground leading-relaxed">
               O periodo precisa incluir hoje. O progresso usa apenas vendas
