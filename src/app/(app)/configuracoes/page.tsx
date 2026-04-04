@@ -1,19 +1,24 @@
 import type { Metadata } from "next";
 import { CatalogSettingsPanel } from "@/components/settings/catalog-settings-panel";
+import { GoalsSettingsPanel } from "@/components/settings/goals-settings-panel";
 import {
   getCatalogSettings,
   listCategoriesWithUsage,
 } from "@/features/catalog/server";
+import { getDashboardDateBounds } from "@/features/dashboard/server";
+import { getGoalsSettingsData } from "@/features/goals/server";
 
 export const metadata: Metadata = {
   title: "Configuracoes | DG Imports",
-  description: "Categorias, markup e regras operacionais de pagamento.",
+  description: "Categorias, markup, metas e regras operacionais de pagamento.",
 };
 
 export default async function ConfiguracoesPage() {
-  const [categories, settings] = await Promise.all([
+  const [categories, settings, dateBounds, goalsPayload] = await Promise.all([
     listCategoriesWithUsage(),
     getCatalogSettings(),
+    getDashboardDateBounds(),
+    getGoalsSettingsData(),
   ]);
 
   return (
@@ -21,10 +26,12 @@ export default async function ConfiguracoesPage() {
       <div className="space-y-2">
         <h1 className="font-semibold text-2xl tracking-tight">Configuracoes</h1>
         <p className="max-w-3xl text-muted-foreground text-sm">
-          Ajuste categorias, precificacao e regras de parcelamento sem depender
-          do fluxo de cadastro de produtos.
+          Ajuste categorias, precificacao, metas do negocio e regras de
+          parcelamento sem depender do fluxo de cadastro de produtos.
         </p>
       </div>
+
+      <GoalsSettingsPanel dateBounds={dateBounds} payload={goalsPayload} />
 
       <CatalogSettingsPanel categories={categories} settings={settings} />
     </div>

@@ -28,17 +28,25 @@ export interface DashboardGoalCard {
 }
 
 export interface DashboardGoalHistoryItem {
+  createdAt: string;
   id: string;
   metric: GoalMetric;
   name: string;
   period: GoalPeriodRange;
+  /** Human-readable elapsed time from period start to resolution (completed goals). */
+  resolutionElapsedLabel: string | null;
   resolvedAt: string | null;
   resolvedValue: number | null;
   status: Exclude<GoalStatus, "active">;
   targetValue: number;
 }
 
+/** Active goals only — used on the dashboard beside the contribution graph. */
 export interface GoalsDashboardPayload {
+  active: DashboardGoalCard[];
+}
+
+export interface GoalsSettingsPayload {
   active: DashboardGoalCard[];
   history: DashboardGoalHistoryItem[];
 }

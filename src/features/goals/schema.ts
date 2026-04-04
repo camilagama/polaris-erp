@@ -77,6 +77,12 @@ export const archiveGoalSchema = z.object({
 
 export type ArchiveGoalInput = z.infer<typeof archiveGoalSchema>;
 
+export const unarchiveGoalSchema = z.object({
+  id: z.string().uuid("Meta invalida."),
+});
+
+export type UnarchiveGoalInput = z.infer<typeof unarchiveGoalSchema>;
+
 export const validateGoalTargetValue = (
   metric: GoalMetric,
   value: number

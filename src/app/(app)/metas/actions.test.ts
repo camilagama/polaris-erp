@@ -13,6 +13,7 @@ vi.mock("@/lib/server-action-auth", () => ({
 vi.mock("@/features/goals/server", () => ({
   archiveGoal: vi.fn(),
   createGoal: vi.fn(),
+  unarchiveGoal: vi.fn(),
   updateGoal: vi.fn(),
 }));
 
@@ -28,6 +29,7 @@ const resolveMocks = async () => {
     mockCreateGoal: goalsServer.createGoal as MockFn,
     mockRefresh: cache.refresh as MockFn,
     mockRequireSession: auth.requireActionSession as MockFn,
+    mockUnarchiveGoal: goalsServer.unarchiveGoal as MockFn,
     mockUpdateGoal: goalsServer.updateGoal as MockFn,
   };
 };
@@ -114,6 +116,24 @@ describe("metas server actions", () => {
     });
 
     expect(mockArchiveGoal).toHaveBeenCalledWith(
+      "550e8400-e29b-41d4-a716-446655440000"
+    );
+    expect(mockRefresh).toHaveBeenCalled();
+  });
+
+  it("unarchives a goal after authentication", async () => {
+    const { mockRefresh, mockRequireSession, mockUnarchiveGoal } =
+      await resolveMocks();
+    mockRequireSession.mockResolvedValue({ user: { id: "user-1" } });
+    mockUnarchiveGoal.mockResolvedValue(undefined);
+
+    const { unarchiveGoalAction } = await import("@/app/(app)/metas/actions");
+
+    await unarchiveGoalAction({
+      id: "550e8400-e29b-41d4-a716-446655440000",
+    });
+
+    expect(mockUnarchiveGoal).toHaveBeenCalledWith(
       "550e8400-e29b-41d4-a716-446655440000"
     );
     expect(mockRefresh).toHaveBeenCalled();

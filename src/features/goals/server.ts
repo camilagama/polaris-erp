@@ -10,8 +10,10 @@ import {
   type GoalMetric,
   type GoalStatus,
   type GoalsDashboardPayload,
+  type GoalsSettingsPayload,
   MAX_ACTIVE_GOALS,
 } from "@/features/goals/contracts";
+import { formatCompletionElapsedLabel } from "@/features/goals/duration";
 import {
   computeGoalProgressPercent,
   getGoalActualValue,
@@ -22,7 +24,7 @@ import { periodIncludesToday } from "@/features/goals/schema";
 import { roundCurrency } from "@/lib/domain/currency";
 import { formatDateInputValue } from "@/lib/domain/date";
 
-const HISTORY_LIMIT = 5;
+const SETTINGS_HISTORY_LIMIT = 40;
 
 const toTargetDecimalString = (metric: GoalMetric, value: number): string => {
   if (metric === "sales_count") {
@@ -92,6 +94,41 @@ export const resolveActiveGoalTransitions = async (): Promise<void> => {
   }
 };
 
+const buildActiveDashboardCards = async (
+  activeRows: (typeof goals.$inferSelect)[]
+): Promise<DashboardGoalCard[]> => {
+  const active: DashboardGoalCard[] = [];
+
+  for (const row of activeRows) {
+    const metric = row.metric as GoalMetric;
+    const metrics = await getDashboardMetrics({
+      from: row.periodStart,
+      to: row.periodEnd,
+    });
+    const actual = getGoalActualValue(metric, metrics);
+    const target = Number(row.targetValue);
+    const { barPercent, progressPercent } = computeGoalProgressPercent(
+      actual,
+      target
+    );
+
+    active.push({
+      actualValue: actual,
+      barPercent,
+      displayMode: row.displayMode as DashboardGoalCard["displayMode"],
+      id: row.id,
+      metric,
+      name: row.name,
+      period: { from: row.periodStart, to: row.periodEnd },
+      progressPercent,
+      status: row.status as GoalStatus,
+      targetValue: target,
+    });
+  }
+
+  return active;
+};
+
 export const getGoalsDashboardData =
   async (): Promise<GoalsDashboardPayload> => {
     await resolveActiveGoalTransitions();
@@ -102,56 +139,53 @@ export const getGoalsDashboardData =
       .where(eq(goals.status, "active"))
       .orderBy(asc(goals.periodEnd));
 
-    const active: DashboardGoalCard[] = [];
+    const active = await buildActiveDashboardCards(activeRows);
 
-    for (const row of activeRows) {
-      const metric = row.metric as GoalMetric;
-      const metrics = await getDashboardMetrics({
-        from: row.periodStart,
-        to: row.periodEnd,
-      });
-      const actual = getGoalActualValue(metric, metrics);
-      const target = Number(row.targetValue);
-      const { barPercent, progressPercent } = computeGoalProgressPercent(
-        actual,
-        target
-      );
+    return { active };
+  };
 
-      active.push({
-        actualValue: actual,
-        barPercent,
-        displayMode: row.displayMode as DashboardGoalCard["displayMode"],
-        id: row.id,
-        metric,
-        name: row.name,
-        period: { from: row.periodStart, to: row.periodEnd },
-        progressPercent,
-        status: row.status as GoalStatus,
-        targetValue: target,
-      });
-    }
+export const getGoalsSettingsData = async (): Promise<GoalsSettingsPayload> => {
+  await resolveActiveGoalTransitions();
 
-    const historyRows = await db
-      .select()
-      .from(goals)
-      .where(inArray(goals.status, ["completed", "expired", "archived"]))
-      .orderBy(desc(goals.updatedAt))
-      .limit(HISTORY_LIMIT);
+  const activeRows = await db
+    .select()
+    .from(goals)
+    .where(eq(goals.status, "active"))
+    .orderBy(asc(goals.periodEnd));
 
-    const history: DashboardGoalHistoryItem[] = historyRows.map((row) => ({
+  const active = await buildActiveDashboardCards(activeRows);
+
+  const historyRows = await db
+    .select()
+    .from(goals)
+    .where(inArray(goals.status, ["completed", "expired", "archived"]))
+    .orderBy(desc(goals.updatedAt))
+    .limit(SETTINGS_HISTORY_LIMIT);
+
+  const history: DashboardGoalHistoryItem[] = historyRows.map((row) => {
+    const resolvedAtIso = row.resolvedAt?.toISOString() ?? null;
+    const resolutionElapsedLabel =
+      resolvedAtIso === null
+        ? null
+        : formatCompletionElapsedLabel(row.periodStart, resolvedAtIso);
+
+    return {
+      createdAt: row.createdAt.toISOString(),
       id: row.id,
       metric: row.metric as GoalMetric,
       name: row.name,
       period: { from: row.periodStart, to: row.periodEnd },
-      resolvedAt: row.resolvedAt?.toISOString() ?? null,
+      resolutionElapsedLabel,
+      resolvedAt: resolvedAtIso,
       resolvedValue:
         row.resolvedValue === null ? null : Number(row.resolvedValue),
       status: row.status as DashboardGoalHistoryItem["status"],
       targetValue: Number(row.targetValue),
-    }));
+    };
+  });
 
-    return { active, history };
-  };
+  return { active, history };
+};
 
 export const createGoal = async (
   input: CreateGoalInput,
@@ -254,6 +288,52 @@ export const archiveGoal = async (goalId: string): Promise<void> => {
       resolvedAt: new Date(),
       resolvedValue: toResolvedDecimalString(metric, actual),
       status: "archived",
+      updatedAt: new Date(),
+    })
+    .where(eq(goals.id, goalId));
+};
+
+export const unarchiveGoal = async (goalId: string): Promise<void> => {
+  const row = await db.query.goals.findFirst({
+    where: eq(goals.id, goalId),
+  });
+
+  if (!row) {
+    throw new Error("Meta nao encontrada.");
+  }
+
+  if (row.status !== "archived") {
+    throw new Error("Somente metas arquivadas podem ser desarquivadas.");
+  }
+
+  const today = formatDateInputValue();
+
+  if (
+    !periodIncludesToday({
+      periodEnd: row.periodEnd,
+      periodStart: row.periodStart,
+      today,
+    })
+  ) {
+    throw new Error(
+      "O periodo desta meta nao inclui hoje. Edite as datas em Configuracoes antes de reativar."
+    );
+  }
+
+  const activeCount = await countActiveGoals();
+
+  if (activeCount >= MAX_ACTIVE_GOALS) {
+    throw new Error(
+      `Ja existem ${MAX_ACTIVE_GOALS} metas ativas. Arquive ou conclua outra antes de reativar esta.`
+    );
+  }
+
+  await db
+    .update(goals)
+    .set({
+      resolvedAt: null,
+      resolvedValue: null,
+      status: "active",
       updatedAt: new Date(),
     })
     .where(eq(goals.id, goalId));

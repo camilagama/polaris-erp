@@ -5,8 +5,8 @@ import { endOfMonth, startOfMonth } from "date-fns";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { createGoalAction, updateGoalAction } from "@/app/(app)/metas/actions";
-import { ProductDatePicker } from "@/components/products/product-date-picker";
 import { Button } from "@/components/ui/button";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 import {
   Dialog,
   DialogContent,
@@ -30,6 +30,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  dashboardDatePresetOptions,
+  getDashboardPresetDateRangeWithBounds,
+} from "@/features/dashboard/date-range";
 import type { DashboardGoalCard } from "@/features/goals/contracts";
 import {
   createGoalSchema,
@@ -46,12 +50,17 @@ const defaultMonthRange = () => {
   return {
     periodEnd: formatDateInputValue(endOfMonth(now)),
     periodStart: formatDateInputValue(startOfMonth(now)),
+    rangePreset: null as string | null,
   };
 };
 
 type GoalFormMode = "create" | "edit";
 
 interface GoalFormDialogProps {
+  dateBounds: {
+    from: string;
+    to: string;
+  };
   initialGoal?: DashboardGoalCard | null;
   mode: GoalFormMode;
   onOpenChange: (open: boolean) => void;
@@ -59,6 +68,7 @@ interface GoalFormDialogProps {
 }
 
 export function GoalFormDialog({
+  dateBounds,
   initialGoal,
   mode,
   onOpenChange,
@@ -76,6 +86,7 @@ export function GoalFormDialog({
         name: initialGoal.name,
         periodEnd: initialGoal.period.to,
         periodStart: initialGoal.period.from,
+        rangePreset: null as string | null,
         targetValue: initialGoal.targetValue,
       };
     }
@@ -328,65 +339,39 @@ export function GoalFormDialog({
               )}
             </form.Subscribe>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <form.Field
-                name="periodStart"
-                validators={{
-                  onChange: ({ value }) => {
-                    const result =
-                      createGoalSchema.shape.periodStart.safeParse(value);
-                    return result.success
-                      ? undefined
-                      : result.error.issues[0]?.message;
-                  },
-                }}
-              >
-                {(field) => (
-                  <div className="flex flex-col gap-1.5">
-                    <Label htmlFor={field.name}>Inicio do periodo</Label>
-                    <ProductDatePicker
-                      id={field.name}
-                      onChange={field.handleChange}
-                      value={field.state.value}
-                    />
-                    {field.state.meta.errors.length > 0 ? (
-                      <em className="text-[11px] text-destructive">
-                        {field.state.meta.errors.join(", ")}
-                      </em>
-                    ) : null}
-                  </div>
-                )}
-              </form.Field>
-
-              <form.Field
-                name="periodEnd"
-                validators={{
-                  onChange: ({ value }) => {
-                    const result =
-                      createGoalSchema.shape.periodEnd.safeParse(value);
-                    return result.success
-                      ? undefined
-                      : result.error.issues[0]?.message;
-                  },
-                }}
-              >
-                {(field) => (
-                  <div className="flex flex-col gap-1.5">
-                    <Label htmlFor={field.name}>Fim do periodo</Label>
-                    <ProductDatePicker
-                      id={field.name}
-                      onChange={field.handleChange}
-                      value={field.state.value}
-                    />
-                    {field.state.meta.errors.length > 0 ? (
-                      <em className="text-[11px] text-destructive">
-                        {field.state.meta.errors.join(", ")}
-                      </em>
-                    ) : null}
-                  </div>
-                )}
-              </form.Field>
-            </div>
+            <form.Subscribe
+              selector={(state) => ({
+                from: state.values.periodStart,
+                preset: state.values.rangePreset,
+                to: state.values.periodEnd,
+              })}
+            >
+              {(range) => (
+                <div className="flex flex-col gap-1.5">
+                  <Label>Periodo da meta</Label>
+                  <DateRangePicker
+                    onChange={({ from, preset, to }) => {
+                      form.setFieldValue("periodStart", from);
+                      form.setFieldValue("periodEnd", to);
+                      form.setFieldValue("rangePreset", preset);
+                    }}
+                    presets={dashboardDatePresetOptions}
+                    resolvePresetRange={(presetValue) =>
+                      getDashboardPresetDateRangeWithBounds({
+                        bounds: dateBounds,
+                        preset:
+                          presetValue as (typeof dashboardDatePresetOptions)[number]["value"],
+                      })
+                    }
+                    value={{
+                      from: range.from,
+                      preset: range.preset,
+                      to: range.to,
+                    }}
+                  />
+                </div>
+              )}
+            </form.Subscribe>
 
             <p className="text-[11px] text-muted-foreground leading-relaxed">
               O periodo precisa incluir hoje. O progresso usa apenas vendas
