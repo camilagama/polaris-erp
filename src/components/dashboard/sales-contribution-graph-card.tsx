@@ -127,8 +127,11 @@ export function SalesContributionGraphCard({
 
   return (
     <Card className={cn("flex flex-col justify-center", className)}>
-      <CardContent className="flex flex-col">
-        <div className="w-full" ref={containerRef}>
+      <CardContent className="flex flex-col gap-2.5">
+        <div
+          className="motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 w-full motion-safe:animate-in motion-safe:duration-500"
+          ref={containerRef}
+        >
           {visibleData && visibleData.activities.length > 0 && (
             <TooltipProvider delayDuration={200}>
               <ContributionGraph
@@ -163,21 +166,41 @@ export function SalesContributionGraphCard({
                             <ContributionGraphBlock
                               activity={activity}
                               aria-label={`${longDate}: ${formatCurrency(sold)}, ${salesCount} vendas, ${levelBandLabel(activity.level)}`}
+                              className="motion-safe:fade-in-0 transition-opacity hover:opacity-80 motion-safe:animate-in motion-safe:duration-300"
                               dayIndex={dayIndex}
+                              style={{
+                                animationDelay: `${Math.min(weekIndex * 14 + dayIndex * 10, 280)}ms`,
+                              }}
                               weekIndex={weekIndex}
                             />
                           </g>
                         </TooltipTrigger>
-                        <TooltipContent className="max-w-xs" side="top">
-                          <div className="flex flex-col gap-1">
+                        <TooltipContent
+                          align="center"
+                          className="grid min-w-32 items-start gap-1.5 rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-foreground text-xs/relaxed shadow-xl [&>svg]:hidden"
+                          collisionPadding={12}
+                          hideArrow
+                          side="top"
+                          sideOffset={8}
+                        >
+                          <div className="flex flex-col gap-1.5">
                             <span className="font-medium">{longDate}</span>
-                            <span className="font-mono tabular-nums">
-                              {formatCurrency(sold)}
-                            </span>
-                            <span className="text-muted-foreground">
-                              {salesCount}{" "}
-                              {salesCount === 1 ? "venda" : "vendas"}
-                            </span>
+                            <div className="flex items-center justify-between gap-4 leading-none">
+                              <span className="text-muted-foreground">
+                                Total vendido
+                              </span>
+                              <span className="font-medium font-mono tabular-nums">
+                                {formatCurrency(sold)}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between gap-4 leading-none">
+                              <span className="text-muted-foreground">
+                                Vendas
+                              </span>
+                              <span className="font-medium font-mono tabular-nums">
+                                {salesCount}
+                              </span>
+                            </div>
                           </div>
                         </TooltipContent>
                       </Tooltip>
