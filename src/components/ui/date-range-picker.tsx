@@ -122,7 +122,12 @@ export function DateRangePicker({
         align={popoverAlign}
         className={cn("w-auto p-0", popoverContentClassName)}
       >
-        <div className="grid gap-0 sm:grid-cols-[130px_1fr]">
+        <div
+          className={cn(
+            "grid gap-0",
+            presets?.length > 0 && "sm:grid-cols-[130px_1fr]"
+          )}
+        >
           {presets.length > 0 ? (
             <div className="flex flex-col gap-2 border-border/60 border-b bg-muted/10 p-3 sm:border-r sm:border-b-0">
               <p className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">

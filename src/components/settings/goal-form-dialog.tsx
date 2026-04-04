@@ -370,7 +370,7 @@ export function GoalFormDialog({
                         form.setFieldValue("rangePreset", preset);
                       }}
                       popoverAlign="start"
-                      popoverContentClassName="z-[100] min-w-[20.5rem] w-fit max-h-[85vh] overflow-auto"
+                      popoverContentClassName="z-[100] w-auto max-h-[85vh] overflow-auto"
                       triggerClassName="h-7 w-full min-w-0 sm:min-w-0"
                       value={{
                         from: range.from,
