@@ -369,8 +369,8 @@ export function GoalFormDialog({
                         form.setFieldValue("periodEnd", to);
                         form.setFieldValue("rangePreset", preset);
                       }}
-                      popoverAlign="center"
-                      popoverContentClassName="z-[100] w-[20rem] max-w-[calc(100vw-1rem)]"
+                      popoverAlign="start"
+                      popoverContentClassName="z-[100] min-w-[20.5rem] w-fit max-h-[85vh] overflow-auto"
                       triggerClassName="h-7 w-full min-w-0 sm:min-w-0"
                       value={{
                         from: range.from,

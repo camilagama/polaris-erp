@@ -160,7 +160,7 @@ export function DateRangePicker({
 
           <div className="flex flex-col">
             <Calendar
-              className="rounded-none bg-background p-2 [--cell-size:--spacing(7)]"
+              className="rounded-none bg-background p-3"
               locale={ptBR}
               mode="range"
               onSelect={(rangeValue) => {
