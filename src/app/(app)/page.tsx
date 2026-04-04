@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { DashboardDateRangeFilter } from "@/components/dashboard/dashboard-date-range-filter";
+import { DashboardGoalsSection } from "@/components/dashboard/dashboard-goals-section";
 import { OperationalCostsChart } from "@/components/dashboard/operational-costs-chart";
 import { ProfitMarginChart } from "@/components/dashboard/profit-margin-chart";
 import { RevenueProfitChart } from "@/components/dashboard/revenue-profit-chart";
@@ -28,6 +29,7 @@ import {
   getDashboardGlobalStats,
   getDashboardMetrics,
 } from "@/features/dashboard/server";
+import { getGoalsDashboardData } from "@/features/goals/server";
 import { buildProductImageUrl } from "@/features/products/image-urls";
 import { formatCurrency } from "@/lib/formatters";
 
@@ -43,14 +45,16 @@ export default async function DashboardPage(props: PageProps<"/">) {
     bounds,
     searchParams,
   });
-  const [metrics, globalStats, contributionGraph] = await Promise.all([
-    getDashboardMetrics({
-      from: selectedRange.from,
-      to: selectedRange.to,
-    }),
-    getDashboardGlobalStats(),
-    getDashboardContributionGraph(),
-  ]);
+  const [metrics, globalStats, contributionGraph, goalsPayload] =
+    await Promise.all([
+      getDashboardMetrics({
+        from: selectedRange.from,
+        to: selectedRange.to,
+      }),
+      getDashboardGlobalStats(),
+      getDashboardContributionGraph(),
+      getGoalsDashboardData(),
+    ]);
   const marginPercentage =
     globalStats.investment > 0
       ? (globalStats.profit / globalStats.investment) * 100
@@ -196,6 +200,8 @@ export default async function DashboardPage(props: PageProps<"/">) {
           </Card>
         ))}
       </div>
+
+      <DashboardGoalsSection payload={goalsPayload} />
 
       <SalesContributionGraphCard graph={contributionGraph} />
 

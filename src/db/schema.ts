@@ -107,6 +107,24 @@ export const productWriteOffReasonEnum = pgEnum("product_write_off_reason", [
   "operational",
 ]);
 
+export const goalMetricEnum = pgEnum("goal_metric", [
+  "revenue",
+  "profit",
+  "sales_count",
+]);
+
+export const goalStatusEnum = pgEnum("goal_status", [
+  "active",
+  "completed",
+  "expired",
+  "archived",
+]);
+
+export const goalDisplayModeEnum = pgEnum("goal_display_mode", [
+  "percentage",
+  "absolute",
+]);
+
 // ---------------------------------------------------------------------------
 // Domain tables (IDs as native UUID, timestamps with timezone)
 // ---------------------------------------------------------------------------
@@ -454,5 +472,37 @@ export const saleItems = pgTable(
       table.saleId,
       table.productId
     ),
+  ]
+);
+
+export const goals = pgTable(
+  "goals",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: text("name").notNull(),
+    metric: goalMetricEnum("metric").notNull(),
+    displayMode: goalDisplayModeEnum("display_mode").notNull(),
+    targetValue: decimal("target_value", { precision: 12, scale: 2 })
+      .notNull()
+      .default("0"),
+    periodStart: date("period_start").notNull(),
+    periodEnd: date("period_end").notNull(),
+    status: goalStatusEnum("status").notNull().default("active"),
+    resolvedAt: timestamp("resolved_at", tz),
+    resolvedValue: decimal("resolved_value", { precision: 12, scale: 2 }),
+    createdByUserId: text("created_by_user_id")
+      .notNull()
+      .references(() => users.id),
+    ...timestamps,
+  },
+  (table) => [
+    check("goals_target_value_positive", sql`${table.targetValue} > 0`),
+    check(
+      "goals_period_end_gte_start",
+      sql`${table.periodEnd} >= ${table.periodStart}`
+    ),
+    index("goals_status_idx").on(table.status),
+    index("goals_period_end_idx").on(table.periodEnd),
+    index("goals_created_by_user_id_idx").on(table.createdByUserId),
   ]
 );
