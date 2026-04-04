@@ -107,28 +107,14 @@ export function GoalDashboardCompactCard({
 
                     return (
                       <>
-                        <div className="size-2.5 shrink-0 rounded-[2px] bg-chart-6" />
-                        <div className="flex min-w-0 flex-1 flex-col gap-1 leading-none">
-                          <div className="flex items-center justify-between gap-4">
-                            <span className="text-muted-foreground">
-                              Progresso
-                            </span>
-                            <span className="font-heading font-semibold text-foreground tabular-nums">
-                              {actualPercentage.toFixed(1)}%
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-between gap-4 text-muted-foreground text-xs">
-                            <span>Atual</span>
-                            <span className="font-mono tabular-nums">
-                              {formatGoalAmount(goal.metric, goal.actualValue)}
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-between gap-4 text-muted-foreground text-xs">
-                            <span>Meta</span>
-                            <span className="font-mono tabular-nums">
-                              {formatGoalAmount(goal.metric, goal.targetValue)}
-                            </span>
-                          </div>
+                        <div className="size-2.5 shrink-0 rounded-xs bg-chart-6" />
+                        <div className="flex flex-1 items-center justify-between gap-4 leading-none">
+                          <span className="text-muted-foreground">
+                            Progresso
+                          </span>
+                          <span className="font-medium font-mono tabular-nums">
+                            {actualPercentage.toFixed(1)}%
+                          </span>
                         </div>
                       </>
                     );

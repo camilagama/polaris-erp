@@ -1,6 +1,6 @@
 "use client";
 
-import { Area, AreaChart } from "recharts";
+import { Area, AreaChart, YAxis } from "recharts";
 
 import {
   type ChartConfig,
@@ -28,8 +28,18 @@ export function SalesCountChart({
         <AreaChart
           accessibilityLayer
           data={data}
-          margin={{ top: 0, right: 0, bottom: 0, left: 0 }}
+          margin={{ top: 6, right: 8, bottom: 4, left: 8 }}
         >
+          <YAxis
+            allowDecimals={false}
+            domain={[
+              (dataMin: number) => Math.max(0, dataMin - 1),
+              (dataMax: number) => dataMax + 1,
+            ]}
+            hide
+            type="number"
+          />
+
           <defs>
             <linearGradient id="fillSales" x1="0" x2="0" y1="0" y2="1">
               <stop
@@ -46,17 +56,17 @@ export function SalesCountChart({
           </defs>
 
           <ChartTooltip
-            content={<ChartTooltipContent indicator="line" />}
+            content={<ChartTooltipContent hideLabel />}
             cursor={{
               opacity: 0.5,
               stroke: "var(--muted-foreground)",
               strokeDasharray: "3 3",
               strokeWidth: 1,
             }}
-            position={{ x: -110, y: -10 }}
           />
 
           <Area
+            activeDot={{ r: 3.5 }}
             dataKey="salesCount"
             fill="url(#fillSales)"
             fillOpacity={0.4}
