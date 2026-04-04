@@ -67,6 +67,12 @@ export default async function DashboardPage(props: PageProps<"/">) {
     };
   }> = [
     {
+      id: "count",
+      label: "Vendas concluidas",
+      note: "Quantidade no periodo",
+      value: `${metrics.totalSalesCount}`,
+    },
+    {
       id: "revenue",
       label: "Receita / Lucro",
       value: formatCurrency(metrics.totalSold),
@@ -82,12 +88,6 @@ export default async function DashboardPage(props: PageProps<"/">) {
       id: "margin",
       label: "Retorno / Investimento",
       value: `${marginPercentage.toFixed(1)}%`,
-    },
-    {
-      id: "count",
-      label: "Vendas concluidas",
-      note: "Quantidade no periodo",
-      value: `${metrics.totalSalesCount}`,
     },
   ];
 
