@@ -15,6 +15,9 @@ const imageRemotePatterns = (() => {
 })();
 
 const nextConfig: NextConfig = {
+  ...(process.env.VERCEL_ENV
+    ? { env: { NEXT_PUBLIC_VERCEL_ENV: process.env.VERCEL_ENV } }
+    : {}),
   allowedDevOrigins: ["127.0.0.1", "localhost"],
   images: {
     remotePatterns: imageRemotePatterns,

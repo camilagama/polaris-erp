@@ -2,10 +2,13 @@
 
 import { Alert02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { captureException } from "@sentry/nextjs";
 import Link from "next/link";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 
 export default function GlobalError({
+  error,
   reset: _reset,
   unstable_retry: unstableRetry,
 }: {
@@ -13,6 +16,12 @@ export default function GlobalError({
   reset: () => void;
   unstable_retry: () => void;
 }) {
+  useEffect(() => {
+    if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
+      captureException(error);
+    }
+  }, [error]);
+
   const handleRetry = () => {
     unstableRetry();
   };
