@@ -63,15 +63,17 @@ As migrações **não** rodam automaticamente no deploy por padrão. Antes do pr
 
 ## 6. Cron (reconcile de imagens)
 
-O [`vercel.json`](../vercel.json) agenda `POST /api/internal/product-images/reconcile`. A documentação da Vercel indica que crons disparam contra o deployment de **produção**.
+O [`vercel.json`](../vercel.json) agenda o path `/api/internal/product-images/reconcile` contra o deployment de **produção**. O **Cron da Vercel chama esse URL com GET**; a rota aceita **GET e POST** com a mesma checagem de `Authorization`.
 
-- Defina `CRON_SECRET` na Vercel.
-- O handler espera `Authorization: Bearer <CRON_SECRET>`.
+- Defina `CRON_SECRET` na Vercel (a plataforma envia `Authorization: Bearer <CRON_SECRET>` nas invocações agendadas, quando a variável existe).
 
-Teste manual:
+Teste manual (POST ou GET):
 
 ```bash
 curl -X POST "https://SEU_DOMINIO/api/internal/product-images/reconcile" \
+  -H "Authorization: Bearer $CRON_SECRET"
+
+curl -X GET "https://SEU_DOMINIO/api/internal/product-images/reconcile" \
   -H "Authorization: Bearer $CRON_SECRET"
 ```
 

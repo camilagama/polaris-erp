@@ -18,12 +18,12 @@ vi.mock("@/features/products/image-storage", () => ({
   listAllStoredProductImageKeys: vi.fn(),
 }));
 
-describe("POST /api/internal/product-images/reconcile", () => {
+describe("/api/internal/product-images/reconcile", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("returns 401 when the bearer token is invalid", async () => {
+  it("returns 401 when the bearer token is invalid (POST)", async () => {
     const { POST } = await import(
       "@/app/api/internal/product-images/reconcile/route"
     );
@@ -34,6 +34,23 @@ describe("POST /api/internal/product-images/reconcile", () => {
           Authorization: "Bearer wrong",
         },
         method: "POST",
+      })
+    );
+
+    expect(response.status).toBe(401);
+  });
+
+  it("returns 401 when the bearer token is invalid (GET, Vercel Cron)", async () => {
+    const { GET } = await import(
+      "@/app/api/internal/product-images/reconcile/route"
+    );
+
+    const response = await GET(
+      new Request("http://localhost/api/internal/product-images/reconcile", {
+        headers: {
+          Authorization: "Bearer wrong",
+        },
+        method: "GET",
       })
     );
 

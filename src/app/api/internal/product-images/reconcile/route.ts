@@ -10,7 +10,7 @@ import { jsonError } from "@/lib/server-api-error";
 
 export const runtime = "nodejs";
 
-export async function POST(request: Request) {
+async function reconcile(request: Request): Promise<Response> {
   const authorization = request.headers.get("authorization");
   const expectedAuthorization = serverEnv.CRON_SECRET
     ? `Bearer ${serverEnv.CRON_SECRET}`
@@ -55,4 +55,13 @@ export async function POST(request: Request) {
       error
     );
   }
+}
+
+/** Vercel Cron invoca o path com GET por padrao. */
+export function GET(request: Request): Promise<Response> {
+  return reconcile(request);
+}
+
+export function POST(request: Request): Promise<Response> {
+  return reconcile(request);
 }
