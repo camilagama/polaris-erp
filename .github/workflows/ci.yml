@@ -28,6 +28,8 @@ jobs:
       - name: Production build
         run: bun run build
         env:
+          # Opcional: adicione SENTRY_AUTH_TOKEN, SENTRY_ORG, SENTRY_PROJECT e SENTRY_DSN
+          # como secrets do GitHub se quiser source maps e upload de artefatos no CI.
           # Minimal placeholders so `next build` can read env schema if required
           DATABASE_URL: postgres://ci:ci@127.0.0.1:5432/ci
           BETTER_AUTH_SECRET: ci-better-auth-secret-at-least-32-chars!!

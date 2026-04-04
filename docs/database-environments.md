@@ -71,3 +71,7 @@ rollback; -- troque por commit apos validar
 ```
 
 Prefira limpar apenas na branch `e2e` e recriar a branch a partir de `production` quando quiser um estado limpo.
+
+## Limpeza destrutiva em producao
+
+Para um roteiro revisado com PITR, auditoria e SQL transacional (incluindo manter apenas dois e-mails operacionais), veja [production-database-cleanup.md](./production-database-cleanup.md) e [production-database-cleanup.sql](./production-database-cleanup.sql).

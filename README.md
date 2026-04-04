@@ -74,11 +74,14 @@ Entidades principais:
 
 - CI em `.github/workflows/ci.yml`: `bun run check`, `bun run test`, `bun run build`.
 - Healthcheck: `GET /api/health` retorna `{ ok: true, timestamp }`.
-- `src/instrumentation.ts`: hook de inicializacao e `onRequestError` com log JSON no servidor.
+- **Sentry** (baseline lean): `@sentry/nextjs` com `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN`, e opcionalmente `SENTRY_ORG` / `SENTRY_PROJECT` / `SENTRY_AUTH_TOKEN` para source maps no build. `onRequestError` envia para o Sentry via `captureRequestError` e mantem log JSON no servidor.
+- **PostHog** nao faz parte do baseline atual (app interno; reavalie se precisar de replay/flags/analytics de produto).
+- Deploy passo a passo na Vercel: `docs/deploy-vercel.md`.
 
 ## Banco, E2E e producao
 
 - Modelo de branches, `E2E_DATABASE_URL` e opt-in de banco compartilhado: `docs/database-environments.md`.
+- Limpeza destrutiva de producao (com salvaguardas): `docs/production-database-cleanup.md` e `docs/production-database-cleanup.sql`.
 
 ## Qualidade atual
 

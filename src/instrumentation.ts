@@ -1,8 +1,28 @@
+import { captureRequestError, init } from "@sentry/nextjs";
 import type { Instrumentation } from "next";
+
+function initSentryServer(): void {
+  const dsn = process.env.SENTRY_DSN;
+  if (!dsn) {
+    return;
+  }
+
+  init({
+    dsn,
+    environment:
+      process.env.VERCEL_ENV ?? process.env.NODE_ENV ?? "development",
+    tracesSampleRate: 0,
+  });
+}
 
 export function register(): void {
   if (process.env.NEXT_RUNTIME === "nodejs") {
+    initSentryServer();
     console.info("[dgimports] instrumentation register (nodejs)");
+  }
+
+  if (process.env.NEXT_RUNTIME === "edge") {
+    initSentryServer();
   }
 }
 
@@ -11,6 +31,8 @@ export const onRequestError: Instrumentation.onRequestError = (
   request,
   context
 ) => {
+  captureRequestError(error, request, context);
+
   const message = error instanceof Error ? error.message : String(error);
   const digest =
     error !== null &&

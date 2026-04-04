@@ -38,6 +38,18 @@ const serverEnvSchema = z.object({
     return trimmedValue.length === 0 ? undefined : trimmedValue;
   }, z.string().url().optional()),
   R2_SECRET_ACCESS_KEY: optionalNonEmptyString,
+  SENTRY_AUTH_TOKEN: optionalNonEmptyString,
+  SENTRY_DSN: optionalNonEmptyString,
+  SENTRY_ORG: optionalNonEmptyString,
+  SENTRY_PROJECT: optionalNonEmptyString,
+  NEXT_PUBLIC_SENTRY_DSN: z.preprocess((value) => {
+    if (typeof value !== "string") {
+      return value;
+    }
+
+    const trimmedValue = value.trim();
+    return trimmedValue.length === 0 ? undefined : trimmedValue;
+  }, z.string().url().optional()),
 });
 
 export const serverEnv = serverEnvSchema.parse({
@@ -59,4 +71,9 @@ export const serverEnv = serverEnvSchema.parse({
   R2_BUCKET_STAGING: process.env.R2_BUCKET_STAGING,
   R2_PUBLIC_BASE_URL: process.env.R2_PUBLIC_BASE_URL,
   R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY,
+  SENTRY_AUTH_TOKEN: process.env.SENTRY_AUTH_TOKEN,
+  SENTRY_DSN: process.env.SENTRY_DSN,
+  SENTRY_ORG: process.env.SENTRY_ORG,
+  SENTRY_PROJECT: process.env.SENTRY_PROJECT,
+  NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
 });
