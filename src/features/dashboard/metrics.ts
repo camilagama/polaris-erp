@@ -5,9 +5,13 @@ import {
   format,
   parseISO,
   startOfMonth,
+  subMonths,
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type {
+  DashboardContributionDay,
+  DashboardContributionGraph,
+  DashboardContributionLevel,
   DashboardInventoryCategory,
   DashboardMetrics,
   DashboardPeriodComparisonPoint,
@@ -381,5 +385,112 @@ export const buildDashboardMetrics = ({
       range,
       saleItems,
     }),
+  };
+};
+
+interface ContributionGraphSaleRecord {
+  occurredOn: string;
+  status: "cancelled" | "completed";
+  totalAmount: number;
+}
+
+const soldToContributionLevel = (sold: number): DashboardContributionLevel => {
+  if (sold <= 0) {
+    return 0;
+  }
+
+  if (sold <= 100) {
+    return 1;
+  }
+
+  if (sold <= 299) {
+    return 2;
+  }
+
+  return 3;
+};
+
+/**
+ * Janela fixa de 12 meses corridos (do 1º dia do mês há 11 meses até `graphTo`).
+ * Não limita o início à primeira venda no banco — dias anteriores aparecem como zero.
+ */
+export const resolveContributionGraphRange = (bounds: {
+  to: string;
+}): DashboardSelectedRange => {
+  const today = formatDateInputValue(new Date());
+  const graphTo = today <= bounds.to ? today : bounds.to;
+  const graphToDate = parseISO(`${graphTo}T00:00:00`);
+  const graphFromDate = startOfMonth(subMonths(graphToDate, 11));
+
+  return {
+    from: formatDateInputValue(graphFromDate),
+    to: graphTo,
+  };
+};
+
+export const buildDashboardContributionGraph = ({
+  range,
+  sales,
+}: {
+  range: DashboardSelectedRange;
+  sales: ContributionGraphSaleRecord[];
+}): DashboardContributionGraph => {
+  const soldByDay = new Map<string, { count: number; sold: number }>();
+
+  for (const sale of sales) {
+    if (sale.status !== "completed") {
+      continue;
+    }
+
+    if (
+      !isDateInRange({
+        date: sale.occurredOn,
+        endInclusive: range.to,
+        startInclusive: range.from,
+      })
+    ) {
+      continue;
+    }
+
+    const previous = soldByDay.get(sale.occurredOn) ?? { count: 0, sold: 0 };
+    soldByDay.set(sale.occurredOn, {
+      count: previous.count + 1,
+      sold: roundCurrency(previous.sold + sale.totalAmount),
+    });
+  }
+
+  const fromDate = parseISO(`${range.from}T00:00:00`);
+  const toDate = parseISO(`${range.to}T00:00:00`);
+  const days: DashboardContributionDay[] = [];
+  let totalSold = 0;
+  let totalSalesCount = 0;
+
+  for (
+    let currentDate = fromDate;
+    currentDate <= toDate;
+    currentDate = addDays(currentDate, 1)
+  ) {
+    const date = formatDateInputValue(currentDate);
+    const bucket = soldByDay.get(date);
+    const sold = bucket?.sold ?? 0;
+    const salesCount = bucket?.count ?? 0;
+    const level = soldToContributionLevel(sold);
+
+    days.push({
+      date,
+      level,
+      salesCount,
+      sold,
+    });
+    totalSold = roundCurrency(totalSold + sold);
+    totalSalesCount += salesCount;
+  }
+
+  return {
+    days,
+    from: range.from,
+    to: range.to,
+    totalSalesCount,
+    totalSold,
   };
 };

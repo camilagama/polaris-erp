@@ -8,6 +8,7 @@ import { OperationalCostsChart } from "@/components/dashboard/operational-costs-
 import { ProfitMarginChart } from "@/components/dashboard/profit-margin-chart";
 import { RevenueProfitChart } from "@/components/dashboard/revenue-profit-chart";
 import { RevenueResultChart } from "@/components/dashboard/revenue-result-chart";
+import { SalesContributionGraphCard } from "@/components/dashboard/sales-contribution-graph-card";
 import { SalesCountChart } from "@/components/dashboard/sales-count-chart";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -22,6 +23,7 @@ import {
   resolveDashboardDateRange,
 } from "@/features/dashboard/date-range";
 import {
+  getDashboardContributionGraph,
   getDashboardDateBounds,
   getDashboardGlobalStats,
   getDashboardMetrics,
@@ -41,11 +43,14 @@ export default async function DashboardPage(props: PageProps<"/">) {
     bounds,
     searchParams,
   });
-  const metrics = await getDashboardMetrics({
-    from: selectedRange.from,
-    to: selectedRange.to,
-  });
-  const globalStats = await getDashboardGlobalStats();
+  const [metrics, globalStats, contributionGraph] = await Promise.all([
+    getDashboardMetrics({
+      from: selectedRange.from,
+      to: selectedRange.to,
+    }),
+    getDashboardGlobalStats(),
+    getDashboardContributionGraph(),
+  ]);
   const marginPercentage =
     globalStats.investment > 0
       ? (globalStats.profit / globalStats.investment) * 100
@@ -191,6 +196,8 @@ export default async function DashboardPage(props: PageProps<"/">) {
           </Card>
         ))}
       </div>
+
+      <SalesContributionGraphCard graph={contributionGraph} />
 
       <div className="grid gap-4 xl:grid-cols-[1.35fr_0.95fr]">
         <Card>

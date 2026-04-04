@@ -10,10 +10,15 @@ import {
   sales,
 } from "@/db/schema";
 import type {
+  DashboardContributionGraph,
   DashboardMetrics,
   DashboardSelectedRange,
 } from "@/features/dashboard/contracts";
-import { buildDashboardMetrics } from "@/features/dashboard/metrics";
+import {
+  buildDashboardContributionGraph,
+  buildDashboardMetrics,
+  resolveContributionGraphRange,
+} from "@/features/dashboard/metrics";
 import { formatDateInputValue } from "@/lib/domain/date";
 
 export const getDashboardDateBounds = async (): Promise<{
@@ -129,6 +134,32 @@ export const getDashboardMetrics = async (
     })),
   });
 };
+
+export const getDashboardContributionGraph =
+  async (): Promise<DashboardContributionGraph> => {
+    const bounds = await getDashboardDateBounds();
+    const range = resolveContributionGraphRange(bounds);
+
+    const salesRows = await db
+      .select({
+        occurredOn: sales.occurredOn,
+        status: sales.status,
+        totalAmount: sales.totalAmount,
+      })
+      .from(sales)
+      .where(
+        and(gte(sales.occurredOn, range.from), lte(sales.occurredOn, range.to))
+      );
+
+    return buildDashboardContributionGraph({
+      range,
+      sales: salesRows.map((row) => ({
+        occurredOn: row.occurredOn,
+        status: row.status as "cancelled" | "completed",
+        totalAmount: Number(row.totalAmount),
+      })),
+    });
+  };
 
 export const getDashboardGlobalStats = async () => {
   const [investmentRows, salesRows, saleItemsRows] = await Promise.all([

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { buildDashboardMetrics } from "@/features/dashboard/metrics";
+import {
+  buildDashboardContributionGraph,
+  buildDashboardMetrics,
+  resolveContributionGraphRange,
+} from "@/features/dashboard/metrics";
 
 describe("buildDashboardMetrics", () => {
   const selectedRange = {
@@ -190,11 +194,11 @@ describe("buildDashboardMetrics", () => {
 
     expect(metrics.periodGranularity).toBe("day");
     expect(metrics.periodComparison).toEqual([
-      { costs: 0, label: "01/04", result: 0, sold: 0 },
-      { costs: 37, label: "02/04", result: 63, sold: 100 },
-      { costs: 0, label: "03/04", result: 0, sold: 0 },
-      { costs: 0, label: "04/04", result: 0, sold: 0 },
-      { costs: 0, label: "05/04", result: 0, sold: 0 },
+      { costs: 0, label: "01/04", result: 0, salesCount: 0, sold: 0 },
+      { costs: 37, label: "02/04", result: 63, salesCount: 1, sold: 100 },
+      { costs: 0, label: "03/04", result: 0, salesCount: 0, sold: 0 },
+      { costs: 0, label: "04/04", result: 0, salesCount: 0, sold: 0 },
+      { costs: 0, label: "05/04", result: 0, salesCount: 0, sold: 0 },
     ]);
   });
 
@@ -255,10 +259,10 @@ describe("buildDashboardMetrics", () => {
 
     expect(metrics.periodGranularity).toBe("month");
     expect(metrics.periodComparison).toEqual([
-      { costs: 0, label: "jan/26", result: 0, sold: 0 },
-      { costs: 37, label: "fev/26", result: 63, sold: 100 },
-      { costs: 0, label: "mar/26", result: 0, sold: 0 },
-      { costs: 44, label: "abr/26", result: 96, sold: 140 },
+      { costs: 0, label: "jan/26", result: 0, salesCount: 0, sold: 0 },
+      { costs: 37, label: "fev/26", result: 63, salesCount: 1, sold: 100 },
+      { costs: 0, label: "mar/26", result: 0, salesCount: 0, sold: 0 },
+      { costs: 44, label: "abr/26", result: 96, salesCount: 1, sold: 140 },
     ]);
     expect(metrics.totalSalesCount).toBe(2);
     expect(metrics.totalSold).toBe(240);
@@ -309,5 +313,43 @@ describe("buildDashboardMetrics", () => {
     expect(metrics.totalSalesCount).toBe(0);
     expect(metrics.topProducts).toEqual([]);
     expect(metrics.inventoryByCategory).toEqual([]);
+  });
+});
+
+describe("resolveContributionGraphRange", () => {
+  it("covers 12 calendar months ending at bounds.to when today is after bounds.to", () => {
+    const range = resolveContributionGraphRange({ to: "2020-01-15" });
+
+    expect(range.to).toBe("2020-01-15");
+    expect(range.from).toBe("2019-02-01");
+  });
+});
+
+describe("buildDashboardContributionGraph", () => {
+  it("fills every day in range including days before any sale", () => {
+    const graph = buildDashboardContributionGraph({
+      range: { from: "2020-01-01", to: "2020-01-05" },
+      sales: [
+        {
+          occurredOn: "2020-01-04",
+          status: "completed",
+          totalAmount: 50,
+        },
+      ],
+    });
+
+    expect(graph.days).toHaveLength(5);
+    expect(graph.days[0]).toMatchObject({
+      date: "2020-01-01",
+      level: 0,
+      salesCount: 0,
+      sold: 0,
+    });
+    expect(graph.days[3]).toMatchObject({
+      date: "2020-01-04",
+      level: 1,
+      salesCount: 1,
+      sold: 50,
+    });
   });
 });

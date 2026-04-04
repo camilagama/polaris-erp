@@ -44,3 +44,20 @@ export interface DashboardMetrics {
   totalShippingAndSellerFees: number;
   totalSold: number;
 }
+
+export type DashboardContributionLevel = 0 | 1 | 2 | 3;
+
+export interface DashboardContributionDay {
+  date: string;
+  level: DashboardContributionLevel;
+  salesCount: number;
+  sold: number;
+}
+
+export interface DashboardContributionGraph {
+  days: DashboardContributionDay[];
+  from: string;
+  to: string;
+  totalSalesCount: number;
+  totalSold: number;
+}
