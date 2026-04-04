@@ -201,29 +201,18 @@ export default async function DashboardPage(props: PageProps<"/">) {
         ))}
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(260px,340px)]">
-        <SalesContributionGraphCard graph={contributionGraph} />
-        <div className="flex flex-col gap-3">
-          {goalsPayload.active.length === 0 ? (
-            <Card>
-              <CardHeader className="gap-1">
-                <CardTitle className="font-medium text-[10px] text-muted-foreground uppercase leading-none tracking-[0.14em]">
-                  Metas
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="flex min-h-32 items-center justify-center rounded-2xl border border-border/70 border-dashed bg-muted/10 px-3 text-center text-muted-foreground text-xs">
-                  Nenhuma meta ativa. Crie em Configuracoes.
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            goalsPayload.active.map((goal) => (
+      {goalsPayload.active.length > 0 ? (
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(260px,340px)]">
+          <SalesContributionGraphCard graph={contributionGraph} />
+          <div className="flex flex-col gap-3">
+            {goalsPayload.active.map((goal) => (
               <GoalDashboardCompactCard goal={goal} key={goal.id} />
-            ))
-          )}
+            ))}
+          </div>
         </div>
-      </div>
+      ) : (
+        <SalesContributionGraphCard graph={contributionGraph} />
+      )}
 
       <div className="grid gap-4 xl:grid-cols-[1.35fr_0.95fr]">
         <Card>

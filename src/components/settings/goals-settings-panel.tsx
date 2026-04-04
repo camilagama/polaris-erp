@@ -19,7 +19,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -36,10 +35,10 @@ import {
 } from "@/features/goals/contracts";
 import { formatCurrency } from "@/lib/formatters";
 
-const metricLabel = (metric: DashboardGoalCard["metric"]): string => {
+const metricShort = (metric: DashboardGoalCard["metric"]): string => {
   switch (metric) {
     case "profit": {
-      return "Lucro operacional";
+      return "Lucro";
     }
     case "revenue": {
       return "Receita";
@@ -53,7 +52,7 @@ const metricLabel = (metric: DashboardGoalCard["metric"]): string => {
   }
 };
 
-const historyStatusLabel = (
+const historyStatusShort = (
   status: DashboardGoalHistoryItem["status"]
 ): string => {
   switch (status) {
@@ -72,11 +71,14 @@ const historyStatusLabel = (
   }
 };
 
-const formatHistoryAmount = (
+const fmtAmt = (
   metric: DashboardGoalHistoryItem["metric"],
   value: number
 ): string =>
   metric === "sales_count" ? `${Math.round(value)}` : formatCurrency(value);
+
+const periodShort = (from: string, to: string): string =>
+  `${format(parseISO(`${from}T12:00:00`), "dd/MM/yy", { locale: ptBR })}–${format(parseISO(`${to}T12:00:00`), "dd/MM/yy", { locale: ptBR })}`;
 
 export function GoalsSettingsPanel({
   dateBounds,
@@ -131,69 +133,51 @@ export function GoalsSettingsPanel({
     <>
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Metas</CardTitle>
-          <CardDescription>
-            Ate {MAX_ACTIVE_GOALS} metas ativas. O dashboard mostra apenas o
-            resumo; crie, edite e arquive metas aqui.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-6">
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-1.5">
+              <CardTitle>Metas</CardTitle>
+              <CardDescription>
+                Resumo no dashboard. Ate {MAX_ACTIVE_GOALS} ativas.
+              </CardDescription>
+            </div>
             <Button
               disabled={atCapacity}
               onClick={() => setCreateOpen(true)}
               size="sm"
               type="button"
+              variant="secondary"
             >
               Nova meta
             </Button>
           </div>
-
-          {payload.active.length === 0 ? (
-            <p className="rounded-xl border border-border/60 border-dashed bg-muted/5 px-4 py-8 text-center text-muted-foreground text-sm">
-              Nenhuma meta ativa. Crie uma para acompanhar no dashboard.
-            </p>
-          ) : (
-            <ul className="flex flex-col gap-3">
-              {payload.active.map((goal) => (
-                <li
-                  className="flex flex-col gap-3 rounded-xl border border-border/60 bg-muted/5 p-4 sm:flex-row sm:items-center sm:justify-between"
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="divide-y divide-border/60">
+            {payload.active.length === 0 ? (
+              <p className="py-3 text-muted-foreground text-sm">
+                Nenhuma meta ativa.
+              </p>
+            ) : (
+              payload.active.map((goal) => (
+                <div
+                  className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 py-3 first:pt-0"
                   key={goal.id}
                 >
-                  <div className="flex min-w-0 flex-col gap-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-medium">{goal.name}</span>
-                      <Badge variant="secondary">
-                        {metricLabel(goal.metric)}
-                      </Badge>
-                    </div>
-                    <span className="text-muted-foreground text-xs">
-                      {format(
-                        parseISO(`${goal.period.from}T12:00:00`),
-                        "dd/MM/yyyy",
-                        {
-                          locale: ptBR,
-                        }
-                      )}{" "}
-                      —{" "}
-                      {format(
-                        parseISO(`${goal.period.to}T12:00:00`),
-                        "dd/MM/yyyy",
-                        {
-                          locale: ptBR,
-                        }
-                      )}{" "}
-                      · Alvo:{" "}
-                      {formatHistoryAmount(goal.metric, goal.targetValue)} ·{" "}
-                      {goal.progressPercent.toFixed(1)}% concluido
-                    </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium text-sm">{goal.name}</p>
+                    <p className="truncate text-muted-foreground text-xs">
+                      {metricShort(goal.metric)} ·{" "}
+                      {periodShort(goal.period.from, goal.period.to)} ·{" "}
+                      {fmtAmt(goal.metric, goal.targetValue)} ·{" "}
+                      {goal.progressPercent.toFixed(0)}%
+                    </p>
                   </div>
-                  <div className="flex shrink-0 flex-wrap gap-2">
+                  <div className="flex shrink-0 gap-1">
                     <Button
                       onClick={() => setEditGoal(goal)}
                       size="xs"
                       type="button"
-                      variant="outline"
+                      variant="ghost"
                     >
                       Editar
                     </Button>
@@ -206,73 +190,59 @@ export function GoalsSettingsPanel({
                       Arquivar
                     </Button>
                   </div>
-                </li>
-              ))}
-            </ul>
-          )}
+                </div>
+              ))
+            )}
+          </div>
 
-          <div className="flex flex-col gap-3 border-border/50 border-t pt-4">
-            <h3 className="font-medium text-muted-foreground text-sm">
+          <div className="space-y-2">
+            <p className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
               Historico
-            </h3>
+            </p>
             {payload.history.length === 0 ? (
-              <p className="text-muted-foreground text-sm">
-                Ainda nao ha metas concluidas, expiradas ou arquivadas.
-              </p>
+              <p className="text-muted-foreground text-sm">Vazio.</p>
             ) : (
-              <ul className="flex flex-col gap-2">
+              <div className="divide-y divide-border/60">
                 {payload.history.map((item) => (
-                  <li
-                    className="flex flex-col gap-2 rounded-lg border border-border/50 bg-background/50 px-3 py-3 sm:flex-row sm:items-start sm:justify-between"
+                  <div
+                    className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2 py-2.5 first:pt-0"
                     key={item.id}
                   >
-                    <div className="flex min-w-0 flex-col gap-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-medium text-sm">{item.name}</span>
-                        <Badge variant="outline">
-                          {historyStatusLabel(item.status)}
-                        </Badge>
-                      </div>
-                      <span className="text-muted-foreground text-xs">
-                        Criada em{" "}
-                        {format(parseISO(item.createdAt), "dd/MM/yyyy HH:mm", {
-                          locale: ptBR,
-                        })}
-                        {item.resolvedAt
-                          ? ` · Encerrada em ${format(parseISO(item.resolvedAt), "dd/MM/yyyy", { locale: ptBR })}`
-                          : null}
-                      </span>
-                      {item.resolutionElapsedLabel ? (
-                        <span className="text-[11px] text-muted-foreground leading-snug">
-                          {item.resolutionElapsedLabel}
+                    <div className="min-w-0 flex-1 space-y-0.5">
+                      <p className="truncate text-sm">
+                        <span className="font-medium">{item.name}</span>
+                        <span className="text-muted-foreground">
+                          {" "}
+                          · {historyStatusShort(item.status)}
                         </span>
-                      ) : null}
-                      <span className="text-[11px] text-muted-foreground">
-                        Resultado:{" "}
+                      </p>
+                      <p className="line-clamp-2 text-[11px] text-muted-foreground leading-snug">
+                        {item.resolvedAt
+                          ? `${format(parseISO(item.resolvedAt), "dd/MM/yy", { locale: ptBR })}`
+                          : "—"}
+                        {item.resolutionElapsedLabel
+                          ? ` · ${item.resolutionElapsedLabel}`
+                          : null}
                         {item.resolvedValue === null
-                          ? "—"
-                          : formatHistoryAmount(
-                              item.metric,
-                              item.resolvedValue
-                            )}{" "}
-                        · Meta:{" "}
-                        {formatHistoryAmount(item.metric, item.targetValue)}
-                      </span>
+                          ? null
+                          : ` · ${fmtAmt(item.metric, item.resolvedValue)} / ${fmtAmt(item.metric, item.targetValue)}`}
+                      </p>
                     </div>
                     {item.status === "archived" ? (
                       <Button
+                        className="shrink-0"
                         disabled={pending || atCapacity}
                         onClick={() => handleUnarchive(item.id)}
                         size="xs"
                         type="button"
-                        variant="secondary"
+                        variant="outline"
                       >
                         Desarquivar
                       </Button>
                     ) : null}
-                  </li>
+                  </div>
                 ))}
-              </ul>
+              </div>
             )}
           </div>
         </CardContent>
@@ -312,8 +282,7 @@ export function GoalsSettingsPanel({
           <AlertDialogHeader>
             <AlertDialogTitle>Arquivar meta</AlertDialogTitle>
             <AlertDialogDescription>
-              A meta sai das ativas. Voce pode desarquivar depois, se houver
-              vaga entre as metas ativas.
+              Sai das ativas. Pode desarquivar depois se houver vaga.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
