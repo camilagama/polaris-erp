@@ -1,6 +1,6 @@
 "use server";
 
-import { eq, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { refresh } from "next/cache";
 import { db } from "@/db";
 import {
@@ -99,7 +99,7 @@ export async function createProductAction(data: {
   stagedImage?: StagedProductImageInput;
   stock: number;
 }) {
-  await requireActionSession();
+  const session = await requireActionSession();
   const parsed = createProductSchema.parse(data);
   const stagedImage = data.stagedImage
     ? stagedProductImageSchema.parse(data.stagedImage)
@@ -115,6 +115,7 @@ export async function createProductAction(data: {
     ? await storeProductImageFromStage({
         productId,
         stagedImage,
+        userId: session.user.id,
         version: 1,
       })
     : null;
@@ -208,18 +209,22 @@ export async function replaceProductImageAction(
   id: string,
   stagedImageInput: StagedProductImageInput
 ) {
-  await requireActionSession();
+  const session = await requireActionSession();
   const stagedImage = stagedProductImageSchema.parse(stagedImageInput);
   const product = await getProductImageState(id);
-  const nextVersion = (product.imageVersion ?? 0) + 1;
+  const oldVersion = product.imageVersion;
+  const nextVersion = (oldVersion ?? 0) + 1;
   const storedImage = await storeProductImageFromStage({
     productId: id,
     stagedImage,
+    userId: session.user.id,
     version: nextVersion,
   });
 
+  let updatedRows: { id: string }[];
+
   try {
-    await db
+    updatedRows = await db
       .update(products)
       .set({
         imageBlurDataUrl: storedImage.blurDataURL,
@@ -228,7 +233,15 @@ export async function replaceProductImageAction(
         imageVersion: storedImage.version,
         imageWidth: storedImage.width,
       })
-      .where(eq(products.id, id));
+      .where(
+        and(
+          eq(products.id, id),
+          oldVersion === null
+            ? isNull(products.imageVersion)
+            : eq(products.imageVersion, oldVersion)
+        )
+      )
+      .returning({ id: products.id });
   } catch (error) {
     await deleteProductImageVersion({
       productId: id,
@@ -238,10 +251,21 @@ export async function replaceProductImageAction(
     throw error;
   }
 
-  if (product.imageVersion !== null) {
+  if (updatedRows.length === 0) {
     await deleteProductImageVersion({
       productId: id,
-      version: product.imageVersion,
+      version: storedImage.version,
+    }).catch(() => undefined);
+
+    throw new Error(
+      "A imagem foi atualizada por outra operacao. Atualize a pagina e tente novamente."
+    );
+  }
+
+  if (oldVersion !== null) {
+    await deleteProductImageVersion({
+      productId: id,
+      version: oldVersion,
     }).catch(() => undefined);
   }
 

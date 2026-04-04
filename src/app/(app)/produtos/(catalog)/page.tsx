@@ -5,7 +5,7 @@ import {
   listCategoriesWithUsage,
 } from "@/features/catalog/server";
 import { getProductAnalytics } from "@/features/products/server";
-import { getProductsQuery } from "./queries";
+import { getProductsQuery } from "../queries";
 
 export const metadata: Metadata = {
   title: "Produtos | DG Imports",

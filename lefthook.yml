@@ -12,3 +12,8 @@ pre-commit:
       exclude:
         - ".agents/**/*"
       stage_fixed: true
+
+pre-push:
+  jobs:
+    - run: bun run check
+    - run: bun run test

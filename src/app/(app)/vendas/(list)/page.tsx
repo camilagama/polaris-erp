@@ -3,7 +3,7 @@ import { SalesPanel } from "@/components/sales/sales-panel";
 import { getCatalogSettings } from "@/features/catalog/server";
 import { resolveSalesDateRange } from "@/features/sales/date-range";
 import { getSalesAnalytics, getSalesDateBounds } from "@/features/sales/server";
-import { getSaleProductsQuery, getSalesQuery } from "./queries";
+import { getSaleProductsQuery, getSalesQuery } from "../queries";
 
 export const metadata: Metadata = {
   title: "Vendas | DG Imports",

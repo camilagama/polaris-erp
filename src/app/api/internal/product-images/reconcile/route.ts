@@ -6,6 +6,7 @@ import {
   listAllStoredProductImageKeys,
 } from "@/features/products/image-storage";
 import { serverEnv } from "@/lib/env";
+import { jsonError } from "@/lib/server-api-error";
 
 export const runtime = "nodejs";
 
@@ -48,14 +49,10 @@ export async function POST(request: Request) {
       scannedCount: storedKeys.length,
     });
   } catch (error) {
-    return Response.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Nao foi possivel reconciliar as imagens de produto.",
-      },
-      { status: 500 }
+    return jsonError(
+      "Nao foi possivel reconciliar as imagens de produto.",
+      500,
+      error
     );
   }
 }

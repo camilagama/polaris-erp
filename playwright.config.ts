@@ -1,8 +1,57 @@
 import { defineConfig } from "@playwright/test";
+import {
+  E2E_DEFAULT_CRON_SECRET,
+  E2E_DEFAULT_INTERNAL_BOOTSTRAP_SECRET,
+} from "./tests/e2e/constants";
 
-const e2eBootstrapSecret = process.env.CRON_SECRET ?? "dgimports-e2e-bootstrap";
+const isCi = process.env.CI === "true";
+const e2eDatabaseUrl = process.env.E2E_DATABASE_URL;
+const allowSharedDb = process.env.ALLOW_E2E_SHARED_DATABASE === "true";
+
+if (isCi && !e2eDatabaseUrl) {
+  throw new Error(
+    "CI exige E2E_DATABASE_URL apontando para uma branch Neon dedicada (nao use o banco de producao). Veja docs/database-environments.md."
+  );
+}
+
+if (!(e2eDatabaseUrl || allowSharedDb || isCi)) {
+  // eslint-disable-next-line no-console -- aviso operacional para dev local
+  console.warn(
+    "[playwright] Defina E2E_DATABASE_URL para um banco isolado. Sem isso, os E2E usam DATABASE_URL do ambiente (risco de poluir dados reais). Veja docs/database-environments.md."
+  );
+}
+
+const e2eCronSecret = process.env.E2E_CRON_SECRET ?? E2E_DEFAULT_CRON_SECRET;
 const e2eInternalBootstrapSecret =
-  process.env.INTERNAL_BOOTSTRAP_SECRET ?? "dgimports-e2e-bootstrap";
+  process.env.E2E_INTERNAL_BOOTSTRAP_SECRET ??
+  E2E_DEFAULT_INTERNAL_BOOTSTRAP_SECRET;
+
+const processEnvWithE2eOverrides: NodeJS.ProcessEnv = {
+  ...process.env,
+  ALLOW_PLAYWRIGHT_BOOTSTRAP: "true",
+  CRON_SECRET: e2eCronSecret,
+  INTERNAL_BOOTSTRAP_SECRET: e2eInternalBootstrapSecret,
+};
+
+if (e2eDatabaseUrl) {
+  processEnvWithE2eOverrides.DATABASE_URL = e2eDatabaseUrl;
+}
+
+const toPlaywrightStringEnv = (
+  env: NodeJS.ProcessEnv
+): Record<string, string> => {
+  const result: Record<string, string> = {};
+
+  for (const [key, value] of Object.entries(env)) {
+    if (value !== undefined) {
+      result[key] = value;
+    }
+  }
+
+  return result;
+};
+
+const webServerEnv = toPlaywrightStringEnv(processEnvWithE2eOverrides);
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -15,12 +64,7 @@ export default defineConfig({
   },
   webServer: {
     command: "bun run build && bun x next start --port 3001",
-    env: {
-      ...process.env,
-      CRON_SECRET: e2eBootstrapSecret,
-      ENABLE_INTERNAL_BOOTSTRAP: "true",
-      INTERNAL_BOOTSTRAP_SECRET: e2eInternalBootstrapSecret,
-    },
+    env: webServerEnv,
     port: 3001,
     reuseExistingServer: false,
     timeout: 180_000,

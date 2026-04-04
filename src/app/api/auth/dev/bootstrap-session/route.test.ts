@@ -23,7 +23,7 @@ const { authContext, serverEnvMock } = vi.hoisted(() => ({
     secret: "better-auth-secret",
   },
   serverEnvMock: {
-    ENABLE_INTERNAL_BOOTSTRAP: "false" as "false" | "true",
+    ALLOW_PLAYWRIGHT_BOOTSTRAP: undefined as "false" | "true" | undefined,
     INTERNAL_BOOTSTRAP_SECRET: "bootstrap-secret" as string | undefined,
     NODE_ENV: "test" as "development" | "production" | "test",
   },
@@ -42,7 +42,7 @@ vi.mock("@/lib/auth", () => ({
 describe("POST /api/auth/dev/bootstrap-session", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    serverEnvMock.ENABLE_INTERNAL_BOOTSTRAP = "false";
+    serverEnvMock.ALLOW_PLAYWRIGHT_BOOTSTRAP = undefined;
     serverEnvMock.INTERNAL_BOOTSTRAP_SECRET = "bootstrap-secret";
     serverEnvMock.NODE_ENV = "test";
     authContext.internalAdapter.findUserByEmail.mockResolvedValue(null);
@@ -57,8 +57,9 @@ describe("POST /api/auth/dev/bootstrap-session", () => {
     });
   });
 
-  it("returns 403 outside development and test", async () => {
+  it("returns 403 in production without ALLOW_PLAYWRIGHT_BOOTSTRAP", async () => {
     serverEnvMock.NODE_ENV = "production";
+    serverEnvMock.ALLOW_PLAYWRIGHT_BOOTSTRAP = undefined;
 
     const response = await POST(
       new Request("http://localhost/api/auth/dev/bootstrap-session", {
@@ -74,6 +75,26 @@ describe("POST /api/auth/dev/bootstrap-session", () => {
     );
 
     expect(response.status).toBe(403);
+  });
+
+  it("allows bootstrap in production when ALLOW_PLAYWRIGHT_BOOTSTRAP is true", async () => {
+    serverEnvMock.NODE_ENV = "production";
+    serverEnvMock.ALLOW_PLAYWRIGHT_BOOTSTRAP = "true";
+
+    const response = await POST(
+      new Request("http://localhost/api/auth/dev/bootstrap-session", {
+        body: JSON.stringify({
+          email: "user@example.com",
+          name: "User",
+        }),
+        headers: {
+          Authorization: "Bearer bootstrap-secret",
+        },
+        method: "POST",
+      })
+    );
+
+    expect(response.status).toBe(200);
   });
 
   it("returns 401 when the bearer token is invalid", async () => {

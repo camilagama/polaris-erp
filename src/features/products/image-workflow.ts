@@ -20,10 +20,12 @@ interface StoredProductImageResult {
 export const storeProductImageFromStage = async ({
   productId,
   stagedImage,
+  userId,
   version,
 }: {
   productId: string;
   stagedImage: StagedProductImageInput;
+  userId: string;
   version: number;
 }): Promise<StoredProductImageResult> => {
   let uploadedNewVersion = false;
@@ -33,6 +35,7 @@ export const storeProductImageFromStage = async ({
       contentType: stagedImage.contentType,
       objectKey: stagedImage.objectKey,
       size: stagedImage.size,
+      userId,
     });
     const processed = await processProductImage(stagedBuffer);
 

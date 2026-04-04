@@ -10,18 +10,18 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { calculateSaleReceivedAmount } from "@/features/sales/calculations";
+import type { SaleDetail } from "@/features/sales/contracts";
+import {
+  formatSaleDetailPaymentMethodLabel,
+  getOperationalSaleStatusLabel,
+} from "@/features/sales/sale-display-labels";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/formatters";
 import { getSaleByIdQuery } from "../queries";
 
-const getStatusLabel = (status: "cancelled" | "completed") => {
-  if (status === "cancelled") {
-    return "Cancelada";
-  }
+const getStatusLabel = (status: SaleDetail["status"]) =>
+  getOperationalSaleStatusLabel(status);
 
-  return "Concluida";
-};
-
-const getStatusVariant = (status: "cancelled" | "completed") => {
+const getStatusVariant = (status: SaleDetail["status"]) => {
   if (status === "cancelled") {
     return "destructive" as const;
   }
@@ -29,23 +29,8 @@ const getStatusVariant = (status: "cancelled" | "completed") => {
   return "secondary" as const;
 };
 
-const getPaymentMethodLabel = ({
-  paymentFeePayer,
-  paymentInstallments,
-  paymentMethod,
-}: {
-  paymentFeePayer: "customer" | "not_applicable" | "seller";
-  paymentInstallments: number;
-  paymentMethod: "card" | "pix";
-}) => {
-  if (paymentMethod === "pix") {
-    return "Pix";
-  }
-
-  const payerLabel = paymentFeePayer === "seller" ? "vendedor" : "cliente";
-
-  return `Cartao ${paymentInstallments}x (${payerLabel})`;
-};
+const getPaymentMethodLabel = (sale: SaleDetail) =>
+  formatSaleDetailPaymentMethodLabel(sale);
 
 export default async function VendaDetalhePage(
   props: PageProps<"/vendas/[id]">

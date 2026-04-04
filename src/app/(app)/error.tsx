@@ -7,11 +7,16 @@ import { Button } from "@/components/ui/button";
 
 export default function AppError({
   error: _error,
-  reset,
+  reset: _reset,
+  unstable_retry: unstableRetry,
 }: {
   error: Error & { digest?: string };
   reset: () => void;
+  unstable_retry: () => void;
 }) {
+  const handleRetry = () => {
+    unstableRetry();
+  };
   return (
     <div className="mx-auto flex min-h-[60svh] max-w-2xl items-center justify-center p-6">
       <div className="w-full rounded-3xl border border-border/60 bg-card p-8 shadow-sm">
@@ -29,7 +34,7 @@ export default function AppError({
           secao. Se persistir, revise o ultimo fluxo executado.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
-          <Button onClick={reset} type="button">
+          <Button onClick={handleRetry} type="button">
             Tentar novamente
           </Button>
           <Button asChild type="button" variant="outline">

@@ -48,15 +48,14 @@ import {
   type SalesDateRange,
   salesDatePresetOptions,
 } from "@/features/sales/date-range";
+import {
+  formatSaleListPaymentMethodLabel,
+  getOperationalSaleStatusLabel,
+} from "@/features/sales/sale-display-labels";
 import { formatCurrency, formatDate, formatPercent } from "@/lib/formatters";
 
-const getStatusLabel = (status: SaleListItem["status"]) => {
-  if (status === "cancelled") {
-    return "Cancelada";
-  }
-
-  return "Concluida";
-};
+const getStatusLabel = (status: SaleListItem["status"]) =>
+  getOperationalSaleStatusLabel(status);
 
 const getStatusVariant = (status: SaleListItem["status"]) => {
   if (status === "cancelled") {
@@ -68,13 +67,7 @@ const getStatusVariant = (status: SaleListItem["status"]) => {
 
 const getPaymentMethodLabel = (
   sale: Pick<SaleListItem, "paymentInstallments" | "paymentMethod">
-) => {
-  if (sale.paymentMethod === "pix") {
-    return "Pix";
-  }
-
-  return `Cartao ${sale.paymentInstallments}x`;
-};
+) => formatSaleListPaymentMethodLabel(sale);
 
 const getSalesEmptyStateTitle = ({
   appliedQuery,

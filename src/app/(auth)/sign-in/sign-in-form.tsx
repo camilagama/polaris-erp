@@ -110,6 +110,13 @@ export function SignInForm() {
                 </div>
               ) : null}
 
+              {isLocalhost && hasGoogleAuthClient ? (
+                <p className="rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-center text-muted-foreground text-xs leading-relaxed">
+                  One Tap fica desativado localmente para evitar avisos do GSI
+                  no console.
+                </p>
+              ) : null}
+
               <p className="mt-8 text-center text-muted-foreground/70 text-xs leading-relaxed">
                 O acesso é liberado apenas para usuários previamente
                 provisionados na operação.

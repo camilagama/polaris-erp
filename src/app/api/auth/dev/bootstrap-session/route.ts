@@ -9,9 +9,17 @@ const bootstrapSessionSchema = z.object({
   name: z.string().trim().min(1).optional(),
 });
 
-const isBootstrapEnabled = () =>
-  ["development", "test"].includes(serverEnv.NODE_ENV) ||
-  serverEnv.ENABLE_INTERNAL_BOOTSTRAP === "true";
+const isBootstrapEnabled = () => {
+  if (serverEnv.NODE_ENV === "development" || serverEnv.NODE_ENV === "test") {
+    return true;
+  }
+
+  if (serverEnv.NODE_ENV === "production") {
+    return serverEnv.ALLOW_PLAYWRIGHT_BOOTSTRAP === "true";
+  }
+
+  return false;
+};
 
 const normalizeSameSite = (sameSite: string | boolean | undefined) => {
   if (typeof sameSite !== "string") {
@@ -117,7 +125,8 @@ export async function POST(request: Request) {
   if (!isBootstrapEnabled()) {
     return Response.json(
       {
-        error: "Bootstrap interno disponivel apenas em development e test.",
+        error:
+          "Bootstrap interno disponivel em development/test ou em build de producao apenas com ALLOW_PLAYWRIGHT_BOOTSTRAP=true (uso exclusivo Playwright local/CI).",
       },
       { status: 403 }
     );

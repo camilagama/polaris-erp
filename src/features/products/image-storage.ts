@@ -125,13 +125,16 @@ export const readStagedProductImage = async ({
   contentType,
   objectKey,
   size,
+  userId,
 }: {
   contentType: ProductImageMimeType;
   objectKey: string;
   size: number;
+  userId: string;
 }) => {
   const env = getRequiredStorageEnv();
-  if (!objectKey.startsWith(STAGING_IMAGE_PREFIX)) {
+  const expectedPrefix = `${STAGING_IMAGE_PREFIX}${userId}/`;
+  if (!objectKey.startsWith(expectedPrefix)) {
     throw new Error("Chave de upload temporario invalida.");
   }
 

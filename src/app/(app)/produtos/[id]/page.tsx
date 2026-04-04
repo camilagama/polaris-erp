@@ -23,8 +23,13 @@ export default async function ProdutoDetalhePage(
   props: PageProps<"/produtos/[id]">
 ) {
   const { id } = await props.params;
+  const product = await getProductByIdQuery(id);
+
+  if (!product) {
+    notFound();
+  }
+
   const [
-    product,
     stockEntries,
     writeOffs,
     sales,
@@ -33,7 +38,6 @@ export default async function ProdutoDetalhePage(
     salesMetrics,
     priceChanges,
   ] = await Promise.all([
-    getProductByIdQuery(id),
     getProductStockEntriesByProductIdQuery(id),
     getProductStockWriteOffsByProductIdQuery(id),
     getProductSalesByProductIdQuery(id),
@@ -42,10 +46,6 @@ export default async function ProdutoDetalhePage(
     getProductSalesHistoryMetrics(id),
     getProductPriceChangesByProductIdQuery(id),
   ]);
-
-  if (!product) {
-    notFound();
-  }
 
   const averageCost = Number(product.costPrice);
   const initialEntryId =

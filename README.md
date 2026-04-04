@@ -32,7 +32,7 @@ bun run db:migrate
 - O app e interno e fechado.
 - O produto nao oferece cadastro publico nem login por email e senha.
 - O login aceita apenas usuarios previamente provisionados.
-- Em `development` e `test` existe um bootstrap interno de sessao em `/api/auth/dev/bootstrap-session`, protegido por `INTERNAL_BOOTSTRAP_SECRET`.
+- Em `development` e `test` existe um bootstrap interno de sessao em `/api/auth/dev/bootstrap-session`, protegido por `INTERNAL_BOOTSTRAP_SECRET`. Em `production`, esse endpoint so aceita bootstrap quando `ALLOW_PLAYWRIGHT_BOOTSTRAP=true` (uso exclusivo de E2E com banco isolado).
 - O login com Google continua disponivel apenas para usuarios aprovados na tabela `users`.
 - O One Tap nao e inicializado em `localhost` para evitar prompts invalidos e ruido operacional.
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` e `NEXT_PUBLIC_GOOGLE_CLIENT_ID` devem existir nos ambientes reais.
@@ -64,10 +64,21 @@ Entidades principais:
 
 ## Imagens de produto
 
-- Upload vai primeiro para o bucket de staging do R2.
+- Upload vai primeiro para o bucket de staging do R2 com chave namespaced por usuario (`staging/{userId}/...`).
 - O app gera as variantes finais `detail` e `table`.
+- Entrega via `/api/product-images/...` exige sessao autenticada (mesmo com CDN/R2 publico para os bytes finais, o app nao expoe a rota anonimamente).
 - A reconciliacao diaria limpa objetos orfaos e mantem o bucket publico consistente com o banco.
 - Detalhes operacionais e de CORS: `docs/product-images-r2.md`.
+
+## CI, healthcheck e observabilidade
+
+- CI em `.github/workflows/ci.yml`: `bun run check`, `bun run test`, `bun run build`.
+- Healthcheck: `GET /api/health` retorna `{ ok: true, timestamp }`.
+- `src/instrumentation.ts`: hook de inicializacao e `onRequestError` com log JSON no servidor.
+
+## Banco, E2E e producao
+
+- Modelo de branches, `E2E_DATABASE_URL` e opt-in de banco compartilhado: `docs/database-environments.md`.
 
 ## Qualidade atual
 

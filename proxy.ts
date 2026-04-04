@@ -20,7 +20,7 @@ export function proxy(request: NextRequest) {
   return NextResponse.next();
 }
 
-export const proxyConfig = {
+export const config = {
   // Proxy remains an optimistic edge barrier only.
   // Route-level auth is still enforced in layouts and server actions.
   matcher: [

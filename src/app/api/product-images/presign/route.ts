@@ -4,6 +4,7 @@ import {
   createStagingObjectKey,
 } from "@/features/products/image-storage";
 import { auth } from "@/lib/auth";
+import { jsonError } from "@/lib/server-api-error";
 
 export const runtime = "nodejs";
 
@@ -43,14 +44,10 @@ export async function POST(request: Request) {
       ...presigned,
     });
   } catch (error) {
-    return Response.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Nao foi possivel preparar o upload da imagem.",
-      },
-      { status: 500 }
+    return jsonError(
+      "Nao foi possivel preparar o upload da imagem.",
+      500,
+      error
     );
   }
 }

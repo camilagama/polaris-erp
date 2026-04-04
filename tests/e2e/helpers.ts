@@ -5,10 +5,14 @@ import {
   type Page,
 } from "@playwright/test";
 
+import { E2E_DEFAULT_INTERNAL_BOOTSTRAP_SECRET } from "./constants";
+
 const e2eBaseUrl = process.env.E2E_BASE_URL ?? "http://127.0.0.1:3001";
 const e2eUserName = process.env.E2E_NAME ?? "DG Imports E2E";
 const e2eBootstrapSecret =
-  process.env.INTERNAL_BOOTSTRAP_SECRET ?? "dgimports-e2e-bootstrap";
+  process.env.E2E_INTERNAL_BOOTSTRAP_SECRET ??
+  process.env.INTERNAL_BOOTSTRAP_SECRET ??
+  E2E_DEFAULT_INTERNAL_BOOTSTRAP_SECRET;
 
 const parseSetCookieHeader = (cookieHeader: string) => {
   const [nameValue, ...attributeEntries] = cookieHeader.split("; ");

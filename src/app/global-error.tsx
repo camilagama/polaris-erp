@@ -6,11 +6,16 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 export default function GlobalError({
-  reset,
+  reset: _reset,
+  unstable_retry: unstableRetry,
 }: {
   error: Error & { digest?: string };
   reset: () => void;
+  unstable_retry: () => void;
 }) {
+  const handleRetry = () => {
+    unstableRetry();
+  };
   return (
     <html lang="pt-BR">
       <body className="flex min-h-screen items-center justify-center bg-background px-6 py-16 text-foreground">
@@ -29,7 +34,7 @@ export default function GlobalError({
             alteracao estrutural ou a configuracao de ambiente.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Button onClick={reset} type="button">
+            <Button onClick={handleRetry} type="button">
               Tentar novamente
             </Button>
             <Button asChild type="button" variant="outline">

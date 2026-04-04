@@ -1,11 +1,12 @@
 import { readPublicProductImageVariant } from "@/features/products/image-storage";
+import { auth } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
 const VALID_VARIANTS = new Set(["detail", "table"]);
 
 export async function GET(
-  _request: Request,
+  request: Request,
   props: {
     params: Promise<{
       productId: string;
@@ -16,6 +17,14 @@ export async function GET(
 ) {
   const { productId, variant, version } = await props.params;
   const parsedVersion = Number(version);
+
+  const session = await auth.api.getSession({
+    headers: request.headers,
+  });
+
+  if (!session?.user?.id) {
+    return new Response("Unauthorized", { status: 401 });
+  }
 
   if (!(VALID_VARIANTS.has(variant) && Number.isInteger(parsedVersion))) {
     return new Response("Not Found", { status: 404 });
