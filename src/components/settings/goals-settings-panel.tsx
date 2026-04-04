@@ -172,7 +172,7 @@ export function GoalsSettingsPanel({
                 onClick={() => setCreateOpen(true)}
                 size="sm"
                 type="button"
-                variant="secondary"
+                variant="default"
               >
                 Nova meta
               </Button>
@@ -193,20 +193,24 @@ export function GoalsSettingsPanel({
                 >
                   <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
                     <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium text-sm">
-                        {goal.name}
-                      </p>
-                      <p className="truncate text-muted-foreground text-xs">
-                        {metricShort(goal.metric)} ·{" "}
-                        {periodShort(goal.period.from, goal.period.to)}
-                      </p>
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+                        <p className="truncate font-medium">{goal.name}</p>
+                        <span className="text-muted-foreground text-xs">•</span>
+                        <span className="text-muted-foreground text-xs">
+                          {metricShort(goal.metric)}
+                        </span>
+                        <span className="text-muted-foreground text-xs">•</span>
+                        <span className="text-muted-foreground text-xs">
+                          {periodShort(goal.period.from, goal.period.to)}
+                        </span>
+                      </div>
                     </div>
                     <div className="flex shrink-0 gap-1">
                       <Button
                         onClick={() => setEditGoal(goal)}
                         size="xs"
                         type="button"
-                        variant="ghost"
+                        variant="outline"
                       >
                         Editar
                       </Button>
@@ -214,7 +218,7 @@ export function GoalsSettingsPanel({
                         onClick={() => setArchiveId(goal.id)}
                         size="xs"
                         type="button"
-                        variant="ghost"
+                        variant="outline"
                       >
                         Arquivar
                       </Button>

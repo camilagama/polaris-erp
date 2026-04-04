@@ -20,7 +20,7 @@ import {
   goalTargetMet,
 } from "@/features/goals/progress";
 import type { CreateGoalInput, UpdateGoalInput } from "@/features/goals/schema";
-import { periodIncludesToday } from "@/features/goals/schema";
+import { goalPeriodIsCreatable } from "@/features/goals/schema";
 import { roundCurrency } from "@/lib/domain/currency";
 import { formatDateInputValue } from "@/lib/domain/date";
 
@@ -204,14 +204,14 @@ export const createGoal = async (
   const today = formatDateInputValue();
 
   if (
-    !periodIncludesToday({
+    !goalPeriodIsCreatable({
       periodEnd: input.periodEnd,
       periodStart: input.periodStart,
       today,
     })
   ) {
     throw new Error(
-      "O periodo da meta deve incluir a data de hoje. Ajuste as datas."
+      "Nao e permitido criar metas com periodo totalmente passado."
     );
   }
 
@@ -237,14 +237,14 @@ export const updateGoal = async (input: UpdateGoalInput): Promise<void> => {
   const today = formatDateInputValue();
 
   if (
-    !periodIncludesToday({
+    !goalPeriodIsCreatable({
       periodEnd: input.periodEnd,
       periodStart: input.periodStart,
       today,
     })
   ) {
     throw new Error(
-      "O periodo da meta deve incluir a data de hoje. Ajuste as datas."
+      "Nao e permitido criar metas com periodo totalmente passado."
     );
   }
 
@@ -317,14 +317,14 @@ export const unarchiveGoal = async (goalId: string): Promise<void> => {
   const today = formatDateInputValue();
 
   if (
-    !periodIncludesToday({
+    !goalPeriodIsCreatable({
       periodEnd: row.periodEnd,
       periodStart: row.periodStart,
       today,
     })
   ) {
     throw new Error(
-      "O periodo desta meta nao inclui hoje. Edite as datas em Configuracoes antes de reativar."
+      "Nao e permitido reativar metas com periodo totalmente passado."
     );
   }
 

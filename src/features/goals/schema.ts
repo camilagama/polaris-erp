@@ -119,3 +119,20 @@ export const periodIncludesToday = ({
   periodStart: string;
   today: string;
 }): boolean => periodStart <= today && periodEnd >= today;
+
+export const goalPeriodIsCreatable = ({
+  periodEnd,
+  periodStart,
+  today,
+}: {
+  periodEnd: string;
+  periodStart: string;
+  today: string;
+}): boolean => {
+  if (periodEnd < periodStart) {
+    return false;
+  }
+
+  // Future goals are allowed. What is blocked is a period that ended before today.
+  return periodEnd >= today;
+};

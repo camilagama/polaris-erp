@@ -31,10 +31,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  dashboardDatePresetOptions,
-  getDashboardPresetDateRangeWithBounds,
-} from "@/features/dashboard/date-range";
-import {
   type DashboardGoalCard,
   MAX_ACTIVE_GOALS,
 } from "@/features/goals/contracts";
@@ -42,6 +38,7 @@ import {
   createGoalSchema,
   goalDisplayModeSchema,
   goalMetricSchema,
+  goalPeriodIsCreatable,
   updateGoalSchema,
   validateGoalTargetValue,
 } from "@/features/goals/schema";
@@ -71,7 +68,7 @@ interface GoalFormDialogProps {
 }
 
 export function GoalFormDialog({
-  dateBounds,
+  dateBounds: _dateBounds,
   initialGoal,
   mode,
   onOpenChange,
@@ -106,6 +103,21 @@ export function GoalFormDialog({
   const form = useForm({
     defaultValues: defaults,
     onSubmit: async ({ value }) => {
+      const today = formatDateInputValue();
+
+      if (
+        !goalPeriodIsCreatable({
+          periodEnd: value.periodEnd,
+          periodStart: value.periodStart,
+          today,
+        })
+      ) {
+        toast.error(
+          "Nao e permitido criar metas com periodo totalmente passado."
+        );
+        return;
+      }
+
       try {
         setSubmitLabel("Salvando...");
 
@@ -162,7 +174,7 @@ export function GoalFormDialog({
       : `Defina ate ${MAX_ACTIVE_GOALS} metas ativas para acompanhar receita, lucro operacional ou quantidade de vendas no periodo.`;
   const description =
     mode === "edit"
-      ? "Ajuste nome, tipo, periodo ou valor alvo. O periodo deve incluir hoje enquanto a meta estiver ativa."
+      ? "Ajuste nome, tipo, periodo ou valor alvo. Metas totalmente passadas nao podem ser salvas."
       : createModeDescription;
 
   return (
@@ -179,7 +191,7 @@ export function GoalFormDialog({
             form.handleSubmit();
           }}
         >
-          <div className="flex flex-col gap-5 py-4">
+          <div className="flex flex-col gap-5 pb-6">
             <form.Field
               name="name"
               validators={{
@@ -236,14 +248,10 @@ export function GoalFormDialog({
                         <SelectValue placeholder="Selecione" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="revenue">
-                          Receita no periodo
-                        </SelectItem>
-                        <SelectItem value="profit">
-                          Lucro operacional no periodo
-                        </SelectItem>
+                        <SelectItem value="revenue">Receita</SelectItem>
+                        <SelectItem value="profit">Lucro</SelectItem>
                         <SelectItem value="sales_count">
-                          Vendas concluidas no periodo
+                          Vendas concluidas
                         </SelectItem>
                       </SelectContent>
                     </Select>
@@ -281,9 +289,7 @@ export function GoalFormDialog({
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="percentage">Porcentagem</SelectItem>
-                        <SelectItem value="absolute">
-                          Valor real (atual vs meta)
-                        </SelectItem>
+                        <SelectItem value="absolute">Valor real</SelectItem>
                       </SelectContent>
                     </Select>
                     {field.state.meta.errors.length > 0 ? (
@@ -363,29 +369,29 @@ export function GoalFormDialog({
                         form.setFieldValue("periodEnd", to);
                         form.setFieldValue("rangePreset", preset);
                       }}
-                      presets={dashboardDatePresetOptions}
-                      resolvePresetRange={(presetValue) =>
-                        getDashboardPresetDateRangeWithBounds({
-                          bounds: dateBounds,
-                          preset:
-                            presetValue as (typeof dashboardDatePresetOptions)[number]["value"],
-                        })
-                      }
+                      popoverAlign="center"
+                      popoverContentClassName="z-[100] w-[20rem] max-w-[calc(100vw-1rem)]"
+                      triggerClassName="h-7 w-full min-w-0 sm:min-w-0"
                       value={{
                         from: range.from,
                         preset: range.preset,
                         to: range.to,
                       }}
                     />
+
+                    {goalPeriodIsCreatable({
+                      periodEnd: range.to,
+                      periodStart: range.from,
+                      today: formatDateInputValue(),
+                    }) ? null : (
+                      <em className="text-[11px] text-destructive">
+                        Periodos totalmente no passado nao sao permitidos.
+                      </em>
+                    )}
                   </div>
                 )}
               </form.Subscribe>
             </div>
-
-            <p className="text-[11px] text-muted-foreground leading-relaxed">
-              O periodo precisa incluir hoje. O progresso usa apenas vendas
-              concluidas e o mesmo calculo de receita e lucro do dashboard.
-            </p>
           </div>
 
           <DialogFooter>

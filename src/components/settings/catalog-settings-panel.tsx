@@ -66,7 +66,6 @@ import type {
   CatalogCategory,
   CatalogSettings,
 } from "@/features/catalog/server";
-import { formatPercent } from "@/lib/formatters";
 
 interface CardInstallmentRuleDraft {
   feePercent: string;
@@ -124,14 +123,6 @@ export function CatalogSettingsPanel({
     setCardInstallmentRules(toRuleDrafts(settings.cardInstallmentRules));
   }, [settings]);
 
-  const minimum = Number(minimumMarkupPercent) || 0;
-  const ideal = Number(idealMarkupPercent) || 0;
-  const pricingHint =
-    minimum === 0 && ideal === 0
-      ? "Configure as margens para ativar as sugestoes de preco no cadastro de produtos."
-      : `Margem minima ${formatPercent(minimum)}% e ideal ${formatPercent(
-          ideal
-        )}% aplicadas sobre o custo do produto.`;
   const selectedMaxInstallments = String(cardInstallmentRules.length);
 
   const handleCreateCategory = () => {
@@ -208,8 +199,8 @@ export function CatalogSettingsPanel({
     <>
       <Card className="h-full">
         <CardHeader>
-          <div className="flex flex-wrap items-start justify-between gap-2">
-            <div className="space-y-1">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-1.5">
               <CardTitle>Categorias</CardTitle>
               <CardDescription>
                 Organize o catalogo fora do fluxo de cadastro. A categoria
@@ -222,7 +213,7 @@ export function CatalogSettingsPanel({
               type="button"
               variant="outline"
             >
-              Gerenciar categorias
+              Gerenciar
             </Button>
           </div>
         </CardHeader>
@@ -302,10 +293,6 @@ export function CatalogSettingsPanel({
             </div>
           </div>
 
-          <div className="rounded-lg border border-border/60 bg-muted/20 p-3 text-muted-foreground text-xs">
-            {pricingHint}
-          </div>
-
           <Button
             className="w-full sm:w-auto"
             disabled={pending}
@@ -321,8 +308,8 @@ export function CatalogSettingsPanel({
         <CardHeader>
           <CardTitle>Cartao</CardTitle>
           <CardDescription>
-            Configure uma sequencia continua de 1x ate o maximo desejado. A taxa
-            de cada parcela e aplicada sobre o valor total da transacao.
+            Configure a taxa da quantidade de parcelas. A taxa de cada parcela e
+            aplicada sobre o valor total da transacao.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

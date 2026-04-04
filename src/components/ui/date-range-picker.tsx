@@ -28,8 +28,11 @@ interface DateRangePickerProps {
     preset: string | null;
     to: string;
   }) => void;
+  popoverAlign?: "center" | "end" | "start";
+  popoverContentClassName?: string;
   presets?: readonly DateRangePickerPreset[];
   resolvePresetRange?: (preset: string) => { from: string; to: string };
+  triggerClassName?: string;
   value: {
     from: string;
     preset: string | null;
@@ -53,8 +56,11 @@ const toDraftRange = ({
 export function DateRangePicker({
   disabled = false,
   onChange,
+  popoverAlign = "end",
+  popoverContentClassName,
   presets = [],
   resolvePresetRange,
+  triggerClassName,
   value,
 }: DateRangePickerProps) {
   const [open, setOpen] = useState(false);
@@ -94,10 +100,11 @@ export function DateRangePicker({
         <Button
           className={cn(
             "min-w-56 justify-start text-left font-normal sm:min-w-72",
+            triggerClassName,
             disabled && "opacity-70"
           )}
           disabled={disabled}
-          size="sm"
+          size="default"
           type="button"
           variant="outline"
         >
@@ -111,7 +118,10 @@ export function DateRangePicker({
           })}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-auto p-0">
+      <PopoverContent
+        align={popoverAlign}
+        className={cn("w-auto p-0", popoverContentClassName)}
+      >
         <div className="grid gap-0 sm:grid-cols-[130px_1fr]">
           {presets.length > 0 ? (
             <div className="flex flex-col gap-2 border-border/60 border-b bg-muted/10 p-3 sm:border-r sm:border-b-0">
@@ -150,7 +160,7 @@ export function DateRangePicker({
 
           <div className="flex flex-col">
             <Calendar
-              className="rounded-none bg-background p-3"
+              className="rounded-none bg-background p-2 [--cell-size:--spacing(7)]"
               locale={ptBR}
               mode="range"
               onSelect={(rangeValue) => {

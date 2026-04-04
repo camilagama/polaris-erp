@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   createGoalSchema,
+  goalPeriodIsCreatable,
   periodIncludesToday,
   validateGoalTargetValue,
 } from "@/features/goals/schema";
@@ -19,6 +20,38 @@ describe("periodIncludesToday", () => {
   it("returns false when today is outside the range", () => {
     expect(
       periodIncludesToday({
+        periodEnd: "2025-05-31",
+        periodStart: "2025-05-01",
+        today: "2025-06-01",
+      })
+    ).toBe(false);
+  });
+});
+
+describe("goalPeriodIsCreatable", () => {
+  it("allows future goals", () => {
+    expect(
+      goalPeriodIsCreatable({
+        periodEnd: "2025-07-31",
+        periodStart: "2025-07-01",
+        today: "2025-06-15",
+      })
+    ).toBe(true);
+  });
+
+  it("allows ranges that started in the past and still include today", () => {
+    expect(
+      goalPeriodIsCreatable({
+        periodEnd: "2025-06-30",
+        periodStart: "2025-06-01",
+        today: "2025-06-15",
+      })
+    ).toBe(true);
+  });
+
+  it("rejects fully past ranges", () => {
+    expect(
+      goalPeriodIsCreatable({
         periodEnd: "2025-05-31",
         periodStart: "2025-05-01",
         today: "2025-06-01",
