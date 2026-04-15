@@ -35,3 +35,6 @@ jobs:
           BETTER_AUTH_SECRET: ci-better-auth-secret-at-least-32-chars!!
           BETTER_AUTH_URL: http://localhost:3000
           NEXT_PUBLIC_APP_URL: http://localhost:3000
+          GOOGLE_CLIENT_ID: dummy-google-client-id
+          GOOGLE_CLIENT_SECRET: dummy-google-client-secret
+          NEXT_PUBLIC_GOOGLE_CLIENT_ID: dummy-google-client-id
