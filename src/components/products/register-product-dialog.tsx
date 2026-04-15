@@ -1,6 +1,7 @@
 "use client";
 
 import { useForm } from "@tanstack/react-form";
+import { useRouter } from "next/navigation";
 import { type ChangeEvent, useState } from "react";
 import { toast } from "sonner";
 import { createProductAction } from "@/app/(app)/produtos/actions";
@@ -63,6 +64,7 @@ export function RegisterProductDialog({
   settings,
 }: RegisterProductDialogProps) {
   const [open, setOpen] = useState(false);
+  const router = useRouter();
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [submitLabel, setSubmitLabel] = useState("Salvar Produto");
   const today = formatDateInputValue();
@@ -91,7 +93,7 @@ export function RegisterProductDialog({
           : undefined;
 
         setSubmitLabel("Salvando produto...");
-        await createProductAction({
+        const productId = await createProductAction({
           name: value.name,
           description: value.description || undefined,
           categoryId: value.categoryId,
@@ -105,6 +107,7 @@ export function RegisterProductDialog({
         setOpen(false);
         form.reset();
         setSelectedImage(null);
+        router.push(`/produtos/${productId}`);
       } catch (error) {
         toast.error(
           error instanceof Error

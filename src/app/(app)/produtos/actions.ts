@@ -159,6 +159,7 @@ export async function createProductAction(data: {
   }
 
   revalidateProducts();
+  return productId;
 }
 
 export async function updateProductAction(
