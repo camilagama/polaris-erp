@@ -46,7 +46,7 @@ await client.send(
     CORSConfiguration: {
       CORSRules: [
         {
-          AllowedHeaders: ["Content-Type"],
+          AllowedHeaders: ["Content-Type", "Content-Length"],
           AllowedMethods: ["PUT", "HEAD"],
           AllowedOrigins: allowedOrigins,
           ExposeHeaders: ["ETag"],

@@ -39,9 +39,10 @@ export async function GET(
 
     return new Response(image.body, {
       headers: {
-        "Cache-Control": image.cacheControl,
+        "Cache-Control": "private, max-age=0, must-revalidate",
         "Content-Type": image.contentType,
         ETag: image.etag ?? "",
+        Vary: "Cookie",
       },
       status: 200,
     });

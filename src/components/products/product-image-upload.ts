@@ -85,7 +85,12 @@ export const uploadProductImageToStaging = async (
   }
 
   if (!uploadResponse.ok) {
-    throw new Error("Nao foi possivel enviar a imagem para o armazenamento.");
+    const bodyText = await uploadResponse.text().catch(() => "");
+    const trimmed = bodyText.trim().slice(0, 200);
+    const suffix = trimmed.length > 0 ? ` — ${trimmed}` : "";
+    throw new Error(
+      `Nao foi possivel enviar a imagem para o armazenamento (HTTP ${uploadResponse.status}${suffix}).`
+    );
   }
 
   return {

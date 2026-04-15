@@ -11,6 +11,7 @@ import { useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import type { ProductImageAsset } from "@/features/products/contracts";
 import { useFileUpload } from "@/hooks/use-file-upload";
+import { isSessionProxiedProductImageSrc } from "@/lib/product-image-client";
 
 interface ProductImageInputProps {
   currentImage?: ProductImageAsset | null;
@@ -87,7 +88,10 @@ function ProductImagePreview({
           fill
           sizes="96px"
           src={visibleImage.src}
-          unoptimized={previewUrl !== null}
+          unoptimized={
+            previewUrl !== null ||
+            isSessionProxiedProductImageSrc(visibleImage.src)
+          }
         />
       ) : null}
     </div>

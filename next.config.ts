@@ -2,16 +2,44 @@ import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
 const TRAILING_SLASH_PATTERN = /\/$/;
+const PLACEHOLDER_DOMAIN_PATTERN = /seu-dominio\.com/i;
 
+const normalizeBaseUrl = (value: string) =>
+  value.replace(TRAILING_SLASH_PATTERN, "");
+
+const parseOrigin = (value: string): string | null => {
+  try {
+    return new URL(normalizeBaseUrl(value)).origin;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Only allow `next/image` optimization for the real public media origin.
+ * Same-origin app URLs are unnecessary (and widen the allowlist); `/api/...`
+ * fallbacks do not need a remote pattern.
+ */
 const imageRemotePatterns = (() => {
-  const remoteUrls = [
-    process.env.R2_PUBLIC_BASE_URL,
-    process.env.NEXT_PUBLIC_APP_URL,
-  ].filter((value): value is string => Boolean(value));
+  const publicBase = process.env.R2_PUBLIC_BASE_URL?.trim();
+  if (!publicBase || PLACEHOLDER_DOMAIN_PATTERN.test(publicBase)) {
+    return [];
+  }
 
-  return remoteUrls.map(
-    (value) => new URL(`${value.replace(TRAILING_SLASH_PATTERN, "")}/**`)
-  );
+  const publicOrigin = parseOrigin(publicBase);
+  const appOrigin = process.env.NEXT_PUBLIC_APP_URL
+    ? parseOrigin(process.env.NEXT_PUBLIC_APP_URL)
+    : null;
+
+  if (publicOrigin && appOrigin && publicOrigin === appOrigin) {
+    return [];
+  }
+
+  try {
+    return [new URL(`${normalizeBaseUrl(publicBase)}/**`)];
+  } catch {
+    return [];
+  }
 })();
 
 const nextConfig: NextConfig = {

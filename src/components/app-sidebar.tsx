@@ -143,11 +143,13 @@ export function AppSidebar({ onSignOut, user, ...props }: AppSidebarProps) {
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton className="rounded-sm" size="lg">
                   <Avatar className="size-8 rounded-full">
-                    <AvatarImage
-                      alt={user.name}
-                      referrerPolicy="no-referrer"
-                      src={user.image ?? ""}
-                    />
+                    {user.image ? (
+                      <AvatarImage
+                        alt={user.name}
+                        referrerPolicy="no-referrer"
+                        src={user.image}
+                      />
+                    ) : null}
                     <AvatarFallback className="rounded-full bg-muted-foreground/10">
                       {initials}
                     </AvatarFallback>
@@ -169,11 +171,13 @@ export function AppSidebar({ onSignOut, user, ...props }: AppSidebarProps) {
                 <DropdownMenuLabel className="p-0 font-normal">
                   <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                     <Avatar className="size-8 rounded-lg">
-                      <AvatarImage
-                        alt={user.name}
-                        referrerPolicy="no-referrer"
-                        src={user.image ?? ""}
-                      />
+                      {user.image ? (
+                        <AvatarImage
+                          alt={user.name}
+                          referrerPolicy="no-referrer"
+                          src={user.image}
+                        />
+                      ) : null}
                       <AvatarFallback className="rounded-lg bg-muted-foreground/10">
                         {initials}
                       </AvatarFallback>

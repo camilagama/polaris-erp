@@ -7,6 +7,40 @@ const PLACEHOLDER_DOMAIN_PATTERN = /seu-dominio\.com/i;
 const trimTrailingSlash = (value: string) =>
   value.replace(TRAILING_SLASHES_PATTERN, "");
 
+const parseOrigin = (value: string): string | null => {
+  try {
+    return new URL(trimTrailingSlash(value)).origin;
+  } catch {
+    return null;
+  }
+};
+
+const collectConfiguredAppOrigins = (): Set<string> => {
+  const origins = new Set<string>();
+  const appOrigin = parseOrigin(serverEnv.NEXT_PUBLIC_APP_URL);
+  if (appOrigin) {
+    origins.add(appOrigin);
+  }
+  const authOrigin = parseOrigin(serverEnv.BETTER_AUTH_URL);
+  if (authOrigin) {
+    origins.add(authOrigin);
+  }
+  return origins;
+};
+
+/**
+ * `R2_PUBLIC_BASE_URL` must point at the public CDN/custom domain for the R2
+ * public bucket — not the Next app origin. Misconfiguration would 404 under
+ * `products/...` paths that only exist on the bucket.
+ */
+const isPublicBaseUrlSameOriginAsApp = (value: string): boolean => {
+  const publicOrigin = parseOrigin(value);
+  if (!publicOrigin) {
+    return true;
+  }
+  return collectConfiguredAppOrigins().has(publicOrigin);
+};
+
 const isLocalAppUrl = (value: string) => {
   try {
     const url = new URL(value);
@@ -43,7 +77,8 @@ export const buildProductImageUrl = (
   if (
     publicBaseUrl &&
     !PLACEHOLDER_DOMAIN_PATTERN.test(publicBaseUrl) &&
-    !isLocalAppUrl(publicBaseUrl)
+    !isLocalAppUrl(publicBaseUrl) &&
+    !isPublicBaseUrlSameOriginAsApp(publicBaseUrl)
   ) {
     const baseUrl = trimTrailingSlash(publicBaseUrl);
     return `${baseUrl}/${objectKey}`;

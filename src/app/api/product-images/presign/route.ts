@@ -37,6 +37,7 @@ export async function POST(request: Request) {
     const presigned = await createPresignedProductImageUpload({
       contentType: parsed.data.contentType,
       objectKey,
+      size: parsed.data.size,
     });
 
     return Response.json({

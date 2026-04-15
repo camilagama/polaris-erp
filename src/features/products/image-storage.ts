@@ -79,6 +79,21 @@ const getStorageClient = () => {
   return storageClient;
 };
 
+const assertBatchDeleteSucceeded = (
+  result: { Errors?: { Code?: string; Key?: string }[] },
+  context: string
+) => {
+  const errors = result.Errors ?? [];
+  if (errors.length === 0) {
+    return;
+  }
+
+  const detail = errors
+    .map((entry) => `${entry.Key ?? "?"}:${entry.Code ?? "?"}`)
+    .join(", ");
+  throw new Error(`${context}: falha(s) no R2: ${detail}`);
+};
+
 const readBodyToBuffer = async (
   body:
     | {
@@ -99,13 +114,16 @@ export const createStagingObjectKey = (userId: string) =>
 export const createPresignedProductImageUpload = async ({
   contentType,
   objectKey,
+  size,
 }: {
   contentType: ProductImageMimeType;
   objectKey: string;
+  size: number;
 }) => {
   const env = getRequiredStorageEnv();
   const command = new PutObjectCommand({
     Bucket: env.stagingBucket,
+    ContentLength: size,
     ContentType: contentType,
     Key: objectKey,
   });
@@ -116,6 +134,11 @@ export const createPresignedProductImageUpload = async ({
 
   return {
     expiresIn: PRODUCT_IMAGE_PRESIGN_EXPIRES_IN_SECONDS,
+    /**
+     * Do not send `Content-Length` from JS: browsers treat it as a forbidden
+     * request header, but still set it automatically to match the request body
+     * (must equal `size` for this presigned PUT).
+     */
     requiredHeaders: {
       "Content-Type": contentType,
     },
@@ -246,7 +269,7 @@ export const deleteProductImageVersion = async ({
   version: number;
 }) => {
   const env = getRequiredStorageEnv();
-  await getStorageClient().send(
+  const result = await getStorageClient().send(
     new DeleteObjectsCommand({
       Bucket: env.publicBucket,
       Delete: {
@@ -256,6 +279,10 @@ export const deleteProductImageVersion = async ({
         Quiet: true,
       },
     })
+  );
+  assertBatchDeleteSucceeded(
+    result,
+    `deleteProductImageVersion(${productId}, v${version})`
   );
 };
 
@@ -296,7 +323,7 @@ export const deleteManyProductImageKeys = async (keys: string[]) => {
       continue;
     }
 
-    await client.send(
+    const result = await client.send(
       new DeleteObjectsCommand({
         Bucket: env.publicBucket,
         Delete: {
@@ -304,6 +331,10 @@ export const deleteManyProductImageKeys = async (keys: string[]) => {
           Quiet: true,
         },
       })
+    );
+    assertBatchDeleteSucceeded(
+      result,
+      `deleteManyProductImageKeys(offset=${index})`
     );
   }
 };

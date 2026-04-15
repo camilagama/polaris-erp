@@ -102,5 +102,12 @@ describe("POST /api/product-images/presign", () => {
       objectKey: "staging/user-1/file",
       uploadUrl: "https://example.com/upload",
     });
+    expect(
+      imageStorageModule.createPresignedProductImageUpload
+    ).toHaveBeenCalledWith({
+      contentType: "image/png",
+      objectKey: "staging/user-1/file",
+      size: 120,
+    });
   });
 });
