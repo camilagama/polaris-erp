@@ -43,6 +43,7 @@ import {
   validateGoalTargetValue,
 } from "@/features/goals/schema";
 import { formatDateInputValue } from "@/lib/domain/date";
+import { formatCurrencyInput, parseCurrencyInput } from "@/lib/formatters";
 
 const defaultMonthRange = () => {
   const now = new Date();
@@ -312,43 +313,57 @@ export function GoalFormDialog({
                         validateGoalTargetValue(metric, value),
                     }}
                   >
-                    {(field) => (
-                      <div className="flex flex-col gap-1.5">
-                        <Label htmlFor={field.name}>Valor alvo</Label>
-                        <InputGroup>
-                          {metric === "sales_count" ? null : (
-                            <InputGroupAddon>
-                              <InputGroupText>R$</InputGroupText>
-                            </InputGroupAddon>
-                          )}
-                          <InputGroupInput
-                            id={field.name}
-                            min={metric === "sales_count" ? 1 : 0.01}
-                            name={field.name}
-                            onBlur={field.handleBlur}
-                            onChange={(event) =>
-                              field.handleChange(Number(event.target.value))
-                            }
-                            placeholder={
-                              metric === "sales_count" ? "50" : "10000.00"
-                            }
-                            step={metric === "sales_count" ? 1 : 0.01}
-                            type="number"
-                            value={field.state.value}
-                          />
-                          {metric === "sales_count" ? (
-                            <InputGroupAddon align="inline-end">
-                              <InputGroupText>vendas</InputGroupText>
-                            </InputGroupAddon>
-                          ) : null}
-                        </InputGroup>
-                        {field.state.meta.errors.length > 0 ? (
-                          <em className="text-[11px] text-destructive">
-                            {field.state.meta.errors.join(", ")}
-                          </em>
-                        ) : null}
-                      </div>
-                    )}
+                    {
+                      // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Required for dynamic unit masking
+                      (field) => {
+                        const isSalesCount = metric === "sales_count";
+
+                        return (
+                          <div className="flex flex-col gap-1.5">
+                            <Label htmlFor={field.name}>Valor alvo</Label>
+                            <InputGroup>
+                              {isSalesCount ? null : (
+                                <InputGroupAddon>
+                                  <InputGroupText>R$</InputGroupText>
+                                </InputGroupAddon>
+                              )}
+                              <InputGroupInput
+                                id={field.name}
+                                inputMode={isSalesCount ? undefined : "numeric"}
+                                min={isSalesCount ? 1 : undefined}
+                                name={field.name}
+                                onBlur={field.handleBlur}
+                                onChange={(event) =>
+                                  field.handleChange(
+                                    isSalesCount
+                                      ? Number(event.target.value)
+                                      : parseCurrencyInput(event.target.value)
+                                  )
+                                }
+                                placeholder={isSalesCount ? "50" : "10.000,00"}
+                                step={isSalesCount ? 1 : undefined}
+                                type={isSalesCount ? "number" : "text"}
+                                value={
+                                  isSalesCount
+                                    ? field.state.value
+                                    : formatCurrencyInput(field.state.value)
+                                }
+                              />
+                              {isSalesCount ? (
+                                <InputGroupAddon align="inline-end">
+                                  <InputGroupText>vendas</InputGroupText>
+                                </InputGroupAddon>
+                              ) : null}
+                            </InputGroup>
+                            {field.state.meta.errors.length > 0 ? (
+                              <em className="text-[11px] text-destructive">
+                                {field.state.meta.errors.join(", ")}
+                              </em>
+                            ) : null}
+                          </div>
+                        );
+                      }
+                    }
                   </form.Field>
                 )}
               </form.Subscribe>

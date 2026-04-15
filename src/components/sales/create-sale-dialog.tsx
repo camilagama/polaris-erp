@@ -50,7 +50,12 @@ import type {
 import { createSaleSchema } from "@/features/sales/schema";
 import { roundCurrency } from "@/lib/domain/currency";
 import { formatDateInputValue } from "@/lib/domain/date";
-import { formatCurrency, formatPercent } from "@/lib/formatters";
+import {
+  formatCurrency,
+  formatCurrencyInput,
+  formatPercent,
+  parseCurrencyInput,
+} from "@/lib/formatters";
 
 interface SaleRowDraft {
   id: string;
@@ -784,13 +789,14 @@ export function CreateSaleDialog({
                       <InputGroupInput
                         className="h-8 text-right text-sm placeholder:text-muted-foreground/50"
                         id="sale-freight"
-                        min="0"
+                        inputMode="numeric"
                         onChange={(event) =>
-                          setFreightAmount(event.target.value)
+                          setFreightAmount(
+                            parseCurrencyInput(event.target.value).toString()
+                          )
                         }
-                        step="0.01"
-                        type="number"
-                        value={freightAmount}
+                        type="text"
+                        value={formatCurrencyInput(Number(freightAmount))}
                       />
                     </InputGroup>
                   </div>
@@ -808,13 +814,14 @@ export function CreateSaleDialog({
                       <InputGroupInput
                         className="h-8 text-right text-sm placeholder:text-muted-foreground/50"
                         id="sale-additional"
-                        min="0"
+                        inputMode="numeric"
                         onChange={(event) =>
-                          setAdditionalAmount(event.target.value)
+                          setAdditionalAmount(
+                            parseCurrencyInput(event.target.value).toString()
+                          )
                         }
-                        step="0.01"
-                        type="number"
-                        value={additionalAmount}
+                        type="text"
+                        value={formatCurrencyInput(Number(additionalAmount))}
                       />
                     </InputGroup>
                   </div>
@@ -832,13 +839,14 @@ export function CreateSaleDialog({
                       <InputGroupInput
                         className="h-8 text-right text-sm placeholder:text-muted-foreground/50"
                         id="sale-discount"
-                        min="0"
+                        inputMode="numeric"
                         onChange={(event) =>
-                          setDiscountAmount(event.target.value)
+                          setDiscountAmount(
+                            parseCurrencyInput(event.target.value).toString()
+                          )
                         }
-                        step="0.01"
-                        type="number"
-                        value={discountAmount}
+                        type="text"
+                        value={formatCurrencyInput(Number(discountAmount))}
                       />
                     </InputGroup>
                   </div>
