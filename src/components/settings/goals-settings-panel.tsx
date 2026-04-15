@@ -1,5 +1,11 @@
 "use client";
 
+import {
+  Archive01Icon,
+  CheckmarkCircle02Icon,
+  Clock01Icon,
+} from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useState, useTransition } from "react";
@@ -194,7 +200,13 @@ export function GoalsSettingsPanel({
                   <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-                        <p className="truncate font-medium">{goal.name}</p>
+                        <div className="flex min-w-0 items-center gap-2">
+                          <div
+                            className="size-1.5 shrink-0 animate-pulse rounded-full bg-emerald-500"
+                            title="Meta ativa"
+                          />
+                          <p className="truncate font-medium">{goal.name}</p>
+                        </div>
                         <span className="text-muted-foreground text-xs">•</span>
                         <span className="text-muted-foreground text-xs">
                           {metricShort(goal.metric)}
@@ -278,7 +290,34 @@ export function GoalsSettingsPanel({
                   {payload.history.map((item) => (
                     <TableRow key={item.id}>
                       <TableCell className="font-medium">{item.name}</TableCell>
-                      <TableCell>{historyStatusShort(item.status)}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {item.status === "completed" && (
+                            <HugeiconsIcon
+                              className="size-3.5 text-emerald-500"
+                              icon={CheckmarkCircle02Icon}
+                              strokeWidth={2.5}
+                            />
+                          )}
+                          {item.status === "archived" && (
+                            <HugeiconsIcon
+                              className="size-3.5 text-muted-foreground/80"
+                              icon={Archive01Icon}
+                              strokeWidth={2}
+                            />
+                          )}
+                          {item.status === "expired" && (
+                            <HugeiconsIcon
+                              className="size-3.5 text-amber-500"
+                              icon={Clock01Icon}
+                              strokeWidth={2}
+                            />
+                          )}
+                          <span className="text-xs">
+                            {historyStatusShort(item.status)}
+                          </span>
+                        </div>
+                      </TableCell>
                       <TableCell>
                         {periodShort(item.period.from, item.period.to)}
                       </TableCell>

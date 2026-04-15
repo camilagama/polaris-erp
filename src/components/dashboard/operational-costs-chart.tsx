@@ -16,7 +16,7 @@ const chartConfig = {
     label: "Produtos",
   },
   shipping: {
-    color: "var(--chart-2)",
+    color: "var(--chart-3)",
     label: "Fretes e taxas",
   },
 } satisfies ChartConfig;
@@ -60,7 +60,7 @@ export function OperationalCostsChart({
                     <>
                       <div
                         className={`size-2.5 shrink-0 rounded-[2px] ${
-                          name === "products" ? "bg-chart-1" : "bg-chart-2"
+                          name === "products" ? "bg-chart-1" : "bg-chart-3"
                         }`}
                       />
                       <div className="flex flex-1 items-center justify-between gap-4 leading-none">
@@ -102,7 +102,7 @@ export function OperationalCostsChart({
           <span>Produtos ({formatCurrency(totalProductCosts)})</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="size-1.5 shrink-0 rounded-full bg-chart-2" />
+          <div className="size-1.5 shrink-0 rounded-full bg-chart-3" />
           <span>
             Fretes e taxas ({formatCurrency(totalShippingAndSellerFees)})
           </span>

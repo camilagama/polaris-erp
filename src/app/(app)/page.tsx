@@ -279,10 +279,7 @@ export default async function DashboardPage(props: PageProps<"/">) {
         </Card>
 
         <div className="grid gap-4" style={layoutContainmentStyle}>
-          <Card
-            className="flex h-full flex-col justify-center"
-            style={layoutContainmentStyle}
-          >
+          <Card className="flex h-full flex-col" style={layoutContainmentStyle}>
             <CardHeader>
               <CardTitle className="text-base">
                 Produtos mais vendidos

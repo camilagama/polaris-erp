@@ -22,7 +22,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         }}
       />
       <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center border-border/60 border-b bg-background/80 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/70">
+        <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center border-border/60 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/70">
           <SidebarTrigger />
           <div className="ml-3 min-w-0 sm:ml-4">
             <p className="truncate font-semibold text-sm sm:text-base">
