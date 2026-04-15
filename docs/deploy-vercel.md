@@ -54,6 +54,12 @@ Referência de validação no código: [`src/lib/env.ts`](../src/lib/env.ts).
 
 `BETTER_AUTH_URL` e `NEXT_PUBLIC_APP_URL` devem refletir exatamente a origem usada no navegador.
 
+### Origem exata na Vercel (ex.: `https://tiagogama.vercel.app`)
+
+- Defina `BETTER_AUTH_URL` e `NEXT_PUBLIC_APP_URL` com a **mesma origem** que o usuário abre no navegador (mesmo `https`, host e porta), **sem barra final** (o schema em `src/lib/env.ts` valida como URL).
+- Se a produção ficar no subdomínio padrão da Vercel, use literalmente `https://tiagogama.vercel.app` nas duas variáveis. Com domínio próprio, use o `https://` desse domínio.
+- Essa origem precisa estar em **AllowedOrigins** do CORS do bucket de staging do R2 para o upload direto do browser funcionar (ver [product-images-r2.md](./product-images-r2.md)). O Better Auth também usa essas URLs em `trustedOrigins` (`src/lib/auth.ts`).
+
 ## 5. Migrações do banco
 
 As migrações **não** rodam automaticamente no deploy por padrão. Antes do primeiro tráfego real:
@@ -86,9 +92,15 @@ curl -X GET "https://SEU_DOMINIO/api/internal/product-images/reconcile" \
 ## 8. Smoke checks pós-deploy
 
 1. `GET /api/health` → `{ "ok": true, ... }`
-2. Login Google com usuário já provisionado na tabela `users`.
-3. Upload de imagem de produto (valida R2 + CORS).
-4. No dashboard Vercel: **Logs** do último deployment e execução do cron.
+2. `GET /api/internal/health/r2` com `Authorization: Bearer $CRON_SECRET` → JSON com `stagingCors`, `stagingHead` e `summary` (diagnóstico de CORS/credenciais do bucket de staging; ver [product-images-r2.md](./product-images-r2.md)).
+3. Login Google com usuário já provisionado na tabela `users`.
+4. Upload de imagem de produto (valida R2 + CORS).
+5. No dashboard Vercel: **Logs** do último deployment e execução do cron.
+
+```bash
+curl -sS "https://SEU_DOMINIO/api/internal/health/r2" \
+  -H "Authorization: Bearer $CRON_SECRET"
+```
 
 ## 9. Ajuda via plugin da Vercel (Cursor)
 

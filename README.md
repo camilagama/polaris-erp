@@ -74,6 +74,7 @@ Entidades principais:
 
 - CI em `.github/workflows/ci.yml`: `bun run check`, `bun run test`, `bun run build`.
 - Healthcheck: `GET /api/health` retorna `{ ok: true, timestamp }`.
+- Diagnostico R2 (staging/CORS): `GET /api/internal/health/r2` com `Authorization: Bearer $CRON_SECRET` (ver `docs/product-images-r2.md`).
 - **Sentry** (baseline lean): `@sentry/nextjs` com `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN`, e opcionalmente `SENTRY_ORG` / `SENTRY_PROJECT` / `SENTRY_AUTH_TOKEN` para source maps no build. `onRequestError` envia para o Sentry via `captureRequestError` e mantem log JSON no servidor.
 - **PostHog** nao faz parte do baseline atual (app interno; reavalie se precisar de replay/flags/analytics de produto).
 - Deploy passo a passo na Vercel: `docs/deploy-vercel.md`.

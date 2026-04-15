@@ -29,6 +29,8 @@ Use uma politica equivalente a esta no bucket de staging:
     "AllowedOrigins": [
       "http://127.0.0.1:3000",
       "http://localhost:3000",
+      "https://dgimports-1yer-1cyy8sh3u-summit-studios-projects.vercel.app",
+      "https://tiagogama.vercel.app",
       "https://seu-app.com"
     ],
     "AllowedMethods": ["PUT", "HEAD"],
@@ -37,6 +39,25 @@ Use uma politica equivalente a esta no bucket de staging:
     "MaxAgeSeconds": 300
   }
 ]
+```
+
+### Script local (`scripts/configure-r2-staging-cors.mjs`)
+
+Com variaveis `R2_*` em `.env.local`, rode:
+
+```bash
+node scripts/configure-r2-staging-cors.mjs
+```
+
+O script aplica `PUT` + `HEAD`, `Content-Type`, `ETag` e inclui por padrao `localhost`, `127.0.0.1`, `https://dgimports-1yer-1cyy8sh3u-summit-studios-projects.vercel.app` e `https://tiagogama.vercel.app`. Para outras origens (ex.: outra preview), defina `R2_STAGING_CORS_EXTRA_ORIGINS` com URLs separadas por virgula.
+
+### Diagnostico (`/api/internal/health/r2`)
+
+Com `CRON_SECRET` configurado, o servidor pode reler o CORS atual do bucket de staging (sem expor chaves):
+
+```bash
+curl -sS "https://SEU_DOMINIO/api/internal/health/r2" \
+  -H "Authorization: Bearer $CRON_SECRET"
 ```
 
 Se o navegador bloquear o `PUT` com erro de preflight:

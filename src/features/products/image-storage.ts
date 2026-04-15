@@ -3,7 +3,9 @@ import "server-only";
 import {
   DeleteObjectCommand,
   DeleteObjectsCommand,
+  GetBucketCorsCommand,
   GetObjectCommand,
+  HeadBucketCommand,
   HeadObjectCommand,
   ListObjectsV2Command,
   PutObjectCommand,
@@ -313,3 +315,161 @@ export const getExpectedProductImageKeys = (
   (["detail", "table"] as const).map((variant) =>
     buildProductImageObjectKey(productId, version, variant)
   );
+
+export interface R2StagingHealthCorsRule {
+  allowedHeaders: string[];
+  allowedMethods: string[];
+  allowedOrigins: string[];
+  exposeHeaders: string[];
+  maxAgeSeconds?: number;
+}
+
+export interface R2StagingHealthDiagnostics {
+  configured: boolean;
+  ok: boolean;
+  publicBucket?: string;
+  r2EndpointHost?: string;
+  stagingBucket?: string;
+  stagingCors?:
+    | { ok: true; rules: R2StagingHealthCorsRule[] }
+    | { code?: string; message: string; ok: false };
+  stagingHead?: { ok: true } | { code?: string; message: string; ok: false };
+  summary?: string;
+  timestamp: string;
+}
+
+const errorMessageFromUnknown = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error);
+
+const errorNameFromUnknown = (error: unknown): string | undefined =>
+  error instanceof Error ? error.name : undefined;
+
+const headStagingBucketForHealth = async ({
+  bucket,
+  client,
+}: {
+  bucket: string;
+  client: S3Client;
+}): Promise<R2StagingHealthDiagnostics["stagingHead"]> => {
+  try {
+    await client.send(new HeadBucketCommand({ Bucket: bucket }));
+    return { ok: true };
+  } catch (error) {
+    return {
+      code: errorNameFromUnknown(error),
+      message: errorMessageFromUnknown(error),
+      ok: false,
+    };
+  }
+};
+
+const readStagingCorsForHealth = async ({
+  bucket,
+  client,
+}: {
+  bucket: string;
+  client: S3Client;
+}): Promise<R2StagingHealthDiagnostics["stagingCors"]> => {
+  try {
+    const corsResponse = await client.send(
+      new GetBucketCorsCommand({ Bucket: bucket })
+    );
+    const rules: R2StagingHealthCorsRule[] = (corsResponse.CORSRules ?? []).map(
+      (rule) => ({
+        allowedHeaders: [...(rule.AllowedHeaders ?? [])],
+        allowedMethods: [...(rule.AllowedMethods ?? [])],
+        allowedOrigins: [...(rule.AllowedOrigins ?? [])],
+        exposeHeaders: [...(rule.ExposeHeaders ?? [])],
+        maxAgeSeconds: rule.MaxAgeSeconds,
+      })
+    );
+    return { ok: true, rules };
+  } catch (error) {
+    return {
+      code: errorNameFromUnknown(error),
+      message: errorMessageFromUnknown(error),
+      ok: false,
+    };
+  }
+};
+
+const hasCorsOriginsConfigured = (
+  stagingCors: R2StagingHealthDiagnostics["stagingCors"]
+): boolean =>
+  stagingCors?.ok === true &&
+  stagingCors.rules.length > 0 &&
+  stagingCors.rules.some((rule) => rule.allowedOrigins.length > 0);
+
+const buildR2StagingHealthSummary = ({
+  stagingCors,
+  stagingHead,
+}: {
+  stagingCors: R2StagingHealthDiagnostics["stagingCors"];
+  stagingHead: R2StagingHealthDiagnostics["stagingHead"];
+}): string => {
+  if (!stagingHead?.ok) {
+    return "Bucket de staging inacessivel ou credenciais invalidas.";
+  }
+
+  if (!stagingCors?.ok) {
+    return "Nao foi possivel ler a politica CORS do bucket de staging (pode estar ausente).";
+  }
+
+  if (stagingCors.rules.length === 0) {
+    return "CORS do bucket de staging sem regras.";
+  }
+
+  if (stagingCors.rules.some((rule) => rule.allowedOrigins.length > 0)) {
+    return "R2 staging acessivel e CORS legivel; confira se AllowedOrigins inclui a origem exata do app.";
+  }
+
+  return "CORS do bucket de staging sem AllowedOrigins.";
+};
+
+/**
+ * Diagnóstico operacional do R2 (staging): credenciais, bucket acessível e CORS atual.
+ * Não expõe chaves nem segredos.
+ */
+export const getR2StagingHealthDiagnostics =
+  async (): Promise<R2StagingHealthDiagnostics> => {
+    const timestamp = new Date().toISOString();
+
+    if (!isProductImageStorageConfigured()) {
+      return {
+        configured: false,
+        ok: false,
+        summary:
+          "Variaveis R2 incompletas ou imagens de produto nao configuradas (ver isProductImageStorageConfigured).",
+        timestamp,
+      };
+    }
+
+    const env = getRequiredStorageEnv();
+    const r2EndpointHost = `${env.accountId}.r2.cloudflarestorage.com`;
+    const client = getStorageClient();
+
+    const stagingHead = await headStagingBucketForHealth({
+      bucket: env.stagingBucket,
+      client,
+    });
+    const stagingCors = await readStagingCorsForHealth({
+      bucket: env.stagingBucket,
+      client,
+    });
+
+    const corsOk = hasCorsOriginsConfigured(stagingCors);
+    const ok = stagingHead?.ok === true && corsOk;
+    const summary = buildR2StagingHealthSummary({ stagingCors, stagingHead });
+
+    return {
+      configured: true,
+      ok,
+      publicBucket: env.publicBucket,
+      r2EndpointHost,
+      stagingBucket: env.stagingBucket,
+      stagingCors,
+      stagingHead,
+      summary,
+      timestamp,
+    };
+  };

@@ -14,7 +14,20 @@ if (!(accountId && accessKeyId && secretAccessKey && bucket)) {
   );
 }
 
-const allowedOrigins = ["http://localhost:3000", "http://127.0.0.1:3000"];
+const defaultOrigins = [
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+  "https://dgimports-1yer-1cyy8sh3u-summit-studios-projects.vercel.app",
+  "https://tiagogama.vercel.app",
+];
+
+const extraOriginsRaw = process.env.R2_STAGING_CORS_EXTRA_ORIGINS ?? "";
+const extraOrigins = extraOriginsRaw
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter((origin) => origin.length > 0);
+
+const allowedOrigins = [...new Set([...defaultOrigins, ...extraOrigins])];
 
 const client = new S3Client({
   credentials: {

@@ -8,6 +8,12 @@ import {
 
 const supportedMimeTypes = new Set<string>(productImageMimeTypes);
 
+const OPAQUE_FETCH_FAILURE_PATTERN =
+  /failed to fetch|load failed|networkerror|network request failed/i;
+
+const isLikelyOpaqueBrowserFetchFailure = (message: string): boolean =>
+  OPAQUE_FETCH_FAILURE_PATTERN.test(message.trim());
+
 const validateProductImageFile = (file: File) => {
   if (!supportedMimeTypes.has(file.type)) {
     throw new Error("Use uma imagem JPG, PNG ou WebP.");
@@ -63,8 +69,15 @@ export const uploadProductImageToStaging = async (
     });
   } catch (error) {
     if (error instanceof TypeError) {
+      const detail = error.message.trim();
+      if (isLikelyOpaqueBrowserFetchFailure(detail)) {
+        throw new Error(
+          "O navegador bloqueou o envio para o R2 (comum: CORS no bucket de staging sem a origem exata deste site, ou rede/offline). Confira a aba Network no PUT para *.r2.cloudflarestorage.com e docs/product-images-r2.md."
+        );
+      }
+
       throw new Error(
-        "O navegador nao conseguiu enviar a imagem ao R2. Verifique o CORS do bucket de staging para o origin atual."
+        `Nao foi possivel contatar o endpoint de upload do R2 (${detail}). Verifique rede, VPN e extensoes; se o PUT aparecer sem status HTTP, revise tambem o CORS do bucket de staging.`
       );
     }
 
