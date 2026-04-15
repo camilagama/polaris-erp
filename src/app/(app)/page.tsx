@@ -297,10 +297,17 @@ export default async function DashboardPage(props: PageProps<"/">) {
                             {imageUrl ? (
                               <Image
                                 alt={product.name}
+                                blurDataURL={
+                                  product.imageBlurDataUrl ?? undefined
+                                }
                                 className="object-cover"
                                 fill
+                                placeholder={
+                                  product.imageBlurDataUrl ? "blur" : "empty"
+                                }
                                 sizes="32px"
                                 src={imageUrl}
+                                unoptimized
                               />
                             ) : (
                               <HugeiconsIcon
