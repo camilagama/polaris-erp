@@ -9,7 +9,6 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useState, useTransition } from "react";
-import { toast } from "sonner";
 import {
   archiveGoalAction,
   unarchiveGoalAction,
@@ -40,6 +39,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { toast } from "@/components/ui/sonner";
 import {
   Table,
   TableBody,

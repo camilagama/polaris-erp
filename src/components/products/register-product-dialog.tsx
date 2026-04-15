@@ -3,7 +3,6 @@
 import { useForm } from "@tanstack/react-form";
 import { useRouter } from "next/navigation";
 import { type ChangeEvent, useState } from "react";
-import { toast } from "sonner";
 import { createProductAction } from "@/app/(app)/produtos/actions";
 import { ProductDatePicker } from "@/components/products/product-date-picker";
 import { ProductImageInput } from "@/components/products/product-image-input";
@@ -34,6 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { toast } from "@/components/ui/sonner";
 import { OTHERS_CATEGORY_KEY } from "@/features/catalog/constants";
 import { calculateSuggestedPrices } from "@/features/catalog/pricing";
 import { createProductSchema as productSchema } from "@/features/products/schema";

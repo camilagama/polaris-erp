@@ -3,7 +3,6 @@
 import { useForm } from "@tanstack/react-form";
 import { endOfMonth, startOfMonth } from "date-fns";
 import { useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
 import { createGoalAction, updateGoalAction } from "@/app/(app)/metas/actions";
 import { Button } from "@/components/ui/button";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
@@ -30,6 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { toast } from "@/components/ui/sonner";
 import {
   type DashboardGoalCard,
   MAX_ACTIVE_GOALS,

@@ -4,7 +4,6 @@ import { Add01Icon, Delete02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { toast } from "sonner";
 import { createSaleAction } from "@/app/(app)/vendas/actions";
 import { ProductDatePicker } from "@/components/products/product-date-picker";
 import { ProductCombobox } from "@/components/sales/product-combobox";
@@ -32,6 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { toast } from "@/components/ui/sonner";
 import { Textarea } from "@/components/ui/textarea";
 import {
   type CardInstallmentRule,
