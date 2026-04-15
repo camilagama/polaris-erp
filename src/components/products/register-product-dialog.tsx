@@ -37,7 +37,12 @@ import { OTHERS_CATEGORY_KEY } from "@/features/catalog/constants";
 import { calculateSuggestedPrices } from "@/features/catalog/pricing";
 import { createProductSchema as productSchema } from "@/features/products/schema";
 import { formatDateInputValue } from "@/lib/domain/date";
-import { formatCurrency } from "@/lib/formatters";
+import {
+  formatCurrency,
+  formatCurrencyInput,
+  parseCurrencyInput,
+} from "@/lib/formatters";
+import { cn } from "@/lib/utils";
 
 interface ProductCategoryOption {
   id: string;
@@ -337,16 +342,7 @@ export function RegisterProductDialog({
                   const handleChange = (
                     event: ChangeEvent<HTMLInputElement>
                   ) => {
-                    let nextValue = event.target.value;
-
-                    if (nextValue.includes(".")) {
-                      const [integer, decimal] = nextValue.split(".");
-                      if (decimal.length > 2) {
-                        nextValue = `${integer}.${decimal.slice(0, 2)}`;
-                      }
-                    }
-
-                    field.handleChange(Number(nextValue));
+                    field.handleChange(parseCurrencyInput(event.target.value));
                   };
 
                   return (
@@ -358,13 +354,13 @@ export function RegisterProductDialog({
                         </InputGroupAddon>
                         <InputGroupInput
                           id={field.name}
+                          inputMode="numeric"
                           name={field.name}
                           onBlur={field.handleBlur}
                           onChange={handleChange}
-                          placeholder="0.00"
-                          step="0.01"
-                          type="number"
-                          value={field.state.value}
+                          placeholder="0,00"
+                          type="text"
+                          value={formatCurrencyInput(field.state.value)}
                         />
                       </InputGroup>
                       {field.state.meta.errors.length > 0 ? (
@@ -390,43 +386,53 @@ export function RegisterProductDialog({
                 });
 
                 return (
-                  <div className="rounded-md border border-border/50 bg-muted/10 px-3 py-2">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-[11px] text-muted-foreground uppercase tracking-[0.16em]">
-                          Guia de preco
-                        </p>
-                        <p className="truncate text-muted-foreground text-xs">
-                          Min. {formatCurrency(suggestion.minimumPrice)} | Ideal{" "}
+                  <div className="flex flex-col gap-2">
+                    <p className="text-[11px] text-muted-foreground uppercase tracking-[0.16em]">
+                      Guia de preco sugerido
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        className="flex items-center justify-between gap-2 rounded-md border border-border/50 bg-muted/10 px-3 py-1 text-left transition-colors hover:bg-muted/30 focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
+                        onClick={() =>
+                          form.setFieldValue("price", suggestion.minimumPrice)
+                        }
+                        type="button"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] text-muted-foreground uppercase leading-none tracking-wider">
+                            Minimo
+                          </span>
+                          <span className="text-[9px] text-muted-foreground/50 tabular-nums">
+                            {suggestion.minimumMarkupPercent}%
+                          </span>
+                        </div>
+                        <span className="font-medium text-[13px] tabular-nums">
+                          {formatCurrency(suggestion.minimumPrice)}
+                        </span>
+                      </button>
+                      <button
+                        className="flex items-center justify-between gap-2 rounded-md border border-border/50 bg-muted/10 px-3 py-1 text-left transition-colors hover:bg-muted/30 focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
+                        onClick={() =>
+                          form.setFieldValue("price", suggestion.idealPrice)
+                        }
+                        type="button"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] text-muted-foreground uppercase leading-none tracking-wider">
+                            Ideal
+                          </span>
+                          <span className="text-[9px] text-muted-foreground/50 tabular-nums">
+                            {suggestion.idealMarkupPercent}%
+                          </span>
+                        </div>
+                        <span className="font-medium text-[13px] tabular-nums">
                           {formatCurrency(suggestion.idealPrice)}
-                        </p>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-1">
-                        <Button
-                          onClick={() =>
-                            form.setFieldValue("price", suggestion.minimumPrice)
-                          }
-                          size="xs"
-                          type="button"
-                          variant="outline"
-                        >
-                          Min
-                        </Button>
-                        <Button
-                          onClick={() =>
-                            form.setFieldValue("price", suggestion.idealPrice)
-                          }
-                          size="xs"
-                          type="button"
-                          variant="outline"
-                        >
-                          Ideal
-                        </Button>
-                      </div>
+                        </span>
+                      </button>
                     </div>
 
                     {suggestion.isBelowMinimum ? (
-                      <p className="mt-2 text-[11px] text-destructive">
+                      <p className="text-[11px] text-destructive">
                         Preco abaixo do minimo sugerido. O salvamento continua
                         permitido.
                       </p>
@@ -449,16 +455,7 @@ export function RegisterProductDialog({
             >
               {(field) => {
                 const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
-                  let nextValue = event.target.value;
-
-                  if (nextValue.includes(".")) {
-                    const [integer, decimal] = nextValue.split(".");
-                    if (decimal.length > 2) {
-                      nextValue = `${integer}.${decimal.slice(0, 2)}`;
-                    }
-                  }
-
-                  field.handleChange(Number(nextValue));
+                  field.handleChange(parseCurrencyInput(event.target.value));
                 };
 
                 return (
@@ -470,14 +467,38 @@ export function RegisterProductDialog({
                       </InputGroupAddon>
                       <InputGroupInput
                         id={field.name}
+                        inputMode="numeric"
                         name={field.name}
                         onBlur={field.handleBlur}
                         onChange={handleChange}
-                        placeholder="0.00"
-                        step="0.01"
-                        type="number"
-                        value={field.state.value}
+                        placeholder="0,00"
+                        type="text"
+                        value={formatCurrencyInput(field.state.value)}
                       />
+                      <InputGroupAddon align="inline-end">
+                        <InputGroupText
+                          className={cn(
+                            "font-medium text-[10px] opacity-70",
+                            field.state.value > 0 &&
+                              (form.state.values.costPrice > 0 &&
+                              field.state.value <
+                                form.state.values.costPrice *
+                                  (1 + settings.minimumMarkupPercent / 100)
+                                ? "text-destructive"
+                                : "text-emerald-500")
+                          )}
+                        >
+                          {(
+                            (field.state.value > 0 &&
+                            form.state.values.costPrice > 0
+                              ? field.state.value /
+                                  form.state.values.costPrice -
+                                1
+                              : 0) * 100
+                          ).toFixed(1)}
+                          %
+                        </InputGroupText>
+                      </InputGroupAddon>
                     </InputGroup>
                     {field.state.meta.errors.length > 0 ? (
                       <em className="text-[11px] text-destructive">

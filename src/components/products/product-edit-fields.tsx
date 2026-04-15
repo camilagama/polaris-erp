@@ -2,7 +2,6 @@
 
 import type { Dispatch, SetStateAction } from "react";
 import { ProductImageInput } from "@/components/products/product-image-input";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   InputGroup,
@@ -21,7 +20,12 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { calculateSuggestedPrices } from "@/features/catalog/pricing";
 import type { ProductImageAsset } from "@/features/products/contracts";
-import { formatCurrency } from "@/lib/formatters";
+import {
+  formatCurrency,
+  formatCurrencyInput,
+  parseCurrencyInput,
+} from "@/lib/formatters";
+import { cn } from "@/lib/utils";
 
 interface ProductCategoryOption {
   id: string;
@@ -75,6 +79,11 @@ export function ProductEditFields({
     minimumMarkupPercent: settings.minimumMarkupPercent,
   });
 
+  const currentMarkupPercent =
+    suggestion.costPrice > 0 && Number(price) > 0
+      ? (Number(price) / suggestion.costPrice - 1) * 100
+      : 0;
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-3">
@@ -123,6 +132,53 @@ export function ProductEditFields({
           value={description}
         />
       </div>
+      <div className="flex flex-col gap-2">
+        <p className="text-[11px] text-muted-foreground uppercase tracking-[0.16em]">
+          Guia de preco sugerido
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            className="flex items-center justify-between gap-2 rounded-md border border-border/50 bg-muted/10 px-3 py-1 text-left transition-colors hover:bg-muted/30 focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
+            onClick={() => onPriceChange(suggestion.minimumPrice.toString())}
+            type="button"
+          >
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] text-muted-foreground uppercase leading-none tracking-wider">
+                Minimo
+              </span>
+              <span className="text-[9px] text-muted-foreground/50 tabular-nums">
+                {suggestion.minimumMarkupPercent}%
+              </span>
+            </div>
+            <span className="font-medium text-[13px] tabular-nums">
+              {formatCurrency(suggestion.minimumPrice)}
+            </span>
+          </button>
+          <button
+            className="flex items-center justify-between gap-2 rounded-md border border-border/50 bg-muted/10 px-3 py-1 text-left transition-colors hover:bg-muted/30 focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
+            onClick={() => onPriceChange(suggestion.idealPrice.toString())}
+            type="button"
+          >
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] text-muted-foreground uppercase leading-none tracking-wider">
+                Ideal
+              </span>
+              <span className="text-[9px] text-muted-foreground/50 tabular-nums">
+                {suggestion.idealMarkupPercent}%
+              </span>
+            </div>
+            <span className="font-medium text-[13px] tabular-nums">
+              {formatCurrency(suggestion.idealPrice)}
+            </span>
+          </button>
+        </div>
+
+        {suggestion.isBelowMinimum ? (
+          <p className="text-[11px] text-destructive">
+            Preco abaixo do minimo sugerido. O salvamento continua permitido.
+          </p>
+        ) : null}
+      </div>
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between gap-3">
           <Label htmlFor="product-edit-price">Preco de venda</Label>
@@ -136,51 +192,28 @@ export function ProductEditFields({
           </InputGroupAddon>
           <InputGroupInput
             id="product-edit-price"
-            min="0"
-            onChange={(event) => onPriceChange(event.target.value)}
-            placeholder="0.00"
-            step="0.01"
-            type="number"
-            value={price}
+            inputMode="numeric"
+            onChange={(event) =>
+              onPriceChange(parseCurrencyInput(event.target.value).toString())
+            }
+            placeholder="0,00"
+            type="text"
+            value={formatCurrencyInput(Number(price))}
           />
+          <InputGroupAddon align="inline-end">
+            <InputGroupText
+              className={cn(
+                "font-medium text-[10px] opacity-70",
+                Number(price) > 0 &&
+                  (suggestion.isBelowMinimum
+                    ? "text-destructive"
+                    : "text-emerald-500")
+              )}
+            >
+              {currentMarkupPercent.toFixed(1)}%
+            </InputGroupText>
+          </InputGroupAddon>
         </InputGroup>
-      </div>
-      <div className="rounded-md border border-border/50 bg-muted/10 px-3 py-2">
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-[11px] text-muted-foreground uppercase tracking-[0.16em]">
-              Guia de preco
-            </p>
-            <p className="truncate text-muted-foreground text-xs">
-              Min. {formatCurrency(suggestion.minimumPrice)} | Ideal{" "}
-              {formatCurrency(suggestion.idealPrice)}
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-1">
-            <Button
-              onClick={() => onPriceChange(suggestion.minimumPrice.toString())}
-              size="xs"
-              type="button"
-              variant="outline"
-            >
-              Min
-            </Button>
-            <Button
-              onClick={() => onPriceChange(suggestion.idealPrice.toString())}
-              size="xs"
-              type="button"
-              variant="outline"
-            >
-              Ideal
-            </Button>
-          </div>
-        </div>
-
-        {suggestion.isBelowMinimum ? (
-          <p className="mt-2 text-[11px] text-destructive">
-            Preco abaixo do minimo sugerido. O salvamento continua permitido.
-          </p>
-        ) : null}
       </div>
     </div>
   );
