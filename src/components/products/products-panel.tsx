@@ -285,12 +285,31 @@ export function ProductsPanel({
   });
   const summaryScope = getProductsSummaryScope(status);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: reset state only on filter change, not on RSC revalidation
+  const prevQueryRef = useRef(appliedQuery);
+  const prevStatusRef = useRef(status);
+
   useEffect(() => {
-    setProducts(initialProducts);
-    setCursor(initialCursor);
-    cursorRef.current = initialCursor;
-  }, [appliedQuery, status]);
+    if (
+      prevQueryRef.current !== appliedQuery ||
+      prevStatusRef.current !== status
+    ) {
+      setProducts(initialProducts);
+      setCursor(initialCursor);
+      cursorRef.current = initialCursor;
+      prevQueryRef.current = appliedQuery;
+      prevStatusRef.current = status;
+      return;
+    }
+
+    setProducts((current) => {
+      const currentIds = new Set(current.map((p) => p.id));
+      const newItems = initialProducts.filter((p) => !currentIds.has(p.id));
+      const serverMap = new Map(initialProducts.map((p) => [p.id, p]));
+
+      const updatedCurrent = current.map((p) => serverMap.get(p.id) ?? p);
+      return [...newItems, ...updatedCurrent];
+    });
+  }, [initialProducts, initialCursor, appliedQuery, status]);
 
   useEffect(() => {
     setSearchTerm(appliedQuery);
@@ -382,6 +401,23 @@ export function ProductsPanel({
           await removeProductImageAction(editingProduct.id);
         }
 
+        const categoryOption = categories.find((c) => c.id === editCategoryId);
+
+        setProducts((current) =>
+          current.map((p) =>
+            p.id === editingProduct.id
+              ? {
+                  ...p,
+                  categoryId: editCategoryId,
+                  categoryName:
+                    categoryOption?.name ?? editingProduct.categoryName,
+                  name: editName,
+                  price: editPrice,
+                }
+              : p
+          )
+        );
+
         toast.success("Produto atualizado.");
         setEditingProduct(null);
         setEditImageFile(null);
@@ -402,9 +438,11 @@ export function ProductsPanel({
         if (product.archivedAt) {
           await unarchiveProductAction(product.id);
           toast.success("Produto desarquivado.");
+          setProducts((current) => current.filter((p) => p.id !== product.id));
         } else {
           await archiveProductAction(product.id);
           toast.success("Produto arquivado.");
+          setProducts((current) => current.filter((p) => p.id !== product.id));
         }
       } catch (error) {
         toast.error(

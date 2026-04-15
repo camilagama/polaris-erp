@@ -266,12 +266,31 @@ export function SalesPanel({
   });
   const summarySuffix = getSalesSummarySuffix(status);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: reset state only on filter change, not on RSC revalidation
+  const prevQueryRef = useRef(appliedQuery);
+  const prevStatusRef = useRef(status);
+
   useEffect(() => {
-    setSales(initialSales);
-    setCursor(initialCursor);
-    cursorRef.current = initialCursor;
-  }, [appliedQuery, status]);
+    if (
+      prevQueryRef.current !== appliedQuery ||
+      prevStatusRef.current !== status
+    ) {
+      setSales(initialSales);
+      setCursor(initialCursor);
+      cursorRef.current = initialCursor;
+      prevQueryRef.current = appliedQuery;
+      prevStatusRef.current = status;
+      return;
+    }
+
+    setSales((current) => {
+      const currentIds = new Set(current.map((s) => s.id));
+      const newItems = initialSales.filter((s) => !currentIds.has(s.id));
+      const serverMap = new Map(initialSales.map((s) => [s.id, s]));
+
+      const updatedCurrent = current.map((s) => serverMap.get(s.id) ?? s);
+      return [...newItems, ...updatedCurrent];
+    });
+  }, [initialSales, initialCursor, appliedQuery, status]);
 
   useEffect(() => {
     setSearchTerm(appliedQuery);
