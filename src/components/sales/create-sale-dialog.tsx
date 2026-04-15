@@ -651,7 +651,7 @@ export function CreateSaleDialog({
                           </Select>
                         </div>
                         <div className="flex items-end">
-                          <div className="flex h-9 w-full items-center rounded-lg border border-border/60 bg-muted/15 px-3 text-muted-foreground text-xs">
+                          <div className="flex h-7 w-full items-center rounded-lg border border-border/60 bg-muted/15 px-3 text-muted-foreground text-xs">
                             Taxa configurada para{" "}
                             {selectedInstallmentRule
                               ? getCardInstallmentRuleLabel(
