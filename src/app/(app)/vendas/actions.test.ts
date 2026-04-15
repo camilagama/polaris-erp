@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { CACHE_TAGS } from "@/lib/cache-tags";
 
 vi.mock("server-only", () => ({}));
 
@@ -9,6 +10,7 @@ vi.mock("@/lib/session", () => ({
 vi.mock("next/cache", () => ({
   refresh: vi.fn(),
   revalidatePath: vi.fn(),
+  updateTag: vi.fn(),
 }));
 
 vi.mock("@/db", () => ({
@@ -61,13 +63,16 @@ interface CancelSaleHarness {
 const resolveMocks = async () => {
   const sessionModule = await import("@/lib/session");
   const dbModule = await import("@/db");
+  const cache = await import("next/cache");
 
   return {
     mockCatalogSettings: mockGetCatalogSettings as MockFn,
     mockDb: dbModule.db as unknown as {
       transaction: MockFn;
     },
+    mockRefresh: cache.refresh as MockFn,
     mockSession: sessionModule.getSession as MockFn,
+    mockUpdateTag: cache.updateTag as MockFn,
   };
 };
 
@@ -434,7 +439,7 @@ describe("sales server actions", () => {
 
   it("stores pix sales without fee and keeps total based on items only", async () => {
     const { createSaleAction } = await import("@/app/(app)/vendas/actions");
-    const { mockDb } = await resolveMocks();
+    const { mockDb, mockRefresh, mockUpdateTag } = await resolveMocks();
 
     const harness = createSalesHarness([
       {
@@ -478,6 +483,8 @@ describe("sales server actions", () => {
       paymentMethod: "pix",
       totalAmount: "100.00",
     });
+    expect(mockUpdateTag).toHaveBeenCalledWith(CACHE_TAGS.analyticsShared);
+    expect(mockRefresh).toHaveBeenCalled();
   });
 
   it("stores card sales with seller fee as operational cost", async () => {
@@ -614,7 +621,7 @@ describe("sales server actions", () => {
 
   it("cancels a sale and restores stock", async () => {
     const { cancelSaleAction } = await import("@/app/(app)/vendas/actions");
-    const { mockDb } = await resolveMocks();
+    const { mockDb, mockRefresh, mockUpdateTag } = await resolveMocks();
 
     const harness = createCancelSaleHarness({
       items: [
@@ -642,5 +649,7 @@ describe("sales server actions", () => {
     expect(harness.productById.get("product-1")?.stock).toBe(5);
     expect(harness.state.saleStatus).toBe("cancelled");
     expect(harness.state.cancelledAt).toBeInstanceOf(Date);
+    expect(mockUpdateTag).toHaveBeenCalledWith(CACHE_TAGS.analyticsShared);
+    expect(mockRefresh).toHaveBeenCalled();
   });
 });

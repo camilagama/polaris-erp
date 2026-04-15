@@ -1,12 +1,14 @@
 import "server-only";
 
 import { asc, count, desc, eq } from "drizzle-orm";
+import { cacheLife, cacheTag } from "next/cache";
 import { db } from "@/db";
 import { categories, products, systemSettings } from "@/db/schema";
 import {
   catalogSettingsSchema,
   categorySchema,
 } from "@/features/catalog/schema";
+import { CACHE_TAGS } from "@/lib/cache-tags";
 import { GLOBAL_SETTINGS_ID } from "./constants";
 import { canDeleteCategory, canRenameCategory } from "./guards";
 import { normalizeCardInstallmentRules } from "./payment-rules";
@@ -30,6 +32,10 @@ export interface CatalogSettings {
 }
 
 export const getCatalogSettings = async (): Promise<CatalogSettings> => {
+  "use cache: remote";
+  cacheTag(CACHE_TAGS.catalog);
+  cacheLife("hours");
+
   const existing = await db.query.systemSettings.findFirst({
     where: eq(systemSettings.id, GLOBAL_SETTINGS_ID),
   });
@@ -50,6 +56,10 @@ export const getCatalogSettings = async (): Promise<CatalogSettings> => {
 };
 
 export const listCategoriesWithUsage = async (): Promise<CatalogCategory[]> => {
+  "use cache: remote";
+  cacheTag(CACHE_TAGS.catalog);
+  cacheLife("hours");
+
   const rows = await db
     .select({
       description: categories.description,

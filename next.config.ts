@@ -47,6 +47,7 @@ const nextConfig: NextConfig = {
     ? { env: { NEXT_PUBLIC_VERCEL_ENV: process.env.VERCEL_ENV } }
     : {}),
   allowedDevOrigins: ["127.0.0.1", "localhost"],
+  cacheComponents: true,
   images: {
     remotePatterns: imageRemotePatterns,
   },

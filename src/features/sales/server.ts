@@ -1,16 +1,22 @@
 import "server-only";
 
 import { asc, eq, sql } from "drizzle-orm";
+import { cacheLife, cacheTag } from "next/cache";
 import { db } from "@/db";
 import { productStockEntries, saleItems, sales } from "@/db/schema";
 import { buildSalesAnalytics } from "@/features/sales/analytics";
 import type { SalesAnalytics } from "@/features/sales/contracts";
+import { CACHE_TAGS } from "@/lib/cache-tags";
 import { formatDateInputValue } from "@/lib/domain/date";
 
 export const getSalesDateBounds = async (): Promise<{
   from: string;
   to: string;
 }> => {
+  "use cache: remote";
+  cacheTag(CACHE_TAGS.analyticsShared);
+  cacheLife("minutes");
+
   const [salesRows, stockEntriesRows] = await Promise.all([
     db
       .select({

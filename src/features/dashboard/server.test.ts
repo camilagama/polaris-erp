@@ -1,0 +1,186 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { CACHE_TAGS } from "@/lib/cache-tags";
+
+vi.mock("server-only", () => ({}));
+
+vi.mock("next/cache", () => ({
+  cacheLife: vi.fn(),
+  cacheTag: vi.fn(),
+}));
+
+vi.mock("react", async () => {
+  const actual = await vi.importActual<typeof import("react")>("react");
+
+  return {
+    ...actual,
+    cache: <T extends (...args: any[]) => any>(fn: T) => {
+      const memo = new Map<string, ReturnType<T>>();
+
+      return ((...args: Parameters<T>) => {
+        const key = JSON.stringify(args);
+
+        if (!memo.has(key)) {
+          memo.set(key, fn(...args));
+        }
+
+        return memo.get(key) as ReturnType<T>;
+      }) as T;
+    },
+  };
+});
+
+vi.mock("@/db", () => ({
+  db: {
+    select: vi.fn(),
+  },
+}));
+
+vi.mock("@/features/dashboard/metrics", () => ({
+  buildDashboardContributionGraph: vi.fn(),
+  buildDashboardMetrics: vi.fn(({ range }) => ({
+    inventoryByCategory: [],
+    periodComparison: [],
+    periodGranularity: "day",
+    resultStatus: "breakEven",
+    selectedRange: range,
+    topProducts: [],
+    totalCosts: 0,
+    totalProductCosts: 0,
+    totalResult: 0,
+    totalSalesCount: 0,
+    totalShippingAndSellerFees: 0,
+    totalSold: 0,
+  })),
+  resolveContributionGraphRange: vi.fn(() => ({
+    from: "2026-03-01",
+    to: "2026-03-31",
+  })),
+}));
+
+type MockFn = ReturnType<typeof vi.fn>;
+
+const resolveMocks = async () => {
+  const cache = await import("next/cache");
+  const dbModule = await import("@/db");
+
+  return {
+    mockCacheLife: cache.cacheLife as MockFn,
+    mockCacheTag: cache.cacheTag as MockFn,
+    mockDb: dbModule.db as unknown as {
+      select: MockFn;
+    },
+  };
+};
+
+describe("dashboard server caching", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("tags and caches dashboard date bounds with the shared analytics profile", async () => {
+    const { getDashboardDateBounds } = await import(
+      "@/features/dashboard/server"
+    );
+    const { mockCacheLife, mockCacheTag, mockDb } = await resolveMocks();
+
+    mockDb.select
+      .mockReturnValueOnce({
+        from: async () => [{ minOccurredOn: "2026-03-10" }],
+      })
+      .mockReturnValueOnce({
+        from: async () => [{ minStockedOn: "2026-03-01" }],
+      });
+
+    const result = await getDashboardDateBounds();
+
+    expect(mockCacheTag).toHaveBeenCalledWith(CACHE_TAGS.analyticsShared);
+    expect(mockCacheLife).toHaveBeenCalledWith("minutes");
+    expect(result).toEqual({
+      from: "2026-03-01",
+      to: expect.any(String),
+    });
+  });
+
+  it("tags and caches dashboard global stats with the shared analytics profile", async () => {
+    const { getDashboardGlobalStats } = await import(
+      "@/features/dashboard/server"
+    );
+    const { mockCacheLife, mockCacheTag, mockDb } = await resolveMocks();
+
+    mockDb.select
+      .mockReturnValueOnce({
+        from: async () => [{ total: "1000.00" }],
+      })
+      .mockReturnValueOnce({
+        from: () => ({
+          where: async () => [
+            {
+              totalAmount: "900.00",
+              totalFee: "30.00",
+              totalFreight: "20.00",
+            },
+          ],
+        }),
+      })
+      .mockReturnValueOnce({
+        from: () => ({
+          innerJoin: () => ({
+            where: async () => [{ totalCost: "400.00" }],
+          }),
+        }),
+      });
+
+    const result = await getDashboardGlobalStats();
+
+    expect(mockCacheTag).toHaveBeenCalledWith(CACHE_TAGS.analyticsShared);
+    expect(mockCacheLife).toHaveBeenCalledWith("minutes");
+    expect(result).toEqual({
+      investment: 1000,
+      profit: 450,
+    });
+  });
+
+  it("memoizes dashboard metrics by range within the same request scope", async () => {
+    const { getDashboardMetrics } = await import("@/features/dashboard/server");
+    const { mockDb } = await resolveMocks();
+
+    mockDb.select
+      .mockReturnValueOnce({
+        from: () => ({
+          where: async () => [],
+        }),
+      })
+      .mockReturnValueOnce({
+        from: () => ({
+          innerJoin: () => ({
+            innerJoin: () => ({
+              where: async () => [],
+            }),
+          }),
+        }),
+      })
+      .mockReturnValueOnce({
+        from: () => ({
+          innerJoin: () => ({
+            where: () => ({
+              groupBy: () => ({
+                orderBy: async () => [],
+              }),
+            }),
+          }),
+        }),
+      });
+
+    const first = await getDashboardMetrics({
+      from: "2026-03-01",
+      to: "2026-03-31",
+    });
+    const second = await getDashboardMetrics({
+      from: "2026-03-01",
+      to: "2026-03-31",
+    });
+
+    expect(mockDb.select).toHaveBeenCalledTimes(3);
+    expect(second).toBe(first);
+  });
+});

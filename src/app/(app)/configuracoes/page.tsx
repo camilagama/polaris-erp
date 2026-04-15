@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { CatalogSettingsPanel } from "@/components/settings/catalog-settings-panel";
 import { GoalsSettingsPanel } from "@/components/settings/goals-settings-panel";
 import {
@@ -14,6 +15,7 @@ export const metadata: Metadata = {
 };
 
 export default async function ConfiguracoesPage() {
+  await connection();
   const [categories, settings, dateBounds, goalsPayload] = await Promise.all([
     listCategoriesWithUsage(),
     getCatalogSettings(),

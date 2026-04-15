@@ -1,7 +1,7 @@
 "use server";
 
 import { and, eq, isNull, sql } from "drizzle-orm";
-import { refresh } from "next/cache";
+import { refresh, updateTag } from "next/cache";
 import { db } from "@/db";
 import {
   productPriceChanges,
@@ -26,10 +26,23 @@ import {
   applyStockAddition,
   applyStockWriteOff,
 } from "@/features/products/stock";
+import { CACHE_TAGS } from "@/lib/cache-tags";
 import { toCurrencyString } from "@/lib/domain/currency";
 import { requireActionSession } from "@/lib/server-action-auth";
 
-const revalidateProducts = () => {
+const revalidateCatalogViews = () => {
+  updateTag(CACHE_TAGS.catalog);
+  refresh();
+};
+
+const revalidateSharedAnalytics = () => {
+  updateTag(CACHE_TAGS.analyticsShared);
+  refresh();
+};
+
+const revalidateCatalogAndAnalytics = () => {
+  updateTag(CACHE_TAGS.catalog);
+  updateTag(CACHE_TAGS.analyticsShared);
   refresh();
 };
 
@@ -158,7 +171,12 @@ export async function createProductAction(data: {
     throw error;
   }
 
-  revalidateProducts();
+  if (parsed.stock > 0) {
+    revalidateCatalogAndAnalytics();
+  } else {
+    revalidateCatalogViews();
+  }
+
   return productId;
 }
 
@@ -203,7 +221,7 @@ export async function updateProductAction(
     }
   });
 
-  revalidateProducts();
+  revalidateCatalogViews();
 }
 
 export async function replaceProductImageAction(
@@ -270,7 +288,7 @@ export async function replaceProductImageAction(
     }).catch(() => undefined);
   }
 
-  revalidateProducts();
+  revalidateCatalogViews();
 }
 
 export async function removeProductImageAction(id: string) {
@@ -289,7 +307,7 @@ export async function removeProductImageAction(id: string) {
     }).catch(() => undefined);
   }
 
-  revalidateProducts();
+  revalidateCatalogViews();
 }
 
 export async function addProductStockAction(
@@ -329,7 +347,7 @@ export async function addProductStockAction(
       .where(eq(products.id, id));
   });
 
-  revalidateProducts();
+  revalidateSharedAnalytics();
 }
 
 export async function writeOffProductStockAction(
@@ -368,7 +386,7 @@ export async function writeOffProductStockAction(
       .where(eq(products.id, id));
   });
 
-  revalidateProducts();
+  revalidateSharedAnalytics();
 }
 
 export async function archiveProductAction(id: string) {
@@ -380,7 +398,7 @@ export async function archiveProductAction(id: string) {
     })
     .where(eq(products.id, id));
 
-  revalidateProducts();
+  revalidateCatalogViews();
 }
 
 export async function unarchiveProductAction(id: string) {
@@ -392,5 +410,5 @@ export async function unarchiveProductAction(id: string) {
     })
     .where(eq(products.id, id));
 
-  revalidateProducts();
+  revalidateCatalogViews();
 }

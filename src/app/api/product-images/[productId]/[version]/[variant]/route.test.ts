@@ -94,6 +94,44 @@ describe("GET /api/product-images/[productId]/[version]/[variant]", () => {
     expect(response.headers.get("ETag")).toBe('"etag-value"');
   });
 
+  it("returns 304 when the client's ETag matches the stored image", async () => {
+    const { auth } = await import("@/lib/auth");
+    const imageStorage = await import("@/features/products/image-storage");
+    const { GET } = await import("./route");
+
+    vi.mocked(auth.api.getSession).mockResolvedValue({
+      user: { id: "user-1" },
+    } as never);
+    vi.mocked(imageStorage.readPublicProductImageVariant).mockResolvedValue({
+      body: Buffer.from([0x00, 0x01]),
+      cacheControl: "public, max-age=31536000, immutable",
+      contentType: "image/webp",
+      etag: '"etag-value"',
+    });
+
+    const response = await GET(
+      new Request("http://localhost/api/product-images/p1/1/detail", {
+        headers: {
+          "if-none-match": '"etag-value"',
+        },
+      }),
+      {
+        params: Promise.resolve({
+          productId: "p1",
+          variant: "detail",
+          version: "1",
+        }),
+      }
+    );
+
+    expect(response.status).toBe(304);
+    expect(response.headers.get("Cache-Control")).toBe(
+      "private, max-age=0, must-revalidate"
+    );
+    expect(response.headers.get("Vary")).toBe("Cookie");
+    expect(response.headers.get("ETag")).toBe('"etag-value"');
+  });
+
   it("returns 404 when storage cannot read the object", async () => {
     const { auth } = await import("@/lib/auth");
     const imageStorage = await import("@/features/products/image-storage");

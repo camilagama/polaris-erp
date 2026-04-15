@@ -8,8 +8,6 @@ import {
 import { serverEnv } from "@/lib/env";
 import { jsonError } from "@/lib/server-api-error";
 
-export const runtime = "nodejs";
-
 async function reconcile(request: Request): Promise<Response> {
   const authorization = request.headers.get("authorization");
   const expectedAuthorization = serverEnv.CRON_SECRET

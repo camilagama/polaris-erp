@@ -1,8 +1,6 @@
 import { readPublicProductImageVariant } from "@/features/products/image-storage";
 import { auth } from "@/lib/auth";
 
-export const runtime = "nodejs";
-
 const VALID_VARIANTS = new Set(["detail", "table"]);
 
 export async function GET(
@@ -36,14 +34,23 @@ export async function GET(
       variant: variant as "detail" | "table",
       version: parsedVersion,
     });
+    const requestEtag = request.headers.get("if-none-match");
+    const responseHeaders = {
+      "Cache-Control": "private, max-age=0, must-revalidate",
+      "Content-Type": image.contentType,
+      ETag: image.etag ?? "",
+      Vary: "Cookie",
+    };
+
+    if (image.etag && requestEtag === image.etag) {
+      return new Response(null, {
+        headers: responseHeaders,
+        status: 304,
+      });
+    }
 
     return new Response(image.body, {
-      headers: {
-        "Cache-Control": "private, max-age=0, must-revalidate",
-        "Content-Type": image.contentType,
-        ETag: image.etag ?? "",
-        Vary: "Cookie",
-      },
+      headers: responseHeaders,
       status: 200,
     });
   } catch {

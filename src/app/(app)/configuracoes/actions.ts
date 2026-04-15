@@ -1,6 +1,6 @@
 "use server";
 
-import { refresh } from "next/cache";
+import { refresh, updateTag } from "next/cache";
 import type {
   CatalogSettingsInput,
   CategoryInput,
@@ -11,9 +11,11 @@ import {
   saveCatalogSettings,
   updateCategory,
 } from "@/features/catalog/server";
+import { CACHE_TAGS } from "@/lib/cache-tags";
 import { requireActionSession } from "@/lib/server-action-auth";
 
 const revalidateCatalogViews = () => {
+  updateTag(CACHE_TAGS.catalog);
   refresh();
 };
 

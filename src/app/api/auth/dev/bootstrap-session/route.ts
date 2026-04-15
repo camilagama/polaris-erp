@@ -2,8 +2,6 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { serverEnv } from "@/lib/env";
 
-export const runtime = "nodejs";
-
 const bootstrapSessionSchema = z.object({
   email: z.string().trim().email(),
   name: z.string().trim().min(1).optional(),

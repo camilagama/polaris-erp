@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { CACHE_TAGS } from "@/lib/cache-tags";
 
 vi.mock("server-only", () => ({}));
 
@@ -21,6 +22,7 @@ vi.mock("@/features/products/image-workflow", () => ({
 vi.mock("next/cache", () => ({
   refresh: vi.fn(),
   revalidatePath: vi.fn(),
+  updateTag: vi.fn(),
 }));
 
 vi.mock("@/db", () => ({
@@ -61,6 +63,7 @@ const resolveMocks = async () => {
   const imageWorkflowModule = await import(
     "@/features/products/image-workflow"
   );
+  const cache = await import("next/cache");
 
   return {
     mockDeleteProductImageVersion:
@@ -71,9 +74,11 @@ const resolveMocks = async () => {
       update: MockFn;
     },
     mockGetProductCategoryById: catalogModule.getProductCategoryById as MockFn,
+    mockRefresh: cache.refresh as MockFn,
     mockSession: sessionModule.getSession as MockFn,
     mockStoreProductImageFromStage:
       imageWorkflowModule.storeProductImageFromStage as MockFn,
+    mockUpdateTag: cache.updateTag as MockFn,
   };
 };
 
@@ -312,7 +317,7 @@ describe("product server actions", () => {
     const { writeOffProductStockAction } = await import(
       "@/app/(app)/produtos/actions"
     );
-    const { mockDb } = await resolveMocks();
+    const { mockDb, mockRefresh, mockUpdateTag } = await resolveMocks();
 
     const harness = createInventoryHarness({
       costPrice: 10,
@@ -351,13 +356,20 @@ describe("product server actions", () => {
 
     expect(harness.state.stock).toBe(2);
     expect(harness.writeOffLog).toHaveLength(1);
+    expect(mockUpdateTag).toHaveBeenCalledWith(CACHE_TAGS.analyticsShared);
+    expect(mockRefresh).toHaveBeenCalledTimes(1);
   });
 
   it("creates a product with processed image metadata when a staged image is provided", async () => {
     const { createProductAction } = await import(
       "@/app/(app)/produtos/actions"
     );
-    const { mockDb, mockStoreProductImageFromStage } = await resolveMocks();
+    const {
+      mockDb,
+      mockRefresh,
+      mockStoreProductImageFromStage,
+      mockUpdateTag,
+    } = await resolveMocks();
     const insertLog: Record<string, unknown>[] = [];
 
     mockDb.transaction.mockImplementation(
@@ -395,13 +407,16 @@ describe("product server actions", () => {
       imageWidth: 1200,
       name: "Produto com imagem",
     });
+    expect(mockUpdateTag).toHaveBeenCalledWith(CACHE_TAGS.catalog);
+    expect(mockUpdateTag).toHaveBeenCalledWith(CACHE_TAGS.analyticsShared);
+    expect(mockRefresh).toHaveBeenCalled();
   });
 
   it("updates product price and records a price history row when the value changes", async () => {
     const { updateProductAction } = await import(
       "@/app/(app)/produtos/actions"
     );
-    const { mockDb } = await resolveMocks();
+    const { mockDb, mockRefresh, mockUpdateTag } = await resolveMocks();
 
     const harness = createProductUpdateHarness({
       categoryId: "category-1",
@@ -433,6 +448,8 @@ describe("product server actions", () => {
         productId: "product-1",
       }),
     ]);
+    expect(mockUpdateTag).toHaveBeenCalledWith(CACHE_TAGS.catalog);
+    expect(mockRefresh).toHaveBeenCalled();
   });
 
   it("does not record price history when the product price remains the same", async () => {

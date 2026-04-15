@@ -1,7 +1,7 @@
 "use server";
 
 import { eq, sql } from "drizzle-orm";
-import { refresh } from "next/cache";
+import { refresh, updateTag } from "next/cache";
 import { db } from "@/db";
 import { products, saleItems, sales } from "@/db/schema";
 import { findCardInstallmentRule } from "@/features/catalog/payment-rules";
@@ -11,6 +11,7 @@ import {
   calculateSaleFinancials,
 } from "@/features/sales/calculations";
 import { createSaleSchema } from "@/features/sales/schema";
+import { CACHE_TAGS } from "@/lib/cache-tags";
 import { toCurrencyString } from "@/lib/domain/currency";
 import { formatCurrency } from "@/lib/formatters";
 import { requireActionSession } from "@/lib/server-action-auth";
@@ -30,6 +31,7 @@ interface LockedSaleRow extends Record<string, unknown> {
 }
 
 const revalidateSalesViews = () => {
+  updateTag(CACHE_TAGS.analyticsShared);
   refresh();
 };
 

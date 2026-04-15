@@ -6,8 +6,6 @@ import {
 import { auth } from "@/lib/auth";
 import { jsonError } from "@/lib/server-api-error";
 
-export const runtime = "nodejs";
-
 export async function POST(request: Request) {
   const session = await auth.api.getSession({
     headers: request.headers,
