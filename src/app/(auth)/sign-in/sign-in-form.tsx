@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Google } from "@/components/ui/svgs/google";
+import { DGImportsLogo } from "@/components/ui/svgs/logo";
 import { authClient, hasGoogleAuthClient } from "@/lib/auth-client";
 
 const isLocalHostEnvironment = () => {
@@ -74,11 +75,9 @@ export function SignInForm() {
     <div className="grid min-h-svh lg:grid-cols-[0.8fr_2fr]">
       <div className="flex flex-col gap-4 p-6 md:p-10">
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 font-medium">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <span className="font-bold">DG</span>
-            </div>
-            DG Imports
+          <div className="flex items-center gap-2 font-medium uppercase tracking-[0.24em]">
+            <DGImportsLogo className="size-6 shrink-0" />
+            DG Imports.
           </div>
         </div>
         <div className="flex flex-1 items-center justify-center">
