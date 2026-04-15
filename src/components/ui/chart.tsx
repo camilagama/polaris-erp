@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 
 const THEMES = { light: "", dark: ".dark" } as const;
 const INITIAL_DIMENSION = { height: 200, width: 320 } as const;
+const DEFAULT_CHART_RESIZE_DEBOUNCE = 16;
 
 type TooltipNameType = number | string;
 type TooltipPayloadItem = NonNullable<
@@ -282,6 +283,7 @@ function ChartContainer({
   children,
   config,
   initialDimension = INITIAL_DIMENSION,
+  resizeDebounce = DEFAULT_CHART_RESIZE_DEBOUNCE,
   ...props
 }: ComponentProps<"div"> & {
   children: ComponentProps<typeof ResponsiveContainer>["children"];
@@ -290,6 +292,7 @@ function ChartContainer({
     height: number;
     width: number;
   };
+  resizeDebounce?: ComponentProps<typeof ResponsiveContainer>["debounce"];
 }) {
   const uniqueId = useId();
   const chartId = `chart-${id ?? uniqueId.replace(/:/g, "")}`;
@@ -307,7 +310,10 @@ function ChartContainer({
         {...props}
       >
         {styles ? <style>{styles}</style> : null}
-        <ResponsiveContainer initialDimension={initialDimension}>
+        <ResponsiveContainer
+          debounce={resizeDebounce}
+          initialDimension={initialDimension}
+        >
           {children}
         </ResponsiveContainer>
       </div>

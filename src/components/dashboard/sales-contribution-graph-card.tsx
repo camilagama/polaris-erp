@@ -2,7 +2,8 @@
 
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { startTransition, useEffect, useMemo, useRef, useState } from "react";
+import { getNextRoundedContainerWidth } from "@/components/dashboard/sales-contribution-graph-resize";
 import {
   ContributionGraph,
   ContributionGraphBlock,
@@ -57,6 +58,9 @@ export function SalesContributionGraphCard({
   className,
 }: SalesContributionGraphCardProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const animationFrameIdRef = useRef<number | null>(null);
+  const pendingWidthRef = useRef<number | null>(null);
+  const committedWidthRef = useRef<number | null>(null);
   const [containerWidth, setContainerWidth] = useState<number | null>(null);
 
   useEffect(() => {
@@ -65,14 +69,61 @@ export function SalesContributionGraphCard({
       return;
     }
 
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        setContainerWidth(entry.contentRect.width);
+    const flushWidth = () => {
+      animationFrameIdRef.current = null;
+      const measuredWidth = pendingWidthRef.current;
+      pendingWidthRef.current = null;
+
+      if (measuredWidth === null) {
+        return;
       }
+
+      const nextWidth = getNextRoundedContainerWidth(
+        committedWidthRef.current,
+        measuredWidth
+      );
+
+      if (nextWidth === null) {
+        return;
+      }
+
+      committedWidthRef.current = nextWidth;
+      startTransition(() => {
+        setContainerWidth(nextWidth);
+      });
+    };
+
+    const scheduleWidthUpdate = (measuredWidth: number) => {
+      pendingWidthRef.current = measuredWidth;
+
+      if (animationFrameIdRef.current !== null) {
+        return;
+      }
+
+      animationFrameIdRef.current = window.requestAnimationFrame(flushWidth);
+    };
+
+    scheduleWidthUpdate(element.getBoundingClientRect().width);
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) {
+        return;
+      }
+
+      scheduleWidthUpdate(entry.contentRect.width);
     });
 
     observer.observe(element);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      pendingWidthRef.current = null;
+
+      if (animationFrameIdRef.current !== null) {
+        window.cancelAnimationFrame(animationFrameIdRef.current);
+        animationFrameIdRef.current = null;
+      }
+    };
   }, []);
 
   /**

@@ -3,6 +3,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import { DashboardDateRangeFilter } from "@/components/dashboard/dashboard-date-range-filter";
 import { GoalDashboardCompactCard } from "@/components/dashboard/goal-dashboard-compact-card";
 import { OperationalCostsChart } from "@/components/dashboard/operational-costs-chart";
@@ -37,6 +38,15 @@ export const metadata: Metadata = {
   title: "Dashboard | DG Imports",
   description: "Painel inicial da operacao protegida do DG Imports.",
 };
+
+const layoutContainmentStyle = {
+  contain: "layout",
+} as const satisfies CSSProperties;
+
+const deferredAnalyticsSectionStyle = {
+  containIntrinsicSize: "960px 640px",
+  contentVisibility: "auto",
+} as const satisfies CSSProperties;
 
 export default async function DashboardPage(props: PageProps<"/">) {
   const searchParams = await props.searchParams;
@@ -112,7 +122,7 @@ export default async function DashboardPage(props: PageProps<"/">) {
       <div
         className={`grid gap-4 md:grid-cols-2 ${goalsPayload.active.length > 0 ? "lg:grid-cols-3" : "lg:grid-cols-2"}`}
       >
-        <div className="flex h-full flex-col">
+        <div className="flex h-full flex-col" style={layoutContainmentStyle}>
           <SalesContributionGraphCard
             className="h-full"
             graph={contributionGraph}
@@ -120,7 +130,10 @@ export default async function DashboardPage(props: PageProps<"/">) {
         </div>
 
         {goalsPayload.active.length > 0 && (
-          <div className="flex h-full flex-col gap-3">
+          <div
+            className="flex h-full flex-col gap-3"
+            style={layoutContainmentStyle}
+          >
             {goalsPayload.active.map((goal) => (
               <GoalDashboardCompactCard
                 className="h-full"
@@ -131,7 +144,7 @@ export default async function DashboardPage(props: PageProps<"/">) {
           </div>
         )}
 
-        <div className="flex h-full flex-col">
+        <div className="flex h-full flex-col" style={layoutContainmentStyle}>
           <Card className="flex h-full flex-col justify-center">
             <CardHeader className="gap-1">
               <div className="flex items-center justify-between gap-3">
@@ -171,7 +184,11 @@ export default async function DashboardPage(props: PageProps<"/">) {
 
       <div className={`grid gap-4 md:grid-cols-2 ${bottomGridCols}`}>
         {summaryCards.map((card) => (
-          <Card className="flex h-full flex-col justify-center" key={card.id}>
+          <Card
+            className="flex h-full flex-col justify-center"
+            key={card.id}
+            style={layoutContainmentStyle}
+          >
             {card.id !== "revenue" && (
               <CardHeader className="gap-1">
                 <div className="flex items-center justify-between gap-3">
@@ -244,8 +261,14 @@ export default async function DashboardPage(props: PageProps<"/">) {
         ))}
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[1.35fr_0.95fr]">
-        <Card className="flex h-full flex-col justify-center">
+      <div
+        className="grid gap-4 xl:grid-cols-[1.35fr_0.95fr]"
+        style={deferredAnalyticsSectionStyle}
+      >
+        <Card
+          className="flex h-full flex-col justify-center"
+          style={layoutContainmentStyle}
+        >
           <CardHeader className="gap-1">
             <CardTitle className="text-base">Vendas x custos</CardTitle>
             <CardDescription>Fluxo financeiro no periodo</CardDescription>
@@ -255,8 +278,11 @@ export default async function DashboardPage(props: PageProps<"/">) {
           </CardContent>
         </Card>
 
-        <div className="grid gap-4">
-          <Card className="flex h-full flex-col justify-center">
+        <div className="grid gap-4" style={layoutContainmentStyle}>
+          <Card
+            className="flex h-full flex-col justify-center"
+            style={layoutContainmentStyle}
+          >
             <CardHeader>
               <CardTitle className="text-base">
                 Produtos mais vendidos
