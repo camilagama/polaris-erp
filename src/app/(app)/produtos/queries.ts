@@ -247,7 +247,7 @@ export async function getProductByIdQuery(
     .then((rows) => rows[0]);
 
   if (!row) {
-    return undefined;
+    return;
   }
 
   return mapProductListItem(row);

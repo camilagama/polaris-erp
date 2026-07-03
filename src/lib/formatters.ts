@@ -60,12 +60,11 @@ export const formatPercent = (
     minimumFractionDigits,
   }).format(value || 0);
 
-export const formatCurrencyInput = (value: number) => {
-  return new Intl.NumberFormat("pt-BR", {
+export const formatCurrencyInput = (value: number) =>
+  new Intl.NumberFormat("pt-BR", {
     maximumFractionDigits: 2,
     minimumFractionDigits: 2,
   }).format(value || 0);
-};
 
 export const parseCurrencyInput = (value: string) => {
   const rawValue = value.replace(/\D/g, "");

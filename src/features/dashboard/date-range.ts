@@ -218,8 +218,8 @@ export const resolveDashboardDateRange = ({
   };
   referenceDate?: Date;
   searchParams: Record<string, string | string[] | undefined>;
-}): DashboardDateRange => {
-  return resolveDateRangeFromSearchParams({
+}): DashboardDateRange =>
+  resolveDateRangeFromSearchParams({
     defaultPreset: "current-month",
     getPresetDateRange: (preset, currentReferenceDate) =>
       bounds
@@ -233,7 +233,6 @@ export const resolveDashboardDateRange = ({
     referenceDate,
     searchParams,
   });
-};
 
 export const buildDashboardRangeQuery = ({
   from,

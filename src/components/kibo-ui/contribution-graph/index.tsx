@@ -181,8 +181,8 @@ const groupByWeeks = (
 const getMonthLabels = (
   weeks: Week[],
   monthNames: string[] = DEFAULT_MONTH_LABELS
-): MonthLabel[] => {
-  return weeks
+): MonthLabel[] =>
+  weeks
     .reduce<MonthLabel[]>((labels, week, weekIndex) => {
       const firstActivity = week.find((activity) => activity !== undefined);
 
@@ -224,7 +224,6 @@ const getMonthLabels = (
 
       return true;
     });
-};
 
 export type ContributionGraphProps = HTMLAttributes<HTMLDivElement> & {
   data: Activity[];

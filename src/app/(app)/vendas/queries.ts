@@ -184,7 +184,7 @@ export async function getSaleByIdQuery(
   });
 
   if (!sale) {
-    return undefined;
+    return;
   }
 
   const items = await db

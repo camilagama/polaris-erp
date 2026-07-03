@@ -96,9 +96,8 @@ const enrichToastData = (data: ExternalToast = {}) => {
 
 // Exportamos o toast interceptado pra prover o visual da DG
 const toast = Object.assign(
-  (message: string | React.ReactNode, data?: ExternalToast) => {
-    return originalToast(message, enrichToastData(data));
-  },
+  (message: string | React.ReactNode, data?: ExternalToast) =>
+    originalToast(message, enrichToastData(data)),
   originalToast,
   {
     success: (msg: string | React.ReactNode, data?: ExternalToast) =>

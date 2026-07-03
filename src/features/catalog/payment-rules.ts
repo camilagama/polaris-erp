@@ -28,7 +28,7 @@ const toCardInstallmentRule = (
   rawRule: unknown
 ): CardInstallmentRule | undefined => {
   if (!(rawRule && typeof rawRule === "object")) {
-    return undefined;
+    return;
   }
 
   const maybeRule = rawRule as Partial<{
@@ -38,13 +38,13 @@ const toCardInstallmentRule = (
   }>;
 
   if (maybeRule.paymentMethod === "pix") {
-    return undefined;
+    return;
   }
 
   const installments = normalizeInstallments(Number(maybeRule.installments));
 
   if (installments === 0) {
-    return undefined;
+    return;
   }
 
   return {

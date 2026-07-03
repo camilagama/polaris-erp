@@ -100,14 +100,14 @@ export const validateGoalTargetValue = (
       return "O alvo deve ser pelo menos 1 venda.";
     }
 
-    return undefined;
+    return;
   }
 
   if (value <= 0) {
     return "O valor alvo deve ser maior que zero.";
   }
 
-  return undefined;
+  return;
 };
 
 export const periodIncludesToday = ({
