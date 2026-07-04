@@ -10,6 +10,7 @@ import {
 } from "@/features/catalog/server";
 import { buildProductInventorySummary } from "@/features/products/history";
 import { getProductSalesHistoryMetrics } from "@/features/products/server";
+import { requirePageAppContext } from "@/lib/app-session";
 import { formatCurrency } from "@/lib/formatters";
 import {
   getProductByIdQuery,
@@ -22,8 +23,9 @@ import {
 export default async function ProdutoDetalhePage(
   props: PageProps<"/produtos/[id]">
 ) {
+  const context = await requirePageAppContext();
   const { id } = await props.params;
-  const product = await getProductByIdQuery(id);
+  const product = await getProductByIdQuery(context.organizationId, id);
 
   if (!product) {
     notFound();
@@ -38,13 +40,13 @@ export default async function ProdutoDetalhePage(
     salesMetrics,
     priceChanges,
   ] = await Promise.all([
-    getProductStockEntriesByProductIdQuery(id),
-    getProductStockWriteOffsByProductIdQuery(id),
-    getProductSalesByProductIdQuery(id),
-    listCategoriesWithUsage(),
-    getCatalogSettings(),
-    getProductSalesHistoryMetrics(id),
-    getProductPriceChangesByProductIdQuery(id),
+    getProductStockEntriesByProductIdQuery(context.organizationId, id),
+    getProductStockWriteOffsByProductIdQuery(context.organizationId, id),
+    getProductSalesByProductIdQuery(context.organizationId, id),
+    listCategoriesWithUsage(context.organizationId),
+    getCatalogSettings(context.organizationId),
+    getProductSalesHistoryMetrics(context.organizationId, id),
+    getProductPriceChangesByProductIdQuery(context.organizationId, id),
   ]);
 
   const averageCost = Number(product.costPrice);

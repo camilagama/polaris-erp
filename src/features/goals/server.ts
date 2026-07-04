@@ -55,24 +55,30 @@ const toResolvedDecimalString = (
   return roundCurrency(actual).toFixed(2);
 };
 
-export const countActiveGoals = async (): Promise<number> => {
+const countActiveGoals = async (organizationId: string): Promise<number> => {
   const rows = await db
     .select({ value: count() })
     .from(goals)
-    .where(eq(goals.status, "active"));
+    .where(
+      and(eq(goals.organizationId, organizationId), eq(goals.status, "active"))
+    );
 
   return Number(rows[0]?.value ?? 0);
 };
 
-export const resolveActiveGoalTransitions = async (): Promise<void> => {
+const resolveActiveGoalTransitions = async (
+  organizationId: string
+): Promise<void> => {
   const today = formatDateInputValue();
   const activeRows = await db
     .select()
     .from(goals)
-    .where(eq(goals.status, "active"));
+    .where(
+      and(eq(goals.organizationId, organizationId), eq(goals.status, "active"))
+    );
 
   for (const row of activeRows) {
-    const metrics = await getDashboardMetrics({
+    const metrics = await getDashboardMetrics(organizationId, {
       from: row.periodStart,
       to: row.periodEnd,
     });
@@ -100,18 +106,21 @@ export const resolveActiveGoalTransitions = async (): Promise<void> => {
         status: nextStatus,
         updatedAt: new Date(),
       })
-      .where(eq(goals.id, row.id));
+      .where(
+        and(eq(goals.id, row.id), eq(goals.organizationId, organizationId))
+      );
   }
 };
 
 const buildActiveDashboardCards = async (
+  organizationId: string,
   activeRows: (typeof goals.$inferSelect)[]
 ): Promise<DashboardGoalCard[]> => {
   const active: DashboardGoalCard[] = [];
 
   for (const row of activeRows) {
     const metric = row.metric as GoalMetric;
-    const metrics = await getDashboardMetrics({
+    const metrics = await getDashboardMetrics(organizationId, {
       from: row.periodStart,
       to: row.periodEnd,
     });
@@ -139,36 +148,48 @@ const buildActiveDashboardCards = async (
   return active;
 };
 
-export const getGoalsDashboardData =
-  async (): Promise<GoalsDashboardPayload> => {
-    await resolveActiveGoalTransitions();
-
-    const activeRows = await db
-      .select()
-      .from(goals)
-      .where(eq(goals.status, "active"))
-      .orderBy(asc(goals.periodEnd));
-
-    const active = await buildActiveDashboardCards(activeRows);
-
-    return { active };
-  };
-
-export const getGoalsSettingsData = async (): Promise<GoalsSettingsPayload> => {
-  await resolveActiveGoalTransitions();
+export const getGoalsDashboardData = async (
+  organizationId: string
+): Promise<GoalsDashboardPayload> => {
+  await resolveActiveGoalTransitions(organizationId);
 
   const activeRows = await db
     .select()
     .from(goals)
-    .where(eq(goals.status, "active"))
+    .where(
+      and(eq(goals.organizationId, organizationId), eq(goals.status, "active"))
+    )
     .orderBy(asc(goals.periodEnd));
 
-  const active = await buildActiveDashboardCards(activeRows);
+  const active = await buildActiveDashboardCards(organizationId, activeRows);
+
+  return { active };
+};
+
+export const getGoalsSettingsData = async (
+  organizationId: string
+): Promise<GoalsSettingsPayload> => {
+  await resolveActiveGoalTransitions(organizationId);
+
+  const activeRows = await db
+    .select()
+    .from(goals)
+    .where(
+      and(eq(goals.organizationId, organizationId), eq(goals.status, "active"))
+    )
+    .orderBy(asc(goals.periodEnd));
+
+  const active = await buildActiveDashboardCards(organizationId, activeRows);
 
   const historyRows = await db
     .select()
     .from(goals)
-    .where(inArray(goals.status, ["completed", "expired", "archived"]))
+    .where(
+      and(
+        eq(goals.organizationId, organizationId),
+        inArray(goals.status, ["completed", "expired", "archived"])
+      )
+    )
     .orderBy(desc(goals.updatedAt))
     .limit(SETTINGS_HISTORY_LIMIT);
 
@@ -198,6 +219,7 @@ export const getGoalsSettingsData = async (): Promise<GoalsSettingsPayload> => {
 };
 
 export const createGoal = async (
+  organizationId: string,
   input: CreateGoalInput,
   createdByUserId: string
 ): Promise<void> => {
@@ -215,7 +237,7 @@ export const createGoal = async (
     );
   }
 
-  const activeCount = await countActiveGoals();
+  const activeCount = await countActiveGoals(organizationId);
 
   if (activeCount >= MAX_ACTIVE_GOALS) {
     throw new Error(createGoalCapacityErrorMessage());
@@ -226,6 +248,7 @@ export const createGoal = async (
     displayMode: input.displayMode,
     metric: input.metric,
     name: input.name.trim(),
+    organizationId,
     periodEnd: input.periodEnd,
     periodStart: input.periodStart,
     status: "active",
@@ -233,7 +256,10 @@ export const createGoal = async (
   });
 };
 
-export const updateGoal = async (input: UpdateGoalInput): Promise<void> => {
+export const updateGoal = async (
+  organizationId: string,
+  input: UpdateGoalInput
+): Promise<void> => {
   const today = formatDateInputValue();
 
   if (
@@ -249,7 +275,11 @@ export const updateGoal = async (input: UpdateGoalInput): Promise<void> => {
   }
 
   const existing = await db.query.goals.findFirst({
-    where: and(eq(goals.id, input.id), eq(goals.status, "active")),
+    where: and(
+      eq(goals.id, input.id),
+      eq(goals.organizationId, organizationId),
+      eq(goals.status, "active")
+    ),
   });
 
   if (!existing) {
@@ -267,12 +297,17 @@ export const updateGoal = async (input: UpdateGoalInput): Promise<void> => {
       targetValue: toTargetDecimalString(input.metric, input.targetValue),
       updatedAt: new Date(),
     })
-    .where(eq(goals.id, input.id));
+    .where(
+      and(eq(goals.id, input.id), eq(goals.organizationId, organizationId))
+    );
 };
 
-export const archiveGoal = async (goalId: string): Promise<void> => {
+export const archiveGoal = async (
+  organizationId: string,
+  goalId: string
+): Promise<void> => {
   const row = await db.query.goals.findFirst({
-    where: eq(goals.id, goalId),
+    where: and(eq(goals.id, goalId), eq(goals.organizationId, organizationId)),
   });
 
   if (!row) {
@@ -284,7 +319,7 @@ export const archiveGoal = async (goalId: string): Promise<void> => {
   }
 
   const metric = row.metric as GoalMetric;
-  const metrics = await getDashboardMetrics({
+  const metrics = await getDashboardMetrics(organizationId, {
     from: row.periodStart,
     to: row.periodEnd,
   });
@@ -298,12 +333,15 @@ export const archiveGoal = async (goalId: string): Promise<void> => {
       status: "archived",
       updatedAt: new Date(),
     })
-    .where(eq(goals.id, goalId));
+    .where(and(eq(goals.id, goalId), eq(goals.organizationId, organizationId)));
 };
 
-export const unarchiveGoal = async (goalId: string): Promise<void> => {
+export const unarchiveGoal = async (
+  organizationId: string,
+  goalId: string
+): Promise<void> => {
   const row = await db.query.goals.findFirst({
-    where: eq(goals.id, goalId),
+    where: and(eq(goals.id, goalId), eq(goals.organizationId, organizationId)),
   });
 
   if (!row) {
@@ -328,7 +366,7 @@ export const unarchiveGoal = async (goalId: string): Promise<void> => {
     );
   }
 
-  const activeCount = await countActiveGoals();
+  const activeCount = await countActiveGoals(organizationId);
 
   if (activeCount >= MAX_ACTIVE_GOALS) {
     throw new Error(unarchiveCapacityErrorMessage());
@@ -342,5 +380,5 @@ export const unarchiveGoal = async (goalId: string): Promise<void> => {
       status: "active",
       updatedAt: new Date(),
     })
-    .where(eq(goals.id, goalId));
+    .where(and(eq(goals.id, goalId), eq(goals.organizationId, organizationId)));
 };

@@ -26,23 +26,25 @@ import {
   applyStockAddition,
   applyStockWriteOff,
 } from "@/features/products/stock";
-import { CACHE_TAGS } from "@/lib/cache-tags";
+import { requireAppContext } from "@/lib/app-session";
+import { recordAuditEvent } from "@/lib/audit-log";
+import { buildOrganizationCacheTags } from "@/lib/cache-tags";
 import { toCurrencyString } from "@/lib/domain/currency";
-import { requireActionSession } from "@/lib/server-action-auth";
 
-const revalidateCatalogViews = () => {
-  updateTag(CACHE_TAGS.catalog);
+const revalidateCatalogViews = (organizationId: string) => {
+  updateTag(buildOrganizationCacheTags(organizationId).catalog);
   refresh();
 };
 
-const revalidateSharedAnalytics = () => {
-  updateTag(CACHE_TAGS.analyticsShared);
+const revalidateSharedAnalytics = (organizationId: string) => {
+  updateTag(buildOrganizationCacheTags(organizationId).analytics);
   refresh();
 };
 
-const revalidateCatalogAndAnalytics = () => {
-  updateTag(CACHE_TAGS.catalog);
-  updateTag(CACHE_TAGS.analyticsShared);
+const revalidateCatalogAndAnalytics = (organizationId: string) => {
+  const tags = buildOrganizationCacheTags(organizationId);
+  updateTag(tags.catalog);
+  updateTag(tags.analytics);
   refresh();
 };
 
@@ -55,7 +57,6 @@ const emptyProductImagePayload = {
 } as const;
 
 interface LockedProductRow extends Record<string, unknown> {
-  archivedAt: Date | null;
   costPrice: string;
   id: string;
   price: string;
@@ -64,351 +65,457 @@ interface LockedProductRow extends Record<string, unknown> {
 
 const lockProductForUpdate = async (
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  organizationId: string,
   id: string
-): Promise<LockedProductRow> => {
+) => {
   const result = await tx.execute<LockedProductRow>(sql`
-    select
-      id,
-      cost_price as "costPrice",
-      price,
-      stock,
-      archived_at as "archivedAt"
+    select id, price, cost_price as "costPrice", stock
     from products
-    where id = ${id}
+    where id = ${id} and organization_id = ${organizationId}
     for update
   `);
-  const product = result.rows[0];
 
-  if (!product) {
-    throw new Error("Produto nao encontrado.");
-  }
-
-  return product;
+  return result.rows.at(0) ?? null;
 };
 
-const getProductImageState = async (id: string) => {
+const getProductImageState = async (organizationId: string, id: string) => {
   const [product] = await db
     .select({
       id: products.id,
       imageVersion: products.imageVersion,
     })
     .from(products)
-    .where(eq(products.id, id));
+    .where(
+      and(eq(products.id, id), eq(products.organizationId, organizationId))
+    )
+    .limit(1);
 
-  if (!product) {
-    throw new Error("Produto nao encontrado.");
-  }
-
-  return product;
+  return product ?? null;
 };
 
-export async function createProductAction(data: {
-  categoryId: string;
-  costPrice: string;
-  description?: string;
-  name: string;
-  price: string;
-  purchasedOn: string;
-  stagedImage?: StagedProductImageInput;
-  stock: number;
-}) {
-  const session = await requireActionSession();
-  const parsed = createProductSchema.parse(data);
-  const stagedImage = data.stagedImage
-    ? stagedProductImageSchema.parse(data.stagedImage)
-    : null;
-  const category = await getProductCategoryById(parsed.categoryId);
+const firstZodErrorMessage = (error: { issues: { message: string }[] }) =>
+  error.issues[0]?.message ?? "Dados invalidos.";
+
+export async function createProductAction(input: unknown): Promise<string> {
+  const context = await requireAppContext("products:write");
+  const result = createProductSchema.safeParse(input);
+  const stagedImage =
+    typeof input === "object" && input !== null && "stagedImage" in input
+      ? stagedProductImageSchema.safeParse(input.stagedImage)
+      : null;
+
+  if (!result.success) {
+    throw new Error(firstZodErrorMessage(result.error));
+  }
+
+  const category = await getProductCategoryById(
+    context.organizationId,
+    result.data.categoryId
+  );
 
   if (!category) {
     throw new Error("Selecione uma categoria valida.");
   }
 
   const productId = crypto.randomUUID();
-  const storedImage = stagedImage
-    ? await storeProductImageFromStage({
-        productId,
-        stagedImage,
-        userId: session.user.id,
-        version: 1,
-      })
-    : null;
+  let storedImage: Awaited<
+    ReturnType<typeof storeProductImageFromStage>
+  > | null = null;
 
   try {
+    if (stagedImage?.success) {
+      storedImage = await storeProductImageFromStage({
+        organizationId: context.organizationId,
+        productId,
+        stagedImage: stagedImage.data,
+        userId: context.userId,
+        version: 1,
+      });
+    }
+
     await db.transaction(async (tx) => {
       await tx.insert(products).values({
-        categoryId: parsed.categoryId,
-        costPrice: toCurrencyString(parsed.costPrice),
-        description: parsed.description || undefined,
+        categoryId: result.data.categoryId,
+        costPrice: toCurrencyString(result.data.costPrice),
+        description: result.data.description || null,
         id: productId,
-        imageBlurDataUrl: storedImage?.blurDataURL,
-        imageHeight: storedImage?.height,
-        imageUploadedAt: storedImage ? new Date() : null,
-        imageVersion: storedImage?.version,
-        imageWidth: storedImage?.width,
-        name: parsed.name,
-        price: toCurrencyString(parsed.price),
-        purchasedOn: parsed.purchasedOn,
-        stock: parsed.stock,
+        name: result.data.name,
+        organizationId: context.organizationId,
+        price: toCurrencyString(result.data.price),
+        purchasedOn: result.data.purchasedOn,
+        stock: result.data.stock,
+        ...(storedImage
+          ? {
+              imageBlurDataUrl: storedImage.blurDataURL,
+              imageHeight: storedImage.height,
+              imageUploadedAt: new Date(),
+              imageVersion: storedImage.version,
+              imageWidth: storedImage.width,
+            }
+          : emptyProductImagePayload),
       });
 
-      if (parsed.stock > 0) {
+      if (result.data.stock > 0) {
         await tx.insert(productStockEntries).values({
+          organizationId: context.organizationId,
           productId,
-          quantity: parsed.stock,
-          stockedOn: parsed.purchasedOn,
-          unitCost: toCurrencyString(parsed.costPrice),
+          quantity: result.data.stock,
+          stockedOn: result.data.purchasedOn,
+          unitCost: toCurrencyString(result.data.costPrice),
         });
       }
     });
   } catch (error) {
     if (storedImage) {
       await deleteProductImageVersion({
+        organizationId: context.organizationId,
         productId,
         version: storedImage.version,
-      }).catch(() => undefined);
+      });
     }
 
     throw error;
   }
 
-  if (parsed.stock > 0) {
-    revalidateCatalogAndAnalytics();
-  } else {
-    revalidateCatalogViews();
-  }
-
+  revalidateCatalogAndAnalytics(context.organizationId);
+  await recordAuditEvent({
+    context,
+    subjectId: productId,
+    subjectType: "product",
+    type: "product.created",
+  });
   return productId;
 }
 
-export async function updateProductAction(
-  id: string,
-  data: {
-    categoryId: string;
-    description?: string;
-    name: string;
-    price: string;
+export async function updateProductAction(id: string, input: unknown) {
+  const context = await requireAppContext("products:write");
+  const result = updateProductSchema.safeParse(input);
+
+  if (!result.success) {
+    throw new Error(firstZodErrorMessage(result.error));
   }
-) {
-  const session = await requireActionSession();
-  const parsed = updateProductSchema.parse(data);
-  const category = await getProductCategoryById(parsed.categoryId);
+
+  const category = await getProductCategoryById(
+    context.organizationId,
+    result.data.categoryId
+  );
 
   if (!category) {
     throw new Error("Selecione uma categoria valida.");
   }
 
   await db.transaction(async (tx) => {
-    const product = await lockProductForUpdate(tx, id);
-    const nextPrice = toCurrencyString(parsed.price);
+    const product = await lockProductForUpdate(tx, context.organizationId, id);
+
+    if (!product) {
+      throw new Error("Produto nao encontrado.");
+    }
+
+    const nextPrice = toCurrencyString(result.data.price);
 
     await tx
       .update(products)
       .set({
-        categoryId: parsed.categoryId,
-        description: parsed.description || undefined,
-        name: parsed.name,
+        categoryId: result.data.categoryId,
+        description: result.data.description || null,
+        name: result.data.name,
         price: nextPrice,
+        updatedAt: new Date(),
       })
-      .where(eq(products.id, id));
+      .where(
+        and(
+          eq(products.id, id),
+          eq(products.organizationId, context.organizationId)
+        )
+      );
 
-    if (product.price !== nextPrice) {
+    const priceChanged = product.price !== nextPrice;
+
+    if (priceChanged) {
       await tx.insert(productPriceChanges).values({
-        changedByUserId: session.user.id,
+        changedByUserId: context.userId,
         nextPrice,
+        organizationId: context.organizationId,
         previousPrice: product.price,
         productId: id,
       });
     }
   });
 
-  revalidateCatalogViews();
+  revalidateCatalogViews(context.organizationId);
+  await recordAuditEvent({
+    context,
+    subjectId: id,
+    subjectType: "product",
+    type: "product.updated",
+  });
 }
 
 export async function replaceProductImageAction(
   id: string,
-  stagedImageInput: StagedProductImageInput
+  image: StagedProductImageInput
 ) {
-  const session = await requireActionSession();
-  const stagedImage = stagedProductImageSchema.parse(stagedImageInput);
-  const product = await getProductImageState(id);
+  const context = await requireAppContext("products:write");
+  const parsed = stagedProductImageSchema.safeParse(image);
+
+  if (!parsed.success) {
+    return {
+      errors: parsed.error.flatten().fieldErrors,
+      success: false,
+    } as const;
+  }
+
+  const product = await getProductImageState(context.organizationId, id);
+
+  if (!product) {
+    throw new Error("Produto nao encontrado.");
+  }
+
   const oldVersion = product.imageVersion;
-  const nextVersion = (oldVersion ?? 0) + 1;
   const storedImage = await storeProductImageFromStage({
+    organizationId: context.organizationId,
     productId: id,
-    stagedImage,
-    userId: session.user.id,
-    version: nextVersion,
+    stagedImage: parsed.data,
+    userId: context.userId,
+    version: (oldVersion ?? 0) + 1,
   });
 
-  let updatedRows: { id: string }[];
-
-  try {
-    updatedRows = await db
-      .update(products)
-      .set({
-        imageBlurDataUrl: storedImage.blurDataURL,
-        imageHeight: storedImage.height,
-        imageUploadedAt: new Date(),
-        imageVersion: storedImage.version,
-        imageWidth: storedImage.width,
-      })
-      .where(
-        and(
-          eq(products.id, id),
-          oldVersion === null
-            ? isNull(products.imageVersion)
-            : eq(products.imageVersion, oldVersion)
-        )
-      )
-      .returning({ id: products.id });
-  } catch (error) {
-    await deleteProductImageVersion({
-      productId: id,
-      version: storedImage.version,
-    }).catch(() => undefined);
-
-    throw error;
+  if (!storedImage) {
+    return { success: true } as const;
   }
-
-  if (updatedRows.length === 0) {
-    await deleteProductImageVersion({
-      productId: id,
-      version: storedImage.version,
-    }).catch(() => undefined);
-
-    throw new Error(
-      "A imagem foi atualizada por outra operacao. Atualize a pagina e tente novamente."
-    );
-  }
-
-  if (oldVersion !== null) {
-    await deleteProductImageVersion({
-      productId: id,
-      version: oldVersion,
-    }).catch(() => undefined);
-  }
-
-  revalidateCatalogViews();
-}
-
-export async function removeProductImageAction(id: string) {
-  await requireActionSession();
-  const product = await getProductImageState(id);
 
   await db
     .update(products)
-    .set(emptyProductImagePayload)
-    .where(eq(products.id, id));
+    .set({
+      imageBlurDataUrl: storedImage.blurDataURL,
+      imageHeight: storedImage.height,
+      imageUploadedAt: new Date(),
+      imageVersion: storedImage.version,
+      imageWidth: storedImage.width,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(products.id, id),
+        eq(products.organizationId, context.organizationId),
+        oldVersion === null
+          ? isNull(products.imageVersion)
+          : eq(products.imageVersion, oldVersion)
+      )
+    );
 
-  if (product.imageVersion !== null) {
+  if (oldVersion !== null) {
     await deleteProductImageVersion({
+      organizationId: context.organizationId,
       productId: id,
-      version: product.imageVersion,
-    }).catch(() => undefined);
+      version: oldVersion,
+    });
   }
 
-  revalidateCatalogViews();
+  revalidateCatalogViews(context.organizationId);
+  await recordAuditEvent({
+    context,
+    subjectId: id,
+    subjectType: "product_image",
+    type: "product_image.replaced",
+  });
+  return { success: true } as const;
 }
 
-export async function addProductStockAction(
-  id: string,
-  data: {
-    quantity: number;
-    stockedOn: string;
-    unitCost: string;
+export async function removeProductImageAction(id: string) {
+  const context = await requireAppContext("products:write");
+  const product = await getProductImageState(context.organizationId, id);
+
+  if (!product?.imageVersion) {
+    return { success: true } as const;
   }
-) {
-  await requireActionSession();
-  const parsed = stockAdditionSchema.parse(data);
+
+  await db
+    .update(products)
+    .set({
+      ...emptyProductImagePayload,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(products.id, id),
+        eq(products.organizationId, context.organizationId)
+      )
+    );
+
+  await deleteProductImageVersion({
+    organizationId: context.organizationId,
+    productId: id,
+    version: product.imageVersion,
+  });
+
+  revalidateCatalogViews(context.organizationId);
+  await recordAuditEvent({
+    context,
+    subjectId: id,
+    subjectType: "product_image",
+    type: "product_image.removed",
+  });
+  return { success: true } as const;
+}
+
+export async function addProductStockAction(productId: string, input: unknown) {
+  const context = await requireAppContext("products:write");
+  const result = stockAdditionSchema.safeParse(input);
+
+  if (!result.success) {
+    throw new Error(firstZodErrorMessage(result.error));
+  }
 
   await db.transaction(async (tx) => {
-    const product = await lockProductForUpdate(tx, id);
-    const nextSnapshot = applyStockAddition({
+    const product = await lockProductForUpdate(
+      tx,
+      context.organizationId,
+      productId
+    );
+
+    if (!product) {
+      throw new Error("Produto nao encontrado.");
+    }
+
+    const { nextCostPrice, nextStock } = applyStockAddition({
       currentCostPrice: Number(product.costPrice),
       currentStock: product.stock,
-      incomingQuantity: parsed.quantity,
-      incomingUnitCost: parsed.unitCost,
+      incomingQuantity: result.data.quantity,
+      incomingUnitCost: result.data.unitCost,
     });
 
     await tx.insert(productStockEntries).values({
-      productId: id,
-      quantity: parsed.quantity,
-      stockedOn: parsed.stockedOn,
-      unitCost: toCurrencyString(parsed.unitCost),
+      organizationId: context.organizationId,
+      productId,
+      quantity: result.data.quantity,
+      stockedOn: result.data.stockedOn,
+      unitCost: toCurrencyString(result.data.unitCost),
     });
 
     await tx
       .update(products)
       .set({
-        archivedAt: null,
-        costPrice: toCurrencyString(nextSnapshot.nextCostPrice),
-        stock: nextSnapshot.nextStock,
+        costPrice: toCurrencyString(nextCostPrice),
+        stock: nextStock,
+        updatedAt: new Date(),
       })
-      .where(eq(products.id, id));
+      .where(
+        and(
+          eq(products.id, productId),
+          eq(products.organizationId, context.organizationId)
+        )
+      );
   });
 
-  revalidateSharedAnalytics();
+  revalidateSharedAnalytics(context.organizationId);
+  await recordAuditEvent({
+    context,
+    metadata: { quantity: result.data.quantity },
+    subjectId: productId,
+    subjectType: "stock",
+    type: "stock.added",
+  });
 }
 
 export async function writeOffProductStockAction(
-  id: string,
-  data: {
-    happenedOn: string;
-    notes?: string;
-    quantity: number;
-    reason: "adjustment" | "operational";
-  }
+  productId: string,
+  input: unknown
 ) {
-  await requireActionSession();
-  const parsed = stockWriteOffSchema.parse(data);
+  const context = await requireAppContext("products:write");
+  const result = stockWriteOffSchema.safeParse(input);
+
+  if (!result.success) {
+    throw new Error(firstZodErrorMessage(result.error));
+  }
 
   await db.transaction(async (tx) => {
-    const product = await lockProductForUpdate(tx, id);
-    const nextSnapshot = applyStockWriteOff({
+    const product = await lockProductForUpdate(
+      tx,
+      context.organizationId,
+      productId
+    );
+
+    if (!product) {
+      throw new Error("Produto nao encontrado.");
+    }
+
+    const { nextStock } = applyStockWriteOff({
       currentStock: product.stock,
-      quantity: parsed.quantity,
+      quantity: result.data.quantity,
     });
 
     await tx.insert(productStockWriteOffs).values({
-      happenedOn: parsed.happenedOn,
-      notes: parsed.notes || undefined,
-      productId: id,
-      quantity: parsed.quantity,
-      reason: parsed.reason,
+      happenedOn: result.data.happenedOn,
+      notes: result.data.notes || null,
+      organizationId: context.organizationId,
+      productId,
+      quantity: result.data.quantity,
+      reason: result.data.reason,
       unitCostSnapshot: product.costPrice,
     });
 
     await tx
       .update(products)
-      .set({
-        stock: nextSnapshot.nextStock,
-      })
-      .where(eq(products.id, id));
+      .set({ stock: nextStock, updatedAt: new Date() })
+      .where(
+        and(
+          eq(products.id, productId),
+          eq(products.organizationId, context.organizationId)
+        )
+      );
   });
 
-  revalidateSharedAnalytics();
+  revalidateSharedAnalytics(context.organizationId);
+  await recordAuditEvent({
+    context,
+    metadata: { quantity: result.data.quantity, reason: result.data.reason },
+    subjectId: productId,
+    subjectType: "stock",
+    type: "stock.written_off",
+  });
 }
 
 export async function archiveProductAction(id: string) {
-  await requireActionSession();
+  const context = await requireAppContext("products:write");
+
   await db
     .update(products)
-    .set({
-      archivedAt: new Date(),
-    })
-    .where(eq(products.id, id));
+    .set({ archivedAt: new Date(), updatedAt: new Date() })
+    .where(
+      and(
+        eq(products.id, id),
+        eq(products.organizationId, context.organizationId)
+      )
+    );
 
-  revalidateCatalogViews();
+  revalidateCatalogViews(context.organizationId);
+  await recordAuditEvent({
+    context,
+    subjectId: id,
+    subjectType: "product",
+    type: "product.archived",
+  });
 }
 
 export async function unarchiveProductAction(id: string) {
-  await requireActionSession();
+  const context = await requireAppContext("products:write");
+
   await db
     .update(products)
-    .set({
-      archivedAt: null,
-    })
-    .where(eq(products.id, id));
+    .set({ archivedAt: null, updatedAt: new Date() })
+    .where(
+      and(
+        eq(products.id, id),
+        eq(products.organizationId, context.organizationId)
+      )
+    );
 
-  revalidateCatalogViews();
+  revalidateCatalogViews(context.organizationId);
+  await recordAuditEvent({
+    context,
+    subjectId: id,
+    subjectType: "product",
+    type: "product.unarchived",
+  });
 }

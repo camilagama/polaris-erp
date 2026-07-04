@@ -1,20 +1,22 @@
 import "server-only";
 
-import { asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, gte, lte, sql } from "drizzle-orm";
 import { cacheLife, cacheTag } from "next/cache";
 import { db } from "@/db";
 import { productStockEntries, saleItems, sales } from "@/db/schema";
 import { buildSalesAnalytics } from "@/features/sales/analytics";
 import type { SalesAnalytics } from "@/features/sales/contracts";
-import { CACHE_TAGS } from "@/lib/cache-tags";
+import { buildOrganizationCacheTags } from "@/lib/cache-tags";
 import { formatDateInputValue } from "@/lib/domain/date";
 
-export const getSalesDateBounds = async (): Promise<{
+export const getSalesDateBounds = async (
+  organizationId: string
+): Promise<{
   from: string;
   to: string;
 }> => {
   "use cache: remote";
-  cacheTag(CACHE_TAGS.analyticsShared);
+  cacheTag(buildOrganizationCacheTags(organizationId).analytics);
   cacheLife("minutes");
 
   const [salesRows, stockEntriesRows] = await Promise.all([
@@ -22,12 +24,14 @@ export const getSalesDateBounds = async (): Promise<{
       .select({
         minOccurredOn: sql<string | null>`min(${sales.occurredOn})`,
       })
-      .from(sales),
+      .from(sales)
+      .where(eq(sales.organizationId, organizationId)),
     db
       .select({
         minStockedOn: sql<string | null>`min(${productStockEntries.stockedOn})`,
       })
-      .from(productStockEntries),
+      .from(productStockEntries)
+      .where(eq(productStockEntries.organizationId, organizationId)),
   ]);
   const salesRow = salesRows[0];
   const stockEntriesRow = stockEntriesRows[0];
@@ -45,8 +49,13 @@ export const getSalesDateBounds = async (): Promise<{
   };
 };
 
-export const getSalesAnalytics = async (range: {
+export const getSalesAnalytics = async ({
+  from,
+  organizationId,
+  to,
+}: {
   from: string;
+  organizationId: string;
   to: string;
 }): Promise<SalesAnalytics> => {
   const [salesRows, saleItemRows] = await Promise.all([
@@ -61,7 +70,11 @@ export const getSalesAnalytics = async (range: {
       })
       .from(sales)
       .where(
-        sql`${sales.occurredOn} >= ${range.from} and ${sales.occurredOn} <= ${range.to}`
+        and(
+          eq(sales.organizationId, organizationId),
+          gte(sales.occurredOn, from),
+          lte(sales.occurredOn, to)
+        )
       )
       .orderBy(asc(sales.occurredOn)),
     db
@@ -74,13 +87,18 @@ export const getSalesAnalytics = async (range: {
       .from(saleItems)
       .innerJoin(sales, eq(saleItems.saleId, sales.id))
       .where(
-        sql`${sales.occurredOn} >= ${range.from} and ${sales.occurredOn} <= ${range.to}`
+        and(
+          eq(saleItems.organizationId, organizationId),
+          eq(sales.organizationId, organizationId),
+          gte(sales.occurredOn, from),
+          lte(sales.occurredOn, to)
+        )
       )
       .orderBy(asc(sales.occurredOn), asc(saleItems.createdAt)),
   ]);
 
   return buildSalesAnalytics({
-    range,
+    range: { from, to },
     saleItems: saleItemRows.map((row) => ({
       occurredOn: row.occurredOn,
       quantity: Number(row.quantity),

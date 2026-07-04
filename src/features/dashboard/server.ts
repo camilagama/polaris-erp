@@ -21,15 +21,17 @@ import {
   buildDashboardMetrics,
   resolveContributionGraphRange,
 } from "@/features/dashboard/metrics";
-import { CACHE_TAGS } from "@/lib/cache-tags";
+import { buildOrganizationCacheTags } from "@/lib/cache-tags";
 import { formatDateInputValue } from "@/lib/domain/date";
 
-export const getDashboardDateBounds = async (): Promise<{
+export const getDashboardDateBounds = async (
+  organizationId: string
+): Promise<{
   from: string;
   to: string;
 }> => {
   "use cache: remote";
-  cacheTag(CACHE_TAGS.analyticsShared);
+  cacheTag(buildOrganizationCacheTags(organizationId).analytics);
   cacheLife("minutes");
 
   const [salesRows, stockEntriesRows] = await Promise.all([
@@ -37,12 +39,14 @@ export const getDashboardDateBounds = async (): Promise<{
       .select({
         minOccurredOn: sql<string | null>`min(${sales.occurredOn})`,
       })
-      .from(sales),
+      .from(sales)
+      .where(eq(sales.organizationId, organizationId)),
     db
       .select({
         minStockedOn: sql<string | null>`min(${productStockEntries.stockedOn})`,
       })
-      .from(productStockEntries),
+      .from(productStockEntries)
+      .where(eq(productStockEntries.organizationId, organizationId)),
   ]);
   const salesRow = salesRows[0];
   const stockEntriesRow = stockEntriesRows[0];
@@ -61,7 +65,11 @@ export const getDashboardDateBounds = async (): Promise<{
 };
 
 const getDashboardMetricsByRange = cache(
-  async (from: string, to: string): Promise<DashboardMetrics> => {
+  async (
+    organizationId: string,
+    from: string,
+    to: string
+  ): Promise<DashboardMetrics> => {
     const [salesRows, saleItemRows, inventoryRows] = await Promise.all([
       db
         .select({
@@ -73,7 +81,13 @@ const getDashboardMetricsByRange = cache(
           totalAmount: sales.totalAmount,
         })
         .from(sales)
-        .where(and(gte(sales.occurredOn, from), lte(sales.occurredOn, to))),
+        .where(
+          and(
+            eq(sales.organizationId, organizationId),
+            gte(sales.occurredOn, from),
+            lte(sales.occurredOn, to)
+          )
+        ),
       db
         .select({
           imageBlurDataUrl: products.imageBlurDataUrl,
@@ -91,7 +105,15 @@ const getDashboardMetricsByRange = cache(
         .from(saleItems)
         .innerJoin(sales, eq(saleItems.saleId, sales.id))
         .innerJoin(products, eq(saleItems.productId, products.id))
-        .where(and(gte(sales.occurredOn, from), lte(sales.occurredOn, to))),
+        .where(
+          and(
+            eq(saleItems.organizationId, organizationId),
+            eq(sales.organizationId, organizationId),
+            eq(products.organizationId, organizationId),
+            gte(sales.occurredOn, from),
+            lte(sales.occurredOn, to)
+          )
+        ),
       db
         .select({
           categoryName: categories.name,
@@ -99,7 +121,12 @@ const getDashboardMetricsByRange = cache(
         })
         .from(products)
         .innerJoin(categories, eq(products.categoryId, categories.id))
-        .where(gt(products.stock, 0))
+        .where(
+          and(
+            eq(products.organizationId, organizationId),
+            gt(products.stock, 0)
+          )
+        )
         .groupBy(categories.name)
         .orderBy(asc(categories.name)),
     ]);
@@ -139,39 +166,45 @@ const getDashboardMetricsByRange = cache(
 );
 
 export const getDashboardMetrics = async (
+  organizationId: string,
   range: DashboardSelectedRange
 ): Promise<DashboardMetrics> =>
-  getDashboardMetricsByRange(range.from, range.to);
+  getDashboardMetricsByRange(organizationId, range.from, range.to);
 
-export const getDashboardContributionGraph =
-  async (): Promise<DashboardContributionGraph> => {
-    const bounds = await getDashboardDateBounds();
-    const range = resolveContributionGraphRange(bounds);
+export const getDashboardContributionGraph = async (
+  organizationId: string
+): Promise<DashboardContributionGraph> => {
+  const bounds = await getDashboardDateBounds(organizationId);
+  const range = resolveContributionGraphRange(bounds);
 
-    const salesRows = await db
-      .select({
-        occurredOn: sales.occurredOn,
-        status: sales.status,
-        totalAmount: sales.totalAmount,
-      })
-      .from(sales)
-      .where(
-        and(gte(sales.occurredOn, range.from), lte(sales.occurredOn, range.to))
-      );
+  const salesRows = await db
+    .select({
+      occurredOn: sales.occurredOn,
+      status: sales.status,
+      totalAmount: sales.totalAmount,
+    })
+    .from(sales)
+    .where(
+      and(
+        eq(sales.organizationId, organizationId),
+        gte(sales.occurredOn, range.from),
+        lte(sales.occurredOn, range.to)
+      )
+    );
 
-    return buildDashboardContributionGraph({
-      range,
-      sales: salesRows.map((row) => ({
-        occurredOn: row.occurredOn,
-        status: row.status as "cancelled" | "completed",
-        totalAmount: Number(row.totalAmount),
-      })),
-    });
-  };
+  return buildDashboardContributionGraph({
+    range,
+    sales: salesRows.map((row) => ({
+      occurredOn: row.occurredOn,
+      status: row.status as "cancelled" | "completed",
+      totalAmount: Number(row.totalAmount),
+    })),
+  });
+};
 
-export const getDashboardGlobalStats = async () => {
+export const getDashboardGlobalStats = async (organizationId: string) => {
   "use cache: remote";
-  cacheTag(CACHE_TAGS.analyticsShared);
+  cacheTag(buildOrganizationCacheTags(organizationId).analytics);
   cacheLife("minutes");
 
   const [investmentRows, salesRows, saleItemsRows] = await Promise.all([
@@ -179,7 +212,8 @@ export const getDashboardGlobalStats = async () => {
       .select({
         total: sql<string>`coalesce(sum(${productStockEntries.quantity} * ${productStockEntries.unitCost}), '0')`,
       })
-      .from(productStockEntries),
+      .from(productStockEntries)
+      .where(eq(productStockEntries.organizationId, organizationId)),
     db
       .select({
         totalAmount: sql<string>`coalesce(sum(${sales.totalAmount}), '0')`,
@@ -187,14 +221,25 @@ export const getDashboardGlobalStats = async () => {
         totalFee: sql<string>`coalesce(sum(case when ${sales.paymentFeePayer} = 'seller' then ${sales.feeAmount} else 0 end), '0')`,
       })
       .from(sales)
-      .where(eq(sales.status, "completed")),
+      .where(
+        and(
+          eq(sales.organizationId, organizationId),
+          eq(sales.status, "completed")
+        )
+      ),
     db
       .select({
         totalCost: sql<string>`coalesce(sum(${saleItems.quantity} * ${saleItems.unitCostSnapshot}), '0')`,
       })
       .from(saleItems)
       .innerJoin(sales, eq(sales.id, saleItems.saleId))
-      .where(eq(sales.status, "completed")),
+      .where(
+        and(
+          eq(saleItems.organizationId, organizationId),
+          eq(sales.organizationId, organizationId),
+          eq(sales.status, "completed")
+        )
+      ),
   ]);
 
   const investment = Number(investmentRows[0]?.total ?? 0);

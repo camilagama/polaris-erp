@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Google } from "@/components/ui/svgs/google";
 import { DGImportsLogo } from "@/components/ui/svgs/logo";
 import { authClient, hasGoogleAuthClient } from "@/lib/auth-client";
@@ -15,6 +17,9 @@ const isLocalHostEnvironment = () => {
 export function SignInForm() {
   const [googlePending, setGooglePending] = useState(false);
   const [googleError, setGoogleError] = useState<string | null>(null);
+  const [email, setEmail] = useState("");
+  const [magicLinkPending, setMagicLinkPending] = useState(false);
+  const [magicLinkMessage, setMagicLinkMessage] = useState<string | null>(null);
   const [isLocalhost, setIsLocalhost] = useState(false);
 
   useEffect(() => {
@@ -31,7 +36,7 @@ export function SignInForm() {
     const initializeOneTap = async () => {
       try {
         await authClient.oneTap({
-          callbackURL: "/",
+          callbackURL: "/onboarding",
           context: "signin",
         });
       } catch {
@@ -59,7 +64,7 @@ export function SignInForm() {
     }
 
     const result = await authClient.signIn.social({
-      callbackURL: "/",
+      callbackURL: "/onboarding",
       provider: "google",
     });
 
@@ -69,6 +74,28 @@ export function SignInForm() {
       );
       setGooglePending(false);
     }
+  };
+
+  const handleMagicLinkSignIn = async () => {
+    setMagicLinkPending(true);
+    setMagicLinkMessage(null);
+
+    const result = await authClient.signIn.magicLink({
+      callbackURL: "/onboarding",
+      email,
+      newUserCallbackURL: "/onboarding",
+    });
+
+    if (result.error) {
+      setMagicLinkMessage(
+        result.error.message ?? "Nao foi possivel enviar o link de acesso."
+      );
+      setMagicLinkPending(false);
+      return;
+    }
+
+    setMagicLinkMessage("Enviamos um link de acesso para o seu email.");
+    setMagicLinkPending(false);
   };
 
   return (
@@ -87,11 +114,37 @@ export function SignInForm() {
                 Entrar na sua conta
               </h1>
               <p className="mt-2 text-muted-foreground text-sm">
-                Use sua conta Google aprovada para acessar o painel
+                Use Google ou receba um link magico por email
               </p>
             </div>
 
             <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="magic-link-email">Email</Label>
+                <Input
+                  autoComplete="email"
+                  id="magic-link-email"
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="voce@empresa.com"
+                  type="email"
+                  value={email}
+                />
+                <Button
+                  className="h-11 w-full"
+                  disabled={magicLinkPending || email.trim().length === 0}
+                  onClick={handleMagicLinkSignIn}
+                  type="button"
+                >
+                  {magicLinkPending ? "Enviando..." : "Enviar link de acesso"}
+                </Button>
+              </div>
+
+              {magicLinkMessage ? (
+                <div className="rounded-md border border-border/60 bg-muted/30 p-3 text-center text-muted-foreground text-sm">
+                  {magicLinkMessage}
+                </div>
+              ) : null}
+
               <Button
                 className="relative h-11 w-full gap-3"
                 disabled={googlePending || !hasGoogleAuthClient}
@@ -117,8 +170,7 @@ export function SignInForm() {
               ) : null}
 
               <p className="mt-8 text-center text-muted-foreground/70 text-xs leading-relaxed">
-                O acesso é liberado apenas para usuários previamente
-                provisionados na operação.
+                Novas contas criam uma organizacao propria no primeiro acesso.
               </p>
             </div>
           </div>

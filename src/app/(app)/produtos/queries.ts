@@ -45,6 +45,7 @@ export type ProductStatusFilter = z.infer<typeof productStatusFilterSchema>;
 
 interface ProductsQueryInput {
   cursor?: string;
+  organizationId: string;
   pageSize?: number;
   query?: string;
   status?: ProductStatusFilter;
@@ -56,6 +57,7 @@ const mapProductImage = (row: {
   imageHeight: number | null;
   imageVersion: number | null;
   imageWidth: number | null;
+  organizationId: string;
 }) => {
   if (
     row.imageVersion === null ||
@@ -68,9 +70,19 @@ const mapProductImage = (row: {
 
   return {
     blurDataURL: row.imageBlurDataUrl,
-    detailUrl: buildProductImageUrl(row.id, row.imageVersion, "detail"),
+    detailUrl: buildProductImageUrl(
+      row.organizationId,
+      row.id,
+      row.imageVersion,
+      "detail"
+    ),
     height: row.imageHeight,
-    tableUrl: buildProductImageUrl(row.id, row.imageVersion, "table"),
+    tableUrl: buildProductImageUrl(
+      row.organizationId,
+      row.id,
+      row.imageVersion,
+      "table"
+    ),
     version: row.imageVersion,
     width: row.imageWidth,
   };
@@ -89,6 +101,7 @@ const mapProductListItem = (row: {
   imageVersion: number | null;
   imageWidth: number | null;
   name: string;
+  organizationId: string;
   price: string;
   purchasedOn: string;
   stock: number;
@@ -139,10 +152,11 @@ export interface PaginatedProductsList {
 
 export async function getProductsQuery({
   cursor,
+  organizationId,
   pageSize = DEFAULT_PAGE_SIZE,
   query,
   status = "active",
-}: ProductsQueryInput = {}): Promise<PaginatedProductsList> {
+}: ProductsQueryInput): Promise<PaginatedProductsList> {
   const limit = pageSize + 1;
   const parsedCursor = cursor ? parseProductsCursor(cursor) : null;
   const normalizedQuery = query?.trim();
@@ -151,6 +165,7 @@ export async function getProductsQuery({
       ? `%${normalizedQuery}%`
       : null;
   const filters: SQL[] = [
+    eq(products.organizationId, organizationId),
     status === "archived"
       ? isNotNull(products.archivedAt)
       : isNull(products.archivedAt),
@@ -200,6 +215,7 @@ export async function getProductsQuery({
       imageVersion: products.imageVersion,
       imageWidth: products.imageWidth,
       name: products.name,
+      organizationId: products.organizationId,
       price: products.price,
       purchasedOn: products.purchasedOn,
       stock: products.stock,
@@ -221,6 +237,7 @@ export async function getProductsQuery({
 }
 
 export async function getProductByIdQuery(
+  organizationId: string,
   id: string
 ): Promise<ProductListItem | undefined> {
   const row = await db
@@ -237,13 +254,16 @@ export async function getProductByIdQuery(
       imageVersion: products.imageVersion,
       imageWidth: products.imageWidth,
       name: products.name,
+      organizationId: products.organizationId,
       price: products.price,
       purchasedOn: products.purchasedOn,
       stock: products.stock,
     })
     .from(products)
     .innerJoin(categories, eq(products.categoryId, categories.id))
-    .where(eq(products.id, id))
+    .where(
+      and(eq(products.id, id), eq(products.organizationId, organizationId))
+    )
     .then((rows) => rows[0]);
 
   if (!row) {
@@ -254,6 +274,7 @@ export async function getProductByIdQuery(
 }
 
 export async function getProductStockEntriesByProductIdQuery(
+  organizationId: string,
   productId: string
 ): Promise<ProductStockEntryItem[]> {
   const entries = await db
@@ -266,7 +287,12 @@ export async function getProductStockEntriesByProductIdQuery(
       unitCost: productStockEntries.unitCost,
     })
     .from(productStockEntries)
-    .where(eq(productStockEntries.productId, productId))
+    .where(
+      and(
+        eq(productStockEntries.organizationId, organizationId),
+        eq(productStockEntries.productId, productId)
+      )
+    )
     .orderBy(
       desc(productStockEntries.stockedOn),
       desc(productStockEntries.createdAt)
@@ -280,6 +306,7 @@ export async function getProductStockEntriesByProductIdQuery(
 }
 
 export async function getProductStockWriteOffsByProductIdQuery(
+  organizationId: string,
   productId: string
 ): Promise<ProductStockWriteOffItem[]> {
   const writeOffs = await db
@@ -294,7 +321,12 @@ export async function getProductStockWriteOffsByProductIdQuery(
       unitCostSnapshot: productStockWriteOffs.unitCostSnapshot,
     })
     .from(productStockWriteOffs)
-    .where(eq(productStockWriteOffs.productId, productId))
+    .where(
+      and(
+        eq(productStockWriteOffs.organizationId, organizationId),
+        eq(productStockWriteOffs.productId, productId)
+      )
+    )
     .orderBy(
       desc(productStockWriteOffs.happenedOn),
       desc(productStockWriteOffs.createdAt)
@@ -309,6 +341,7 @@ export async function getProductStockWriteOffsByProductIdQuery(
 }
 
 export async function getProductSalesByProductIdQuery(
+  organizationId: string,
   productId: string
 ): Promise<ProductSaleHistoryItem[]> {
   const rows = await db
@@ -325,7 +358,13 @@ export async function getProductSalesByProductIdQuery(
     })
     .from(saleItems)
     .innerJoin(sales, eq(saleItems.saleId, sales.id))
-    .where(eq(saleItems.productId, productId))
+    .where(
+      and(
+        eq(saleItems.organizationId, organizationId),
+        eq(sales.organizationId, organizationId),
+        eq(saleItems.productId, productId)
+      )
+    )
     .orderBy(desc(sales.occurredOn), desc(saleItems.createdAt))
     .limit(200);
 
@@ -338,6 +377,7 @@ export async function getProductSalesByProductIdQuery(
 }
 
 export async function getProductPriceChangesByProductIdQuery(
+  organizationId: string,
   productId: string
 ): Promise<ProductPriceChangeItem[]> {
   const rows = await db
@@ -350,7 +390,12 @@ export async function getProductPriceChangesByProductIdQuery(
     })
     .from(productPriceChanges)
     .leftJoin(users, eq(productPriceChanges.changedByUserId, users.id))
-    .where(eq(productPriceChanges.productId, productId))
+    .where(
+      and(
+        eq(productPriceChanges.organizationId, organizationId),
+        eq(productPriceChanges.productId, productId)
+      )
+    )
     .orderBy(desc(productPriceChanges.createdAt))
     .limit(10);
 

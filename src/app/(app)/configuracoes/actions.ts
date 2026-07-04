@@ -11,34 +11,59 @@ import {
   saveCatalogSettings,
   updateCategory,
 } from "@/features/catalog/server";
-import { CACHE_TAGS } from "@/lib/cache-tags";
-import { requireActionSession } from "@/lib/server-action-auth";
+import { requireAppContext } from "@/lib/app-session";
+import { recordAuditEvent } from "@/lib/audit-log";
+import { buildOrganizationCacheTags } from "@/lib/cache-tags";
 
-const revalidateCatalogViews = () => {
-  updateTag(CACHE_TAGS.catalog);
+const revalidateCatalogViews = (organizationId: string) => {
+  updateTag(buildOrganizationCacheTags(organizationId).catalog);
   refresh();
 };
 
 export async function createCategoryAction(data: CategoryInput) {
-  await requireActionSession();
-  await createCategory(data);
-  revalidateCatalogViews();
+  const context = await requireAppContext("settings:write");
+  await createCategory(context.organizationId, data);
+  revalidateCatalogViews(context.organizationId);
+  await recordAuditEvent({
+    context,
+    metadata: { name: data.name },
+    subjectType: "category",
+    type: "category.created",
+  });
 }
 
 export async function updateCategoryAction(id: string, data: CategoryInput) {
-  await requireActionSession();
-  await updateCategory(id, data);
-  revalidateCatalogViews();
+  const context = await requireAppContext("settings:write");
+  await updateCategory(context.organizationId, id, data);
+  revalidateCatalogViews(context.organizationId);
+  await recordAuditEvent({
+    context,
+    metadata: { name: data.name },
+    subjectId: id,
+    subjectType: "category",
+    type: "category.updated",
+  });
 }
 
 export async function deleteCategoryAction(id: string) {
-  await requireActionSession();
-  await deleteCategory(id);
-  revalidateCatalogViews();
+  const context = await requireAppContext("settings:write");
+  await deleteCategory(context.organizationId, id);
+  revalidateCatalogViews(context.organizationId);
+  await recordAuditEvent({
+    context,
+    subjectId: id,
+    subjectType: "category",
+    type: "category.deleted",
+  });
 }
 
 export async function saveCatalogSettingsAction(data: CatalogSettingsInput) {
-  await requireActionSession();
-  await saveCatalogSettings(data);
-  revalidateCatalogViews();
+  const context = await requireAppContext("settings:write");
+  await saveCatalogSettings(context.organizationId, data);
+  revalidateCatalogViews(context.organizationId);
+  await recordAuditEvent({
+    context,
+    subjectType: "settings",
+    type: "settings.updated",
+  });
 }

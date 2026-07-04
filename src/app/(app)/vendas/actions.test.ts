@@ -1,10 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { CACHE_TAGS } from "@/lib/cache-tags";
+import { buildOrganizationCacheTags } from "@/lib/cache-tags";
 
 vi.mock("server-only", () => ({}));
 
 vi.mock("@/lib/session", () => ({
   getSession: vi.fn(),
+}));
+
+vi.mock("@/lib/app-session", () => ({
+  requireAppContext: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({
@@ -62,6 +66,7 @@ interface CancelSaleHarness {
 
 const resolveMocks = async () => {
   const sessionModule = await import("@/lib/session");
+  const appSessionModule = await import("@/lib/app-session");
   const dbModule = await import("@/db");
   const cache = await import("next/cache");
 
@@ -71,6 +76,7 @@ const resolveMocks = async () => {
       transaction: MockFn;
     },
     mockRefresh: cache.refresh as MockFn,
+    mockRequireAppContext: appSessionModule.requireAppContext as MockFn,
     mockSession: sessionModule.getSession as MockFn,
     mockUpdateTag: cache.updateTag as MockFn,
   };
@@ -283,7 +289,14 @@ describe("sales server actions", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
 
-    const { mockCatalogSettings, mockSession } = await resolveMocks();
+    const { mockCatalogSettings, mockRequireAppContext, mockSession } =
+      await resolveMocks();
+
+    mockRequireAppContext.mockResolvedValue({
+      organizationId: "org_dg_imports",
+      role: "owner",
+      userId: "user-1",
+    });
 
     mockSession.mockResolvedValue({
       user: {
@@ -303,9 +316,11 @@ describe("sales server actions", () => {
 
   it("requires authentication before creating a sale", async () => {
     const { createSaleAction } = await import("@/app/(app)/vendas/actions");
-    const { mockDb, mockSession } = await resolveMocks();
+    const { mockDb, mockRequireAppContext } = await resolveMocks();
 
-    mockSession.mockResolvedValueOnce(null);
+    mockRequireAppContext.mockRejectedValueOnce(
+      new Error("Sessao invalida. Faca login novamente.")
+    );
 
     await expect(
       createSaleAction({
@@ -483,7 +498,9 @@ describe("sales server actions", () => {
       paymentMethod: "pix",
       totalAmount: "100.00",
     });
-    expect(mockUpdateTag).toHaveBeenCalledWith(CACHE_TAGS.analyticsShared);
+    expect(mockUpdateTag).toHaveBeenCalledWith(
+      buildOrganizationCacheTags("org_dg_imports").analytics
+    );
     expect(mockRefresh).toHaveBeenCalled();
   });
 
@@ -649,7 +666,9 @@ describe("sales server actions", () => {
     expect(harness.productById.get("product-1")?.stock).toBe(5);
     expect(harness.state.saleStatus).toBe("cancelled");
     expect(harness.state.cancelledAt).toBeInstanceOf(Date);
-    expect(mockUpdateTag).toHaveBeenCalledWith(CACHE_TAGS.analyticsShared);
+    expect(mockUpdateTag).toHaveBeenCalledWith(
+      buildOrganizationCacheTags("org_dg_imports").analytics
+    );
     expect(mockRefresh).toHaveBeenCalled();
   });
 });

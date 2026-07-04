@@ -23,7 +23,7 @@ import {
 } from "@/features/products/image-urls";
 import { serverEnv } from "@/lib/env";
 
-const PRODUCT_IMAGE_PREFIX = "products/";
+const PRODUCT_IMAGE_PREFIX = "organizations/";
 const STAGING_IMAGE_PREFIX = "staging/";
 
 const getRequiredStorageEnv = () => {
@@ -192,16 +192,23 @@ export const readStagedProductImage = async ({
 };
 
 export const readPublicProductImageVariant = async ({
+  organizationId,
   productId,
   variant,
   version,
 }: {
+  organizationId: string;
   productId: string;
   variant: ProductImageVariant;
   version: number;
 }) => {
   const env = getRequiredStorageEnv();
-  const key = buildProductImageObjectKey(productId, version, variant);
+  const key = buildProductImageObjectKey(
+    organizationId,
+    productId,
+    version,
+    variant
+  );
 
   const response = await getStorageClient().send(
     new GetObjectCommand({
@@ -221,17 +228,24 @@ export const readPublicProductImageVariant = async ({
 
 export const uploadProcessedProductImageVariant = async ({
   body,
+  organizationId,
   productId,
   variant,
   version,
 }: {
   body: Buffer;
+  organizationId: string;
   productId: string;
   variant: ProductImageVariant;
   version: number;
 }) => {
   const env = getRequiredStorageEnv();
-  const key = buildProductImageObjectKey(productId, version, variant);
+  const key = buildProductImageObjectKey(
+    organizationId,
+    productId,
+    version,
+    variant
+  );
 
   await getStorageClient().send(
     new PutObjectCommand({
@@ -262,9 +276,11 @@ export const deleteObjectIfExists = async ({
 };
 
 export const deleteProductImageVersion = async ({
+  organizationId,
   productId,
   version,
 }: {
+  organizationId: string;
   productId: string;
   version: number;
 }) => {
@@ -274,7 +290,12 @@ export const deleteProductImageVersion = async ({
       Bucket: env.publicBucket,
       Delete: {
         Objects: (["detail", "table"] as const).map((variant) => ({
-          Key: buildProductImageObjectKey(productId, version, variant),
+          Key: buildProductImageObjectKey(
+            organizationId,
+            productId,
+            version,
+            variant
+          ),
         })),
         Quiet: true,
       },
@@ -282,7 +303,7 @@ export const deleteProductImageVersion = async ({
   );
   assertBatchDeleteSucceeded(
     result,
-    `deleteProductImageVersion(${productId}, v${version})`
+    `deleteProductImageVersion(${organizationId}/${productId}, v${version})`
   );
 };
 
@@ -340,11 +361,12 @@ export const deleteManyProductImageKeys = async (keys: string[]) => {
 };
 
 export const getExpectedProductImageKeys = (
+  organizationId: string,
   productId: string,
   version: number
 ) =>
   (["detail", "table"] as const).map((variant) =>
-    buildProductImageObjectKey(productId, version, variant)
+    buildProductImageObjectKey(organizationId, productId, version, variant)
   );
 
 export interface R2StagingHealthCorsRule {

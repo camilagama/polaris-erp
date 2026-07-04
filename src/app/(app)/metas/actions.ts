@@ -13,36 +13,61 @@ import {
   unarchiveGoal,
   updateGoal,
 } from "@/features/goals/server";
-import { requireActionSession } from "@/lib/server-action-auth";
+import { requireAppContext } from "@/lib/app-session";
+import { recordAuditEvent } from "@/lib/audit-log";
 
 const revalidateDashboard = () => {
   refresh();
 };
 
 export async function createGoalAction(data: unknown) {
-  const session = await requireActionSession();
+  const context = await requireAppContext("settings:write");
   const parsed = createGoalSchema.parse(data);
-  await createGoal(parsed, session.user.id);
+  await createGoal(context.organizationId, parsed, context.userId);
   revalidateDashboard();
+  await recordAuditEvent({
+    context,
+    metadata: { metric: parsed.metric, name: parsed.name },
+    subjectType: "goal",
+    type: "goal.created",
+  });
 }
 
 export async function updateGoalAction(data: unknown) {
-  await requireActionSession();
+  const context = await requireAppContext("settings:write");
   const parsed = updateGoalSchema.parse(data);
-  await updateGoal(parsed);
+  await updateGoal(context.organizationId, parsed);
   revalidateDashboard();
+  await recordAuditEvent({
+    context,
+    subjectId: parsed.id,
+    subjectType: "goal",
+    type: "goal.updated",
+  });
 }
 
 export async function archiveGoalAction(data: unknown) {
-  await requireActionSession();
+  const context = await requireAppContext("settings:write");
   const parsed = archiveGoalSchema.parse(data);
-  await archiveGoal(parsed.id);
+  await archiveGoal(context.organizationId, parsed.id);
   revalidateDashboard();
+  await recordAuditEvent({
+    context,
+    subjectId: parsed.id,
+    subjectType: "goal",
+    type: "goal.archived",
+  });
 }
 
 export async function unarchiveGoalAction(data: unknown) {
-  await requireActionSession();
+  const context = await requireAppContext("settings:write");
   const parsed = unarchiveGoalSchema.parse(data);
-  await unarchiveGoal(parsed.id);
+  await unarchiveGoal(context.organizationId, parsed.id);
   revalidateDashboard();
+  await recordAuditEvent({
+    context,
+    subjectId: parsed.id,
+    subjectType: "goal",
+    type: "goal.unarchived",
+  });
 }

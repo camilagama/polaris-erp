@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { CACHE_TAGS } from "@/lib/cache-tags";
+import { buildOrganizationCacheTags } from "@/lib/cache-tags";
 
 vi.mock("server-only", () => ({}));
 
@@ -40,15 +40,21 @@ describe("sales server caching", () => {
 
     mockDb.select
       .mockReturnValueOnce({
-        from: async () => [{ minOccurredOn: "2026-03-15" }],
+        from: () => ({
+          where: async () => [{ minOccurredOn: "2026-03-15" }],
+        }),
       })
       .mockReturnValueOnce({
-        from: async () => [{ minStockedOn: "2026-03-01" }],
+        from: () => ({
+          where: async () => [{ minStockedOn: "2026-03-01" }],
+        }),
       });
 
-    const result = await getSalesDateBounds();
+    const result = await getSalesDateBounds("org_dg_imports");
 
-    expect(mockCacheTag).toHaveBeenCalledWith(CACHE_TAGS.analyticsShared);
+    expect(mockCacheTag).toHaveBeenCalledWith(
+      buildOrganizationCacheTags("org_dg_imports").analytics
+    );
     expect(mockCacheLife).toHaveBeenCalledWith("minutes");
     expect(result).toEqual({
       from: "2026-03-01",

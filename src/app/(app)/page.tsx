@@ -32,6 +32,7 @@ import {
 } from "@/features/dashboard/server";
 import { getGoalsDashboardData } from "@/features/goals/server";
 import { buildProductImageUrl } from "@/features/products/image-urls";
+import { requirePageAppContext } from "@/lib/app-session";
 import { formatCurrency } from "@/lib/formatters";
 
 export const metadata: Metadata = {
@@ -49,21 +50,22 @@ const deferredAnalyticsSectionStyle = {
 } as const satisfies CSSProperties;
 
 export default async function DashboardPage(props: PageProps<"/">) {
+  const context = await requirePageAppContext();
   const searchParams = await props.searchParams;
-  const bounds = await getDashboardDateBounds();
+  const bounds = await getDashboardDateBounds(context.organizationId);
   const selectedRange = resolveDashboardDateRange({
     bounds,
     searchParams,
   });
   const [metrics, globalStats, contributionGraph, goalsPayload] =
     await Promise.all([
-      getDashboardMetrics({
+      getDashboardMetrics(context.organizationId, {
         from: selectedRange.from,
         to: selectedRange.to,
       }),
-      getDashboardGlobalStats(),
-      getDashboardContributionGraph(),
-      getGoalsDashboardData(),
+      getDashboardGlobalStats(context.organizationId),
+      getDashboardContributionGraph(context.organizationId),
+      getGoalsDashboardData(context.organizationId),
     ]);
   const marginPercentage =
     globalStats.investment > 0
@@ -304,6 +306,7 @@ export default async function DashboardPage(props: PageProps<"/">) {
 
                       const imageUrl = hasImage
                         ? buildProductImageUrl(
+                            context.organizationId,
                             product.id,
                             product.imageVersion as number,
                             "table"

@@ -20,6 +20,14 @@ const serverEnvSchema = z.object({
   INTERNAL_BOOTSTRAP_SECRET: optionalNonEmptyString,
   GOOGLE_CLIENT_ID: optionalNonEmptyString,
   GOOGLE_CLIENT_SECRET: optionalNonEmptyString,
+  MAGIC_LINK_EMAIL_WEBHOOK_URL: z.preprocess((value) => {
+    if (typeof value !== "string") {
+      return value;
+    }
+
+    const trimmedValue = value.trim();
+    return trimmedValue.length === 0 ? undefined : trimmedValue;
+  }, z.string().url().optional()),
   NEXT_PUBLIC_APP_URL: z.string().url(),
   NEXT_PUBLIC_GOOGLE_CLIENT_ID: optionalNonEmptyString,
   NODE_ENV: z
@@ -62,6 +70,7 @@ export const serverEnv = serverEnvSchema.parse({
   INTERNAL_BOOTSTRAP_SECRET: process.env.INTERNAL_BOOTSTRAP_SECRET,
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
   GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
+  MAGIC_LINK_EMAIL_WEBHOOK_URL: process.env.MAGIC_LINK_EMAIL_WEBHOOK_URL,
   NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
   NEXT_PUBLIC_GOOGLE_CLIENT_ID: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
   NODE_ENV: process.env.NODE_ENV,

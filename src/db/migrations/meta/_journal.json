@@ -141,6 +141,13 @@
       "when": 1775312046002,
       "tag": "20260404141406_condemned_calypso",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1783119008571,
+      "tag": "20260703225008_spotty_cardiac",
+      "breakpoints": true
     }
   ]
 }

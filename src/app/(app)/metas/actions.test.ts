@@ -6,8 +6,8 @@ vi.mock("next/cache", () => ({
   refresh: vi.fn(),
 }));
 
-vi.mock("@/lib/server-action-auth", () => ({
-  requireActionSession: vi.fn(),
+vi.mock("@/lib/app-session", () => ({
+  requireAppContext: vi.fn(),
 }));
 
 vi.mock("@/features/goals/server", () => ({
@@ -20,7 +20,7 @@ vi.mock("@/features/goals/server", () => ({
 type MockFn = ReturnType<typeof vi.fn>;
 
 const resolveMocks = async () => {
-  const auth = await import("@/lib/server-action-auth");
+  const auth = await import("@/lib/app-session");
   const goalsServer = await import("@/features/goals/server");
   const cache = await import("next/cache");
 
@@ -28,7 +28,7 @@ const resolveMocks = async () => {
     mockArchiveGoal: goalsServer.archiveGoal as MockFn,
     mockCreateGoal: goalsServer.createGoal as MockFn,
     mockRefresh: cache.refresh as MockFn,
-    mockRequireSession: auth.requireActionSession as MockFn,
+    mockRequireAppContext: auth.requireAppContext as MockFn,
     mockUnarchiveGoal: goalsServer.unarchiveGoal as MockFn,
     mockUpdateGoal: goalsServer.updateGoal as MockFn,
   };
@@ -40,8 +40,8 @@ describe("metas server actions", () => {
   });
 
   it("requires authentication before creating a goal", async () => {
-    const { mockRequireSession } = await resolveMocks();
-    mockRequireSession.mockRejectedValue(new Error("Sessao invalida."));
+    const { mockRequireAppContext } = await resolveMocks();
+    mockRequireAppContext.mockRejectedValue(new Error("Sessao invalida."));
 
     const { createGoalAction } = await import("@/app/(app)/metas/actions");
 
@@ -58,9 +58,13 @@ describe("metas server actions", () => {
   });
 
   it("creates a goal with parsed payload and user id", async () => {
-    const { mockCreateGoal, mockRefresh, mockRequireSession } =
+    const { mockCreateGoal, mockRefresh, mockRequireAppContext } =
       await resolveMocks();
-    mockRequireSession.mockResolvedValue({ user: { id: "user-1" } });
+    mockRequireAppContext.mockResolvedValue({
+      organizationId: "org_dg_imports",
+      role: "admin",
+      userId: "user-1",
+    });
     mockCreateGoal.mockResolvedValue(undefined);
 
     const { createGoalAction } = await import("@/app/(app)/metas/actions");
@@ -75,6 +79,7 @@ describe("metas server actions", () => {
     });
 
     expect(mockCreateGoal).toHaveBeenCalledWith(
+      "org_dg_imports",
       {
         displayMode: "absolute",
         metric: "profit",
@@ -89,9 +94,17 @@ describe("metas server actions", () => {
   });
 
   it("updates and archives goals after authentication", async () => {
-    const { mockArchiveGoal, mockRefresh, mockRequireSession, mockUpdateGoal } =
-      await resolveMocks();
-    mockRequireSession.mockResolvedValue({ user: { id: "user-1" } });
+    const {
+      mockArchiveGoal,
+      mockRefresh,
+      mockRequireAppContext,
+      mockUpdateGoal,
+    } = await resolveMocks();
+    mockRequireAppContext.mockResolvedValue({
+      organizationId: "org_dg_imports",
+      role: "admin",
+      userId: "user-1",
+    });
     mockUpdateGoal.mockResolvedValue(undefined);
     mockArchiveGoal.mockResolvedValue(undefined);
 
@@ -116,15 +129,20 @@ describe("metas server actions", () => {
     });
 
     expect(mockArchiveGoal).toHaveBeenCalledWith(
+      "org_dg_imports",
       "550e8400-e29b-41d4-a716-446655440000"
     );
     expect(mockRefresh).toHaveBeenCalled();
   });
 
   it("unarchives a goal after authentication", async () => {
-    const { mockRefresh, mockRequireSession, mockUnarchiveGoal } =
+    const { mockRefresh, mockRequireAppContext, mockUnarchiveGoal } =
       await resolveMocks();
-    mockRequireSession.mockResolvedValue({ user: { id: "user-1" } });
+    mockRequireAppContext.mockResolvedValue({
+      organizationId: "org_dg_imports",
+      role: "admin",
+      userId: "user-1",
+    });
     mockUnarchiveGoal.mockResolvedValue(undefined);
 
     const { unarchiveGoalAction } = await import("@/app/(app)/metas/actions");
@@ -134,6 +152,7 @@ describe("metas server actions", () => {
     });
 
     expect(mockUnarchiveGoal).toHaveBeenCalledWith(
+      "org_dg_imports",
       "550e8400-e29b-41d4-a716-446655440000"
     );
     expect(mockRefresh).toHaveBeenCalled();

@@ -61,17 +61,25 @@ export const isProductImageStorageConfigured = () =>
   );
 
 export const buildProductImageObjectKey = (
+  organizationId: string,
   productId: string,
   version: number,
   variant: ProductImageVariant
-) => `products/${productId}/v${version}/${variant}.webp`;
+) =>
+  `organizations/${organizationId}/products/${productId}/v${version}/${variant}.webp`;
 
 export const buildProductImageUrl = (
+  organizationId: string,
   productId: string,
   version: number,
   variant: ProductImageVariant
 ) => {
-  const objectKey = buildProductImageObjectKey(productId, version, variant);
+  const objectKey = buildProductImageObjectKey(
+    organizationId,
+    productId,
+    version,
+    variant
+  );
   const publicBaseUrl = serverEnv.R2_PUBLIC_BASE_URL;
 
   if (
@@ -84,5 +92,5 @@ export const buildProductImageUrl = (
     return `${baseUrl}/${objectKey}`;
   }
 
-  return `/api/product-images/${productId}/${version}/${variant}`;
+  return `/api/product-images/${organizationId}/${productId}/${version}/${variant}`;
 };

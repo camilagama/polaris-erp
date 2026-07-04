@@ -15,6 +15,7 @@ import {
   formatSaleDetailPaymentMethodLabel,
   getOperationalSaleStatusLabel,
 } from "@/features/sales/sale-display-labels";
+import { requirePageAppContext } from "@/lib/app-session";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/formatters";
 import { getSaleByIdQuery } from "../queries";
 
@@ -35,8 +36,9 @@ const getPaymentMethodLabel = (sale: SaleDetail) =>
 export default async function VendaDetalhePage(
   props: PageProps<"/vendas/[id]">
 ) {
+  const context = await requirePageAppContext();
   const { id } = await props.params;
-  const sale = await getSaleByIdQuery(id);
+  const sale = await getSaleByIdQuery(context.organizationId, id);
 
   if (!sale) {
     notFound();

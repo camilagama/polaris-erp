@@ -6,10 +6,14 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { requirePageAppContext } from "@/lib/app-session";
 import { requireSession } from "@/lib/session";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
-  const session = await requireSession();
+  const [session, context] = await Promise.all([
+    requireSession(),
+    requirePageAppContext(),
+  ]);
 
   return (
     <SidebarProvider>
@@ -26,10 +30,10 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           <SidebarTrigger />
           <div className="ml-3 min-w-0 sm:ml-4">
             <p className="truncate font-semibold text-sm sm:text-base">
-              DG Imports
+              {context.organizationName}
             </p>
             <p className="truncate text-[11px] text-muted-foreground sm:text-xs">
-              Operacao protegida e orientada a transacoes
+              Operacao protegida e isolada por organizacao
             </p>
           </div>
         </header>

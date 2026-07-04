@@ -20,10 +20,12 @@ import type {
 import { formatDateInputValue } from "@/lib/domain/date";
 
 export const getProductAnalytics = async ({
+  organizationId,
   today = formatDateInputValue(),
 }: {
+  organizationId: string;
   today?: string;
-} = {}): Promise<ProductAnalytics> => {
+}): Promise<ProductAnalytics> => {
   const recentFromDate = new Date(`${today}T00:00:00`);
   recentFromDate.setDate(recentFromDate.getDate() - 29);
   const recentFrom = formatDateInputValue(recentFromDate);
@@ -37,6 +39,7 @@ export const getProductAnalytics = async ({
       })
       .from(products)
       .innerJoin(categories, eq(products.categoryId, categories.id))
+      .where(eq(products.organizationId, organizationId))
       .orderBy(asc(products.name)),
     db
       .select({
@@ -44,7 +47,8 @@ export const getProductAnalytics = async ({
         quantity: productStockEntries.quantity,
         unitCost: productStockEntries.unitCost,
       })
-      .from(productStockEntries),
+      .from(productStockEntries)
+      .where(eq(productStockEntries.organizationId, organizationId)),
     db
       .select({
         lineTotal: saleItems.lineTotal,
@@ -55,7 +59,12 @@ export const getProductAnalytics = async ({
       .from(saleItems)
       .innerJoin(sales, eq(saleItems.saleId, sales.id))
       .where(
-        and(gte(sales.occurredOn, recentFrom), lte(sales.occurredOn, today))
+        and(
+          eq(saleItems.organizationId, organizationId),
+          eq(sales.organizationId, organizationId),
+          gte(sales.occurredOn, recentFrom),
+          lte(sales.occurredOn, today)
+        )
       ),
   ]);
 
@@ -82,6 +91,7 @@ export const getProductAnalytics = async ({
 };
 
 export const getProductSalesHistoryMetrics = async (
+  organizationId: string,
   productId: string
 ): Promise<ProductSalesHistoryMetrics> => {
   const salesRows = await db
@@ -93,7 +103,13 @@ export const getProductSalesHistoryMetrics = async (
     })
     .from(saleItems)
     .innerJoin(sales, eq(saleItems.saleId, sales.id))
-    .where(eq(saleItems.productId, productId))
+    .where(
+      and(
+        eq(saleItems.organizationId, organizationId),
+        eq(sales.organizationId, organizationId),
+        eq(saleItems.productId, productId)
+      )
+    )
     .orderBy(asc(sales.occurredOn), asc(saleItems.createdAt));
 
   return buildProductSalesHistoryMetrics({

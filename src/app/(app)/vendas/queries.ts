@@ -34,6 +34,7 @@ export type SaleStatusFilter = z.infer<typeof saleStatusFilterSchema>;
 
 interface SalesQueryInput {
   cursor?: string;
+  organizationId: string;
   pageSize?: number;
   query?: string;
   status?: SaleStatusFilter;
@@ -71,10 +72,11 @@ export interface PaginatedSalesList {
 
 export async function getSalesQuery({
   cursor,
+  organizationId,
   pageSize = DEFAULT_PAGE_SIZE,
   query,
   status = "all",
-}: SalesQueryInput = {}): Promise<PaginatedSalesList> {
+}: SalesQueryInput): Promise<PaginatedSalesList> {
   const limit = pageSize + 1;
   const parsedCursor = cursor ? parseSalesCursor(cursor) : null;
   const normalizedQuery = query?.trim();
@@ -82,7 +84,7 @@ export async function getSalesQuery({
     normalizedQuery && normalizedQuery.length > 0
       ? `%${normalizedQuery}%`
       : null;
-  const filters: SQL[] = [];
+  const filters: SQL[] = [eq(sales.organizationId, organizationId)];
 
   if (status !== "all") {
     filters.push(eq(sales.status, status));
@@ -133,6 +135,7 @@ export async function getSalesQuery({
         select count(*)
         from "sale_items"
         where "sale_items"."sale_id" = "sales"."id"
+          and "sale_items"."organization_id" = ${organizationId}
       )`,
       occurredOn: sales.occurredOn,
       paymentFeePayer: sales.paymentFeePayer,
@@ -163,7 +166,9 @@ export async function getSalesQuery({
   };
 }
 
-export function getSaleProductsQuery(): Promise<SaleProductOption[]> {
+export function getSaleProductsQuery(
+  organizationId: string
+): Promise<SaleProductOption[]> {
   return db
     .select({
       id: products.id,
@@ -172,15 +177,22 @@ export function getSaleProductsQuery(): Promise<SaleProductOption[]> {
       stock: products.stock,
     })
     .from(products)
-    .where(and(isNull(products.archivedAt), gt(products.stock, 0)))
+    .where(
+      and(
+        eq(products.organizationId, organizationId),
+        isNull(products.archivedAt),
+        gt(products.stock, 0)
+      )
+    )
     .orderBy(asc(products.name), asc(products.createdAt), asc(products.id));
 }
 
 export async function getSaleByIdQuery(
+  organizationId: string,
   id: string
 ): Promise<SaleDetail | undefined> {
   const sale = await db.query.sales.findFirst({
-    where: eq(sales.id, id),
+    where: and(eq(sales.id, id), eq(sales.organizationId, organizationId)),
   });
 
   if (!sale) {
@@ -199,7 +211,12 @@ export async function getSaleByIdQuery(
       unitPriceSnapshot: saleItems.unitPriceSnapshot,
     })
     .from(saleItems)
-    .where(eq(saleItems.saleId, id))
+    .where(
+      and(
+        eq(saleItems.organizationId, organizationId),
+        eq(saleItems.saleId, id)
+      )
+    )
     .orderBy(asc(saleItems.createdAt));
 
   return {

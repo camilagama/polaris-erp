@@ -1,13 +1,16 @@
 "use server";
 
-import { requireActionSession } from "@/lib/server-action-auth";
+import { requireAppContext } from "@/lib/app-session";
 import { getProductsQuery, type PaginatedProductsList } from "./queries";
 
 export async function loadMoreProductsAction(
-  input: Parameters<typeof getProductsQuery>[0]
+  input: Omit<Parameters<typeof getProductsQuery>[0], "organizationId">
 ): Promise<PaginatedProductsList> {
-  await requireActionSession();
-  const result = await getProductsQuery(input);
+  const context = await requireAppContext("catalog:read");
+  const result = await getProductsQuery({
+    ...input,
+    organizationId: context.organizationId,
+  });
 
   return result;
 }

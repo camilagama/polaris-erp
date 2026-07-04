@@ -1,6 +1,6 @@
 import "server-only";
 
-import { asc, count, desc, eq } from "drizzle-orm";
+import { and, asc, count, desc, eq } from "drizzle-orm";
 import { cacheLife, cacheTag } from "next/cache";
 import { db } from "@/db";
 import { categories, products, systemSettings } from "@/db/schema";
@@ -8,7 +8,7 @@ import {
   catalogSettingsSchema,
   categorySchema,
 } from "@/features/catalog/schema";
-import { CACHE_TAGS } from "@/lib/cache-tags";
+import { buildOrganizationCacheTags } from "@/lib/cache-tags";
 import { GLOBAL_SETTINGS_ID } from "./constants";
 import { canDeleteCategory, canRenameCategory } from "./guards";
 import { normalizeCardInstallmentRules } from "./payment-rules";
@@ -31,13 +31,18 @@ export interface CatalogSettings {
   minimumMarkupPercent: number;
 }
 
-export const getCatalogSettings = async (): Promise<CatalogSettings> => {
+export const getCatalogSettings = async (
+  organizationId: string
+): Promise<CatalogSettings> => {
   "use cache: remote";
-  cacheTag(CACHE_TAGS.catalog);
+  cacheTag(buildOrganizationCacheTags(organizationId).catalog);
   cacheLife("hours");
 
   const existing = await db.query.systemSettings.findFirst({
-    where: eq(systemSettings.id, GLOBAL_SETTINGS_ID),
+    where: and(
+      eq(systemSettings.id, GLOBAL_SETTINGS_ID),
+      eq(systemSettings.organizationId, organizationId)
+    ),
   });
 
   if (!existing) {
@@ -55,9 +60,11 @@ export const getCatalogSettings = async (): Promise<CatalogSettings> => {
   };
 };
 
-export const listCategoriesWithUsage = async (): Promise<CatalogCategory[]> => {
+export const listCategoriesWithUsage = async (
+  organizationId: string
+): Promise<CatalogCategory[]> => {
   "use cache: remote";
-  cacheTag(CACHE_TAGS.catalog);
+  cacheTag(buildOrganizationCacheTags(organizationId).catalog);
   cacheLife("hours");
 
   const rows = await db
@@ -70,7 +77,14 @@ export const listCategoriesWithUsage = async (): Promise<CatalogCategory[]> => {
       productCount: count(products.id),
     })
     .from(categories)
-    .leftJoin(products, eq(products.categoryId, categories.id))
+    .leftJoin(
+      products,
+      and(
+        eq(products.categoryId, categories.id),
+        eq(products.organizationId, organizationId)
+      )
+    )
+    .where(eq(categories.organizationId, organizationId))
     .groupBy(categories.id)
     .orderBy(desc(categories.isSystem), asc(categories.name));
 
@@ -80,19 +94,27 @@ export const listCategoriesWithUsage = async (): Promise<CatalogCategory[]> => {
   }));
 };
 
-export const createCategory = (input: unknown) => {
+export const createCategory = (organizationId: string, input: unknown) => {
   const parsed = categorySchema.parse(input);
 
   return db.insert(categories).values({
     ...parsed,
     key: crypto.randomUUID(),
+    organizationId,
   });
 };
 
-export const updateCategory = async (id: string, input: unknown) => {
+export const updateCategory = async (
+  organizationId: string,
+  id: string,
+  input: unknown
+) => {
   const parsed = categorySchema.parse(input);
   const category = await db.query.categories.findFirst({
-    where: eq(categories.id, id),
+    where: and(
+      eq(categories.id, id),
+      eq(categories.organizationId, organizationId)
+    ),
   });
 
   if (!category) {
@@ -103,12 +125,20 @@ export const updateCategory = async (id: string, input: unknown) => {
     throw new Error("A categoria Outros e protegida pelo sistema.");
   }
 
-  await db.update(categories).set(parsed).where(eq(categories.id, id));
+  await db
+    .update(categories)
+    .set(parsed)
+    .where(
+      and(eq(categories.id, id), eq(categories.organizationId, organizationId))
+    );
 };
 
-export const deleteCategory = async (id: string) => {
+export const deleteCategory = async (organizationId: string, id: string) => {
   const category = await db.query.categories.findFirst({
-    where: eq(categories.id, id),
+    where: and(
+      eq(categories.id, id),
+      eq(categories.organizationId, organizationId)
+    ),
   });
 
   if (!category) {
@@ -120,7 +150,12 @@ export const deleteCategory = async (id: string) => {
       total: count(products.id),
     })
     .from(products)
-    .where(eq(products.categoryId, id));
+    .where(
+      and(
+        eq(products.categoryId, id),
+        eq(products.organizationId, organizationId)
+      )
+    );
 
   if (!canDeleteCategory(category, Number(total))) {
     if (!canRenameCategory(category)) {
@@ -132,10 +167,17 @@ export const deleteCategory = async (id: string) => {
     );
   }
 
-  await db.delete(categories).where(eq(categories.id, id));
+  await db
+    .delete(categories)
+    .where(
+      and(eq(categories.id, id), eq(categories.organizationId, organizationId))
+    );
 };
 
-export const saveCatalogSettings = async (input: unknown) => {
+export const saveCatalogSettings = async (
+  organizationId: string,
+  input: unknown
+) => {
   const parsed = catalogSettingsSchema.parse(input);
   const cardInstallmentRules = normalizeCardInstallmentRules(
     parsed.cardInstallmentRules
@@ -147,6 +189,7 @@ export const saveCatalogSettings = async (input: unknown) => {
       id: GLOBAL_SETTINGS_ID,
       idealMarkupPercent: parsed.idealMarkupPercent.toFixed(2),
       minimumMarkupPercent: parsed.minimumMarkupPercent.toFixed(2),
+      organizationId,
       paymentFeeRules: cardInstallmentRules,
     })
     .onConflictDoUpdate({
@@ -156,11 +199,17 @@ export const saveCatalogSettings = async (input: unknown) => {
         paymentFeeRules: cardInstallmentRules,
         updatedAt: new Date(),
       },
-      target: systemSettings.id,
+      target: [systemSettings.organizationId, systemSettings.id],
     });
 };
 
-export const getProductCategoryById = async (id: string) =>
+export const getProductCategoryById = async (
+  organizationId: string,
+  id: string
+) =>
   db.query.categories.findFirst({
-    where: eq(categories.id, id),
+    where: and(
+      eq(categories.id, id),
+      eq(categories.organizationId, organizationId)
+    ),
   });

@@ -3,6 +3,15 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
+vi.mock("@/lib/app-session", () => ({
+  requirePageAppContext: vi.fn(async () => ({
+    organizationId: "org_dg_imports",
+    organizationName: "DG Imports",
+    role: "owner",
+    userId: "user-1",
+  })),
+}));
+
 vi.mock("@/components/dashboard/dashboard-date-range-filter", () => ({
   DashboardDateRangeFilter: () => "DashboardDateRangeFilter",
 }));

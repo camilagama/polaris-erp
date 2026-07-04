@@ -18,11 +18,13 @@ interface StoredProductImageResult {
 }
 
 export const storeProductImageFromStage = async ({
+  organizationId,
   productId,
   stagedImage,
   userId,
   version,
 }: {
+  organizationId: string;
   productId: string;
   stagedImage: StagedProductImageInput;
   userId: string;
@@ -42,12 +44,14 @@ export const storeProductImageFromStage = async ({
     await Promise.all([
       uploadProcessedProductImageVariant({
         body: processed.detail.buffer,
+        organizationId,
         productId,
         variant: "detail",
         version,
       }),
       uploadProcessedProductImageVariant({
         body: processed.table.buffer,
+        organizationId,
         productId,
         variant: "table",
         version,
@@ -65,6 +69,7 @@ export const storeProductImageFromStage = async ({
   } catch (error) {
     if (uploadedNewVersion) {
       await deleteProductImageVersion({
+        organizationId,
         productId,
         version,
       }).catch(() => undefined);

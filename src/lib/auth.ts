@@ -2,10 +2,23 @@ import "server-only";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
-import { oneTap } from "better-auth/plugins";
+import {
+  magicLink,
+  oneTap,
+  organization as organizationPlugin,
+} from "better-auth/plugins";
 import { db } from "@/db";
-import { accounts, sessions, users, verifications } from "@/db/schema";
+import {
+  accounts,
+  invitation,
+  member,
+  organization,
+  sessions,
+  users,
+  verifications,
+} from "@/db/schema";
 import { serverEnv } from "@/lib/env";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 const googleClientId = serverEnv.GOOGLE_CLIENT_ID;
 const googleClientSecret = serverEnv.GOOGLE_CLIENT_SECRET;
@@ -40,20 +53,100 @@ const socialProviders = hasGoogleAuth
       google: {
         clientId: googleClientId,
         clientSecret: googleClientSecret,
-        disableImplicitSignUp: true,
       },
     }
   : {};
+
+const sendMagicLink = async ({
+  email,
+  url,
+}: {
+  email: string;
+  url: string;
+}) => {
+  const rateLimit = checkRateLimit({
+    key: `auth:magic-link:${email.toLowerCase()}`,
+    limit: 5,
+    windowMs: 10 * 60 * 1000,
+  });
+
+  if (!rateLimit.ok) {
+    throw new Error(
+      "Muitas tentativas de login. Tente novamente em instantes."
+    );
+  }
+
+  const webhookUrl = serverEnv.MAGIC_LINK_EMAIL_WEBHOOK_URL;
+
+  if (!webhookUrl) {
+    throw new Error("Magic link email delivery is not configured.");
+  }
+
+  const response = await fetch(webhookUrl, {
+    body: JSON.stringify({
+      email,
+      url,
+    }),
+    headers: {
+      "Content-Type": "application/json",
+    },
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    throw new Error("Magic link email delivery failed.");
+  }
+};
 
 const authPlugins = hasGoogleAuth
   ? [
       oneTap({
         clientId: googleClientId,
-        disableSignup: true,
+        disableSignup: false,
+      }),
+      magicLink({
+        sendMagicLink,
+      }),
+      organizationPlugin({
+        creatorRole: "owner",
+        requireEmailVerificationOnInvitation: true,
+        schema: {
+          organization: {
+            additionalFields: {
+              status: {
+                defaultValue: "active",
+                input: false,
+                required: true,
+                type: "string",
+              },
+            },
+          },
+        },
       }),
       nextCookies(),
     ]
-  : [nextCookies()];
+  : [
+      magicLink({
+        sendMagicLink,
+      }),
+      organizationPlugin({
+        creatorRole: "owner",
+        requireEmailVerificationOnInvitation: true,
+        schema: {
+          organization: {
+            additionalFields: {
+              status: {
+                defaultValue: "active",
+                input: false,
+                required: true,
+                type: "string",
+              },
+            },
+          },
+        },
+      }),
+      nextCookies(),
+    ];
 
 export const auth = betterAuth({
   secret: serverEnv.BETTER_AUTH_SECRET,
@@ -65,6 +158,9 @@ export const auth = betterAuth({
     provider: "pg",
     schema: {
       accounts,
+      invitation,
+      member,
+      organization,
       sessions,
       users,
       verifications,

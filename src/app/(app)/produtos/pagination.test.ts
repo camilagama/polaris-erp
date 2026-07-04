@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-vi.mock("@/lib/server-action-auth", () => ({
-  requireActionSession: vi.fn(),
+vi.mock("@/lib/app-session", () => ({
+  requireAppContext: vi.fn(),
 }));
 
 vi.mock("@/app/(app)/produtos/queries", () => ({
@@ -13,12 +13,12 @@ vi.mock("@/app/(app)/produtos/queries", () => ({
 type MockFn = ReturnType<typeof vi.fn>;
 
 const resolveMocks = async () => {
-  const authModule = await import("@/lib/server-action-auth");
+  const authModule = await import("@/lib/app-session");
   const queriesModule = await import("@/app/(app)/produtos/queries");
 
   return {
     mockGetProductsQuery: queriesModule.getProductsQuery as MockFn,
-    mockRequireActionSession: authModule.requireActionSession as MockFn,
+    mockRequireAppContext: authModule.requireAppContext as MockFn,
   };
 };
 
@@ -26,11 +26,13 @@ describe("loadMoreProductsAction", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
 
-    const { mockGetProductsQuery, mockRequireActionSession } =
+    const { mockGetProductsQuery, mockRequireAppContext } =
       await resolveMocks();
 
-    mockRequireActionSession.mockResolvedValue({
-      user: { id: "user-1" },
+    mockRequireAppContext.mockResolvedValue({
+      organizationId: "org_dg_imports",
+      role: "viewer",
+      userId: "user-1",
     });
     mockGetProductsQuery.mockResolvedValue({
       items: [],
@@ -42,10 +44,10 @@ describe("loadMoreProductsAction", () => {
     const { loadMoreProductsAction } = await import(
       "@/app/(app)/produtos/pagination"
     );
-    const { mockGetProductsQuery, mockRequireActionSession } =
+    const { mockGetProductsQuery, mockRequireAppContext } =
       await resolveMocks();
 
-    mockRequireActionSession.mockRejectedValueOnce(
+    mockRequireAppContext.mockRejectedValueOnce(
       new Error("Sessao invalida. Faca login novamente.")
     );
 
@@ -72,6 +74,7 @@ describe("loadMoreProductsAction", () => {
 
     expect(mockGetProductsQuery).toHaveBeenCalledWith({
       cursor: "cursor-1",
+      organizationId: "org_dg_imports",
       query: "iphone",
       status: "archived",
     });

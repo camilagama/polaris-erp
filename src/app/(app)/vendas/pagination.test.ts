@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-vi.mock("@/lib/server-action-auth", () => ({
-  requireActionSession: vi.fn(),
+vi.mock("@/lib/app-session", () => ({
+  requireAppContext: vi.fn(),
 }));
 
 vi.mock("@/app/(app)/vendas/queries", () => ({
@@ -13,12 +13,12 @@ vi.mock("@/app/(app)/vendas/queries", () => ({
 type MockFn = ReturnType<typeof vi.fn>;
 
 const resolveMocks = async () => {
-  const authModule = await import("@/lib/server-action-auth");
+  const authModule = await import("@/lib/app-session");
   const queriesModule = await import("@/app/(app)/vendas/queries");
 
   return {
     mockGetSalesQuery: queriesModule.getSalesQuery as MockFn,
-    mockRequireActionSession: authModule.requireActionSession as MockFn,
+    mockRequireAppContext: authModule.requireAppContext as MockFn,
   };
 };
 
@@ -26,11 +26,12 @@ describe("loadMoreSalesAction", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
 
-    const { mockGetSalesQuery, mockRequireActionSession } =
-      await resolveMocks();
+    const { mockGetSalesQuery, mockRequireAppContext } = await resolveMocks();
 
-    mockRequireActionSession.mockResolvedValue({
-      user: { id: "user-1" },
+    mockRequireAppContext.mockResolvedValue({
+      organizationId: "org_dg_imports",
+      role: "viewer",
+      userId: "user-1",
     });
     mockGetSalesQuery.mockResolvedValue({
       items: [],
@@ -42,10 +43,9 @@ describe("loadMoreSalesAction", () => {
     const { loadMoreSalesAction } = await import(
       "@/app/(app)/vendas/pagination"
     );
-    const { mockGetSalesQuery, mockRequireActionSession } =
-      await resolveMocks();
+    const { mockGetSalesQuery, mockRequireAppContext } = await resolveMocks();
 
-    mockRequireActionSession.mockRejectedValueOnce(
+    mockRequireAppContext.mockRejectedValueOnce(
       new Error("Sessao invalida. Faca login novamente.")
     );
 
@@ -72,6 +72,7 @@ describe("loadMoreSalesAction", () => {
 
     expect(mockGetSalesQuery).toHaveBeenCalledWith({
       cursor: "cursor-1",
+      organizationId: "org_dg_imports",
       query: "maria",
       status: "cancelled",
     });

@@ -5,6 +5,7 @@ import {
   listCategoriesWithUsage,
 } from "@/features/catalog/server";
 import { getProductAnalytics } from "@/features/products/server";
+import { requirePageAppContext } from "@/lib/app-session";
 import { getProductsQuery } from "../queries";
 
 export const metadata: Metadata = {
@@ -13,17 +14,19 @@ export const metadata: Metadata = {
 };
 
 export default async function ProdutosPage(props: PageProps<"/produtos">) {
+  const context = await requirePageAppContext();
   const searchParams = await props.searchParams;
   const query = typeof searchParams.q === "string" ? searchParams.q.trim() : "";
   const status = searchParams.status === "archived" ? "archived" : "active";
   const [productsResult, categories, settings, analytics] = await Promise.all([
     getProductsQuery({
+      organizationId: context.organizationId,
       query,
       status,
     }),
-    listCategoriesWithUsage(),
-    getCatalogSettings(),
-    getProductAnalytics(),
+    listCategoriesWithUsage(context.organizationId),
+    getCatalogSettings(context.organizationId),
+    getProductAnalytics({ organizationId: context.organizationId }),
   ]);
 
   return (

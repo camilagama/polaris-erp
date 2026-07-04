@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("server-only", () => ({}));
+
 vi.mock("@/lib/auth", () => ({
   auth: {
     api: {
@@ -12,9 +14,51 @@ vi.mock("@/features/products/image-storage", () => ({
   readPublicProductImageVariant: vi.fn(),
 }));
 
-describe("GET /api/product-images/[productId]/[version]/[variant]", () => {
-  beforeEach(() => {
+vi.mock("@/db", () => ({
+  db: {
+    query: {
+      member: {
+        findFirst: vi.fn(),
+      },
+      products: {
+        findFirst: vi.fn(),
+      },
+    },
+  },
+}));
+
+type MockFn = ReturnType<typeof vi.fn>;
+
+const resolveMocks = async () => {
+  const dbModule = await import("@/db");
+
+  return {
+    mockFindMember: (
+      dbModule.db as unknown as {
+        query: {
+          member: { findFirst: MockFn };
+          products: { findFirst: MockFn };
+        };
+      }
+    ).query.member.findFirst,
+    mockFindProduct: (
+      dbModule.db as unknown as {
+        query: {
+          member: { findFirst: MockFn };
+          products: { findFirst: MockFn };
+        };
+      }
+    ).query.products.findFirst,
+  };
+};
+
+describe("GET /api/product-images/[organizationId]/[productId]/[version]/[variant]", () => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+
+    const { mockFindMember, mockFindProduct } = await resolveMocks();
+    mockFindProduct.mockResolvedValue({ id: "p1" });
+    mockFindMember.mockResolvedValue({ id: "member-1" });
   });
 
   it("returns 401 when the request has no authenticated session", async () => {
@@ -24,9 +68,12 @@ describe("GET /api/product-images/[productId]/[version]/[variant]", () => {
     vi.mocked(auth.api.getSession).mockResolvedValue(null);
 
     const response = await GET(
-      new Request("http://localhost/api/product-images/p1/1/detail"),
+      new Request(
+        "http://localhost/api/product-images/org_dg_imports/p1/1/detail"
+      ),
       {
         params: Promise.resolve({
+          organizationId: "org_dg_imports",
           productId: "p1",
           variant: "detail",
           version: "1",
@@ -46,9 +93,12 @@ describe("GET /api/product-images/[productId]/[version]/[variant]", () => {
     } as never);
 
     const response = await GET(
-      new Request("http://localhost/api/product-images/p1/1/invalid"),
+      new Request(
+        "http://localhost/api/product-images/org_dg_imports/p1/1/invalid"
+      ),
       {
         params: Promise.resolve({
+          organizationId: "org_dg_imports",
           productId: "p1",
           variant: "invalid",
           version: "1",
@@ -59,7 +109,7 @@ describe("GET /api/product-images/[productId]/[version]/[variant]", () => {
     expect(response.status).toBe(404);
   });
 
-  it("serves bytes with private cache semantics (not the object's public CDN policy)", async () => {
+  it("serves bytes with private cache semantics", async () => {
     const { auth } = await import("@/lib/auth");
     const imageStorage = await import("@/features/products/image-storage");
     const { GET } = await import("./route");
@@ -75,9 +125,12 @@ describe("GET /api/product-images/[productId]/[version]/[variant]", () => {
     });
 
     const response = await GET(
-      new Request("http://localhost/api/product-images/p1/1/detail"),
+      new Request(
+        "http://localhost/api/product-images/org_dg_imports/p1/1/detail"
+      ),
       {
         params: Promise.resolve({
+          organizationId: "org_dg_imports",
           productId: "p1",
           variant: "detail",
           version: "1",
@@ -86,6 +139,12 @@ describe("GET /api/product-images/[productId]/[version]/[variant]", () => {
     );
 
     expect(response.status).toBe(200);
+    expect(imageStorage.readPublicProductImageVariant).toHaveBeenCalledWith({
+      organizationId: "org_dg_imports",
+      productId: "p1",
+      variant: "detail",
+      version: 1,
+    });
     expect(response.headers.get("Cache-Control")).toBe(
       "private, max-age=0, must-revalidate"
     );
@@ -110,13 +169,17 @@ describe("GET /api/product-images/[productId]/[version]/[variant]", () => {
     });
 
     const response = await GET(
-      new Request("http://localhost/api/product-images/p1/1/detail", {
-        headers: {
-          "if-none-match": '"etag-value"',
-        },
-      }),
+      new Request(
+        "http://localhost/api/product-images/org_dg_imports/p1/1/detail",
+        {
+          headers: {
+            "if-none-match": '"etag-value"',
+          },
+        }
+      ),
       {
         params: Promise.resolve({
+          organizationId: "org_dg_imports",
           productId: "p1",
           variant: "detail",
           version: "1",
@@ -145,9 +208,12 @@ describe("GET /api/product-images/[productId]/[version]/[variant]", () => {
     );
 
     const response = await GET(
-      new Request("http://localhost/api/product-images/p1/1/detail"),
+      new Request(
+        "http://localhost/api/product-images/org_dg_imports/p1/1/detail"
+      ),
       {
         params: Promise.resolve({
+          organizationId: "org_dg_imports",
           productId: "p1",
           variant: "detail",
           version: "1",

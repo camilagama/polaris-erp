@@ -8,6 +8,7 @@ import {
 } from "@/features/catalog/server";
 import { getDashboardDateBounds } from "@/features/dashboard/server";
 import { getGoalsSettingsData } from "@/features/goals/server";
+import { requirePageAppContext } from "@/lib/app-session";
 
 export const metadata: Metadata = {
   title: "Configuracoes | DG Imports",
@@ -16,11 +17,12 @@ export const metadata: Metadata = {
 
 export default async function ConfiguracoesPage() {
   await connection();
+  const context = await requirePageAppContext();
   const [categories, settings, dateBounds, goalsPayload] = await Promise.all([
-    listCategoriesWithUsage(),
-    getCatalogSettings(),
-    getDashboardDateBounds(),
-    getGoalsSettingsData(),
+    listCategoriesWithUsage(context.organizationId),
+    getCatalogSettings(context.organizationId),
+    getDashboardDateBounds(context.organizationId),
+    getGoalsSettingsData(context.organizationId),
   ]);
 
   return (

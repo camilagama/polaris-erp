@@ -9,6 +9,7 @@ import {
   jsonb,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -42,10 +43,19 @@ export const users = pgTable("users", {
   ...timestamps,
 });
 
+export const organization = pgTable("organization", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  slug: text("slug").notNull().unique(),
+  logo: text("logo"),
+  status: text("status").default("active").notNull(),
+  ...timestamps,
+});
+
 export const sessions = pgTable(
   "sessions",
   {
-    id: text("id").primaryKey(),
+    id: text("id").notNull(),
     expiresAt: timestamp("expires_at", tz).notNull(),
     token: text("token").notNull().unique(),
     ipAddress: text("ip_address"),
@@ -53,9 +63,16 @@ export const sessions = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    activeOrganizationId: text("active_organization_id").references(
+      () => organization.id,
+      { onDelete: "set null" }
+    ),
     ...timestamps,
   },
-  (table) => [index("sessions_user_id_idx").on(table.userId)]
+  (table) => [
+    index("sessions_user_id_idx").on(table.userId),
+    index("sessions_active_organization_id_idx").on(table.activeOrganizationId),
+  ]
 );
 
 export const accounts = pgTable(
@@ -86,6 +103,80 @@ export const verifications = pgTable("verifications", {
   expiresAt: timestamp("expires_at", tz).notNull(),
   ...timestamps,
 });
+
+export const member = pgTable(
+  "member",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    role: text("role").default("operator").notNull(),
+    createdAt: timestamp("created_at", tz).defaultNow().notNull(),
+  },
+  (table) => [
+    index("member_organization_id_idx").on(table.organizationId),
+    index("member_user_id_idx").on(table.userId),
+    uniqueIndex("member_organization_user_unique_idx").on(
+      table.organizationId,
+      table.userId
+    ),
+  ]
+);
+
+export const invitation = pgTable(
+  "invitation",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    email: text("email").notNull(),
+    role: text("role").notNull(),
+    status: text("status").default("pending").notNull(),
+    expiresAt: timestamp("expires_at", tz),
+    inviterId: text("inviter_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", tz).defaultNow().notNull(),
+  },
+  (table) => [
+    index("invitation_organization_id_idx").on(table.organizationId),
+    index("invitation_email_idx").on(table.email),
+    index("invitation_status_idx").on(table.status),
+  ]
+);
+
+export const auditEvents = pgTable(
+  "audit_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    actorUserId: text("actor_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    type: text("type").notNull(),
+    subjectType: text("subject_type").notNull(),
+    subjectId: text("subject_id"),
+    metadata: jsonb("metadata")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    createdAt: timestamp("created_at", tz).defaultNow().notNull(),
+  },
+  (table) => [
+    index("audit_events_organization_created_at_idx").on(
+      table.organizationId,
+      table.createdAt
+    ),
+    index("audit_events_actor_user_id_idx").on(table.actorUserId),
+  ]
+);
 
 // ---------------------------------------------------------------------------
 // Domain enums
@@ -129,18 +220,37 @@ export const goalDisplayModeEnum = pgEnum("goal_display_mode", [
 // Domain tables (IDs as native UUID, timestamps with timezone)
 // ---------------------------------------------------------------------------
 
-export const categories = pgTable("categories", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  key: text("key").notNull().unique(),
-  name: text("name").notNull().unique(),
-  description: text("description"),
-  isSystem: boolean("is_system").default(false).notNull(),
-  ...timestamps,
-});
+export const categories = pgTable(
+  "categories",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    key: text("key").notNull(),
+    name: text("name").notNull(),
+    description: text("description"),
+    isSystem: boolean("is_system").default(false).notNull(),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("categories_organization_key_unique_idx").on(
+      table.organizationId,
+      table.key
+    ),
+    uniqueIndex("categories_organization_name_unique_idx").on(
+      table.organizationId,
+      table.name
+    ),
+  ]
+);
 
 export const systemSettings = pgTable(
   "system_settings",
   {
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
     id: text("id").primaryKey(),
     minimumMarkupPercent: decimal("minimum_markup_percent", {
       precision: 12,
@@ -166,6 +276,10 @@ export const systemSettings = pgTable(
     ...timestamps,
   },
   (table) => [
+    primaryKey({
+      columns: [table.organizationId, table.id],
+      name: "system_settings_organization_id_id_pk",
+    }),
     check(
       "system_settings_minimum_markup_percent_non_negative",
       sql`${table.minimumMarkupPercent} >= 0`
@@ -181,6 +295,9 @@ export const products = pgTable(
   "products",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     description: text("description"),
     purchasedOn: date("purchased_on").default(sql`CURRENT_DATE`).notNull(),
@@ -216,7 +333,10 @@ export const products = pgTable(
       "products_image_height_positive",
       sql`${table.imageHeight} is null or ${table.imageHeight} > 0`
     ),
-    index("products_category_id_idx").on(table.categoryId),
+    index("products_organization_category_id_idx").on(
+      table.organizationId,
+      table.categoryId
+    ),
     index("products_active_name_idx")
       .on(table.name)
       .where(sql`archived_at IS NULL`),
@@ -230,6 +350,9 @@ export const productPriceChanges = pgTable(
   "product_price_changes",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
     productId: uuid("product_id")
       .notNull()
       .references(() => products.id, { onDelete: "cascade" }),
@@ -267,6 +390,9 @@ export const productStockEntries = pgTable(
   "product_stock_entries",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
     productId: uuid("product_id")
       .notNull()
       .references(() => products.id, { onDelete: "cascade" }),
@@ -297,6 +423,9 @@ export const productStockWriteOffs = pgTable(
   "product_stock_write_offs",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
     productId: uuid("product_id")
       .notNull()
       .references(() => products.id, { onDelete: "cascade" }),
@@ -329,6 +458,9 @@ export const sales = pgTable(
   "sales",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
     occurredOn: date("occurred_on").default(sql`CURRENT_DATE`).notNull(),
     status: saleStatusEnum("status").default("completed").notNull(),
     paymentMethod: salePaymentMethodEnum("payment_method")
@@ -411,12 +543,18 @@ export const sales = pgTable(
       sql`(${table.status} = 'completed' and ${table.cancelledAt} is null) or (${table.status} = 'cancelled' and ${table.cancelledAt} is not null)`
     ),
     // Composite indexes: equality first, range last
-    index("sales_status_occurred_on_idx").on(table.status, table.occurredOn),
-    index("sales_payment_method_occurred_on_idx").on(
+    index("sales_organization_status_occurred_on_idx").on(
+      table.organizationId,
+      table.status,
+      table.occurredOn
+    ),
+    index("sales_organization_payment_method_occurred_on_idx").on(
+      table.organizationId,
       table.paymentMethod,
       table.occurredOn
     ),
-    index("sales_occurred_on_created_at_idx").on(
+    index("sales_organization_occurred_on_created_at_idx").on(
+      table.organizationId,
       table.occurredOn,
       table.createdAt
     ),
@@ -427,6 +565,9 @@ export const saleItems = pgTable(
   "sale_items",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
     saleId: uuid("sale_id")
       .notNull()
       .references(() => sales.id, { onDelete: "cascade" }),
@@ -479,6 +620,9 @@ export const goals = pgTable(
   "goals",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     metric: goalMetricEnum("metric").notNull(),
     displayMode: goalDisplayModeEnum("display_mode").notNull(),

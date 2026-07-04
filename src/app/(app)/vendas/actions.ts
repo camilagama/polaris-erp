@@ -1,6 +1,6 @@
 "use server";
 
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { refresh, updateTag } from "next/cache";
 import { db } from "@/db";
 import { products, saleItems, sales } from "@/db/schema";
@@ -11,10 +11,11 @@ import {
   calculateSaleFinancials,
 } from "@/features/sales/calculations";
 import { createSaleSchema } from "@/features/sales/schema";
-import { CACHE_TAGS } from "@/lib/cache-tags";
+import { requireAppContext } from "@/lib/app-session";
+import { recordAuditEvent } from "@/lib/audit-log";
+import { buildOrganizationCacheTags } from "@/lib/cache-tags";
 import { toCurrencyString } from "@/lib/domain/currency";
 import { formatCurrency } from "@/lib/formatters";
-import { requireActionSession } from "@/lib/server-action-auth";
 
 interface LockedProductRow extends Record<string, unknown> {
   archivedAt: Date | null;
@@ -30,13 +31,14 @@ interface LockedSaleRow extends Record<string, unknown> {
   status: "cancelled" | "completed";
 }
 
-const revalidateSalesViews = () => {
-  updateTag(CACHE_TAGS.analyticsShared);
+const revalidateSalesViews = (organizationId: string) => {
+  updateTag(buildOrganizationCacheTags(organizationId).analytics);
   refresh();
 };
 
 const lockProductsForUpdate = async (
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  organizationId: string,
   productIds: string[]
 ): Promise<LockedProductRow[]> => {
   if (productIds.length === 0) {
@@ -57,7 +59,7 @@ const lockProductsForUpdate = async (
       price,
       archived_at as "archivedAt"
     from products
-    where id in (${clauses})
+    where organization_id = ${organizationId} and id in (${clauses})
     order by id
     for update
   `);
@@ -81,16 +83,20 @@ export async function createSaleAction(data: {
   paymentInstallments: number;
   paymentMethod: "card" | "pix";
 }): Promise<string> {
-  await requireActionSession();
+  const context = await requireAppContext("sales:write");
   const parsed = createSaleSchema.parse(data);
-  const catalogSettings = await getCatalogSettings();
+  const catalogSettings = await getCatalogSettings(context.organizationId);
 
   const createdSaleId = await db.transaction(async (tx) => {
     const productIds = parsed.items
       .map((item) => item.productId)
       .sort((left, right) => left.localeCompare(right));
 
-    const lockedProducts = await lockProductsForUpdate(tx, productIds);
+    const lockedProducts = await lockProductsForUpdate(
+      tx,
+      context.organizationId,
+      productIds
+    );
 
     if (lockedProducts.length !== productIds.length) {
       throw new Error("Um ou mais produtos nao foram encontrados.");
@@ -178,6 +184,7 @@ export async function createSaleAction(data: {
         freightAmount: toCurrencyString(parsed.freightAmount),
         notes: parsed.notes || undefined,
         occurredOn: parsed.occurredOn,
+        organizationId: context.organizationId,
         paymentFeePayer: parsed.paymentFeePayer,
         paymentFeePercent: toCurrencyString(financials.paymentFeePercent),
         paymentInstallments: parsed.paymentInstallments,
@@ -190,6 +197,7 @@ export async function createSaleAction(data: {
     await tx.insert(saleItems).values(
       snapshot.items.map((item) => ({
         lineTotal: toCurrencyString(item.lineTotal),
+        organizationId: context.organizationId,
         productId: item.productId,
         productNameSnapshot: item.productNameSnapshot,
         quantity: item.quantity,
@@ -211,18 +219,30 @@ export async function createSaleAction(data: {
         .set({
           stock: product.stock - item.quantity,
         })
-        .where(eq(products.id, item.productId));
+        .where(
+          and(
+            eq(products.id, item.productId),
+            eq(products.organizationId, context.organizationId)
+          )
+        );
     }
 
     return createdSale.id;
   });
 
-  revalidateSalesViews();
+  revalidateSalesViews(context.organizationId);
+  await recordAuditEvent({
+    context,
+    metadata: { itemCount: parsed.items.length },
+    subjectId: createdSaleId,
+    subjectType: "sale",
+    type: "sale.created",
+  });
   return createdSaleId;
 }
 
 export async function cancelSaleAction(id: string) {
-  await requireActionSession();
+  const context = await requireAppContext("sales:write");
 
   await db.transaction(async (tx) => {
     const saleResult = await tx.execute<LockedSaleRow>(sql`
@@ -230,7 +250,7 @@ export async function cancelSaleAction(id: string) {
         id,
         status
       from sales
-      where id = ${id}
+      where id = ${id} and organization_id = ${context.organizationId}
       for update
     `);
 
@@ -250,7 +270,12 @@ export async function cancelSaleAction(id: string) {
         quantity: saleItems.quantity,
       })
       .from(saleItems)
-      .where(eq(saleItems.saleId, id));
+      .where(
+        and(
+          eq(saleItems.saleId, id),
+          eq(saleItems.organizationId, context.organizationId)
+        )
+      );
 
     if (saleRows.length === 0) {
       throw new Error("Venda sem itens nao pode ser cancelada.");
@@ -260,7 +285,11 @@ export async function cancelSaleAction(id: string) {
       ...new Set(saleRows.map((item) => item.productId)),
     ].sort((left, right) => left.localeCompare(right));
 
-    const lockedProducts = await lockProductsForUpdate(tx, productIds);
+    const lockedProducts = await lockProductsForUpdate(
+      tx,
+      context.organizationId,
+      productIds
+    );
 
     if (lockedProducts.length !== productIds.length) {
       throw new Error(
@@ -284,7 +313,12 @@ export async function cancelSaleAction(id: string) {
         .set({
           stock: product.stock + Number(item.quantity),
         })
-        .where(eq(products.id, item.productId));
+        .where(
+          and(
+            eq(products.id, item.productId),
+            eq(products.organizationId, context.organizationId)
+          )
+        );
     }
 
     await tx
@@ -293,8 +327,16 @@ export async function cancelSaleAction(id: string) {
         cancelledAt: new Date(),
         status: "cancelled",
       })
-      .where(eq(sales.id, id));
+      .where(
+        and(eq(sales.id, id), eq(sales.organizationId, context.organizationId))
+      );
   });
 
-  revalidateSalesViews();
+  revalidateSalesViews(context.organizationId);
+  await recordAuditEvent({
+    context,
+    subjectId: id,
+    subjectType: "sale",
+    type: "sale.cancelled",
+  });
 }

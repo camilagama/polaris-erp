@@ -3,6 +3,7 @@ import { SalesPanel } from "@/components/sales/sales-panel";
 import { getCatalogSettings } from "@/features/catalog/server";
 import { resolveSalesDateRange } from "@/features/sales/date-range";
 import { getSalesAnalytics, getSalesDateBounds } from "@/features/sales/server";
+import { requirePageAppContext } from "@/lib/app-session";
 import { getSaleProductsQuery, getSalesQuery } from "../queries";
 
 export const metadata: Metadata = {
@@ -11,8 +12,9 @@ export const metadata: Metadata = {
 };
 
 export default async function VendasPage(props: PageProps<"/vendas">) {
+  const context = await requirePageAppContext();
   const searchParams = await props.searchParams;
-  const bounds = await getSalesDateBounds();
+  const bounds = await getSalesDateBounds(context.organizationId);
   const query = typeof searchParams.q === "string" ? searchParams.q.trim() : "";
   const status =
     searchParams.status === "completed" || searchParams.status === "cancelled"
@@ -25,15 +27,17 @@ export default async function VendasPage(props: PageProps<"/vendas">) {
   const [salesResult, saleProducts, analytics, catalogSettings] =
     await Promise.all([
       getSalesQuery({
+        organizationId: context.organizationId,
         query,
         status,
       }),
-      getSaleProductsQuery(),
+      getSaleProductsQuery(context.organizationId),
       getSalesAnalytics({
         from: selectedRange.from,
+        organizationId: context.organizationId,
         to: selectedRange.to,
       }),
-      getCatalogSettings(),
+      getCatalogSettings(context.organizationId),
     ]);
 
   return (

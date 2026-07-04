@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { CACHE_TAGS } from "@/lib/cache-tags";
+import { buildOrganizationCacheTags } from "@/lib/cache-tags";
 
 vi.mock("server-only", () => ({}));
 
@@ -85,15 +85,21 @@ describe("dashboard server caching", () => {
 
     mockDb.select
       .mockReturnValueOnce({
-        from: async () => [{ minOccurredOn: "2026-03-10" }],
+        from: () => ({
+          where: async () => [{ minOccurredOn: "2026-03-10" }],
+        }),
       })
       .mockReturnValueOnce({
-        from: async () => [{ minStockedOn: "2026-03-01" }],
+        from: () => ({
+          where: async () => [{ minStockedOn: "2026-03-01" }],
+        }),
       });
 
-    const result = await getDashboardDateBounds();
+    const result = await getDashboardDateBounds("org_dg_imports");
 
-    expect(mockCacheTag).toHaveBeenCalledWith(CACHE_TAGS.analyticsShared);
+    expect(mockCacheTag).toHaveBeenCalledWith(
+      buildOrganizationCacheTags("org_dg_imports").analytics
+    );
     expect(mockCacheLife).toHaveBeenCalledWith("minutes");
     expect(result).toEqual({
       from: "2026-03-01",
@@ -109,7 +115,9 @@ describe("dashboard server caching", () => {
 
     mockDb.select
       .mockReturnValueOnce({
-        from: async () => [{ total: "1000.00" }],
+        from: () => ({
+          where: async () => [{ total: "1000.00" }],
+        }),
       })
       .mockReturnValueOnce({
         from: () => ({
@@ -130,9 +138,11 @@ describe("dashboard server caching", () => {
         }),
       });
 
-    const result = await getDashboardGlobalStats();
+    const result = await getDashboardGlobalStats("org_dg_imports");
 
-    expect(mockCacheTag).toHaveBeenCalledWith(CACHE_TAGS.analyticsShared);
+    expect(mockCacheTag).toHaveBeenCalledWith(
+      buildOrganizationCacheTags("org_dg_imports").analytics
+    );
     expect(mockCacheLife).toHaveBeenCalledWith("minutes");
     expect(result).toEqual({
       investment: 1000,
@@ -171,11 +181,11 @@ describe("dashboard server caching", () => {
         }),
       });
 
-    const first = await getDashboardMetrics({
+    const first = await getDashboardMetrics("org_dg_imports", {
       from: "2026-03-01",
       to: "2026-03-31",
     });
-    const second = await getDashboardMetrics({
+    const second = await getDashboardMetrics("org_dg_imports", {
       from: "2026-03-01",
       to: "2026-03-31",
     });

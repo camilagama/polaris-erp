@@ -1,3 +1,6 @@
+import { and, eq } from "drizzle-orm";
+import { db } from "@/db";
+import { member, products } from "@/db/schema";
 import { readPublicProductImageVariant } from "@/features/products/image-storage";
 import { auth } from "@/lib/auth";
 
@@ -7,13 +10,14 @@ export async function GET(
   request: Request,
   props: {
     params: Promise<{
+      organizationId: string;
       productId: string;
       variant: string;
       version: string;
     }>;
   }
 ) {
-  const { productId, variant, version } = await props.params;
+  const { organizationId, productId, variant, version } = await props.params;
   const parsedVersion = Number(version);
 
   const session = await auth.api.getSession({
@@ -28,8 +32,35 @@ export async function GET(
     return new Response("Not Found", { status: 404 });
   }
 
+  const [product, membership] = await Promise.all([
+    db.query.products.findFirst({
+      columns: {
+        id: true,
+      },
+      where: and(
+        eq(products.id, productId),
+        eq(products.organizationId, organizationId),
+        eq(products.imageVersion, parsedVersion)
+      ),
+    }),
+    db.query.member.findFirst({
+      columns: {
+        id: true,
+      },
+      where: and(
+        eq(member.organizationId, organizationId),
+        eq(member.userId, session.user.id)
+      ),
+    }),
+  ]);
+
+  if (!(product && membership)) {
+    return new Response("Not Found", { status: 404 });
+  }
+
   try {
     const image = await readPublicProductImageVariant({
+      organizationId,
       productId,
       variant: variant as "detail" | "table",
       version: parsedVersion,

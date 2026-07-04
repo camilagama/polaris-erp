@@ -1,10 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { CACHE_TAGS } from "@/lib/cache-tags";
+import { buildOrganizationCacheTags } from "@/lib/cache-tags";
 
 vi.mock("server-only", () => ({}));
 
 vi.mock("@/lib/session", () => ({
   getSession: vi.fn(),
+}));
+
+vi.mock("@/lib/app-session", () => ({
+  requireAppContext: vi.fn(),
 }));
 
 vi.mock("@/features/catalog/server", () => ({
@@ -57,6 +61,7 @@ type MockFn = ReturnType<typeof vi.fn>;
 
 const resolveMocks = async () => {
   const sessionModule = await import("@/lib/session");
+  const appSessionModule = await import("@/lib/app-session");
   const catalogModule = await import("@/features/catalog/server");
   const dbModule = await import("@/db");
   const imageStorageModule = await import("@/features/products/image-storage");
@@ -75,6 +80,7 @@ const resolveMocks = async () => {
     },
     mockGetProductCategoryById: catalogModule.getProductCategoryById as MockFn,
     mockRefresh: cache.refresh as MockFn,
+    mockRequireAppContext: appSessionModule.requireAppContext as MockFn,
     mockSession: sessionModule.getSession as MockFn,
     mockStoreProductImageFromStage:
       imageWorkflowModule.storeProductImageFromStage as MockFn,
@@ -250,9 +256,16 @@ describe("product server actions", () => {
     const {
       mockDeleteProductImageVersion,
       mockGetProductCategoryById,
+      mockRequireAppContext,
       mockSession,
       mockStoreProductImageFromStage,
     } = await resolveMocks();
+
+    mockRequireAppContext.mockResolvedValue({
+      organizationId: "org_dg_imports",
+      role: "owner",
+      userId: "user-1",
+    });
 
     mockSession.mockResolvedValue({
       user: {
@@ -277,9 +290,11 @@ describe("product server actions", () => {
     const { addProductStockAction } = await import(
       "@/app/(app)/produtos/actions"
     );
-    const { mockDb, mockSession } = await resolveMocks();
+    const { mockDb, mockRequireAppContext } = await resolveMocks();
 
-    mockSession.mockResolvedValueOnce(null);
+    mockRequireAppContext.mockRejectedValueOnce(
+      new Error("Sessao invalida. Faca login novamente.")
+    );
 
     await expect(
       addProductStockAction("product-1", {
@@ -356,7 +371,9 @@ describe("product server actions", () => {
 
     expect(harness.state.stock).toBe(2);
     expect(harness.writeOffLog).toHaveLength(1);
-    expect(mockUpdateTag).toHaveBeenCalledWith(CACHE_TAGS.analyticsShared);
+    expect(mockUpdateTag).toHaveBeenCalledWith(
+      buildOrganizationCacheTags("org_dg_imports").analytics
+    );
     expect(mockRefresh).toHaveBeenCalledTimes(1);
   });
 
@@ -407,8 +424,12 @@ describe("product server actions", () => {
       imageWidth: 1200,
       name: "Produto com imagem",
     });
-    expect(mockUpdateTag).toHaveBeenCalledWith(CACHE_TAGS.catalog);
-    expect(mockUpdateTag).toHaveBeenCalledWith(CACHE_TAGS.analyticsShared);
+    expect(mockUpdateTag).toHaveBeenCalledWith(
+      buildOrganizationCacheTags("org_dg_imports").catalog
+    );
+    expect(mockUpdateTag).toHaveBeenCalledWith(
+      buildOrganizationCacheTags("org_dg_imports").analytics
+    );
     expect(mockRefresh).toHaveBeenCalled();
   });
 
@@ -448,7 +469,9 @@ describe("product server actions", () => {
         productId: "product-1",
       }),
     ]);
-    expect(mockUpdateTag).toHaveBeenCalledWith(CACHE_TAGS.catalog);
+    expect(mockUpdateTag).toHaveBeenCalledWith(
+      buildOrganizationCacheTags("org_dg_imports").catalog
+    );
     expect(mockRefresh).toHaveBeenCalled();
   });
 
@@ -508,12 +531,14 @@ describe("product server actions", () => {
 
     mockDb.select.mockReturnValue({
       from: () => ({
-        where: async () => [
-          {
-            id: "product-1",
-            imageVersion: 3,
-          },
-        ],
+        where: () => ({
+          limit: async () => [
+            {
+              id: "product-1",
+              imageVersion: 3,
+            },
+          ],
+        }),
       }),
     });
 
@@ -536,6 +561,7 @@ describe("product server actions", () => {
       imageWidth: null,
     });
     expect(mockDeleteProductImageVersion).toHaveBeenCalledWith({
+      organizationId: "org_dg_imports",
       productId: "product-1",
       version: 3,
     });

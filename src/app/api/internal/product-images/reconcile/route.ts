@@ -6,9 +6,23 @@ import {
   listAllStoredProductImageKeys,
 } from "@/features/products/image-storage";
 import { serverEnv } from "@/lib/env";
+import { checkRateLimit, getRateLimitKeyFromRequest } from "@/lib/rate-limit";
 import { jsonError } from "@/lib/server-api-error";
 
 async function reconcile(request: Request): Promise<Response> {
+  const rateLimit = checkRateLimit({
+    key: getRateLimitKeyFromRequest(request, "internal-image-reconcile"),
+    limit: 10,
+    windowMs: 60 * 1000,
+  });
+
+  if (!rateLimit.ok) {
+    return Response.json(
+      { error: "Muitas tentativas. Tente novamente em instantes." },
+      { status: 429 }
+    );
+  }
+
   const authorization = request.headers.get("authorization");
   const expectedAuthorization = serverEnv.CRON_SECRET
     ? `Bearer ${serverEnv.CRON_SECRET}`
@@ -25,6 +39,7 @@ async function reconcile(request: Request): Promise<Response> {
         .select({
           id: products.id,
           imageVersion: products.imageVersion,
+          organizationId: products.organizationId,
         })
         .from(products),
     ]);
@@ -33,7 +48,11 @@ async function reconcile(request: Request): Promise<Response> {
       productRows.flatMap((product) =>
         product.imageVersion === null
           ? []
-          : getExpectedProductImageKeys(product.id, product.imageVersion)
+          : getExpectedProductImageKeys(
+              product.organizationId,
+              product.id,
+              product.imageVersion
+            )
       )
     );
 

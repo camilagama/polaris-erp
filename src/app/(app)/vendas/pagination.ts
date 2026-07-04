@@ -1,13 +1,16 @@
 "use server";
 
-import { requireActionSession } from "@/lib/server-action-auth";
+import { requireAppContext } from "@/lib/app-session";
 import { getSalesQuery, type PaginatedSalesList } from "./queries";
 
 export async function loadMoreSalesAction(
-  input: Parameters<typeof getSalesQuery>[0]
+  input: Omit<Parameters<typeof getSalesQuery>[0], "organizationId">
 ): Promise<PaginatedSalesList> {
-  await requireActionSession();
-  const result = await getSalesQuery(input);
+  const context = await requireAppContext("catalog:read");
+  const result = await getSalesQuery({
+    ...input,
+    organizationId: context.organizationId,
+  });
 
   return result;
 }

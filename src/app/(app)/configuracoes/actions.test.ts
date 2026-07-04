@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { CACHE_TAGS } from "@/lib/cache-tags";
+import { buildOrganizationCacheTags } from "@/lib/cache-tags";
 
 vi.mock("server-only", () => ({}));
 
@@ -8,8 +8,8 @@ vi.mock("next/cache", () => ({
   updateTag: vi.fn(),
 }));
 
-vi.mock("@/lib/server-action-auth", () => ({
-  requireActionSession: vi.fn(),
+vi.mock("@/lib/app-session", () => ({
+  requireAppContext: vi.fn(),
 }));
 
 vi.mock("@/features/catalog/server", () => ({
@@ -22,14 +22,14 @@ vi.mock("@/features/catalog/server", () => ({
 type MockFn = ReturnType<typeof vi.fn>;
 
 const resolveMocks = async () => {
-  const auth = await import("@/lib/server-action-auth");
+  const auth = await import("@/lib/app-session");
   const cache = await import("next/cache");
   const catalogServer = await import("@/features/catalog/server");
 
   return {
     mockCreateCategory: catalogServer.createCategory as MockFn,
     mockRefresh: cache.refresh as MockFn,
-    mockRequireSession: auth.requireActionSession as MockFn,
+    mockRequireAppContext: auth.requireAppContext as MockFn,
     mockSaveCatalogSettings: catalogServer.saveCatalogSettings as MockFn,
     mockUpdateTag: cache.updateTag as MockFn,
   };
@@ -41,8 +41,8 @@ describe("configuration server actions", () => {
   });
 
   it("requires authentication before mutating configuration", async () => {
-    const { mockRequireSession } = await resolveMocks();
-    mockRequireSession.mockRejectedValue(new Error("Sessao invalida."));
+    const { mockRequireAppContext } = await resolveMocks();
+    mockRequireAppContext.mockRejectedValue(new Error("Sessao invalida."));
 
     const { createCategoryAction } = await import(
       "@/app/(app)/configuracoes/actions"
@@ -60,11 +60,15 @@ describe("configuration server actions", () => {
     const {
       mockCreateCategory,
       mockRefresh,
-      mockRequireSession,
+      mockRequireAppContext,
       mockUpdateTag,
     } = await resolveMocks();
 
-    mockRequireSession.mockResolvedValue({ user: { id: "user-1" } });
+    mockRequireAppContext.mockResolvedValue({
+      organizationId: "org_dg_imports",
+      role: "admin",
+      userId: "user-1",
+    });
     mockCreateCategory.mockResolvedValue(undefined);
 
     const { createCategoryAction } = await import(
@@ -76,23 +80,29 @@ describe("configuration server actions", () => {
       name: "Roupas",
     });
 
-    expect(mockCreateCategory).toHaveBeenCalledWith({
+    expect(mockCreateCategory).toHaveBeenCalledWith("org_dg_imports", {
       description: "Moda",
       name: "Roupas",
     });
-    expect(mockUpdateTag).toHaveBeenCalledWith(CACHE_TAGS.catalog);
+    expect(mockUpdateTag).toHaveBeenCalledWith(
+      buildOrganizationCacheTags("org_dg_imports").catalog
+    );
     expect(mockRefresh).toHaveBeenCalled();
   });
 
   it("invalidates the catalog tag and refreshes after saving settings", async () => {
     const {
       mockRefresh,
-      mockRequireSession,
+      mockRequireAppContext,
       mockSaveCatalogSettings,
       mockUpdateTag,
     } = await resolveMocks();
 
-    mockRequireSession.mockResolvedValue({ user: { id: "user-1" } });
+    mockRequireAppContext.mockResolvedValue({
+      organizationId: "org_dg_imports",
+      role: "admin",
+      userId: "user-1",
+    });
     mockSaveCatalogSettings.mockResolvedValue(undefined);
 
     const { saveCatalogSettingsAction } = await import(
@@ -106,7 +116,9 @@ describe("configuration server actions", () => {
     });
 
     expect(mockSaveCatalogSettings).toHaveBeenCalled();
-    expect(mockUpdateTag).toHaveBeenCalledWith(CACHE_TAGS.catalog);
+    expect(mockUpdateTag).toHaveBeenCalledWith(
+      buildOrganizationCacheTags("org_dg_imports").catalog
+    );
     expect(mockRefresh).toHaveBeenCalled();
   });
 });

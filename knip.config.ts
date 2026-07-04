@@ -3,7 +3,13 @@ import type { KnipConfig } from "knip";
 const config: KnipConfig = {
   ignoreDependencies: ["@biomejs/biome", "tailwindcss"],
   ignoreIssues: {
+    "src/components/kibo-ui/contribution-graph/index.tsx": ["exports", "types"],
     "src/components/ui/*": ["exports"],
+    "src/features/dashboard/contracts.ts": ["types"],
+    "src/features/goals/contracts.ts": ["types"],
+    "src/features/goals/schema.ts": ["types"],
+    "src/features/products/image-storage.ts": ["types"],
+    "src/features/sales/contracts.ts": ["types"],
   },
   next: {
     entry: [

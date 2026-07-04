@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { CACHE_TAGS } from "@/lib/cache-tags";
+import { buildOrganizationCacheTags } from "@/lib/cache-tags";
 
 vi.mock("server-only", () => ({}));
 
@@ -54,9 +54,11 @@ describe("catalog server caching", () => {
       paymentFeeRules: [{ feePercent: 3, installments: 3 }],
     });
 
-    const result = await getCatalogSettings();
+    const result = await getCatalogSettings("org_dg_imports");
 
-    expect(mockCacheTag).toHaveBeenCalledWith(CACHE_TAGS.catalog);
+    expect(mockCacheTag).toHaveBeenCalledWith(
+      buildOrganizationCacheTags("org_dg_imports").catalog
+    );
     expect(mockCacheLife).toHaveBeenCalledWith("hours");
     expect(result).toMatchObject({
       idealMarkupPercent: 30,
@@ -73,25 +75,29 @@ describe("catalog server caching", () => {
     mockDb.select.mockReturnValue({
       from: () => ({
         leftJoin: () => ({
-          groupBy: () => ({
-            orderBy: async () => [
-              {
-                description: "Moda",
-                id: "category-1",
-                isSystem: false,
-                key: "roupas",
-                name: "Roupas",
-                productCount: 3,
-              },
-            ],
+          where: () => ({
+            groupBy: () => ({
+              orderBy: async () => [
+                {
+                  description: "Moda",
+                  id: "category-1",
+                  isSystem: false,
+                  key: "roupas",
+                  name: "Roupas",
+                  productCount: 3,
+                },
+              ],
+            }),
           }),
         }),
       }),
     });
 
-    const result = await listCategoriesWithUsage();
+    const result = await listCategoriesWithUsage("org_dg_imports");
 
-    expect(mockCacheTag).toHaveBeenCalledWith(CACHE_TAGS.catalog);
+    expect(mockCacheTag).toHaveBeenCalledWith(
+      buildOrganizationCacheTags("org_dg_imports").catalog
+    );
     expect(mockCacheLife).toHaveBeenCalledWith("hours");
     expect(result).toEqual([
       {
