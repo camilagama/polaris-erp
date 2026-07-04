@@ -60,6 +60,24 @@ DROP INDEX IF EXISTS "sales_payment_method_occurred_on_idx";
 --> statement-breakpoint
 DROP INDEX IF EXISTS "sales_occurred_on_created_at_idx";
 --> statement-breakpoint
+DROP INDEX IF EXISTS "product_price_changes_product_created_at_idx";
+--> statement-breakpoint
+DROP INDEX IF EXISTS "product_stock_entries_product_stocked_on_idx";
+--> statement-breakpoint
+DROP INDEX IF EXISTS "product_stock_write_offs_product_happened_on_idx";
+--> statement-breakpoint
+DROP INDEX IF EXISTS "sale_items_sale_id_idx";
+--> statement-breakpoint
+DROP INDEX IF EXISTS "sale_items_product_id_idx";
+--> statement-breakpoint
+DROP INDEX IF EXISTS "sale_items_sale_product_unique_idx";
+--> statement-breakpoint
+DROP INDEX IF EXISTS "goals_status_idx";
+--> statement-breakpoint
+DROP INDEX IF EXISTS "goals_period_end_idx";
+--> statement-breakpoint
+DROP INDEX IF EXISTS "goals_created_by_user_id_idx";
+--> statement-breakpoint
 ALTER TABLE "categories" ADD COLUMN IF NOT EXISTS "organization_id" text;
 --> statement-breakpoint
 ALTER TABLE "goals" ADD COLUMN IF NOT EXISTS "organization_id" text;
@@ -185,6 +203,12 @@ END $$;
 --> statement-breakpoint
 ALTER TABLE "system_settings" ADD CONSTRAINT "system_settings_organization_id_id_pk" PRIMARY KEY("organization_id","id");
 --> statement-breakpoint
+CREATE UNIQUE INDEX "categories_organization_id_unique_idx" ON "categories" USING btree ("organization_id","id");
+--> statement-breakpoint
+CREATE UNIQUE INDEX "products_organization_id_unique_idx" ON "products" USING btree ("organization_id","id");
+--> statement-breakpoint
+CREATE UNIQUE INDEX "sales_organization_id_unique_idx" ON "sales" USING btree ("organization_id","id");
+--> statement-breakpoint
 ALTER TABLE "member" ADD CONSTRAINT "member_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE cascade ON UPDATE no action;
 --> statement-breakpoint
 ALTER TABLE "member" ADD CONSTRAINT "member_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
@@ -209,9 +233,21 @@ ALTER TABLE "product_stock_write_offs" ADD CONSTRAINT "product_stock_write_offs_
 --> statement-breakpoint
 ALTER TABLE "products" ADD CONSTRAINT "products_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE cascade ON UPDATE no action;
 --> statement-breakpoint
+ALTER TABLE "products" ADD CONSTRAINT "products_organization_category_fk" FOREIGN KEY ("organization_id","category_id") REFERENCES "public"."categories"("organization_id","id") ON DELETE no action ON UPDATE no action;
+--> statement-breakpoint
+ALTER TABLE "product_price_changes" ADD CONSTRAINT "product_price_changes_organization_product_fk" FOREIGN KEY ("organization_id","product_id") REFERENCES "public"."products"("organization_id","id") ON DELETE cascade ON UPDATE no action;
+--> statement-breakpoint
+ALTER TABLE "product_stock_entries" ADD CONSTRAINT "product_stock_entries_organization_product_fk" FOREIGN KEY ("organization_id","product_id") REFERENCES "public"."products"("organization_id","id") ON DELETE cascade ON UPDATE no action;
+--> statement-breakpoint
+ALTER TABLE "product_stock_write_offs" ADD CONSTRAINT "product_stock_write_offs_organization_product_fk" FOREIGN KEY ("organization_id","product_id") REFERENCES "public"."products"("organization_id","id") ON DELETE cascade ON UPDATE no action;
+--> statement-breakpoint
 ALTER TABLE "sale_items" ADD CONSTRAINT "sale_items_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE cascade ON UPDATE no action;
 --> statement-breakpoint
 ALTER TABLE "sales" ADD CONSTRAINT "sales_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE cascade ON UPDATE no action;
+--> statement-breakpoint
+ALTER TABLE "sale_items" ADD CONSTRAINT "sale_items_organization_sale_fk" FOREIGN KEY ("organization_id","sale_id") REFERENCES "public"."sales"("organization_id","id") ON DELETE cascade ON UPDATE no action;
+--> statement-breakpoint
+ALTER TABLE "sale_items" ADD CONSTRAINT "sale_items_organization_product_fk" FOREIGN KEY ("organization_id","product_id") REFERENCES "public"."products"("organization_id","id") ON DELETE cascade ON UPDATE no action;
 --> statement-breakpoint
 ALTER TABLE "sessions" ADD CONSTRAINT "sessions_active_organization_id_organization_id_fk" FOREIGN KEY ("active_organization_id") REFERENCES "public"."organization"("id") ON DELETE set null ON UPDATE no action;
 --> statement-breakpoint
@@ -239,10 +275,28 @@ CREATE UNIQUE INDEX "categories_organization_name_unique_idx" ON "categories" US
 --> statement-breakpoint
 CREATE INDEX "products_organization_category_id_idx" ON "products" USING btree ("organization_id","category_id");
 --> statement-breakpoint
+CREATE INDEX "product_price_changes_product_created_at_idx" ON "product_price_changes" USING btree ("organization_id","product_id","created_at");
+--> statement-breakpoint
+CREATE INDEX "product_stock_entries_product_stocked_on_idx" ON "product_stock_entries" USING btree ("organization_id","product_id","stocked_on");
+--> statement-breakpoint
+CREATE INDEX "product_stock_write_offs_product_happened_on_idx" ON "product_stock_write_offs" USING btree ("organization_id","product_id","happened_on");
+--> statement-breakpoint
 CREATE INDEX "sales_organization_status_occurred_on_idx" ON "sales" USING btree ("organization_id","status","occurred_on");
 --> statement-breakpoint
 CREATE INDEX "sales_organization_payment_method_occurred_on_idx" ON "sales" USING btree ("organization_id","payment_method","occurred_on");
 --> statement-breakpoint
 CREATE INDEX "sales_organization_occurred_on_created_at_idx" ON "sales" USING btree ("organization_id","occurred_on","created_at");
+--> statement-breakpoint
+CREATE INDEX "sale_items_sale_id_idx" ON "sale_items" USING btree ("organization_id","sale_id");
+--> statement-breakpoint
+CREATE INDEX "sale_items_product_id_idx" ON "sale_items" USING btree ("organization_id","product_id");
+--> statement-breakpoint
+CREATE UNIQUE INDEX "sale_items_sale_product_unique_idx" ON "sale_items" USING btree ("organization_id","sale_id","product_id");
+--> statement-breakpoint
+CREATE INDEX "goals_status_idx" ON "goals" USING btree ("organization_id","status");
+--> statement-breakpoint
+CREATE INDEX "goals_period_end_idx" ON "goals" USING btree ("organization_id","period_end");
+--> statement-breakpoint
+CREATE INDEX "goals_created_by_user_id_idx" ON "goals" USING btree ("organization_id","created_by_user_id");
 --> statement-breakpoint
 CREATE INDEX "sessions_active_organization_id_idx" ON "sessions" USING btree ("active_organization_id");

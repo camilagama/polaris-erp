@@ -17,6 +17,7 @@ import {
   users,
   verifications,
 } from "@/db/schema";
+import { recordActorAuditEvent } from "@/lib/audit-log";
 import { serverEnv } from "@/lib/env";
 import { checkRateLimit } from "@/lib/rate-limit";
 
@@ -148,6 +149,52 @@ const authPlugins = hasGoogleAuth
       nextCookies(),
     ];
 
+const DEFAULT_ORGANIZATION_ID = "org_dg_imports";
+
+interface AuthHookContext {
+  body?: unknown;
+  path?: string;
+}
+
+interface AuthSessionHookPayload {
+  activeOrganizationId?: unknown;
+  id?: string;
+  userId?: string;
+}
+
+interface AuthInvitationHookPayload {
+  email?: string;
+  id?: string;
+  inviterId?: string;
+  organizationId?: string;
+  role?: string;
+}
+
+const recordAuthAuditEvent = async ({
+  actorUserId,
+  metadata,
+  organizationId,
+  subjectId,
+  subjectType,
+  type,
+}: {
+  actorUserId?: string | null;
+  metadata?: Record<string, unknown>;
+  organizationId?: string | null;
+  subjectId?: string | null;
+  subjectType: string;
+  type: string;
+}) => {
+  await recordActorAuditEvent({
+    actorUserId,
+    metadata,
+    organizationId: organizationId ?? DEFAULT_ORGANIZATION_ID,
+    subjectId,
+    subjectType,
+    type,
+  });
+};
+
 export const auth = betterAuth({
   secret: serverEnv.BETTER_AUTH_SECRET,
   baseURL: serverEnv.BETTER_AUTH_URL,
@@ -167,6 +214,50 @@ export const auth = betterAuth({
     },
     usePlural: true,
   }),
+  databaseHooks: {
+    session: {
+      create: {
+        after: async (
+          session: AuthSessionHookPayload,
+          context: AuthHookContext | null
+        ) => {
+          await recordAuthAuditEvent({
+            actorUserId: session.userId,
+            metadata: {
+              path: context?.path ?? null,
+              provider: context?.body
+                ? (context.body as { provider?: unknown }).provider
+                : null,
+            },
+            organizationId:
+              typeof session.activeOrganizationId === "string"
+                ? session.activeOrganizationId
+                : null,
+            subjectId: session.id,
+            subjectType: "session",
+            type: "auth.login",
+          });
+        },
+      },
+    },
+    invitation: {
+      create: {
+        after: async (createdInvitation: AuthInvitationHookPayload) => {
+          await recordAuthAuditEvent({
+            actorUserId: createdInvitation.inviterId ?? null,
+            metadata: {
+              email: createdInvitation.email ?? null,
+              role: createdInvitation.role ?? null,
+            },
+            organizationId: createdInvitation.organizationId,
+            subjectId: createdInvitation.id ?? null,
+            subjectType: "invitation",
+            type: "invitation.created",
+          });
+        },
+      },
+    },
+  } as never,
   emailAndPassword: {
     enabled: false,
   },

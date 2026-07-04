@@ -85,7 +85,13 @@ export const getSalesAnalytics = async ({
         unitCostSnapshot: saleItems.unitCostSnapshot,
       })
       .from(saleItems)
-      .innerJoin(sales, eq(saleItems.saleId, sales.id))
+      .innerJoin(
+        sales,
+        and(
+          eq(saleItems.saleId, sales.id),
+          eq(sales.organizationId, organizationId)
+        )
+      )
       .where(
         and(
           eq(saleItems.organizationId, organizationId),

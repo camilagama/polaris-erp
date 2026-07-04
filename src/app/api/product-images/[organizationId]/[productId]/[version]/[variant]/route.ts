@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { member, products } from "@/db/schema";
 import { readPublicProductImageVariant } from "@/features/products/image-storage";
+import { recordActorAuditEvent } from "@/lib/audit-log";
 import { auth } from "@/lib/auth";
 
 const VALID_VARIANTS = new Set(["detail", "table"]);
@@ -74,11 +75,29 @@ export async function GET(
     };
 
     if (image.etag && requestEtag === image.etag) {
+      await recordActorAuditEvent({
+        actorUserId: session.user.id,
+        metadata: { cached: true, variant, version: parsedVersion },
+        organizationId,
+        subjectId: productId,
+        subjectType: "product_image",
+        type: "product_image.viewed",
+      });
+
       return new Response(null, {
         headers: responseHeaders,
         status: 304,
       });
     }
+
+    await recordActorAuditEvent({
+      actorUserId: session.user.id,
+      metadata: { cached: false, variant, version: parsedVersion },
+      organizationId,
+      subjectId: productId,
+      subjectType: "product_image",
+      type: "product_image.viewed",
+    });
 
     return new Response(image.body, {
       headers: responseHeaders,

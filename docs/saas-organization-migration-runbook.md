@@ -25,12 +25,15 @@ This runbook covers the first SaaS foundation migration: Better Auth organizatio
    - `organization` has `org_dg_imports`.
    - `member` has one `owner` membership per existing user.
    - Domain tables have no null `organization_id`.
+   - Composite tenant constraints exist for product/category, product histories and sale items.
+   - Tenant indexes exist for product histories, sale items and goals.
 3. Smoke test:
    - Google login redirects to `/onboarding` only for users without membership.
    - Existing users land on `/`.
    - Product list, product detail, sales list, dashboard and settings load.
    - Product image URLs include `/api/product-images/{organizationId}/...`.
    - R2 reconcile scans `organizations/` keys.
+   - `audit_events` receives auth login, invitation, settings, product, stock, sale and image events.
 
 ## Production Deploy
 

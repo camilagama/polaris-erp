@@ -1,5 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("server-only", () => ({}));
+
+vi.mock("@/lib/app-session", () => ({
+  getAppContext: vi.fn(),
+}));
+
+vi.mock("@/lib/audit-log", () => ({
+  recordAuditEvent: vi.fn(),
+}));
+
 vi.mock("@/lib/auth", () => ({
   auth: {
     api: {
@@ -61,6 +71,8 @@ describe("POST /api/product-images/presign", () => {
   });
 
   it("returns the signed upload contract for valid requests", async () => {
+    const { getAppContext } = await import("@/lib/app-session");
+    const auditLog = await import("@/lib/audit-log");
     const { auth } = await import("@/lib/auth");
     const { POST } = await import("@/app/api/product-images/presign/route");
     const imageStorageModule = await import(
@@ -72,6 +84,12 @@ describe("POST /api/product-images/presign", () => {
         id: "user-1",
       },
     } as never);
+    vi.mocked(getAppContext).mockResolvedValue({
+      organizationId: "org_dg_imports",
+      organizationName: "DG Imports",
+      role: "owner",
+      userId: "user-1",
+    });
     vi.mocked(imageStorageModule.createStagingObjectKey).mockReturnValue(
       "staging/user-1/file"
     );
@@ -108,6 +126,21 @@ describe("POST /api/product-images/presign", () => {
       contentType: "image/png",
       objectKey: "staging/user-1/file",
       size: 120,
+    });
+    expect(auditLog.recordAuditEvent).toHaveBeenCalledWith({
+      context: {
+        organizationId: "org_dg_imports",
+        organizationName: "DG Imports",
+        role: "owner",
+        userId: "user-1",
+      },
+      metadata: {
+        contentType: "image/png",
+        size: 120,
+      },
+      subjectId: "staging/user-1/file",
+      subjectType: "product_image",
+      type: "product_image.presign_created",
     });
   });
 });

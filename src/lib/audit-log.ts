@@ -11,20 +11,30 @@ interface RecordAuditEventInput {
   type: string;
 }
 
-export const recordAuditEvent = async ({
-  context,
+interface RecordActorAuditEventInput {
+  actorUserId?: string | null;
+  metadata?: Record<string, unknown>;
+  organizationId: string;
+  subjectId?: string | null;
+  subjectType: string;
+  type: string;
+}
+
+export const recordActorAuditEvent = async ({
+  actorUserId = null,
   metadata = {},
+  organizationId,
   subjectId = null,
   subjectType,
   type,
-}: RecordAuditEventInput) => {
+}: RecordActorAuditEventInput) => {
   try {
     const { db } = await import("@/db");
 
     await db.insert(auditEvents).values({
-      actorUserId: context.userId,
+      actorUserId,
       metadata,
-      organizationId: context.organizationId,
+      organizationId,
       subjectId,
       subjectType,
       type,
@@ -33,3 +43,19 @@ export const recordAuditEvent = async ({
     // Audit logging must never make the domain operation fail.
   }
 };
+
+export const recordAuditEvent = async ({
+  context,
+  metadata = {},
+  subjectId = null,
+  subjectType,
+  type,
+}: RecordAuditEventInput) =>
+  recordActorAuditEvent({
+    actorUserId: context.userId,
+    metadata,
+    organizationId: context.organizationId,
+    subjectId,
+    subjectType,
+    type,
+  });

@@ -4,6 +4,7 @@ import {
   check,
   date,
   decimal,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -242,6 +243,10 @@ export const categories = pgTable(
       table.organizationId,
       table.name
     ),
+    uniqueIndex("categories_organization_id_unique_idx").on(
+      table.organizationId,
+      table.id
+    ),
   ]
 );
 
@@ -337,6 +342,15 @@ export const products = pgTable(
       table.organizationId,
       table.categoryId
     ),
+    uniqueIndex("products_organization_id_unique_idx").on(
+      table.organizationId,
+      table.id
+    ),
+    foreignKey({
+      columns: [table.organizationId, table.categoryId],
+      foreignColumns: [categories.organizationId, categories.id],
+      name: "products_organization_category_fk",
+    }),
     index("products_active_name_idx")
       .on(table.name)
       .where(sql`archived_at IS NULL`),
@@ -377,12 +391,18 @@ export const productPriceChanges = pgTable(
       sql`${table.nextPrice} >= 0`
     ),
     index("product_price_changes_product_created_at_idx").on(
+      table.organizationId,
       table.productId,
       table.createdAt
     ),
     index("product_price_changes_changed_by_user_id_idx").on(
       table.changedByUserId
     ),
+    foreignKey({
+      columns: [table.organizationId, table.productId],
+      foreignColumns: [products.organizationId, products.id],
+      name: "product_price_changes_organization_product_fk",
+    }),
   ]
 );
 
@@ -413,9 +433,15 @@ export const productStockEntries = pgTable(
       sql`${table.unitCost} >= 0`
     ),
     index("product_stock_entries_product_stocked_on_idx").on(
+      table.organizationId,
       table.productId,
       table.stockedOn
     ),
+    foreignKey({
+      columns: [table.organizationId, table.productId],
+      foreignColumns: [products.organizationId, products.id],
+      name: "product_stock_entries_organization_product_fk",
+    }),
   ]
 );
 
@@ -448,9 +474,15 @@ export const productStockWriteOffs = pgTable(
       sql`${table.unitCostSnapshot} >= 0`
     ),
     index("product_stock_write_offs_product_happened_on_idx").on(
+      table.organizationId,
       table.productId,
       table.happenedOn
     ),
+    foreignKey({
+      columns: [table.organizationId, table.productId],
+      foreignColumns: [products.organizationId, products.id],
+      name: "product_stock_write_offs_organization_product_fk",
+    }),
   ]
 );
 
@@ -558,6 +590,10 @@ export const sales = pgTable(
       table.occurredOn,
       table.createdAt
     ),
+    uniqueIndex("sales_organization_id_unique_idx").on(
+      table.organizationId,
+      table.id
+    ),
   ]
 );
 
@@ -607,12 +643,26 @@ export const saleItems = pgTable(
       sql`${table.unitCostSnapshot} >= 0`
     ),
     check("sale_items_line_total_non_negative", sql`${table.lineTotal} >= 0`),
-    index("sale_items_sale_id_idx").on(table.saleId),
-    index("sale_items_product_id_idx").on(table.productId),
+    index("sale_items_sale_id_idx").on(table.organizationId, table.saleId),
+    index("sale_items_product_id_idx").on(
+      table.organizationId,
+      table.productId
+    ),
     uniqueIndex("sale_items_sale_product_unique_idx").on(
+      table.organizationId,
       table.saleId,
       table.productId
     ),
+    foreignKey({
+      columns: [table.organizationId, table.saleId],
+      foreignColumns: [sales.organizationId, sales.id],
+      name: "sale_items_organization_sale_fk",
+    }),
+    foreignKey({
+      columns: [table.organizationId, table.productId],
+      foreignColumns: [products.organizationId, products.id],
+      name: "sale_items_organization_product_fk",
+    }),
   ]
 );
 
@@ -645,8 +695,11 @@ export const goals = pgTable(
       "goals_period_end_gte_start",
       sql`${table.periodEnd} >= ${table.periodStart}`
     ),
-    index("goals_status_idx").on(table.status),
-    index("goals_period_end_idx").on(table.periodEnd),
-    index("goals_created_by_user_id_idx").on(table.createdByUserId),
+    index("goals_status_idx").on(table.organizationId, table.status),
+    index("goals_period_end_idx").on(table.organizationId, table.periodEnd),
+    index("goals_created_by_user_id_idx").on(
+      table.organizationId,
+      table.createdByUserId
+    ),
   ]
 );

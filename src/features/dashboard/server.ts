@@ -103,8 +103,20 @@ const getDashboardMetricsByRange = cache(
           unitCostSnapshot: saleItems.unitCostSnapshot,
         })
         .from(saleItems)
-        .innerJoin(sales, eq(saleItems.saleId, sales.id))
-        .innerJoin(products, eq(saleItems.productId, products.id))
+        .innerJoin(
+          sales,
+          and(
+            eq(saleItems.saleId, sales.id),
+            eq(sales.organizationId, organizationId)
+          )
+        )
+        .innerJoin(
+          products,
+          and(
+            eq(saleItems.productId, products.id),
+            eq(products.organizationId, organizationId)
+          )
+        )
         .where(
           and(
             eq(saleItems.organizationId, organizationId),
@@ -120,7 +132,13 @@ const getDashboardMetricsByRange = cache(
           inventoryValue: sql<string>`coalesce(sum(${products.stock} * ${products.costPrice}), '0')`,
         })
         .from(products)
-        .innerJoin(categories, eq(products.categoryId, categories.id))
+        .innerJoin(
+          categories,
+          and(
+            eq(products.categoryId, categories.id),
+            eq(categories.organizationId, organizationId)
+          )
+        )
         .where(
           and(
             eq(products.organizationId, organizationId),

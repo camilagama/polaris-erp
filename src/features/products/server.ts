@@ -38,7 +38,13 @@ export const getProductAnalytics = async ({
         stock: products.stock,
       })
       .from(products)
-      .innerJoin(categories, eq(products.categoryId, categories.id))
+      .innerJoin(
+        categories,
+        and(
+          eq(products.categoryId, categories.id),
+          eq(categories.organizationId, organizationId)
+        )
+      )
       .where(eq(products.organizationId, organizationId))
       .orderBy(asc(products.name)),
     db
@@ -57,7 +63,13 @@ export const getProductAnalytics = async ({
         status: sales.status,
       })
       .from(saleItems)
-      .innerJoin(sales, eq(saleItems.saleId, sales.id))
+      .innerJoin(
+        sales,
+        and(
+          eq(saleItems.saleId, sales.id),
+          eq(sales.organizationId, organizationId)
+        )
+      )
       .where(
         and(
           eq(saleItems.organizationId, organizationId),
@@ -102,7 +114,13 @@ export const getProductSalesHistoryMetrics = async (
       status: sales.status,
     })
     .from(saleItems)
-    .innerJoin(sales, eq(saleItems.saleId, sales.id))
+    .innerJoin(
+      sales,
+      and(
+        eq(saleItems.saleId, sales.id),
+        eq(sales.organizationId, organizationId)
+      )
+    )
     .where(
       and(
         eq(saleItems.organizationId, organizationId),

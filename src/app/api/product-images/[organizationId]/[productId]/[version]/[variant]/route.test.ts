@@ -14,6 +14,10 @@ vi.mock("@/features/products/image-storage", () => ({
   readPublicProductImageVariant: vi.fn(),
 }));
 
+vi.mock("@/lib/audit-log", () => ({
+  recordActorAuditEvent: vi.fn(),
+}));
+
 vi.mock("@/db", () => ({
   db: {
     query: {
@@ -111,6 +115,7 @@ describe("GET /api/product-images/[organizationId]/[productId]/[version]/[varian
 
   it("serves bytes with private cache semantics", async () => {
     const { auth } = await import("@/lib/auth");
+    const auditLog = await import("@/lib/audit-log");
     const imageStorage = await import("@/features/products/image-storage");
     const { GET } = await import("./route");
 
@@ -151,10 +156,19 @@ describe("GET /api/product-images/[organizationId]/[productId]/[version]/[varian
     expect(response.headers.get("Vary")).toBe("Cookie");
     expect(response.headers.get("Content-Type")).toBe("image/webp");
     expect(response.headers.get("ETag")).toBe('"etag-value"');
+    expect(auditLog.recordActorAuditEvent).toHaveBeenCalledWith({
+      actorUserId: "user-1",
+      metadata: { cached: false, variant: "detail", version: 1 },
+      organizationId: "org_dg_imports",
+      subjectId: "p1",
+      subjectType: "product_image",
+      type: "product_image.viewed",
+    });
   });
 
   it("returns 304 when the client's ETag matches the stored image", async () => {
     const { auth } = await import("@/lib/auth");
+    const auditLog = await import("@/lib/audit-log");
     const imageStorage = await import("@/features/products/image-storage");
     const { GET } = await import("./route");
 
@@ -193,6 +207,14 @@ describe("GET /api/product-images/[organizationId]/[productId]/[version]/[varian
     );
     expect(response.headers.get("Vary")).toBe("Cookie");
     expect(response.headers.get("ETag")).toBe('"etag-value"');
+    expect(auditLog.recordActorAuditEvent).toHaveBeenCalledWith({
+      actorUserId: "user-1",
+      metadata: { cached: true, variant: "detail", version: 1 },
+      organizationId: "org_dg_imports",
+      subjectId: "p1",
+      subjectType: "product_image",
+      type: "product_image.viewed",
+    });
   });
 
   it("returns 404 when storage cannot read the object", async () => {
