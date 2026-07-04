@@ -2,6 +2,8 @@ import { type NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { serverEnv } from "@/lib/env";
 
+const TRAILING_COLON = /:$/;
+
 const getSafeCallbackUrl = (callbackUrl: string | null) =>
   callbackUrl?.startsWith("/") && !callbackUrl.startsWith("//")
     ? callbackUrl
@@ -33,10 +35,26 @@ const copySetCookieHeaders = ({
   }
 };
 
+const getRequestOrigin = (request: NextRequest) => {
+  const forwardedHost = request.headers.get("x-forwarded-host");
+  const host = forwardedHost ?? request.headers.get("host");
+
+  if (!host) {
+    return request.nextUrl.origin;
+  }
+
+  const forwardedProto = request.headers.get("x-forwarded-proto");
+  const protocol =
+    forwardedProto ?? request.nextUrl.protocol.replace(TRAILING_COLON, "");
+
+  return `${protocol}://${host}`;
+};
+
 const getCanonicalRedirectUrl = (request: NextRequest) => {
   const canonicalOrigin = new URL(serverEnv.BETTER_AUTH_URL).origin;
+  const requestOrigin = getRequestOrigin(request);
 
-  if (request.nextUrl.origin === canonicalOrigin) {
+  if (requestOrigin === canonicalOrigin) {
     return null;
   }
 
@@ -56,8 +74,9 @@ export const GET = async (request: NextRequest) => {
   const callbackURL = getSafeCallbackUrl(
     request.nextUrl.searchParams.get("callbackUrl")
   );
+  const requestOrigin = getRequestOrigin(request);
   const authRequest = new Request(
-    new URL("/api/auth/sign-in/social", request.url),
+    new URL("/api/auth/sign-in/social", requestOrigin),
     {
       body: JSON.stringify({
         callbackURL,
@@ -68,7 +87,7 @@ export const GET = async (request: NextRequest) => {
       }),
       headers: {
         "content-type": "application/json",
-        origin: request.nextUrl.origin,
+        origin: requestOrigin,
       },
       method: "POST",
     }

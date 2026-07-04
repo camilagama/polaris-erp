@@ -84,4 +84,33 @@ describe("GET /api/auth/google", () => {
       requestSignUp: true,
     });
   });
+
+  it("treats forwarded tunnel headers as the public canonical origin", async () => {
+    authMocks.handler.mockResolvedValue(
+      Response.json({
+        url: "https://accounts.google.com/o/oauth2/v2/auth?client_id=google",
+      })
+    );
+
+    const response = await GET(
+      new NextRequest("http://localhost:3000/api/auth/google?callbackUrl=%2F", {
+        headers: {
+          "x-forwarded-host": "app.example.com",
+          "x-forwarded-proto": "https",
+        },
+      })
+    );
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe(
+      "https://accounts.google.com/o/oauth2/v2/auth?client_id=google"
+    );
+    expect(authMocks.handler).toHaveBeenCalledOnce();
+
+    const [authRequest] = authMocks.handler.mock.calls[0] as [Request];
+    expect(authRequest.url).toBe(
+      "https://app.example.com/api/auth/sign-in/social"
+    );
+    expect(authRequest.headers.get("origin")).toBe("https://app.example.com");
+  });
 });

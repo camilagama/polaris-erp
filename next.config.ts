@@ -15,6 +15,35 @@ const parseOrigin = (value: string): string | null => {
   }
 };
 
+const parseHostname = (value: string): string | null => {
+  try {
+    return new URL(normalizeBaseUrl(value)).hostname;
+  } catch {
+    return null;
+  }
+};
+
+const getAllowedDevOrigins = () => {
+  const hosts = new Set(["127.0.0.1", "localhost"]);
+
+  for (const value of [
+    process.env.BETTER_AUTH_URL,
+    process.env.NEXT_PUBLIC_APP_URL,
+  ]) {
+    if (!value) {
+      continue;
+    }
+
+    const hostname = parseHostname(value);
+
+    if (hostname) {
+      hosts.add(hostname);
+    }
+  }
+
+  return [...hosts];
+};
+
 /**
  * Only allow `next/image` optimization for the real public media origin.
  * Same-origin app URLs are unnecessary (and widen the allowlist); `/api/...`
@@ -46,7 +75,7 @@ const nextConfig: NextConfig = {
   ...(process.env.VERCEL_ENV
     ? { env: { NEXT_PUBLIC_VERCEL_ENV: process.env.VERCEL_ENV } }
     : {}),
-  allowedDevOrigins: ["127.0.0.1", "localhost"],
+  allowedDevOrigins: getAllowedDevOrigins(),
   cacheComponents: true,
   images: {
     remotePatterns: imageRemotePatterns,
