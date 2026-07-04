@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { serverEnv } from "@/lib/env";
+import { checkRateLimit, getRateLimitKeyFromRequest } from "@/lib/rate-limit";
 
 const TRAILING_COLON = /:$/;
 
@@ -69,6 +70,19 @@ export const GET = async (request: NextRequest) => {
 
   if (canonicalRedirectUrl) {
     return NextResponse.redirect(canonicalRedirectUrl);
+  }
+
+  const rateLimit = await checkRateLimit({
+    key: getRateLimitKeyFromRequest(request, "auth-google"),
+    limit: 20,
+    windowMs: 60 * 1000,
+  });
+
+  if (!rateLimit.ok) {
+    return Response.json(
+      { error: "Muitas tentativas de login. Tente novamente em instantes." },
+      { status: 429 }
+    );
   }
 
   const callbackURL = getSafeCallbackUrl(

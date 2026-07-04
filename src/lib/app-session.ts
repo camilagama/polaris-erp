@@ -83,6 +83,23 @@ const resolveMembership = async ({
   return membership;
 };
 
+const ensureSessionActiveOrganization = async ({
+  organizationId,
+  sessionId,
+}: {
+  organizationId: string;
+  sessionId: string;
+}) => {
+  const db = await getDb();
+  await db
+    .update(sessions)
+    .set({
+      activeOrganizationId: organizationId,
+      updatedAt: new Date(),
+    })
+    .where(eq(sessions.id, sessionId));
+};
+
 const getAppContextFromSession = async (
   session: NonNullable<SessionPayload>
 ): Promise<AppContext | null> => {
@@ -110,14 +127,10 @@ const getAppContextFromSession = async (
   }
 
   if (activeOrganizationId !== membership.organizationId) {
-    const db = await getDb();
-    await db
-      .update(sessions)
-      .set({
-        activeOrganizationId: membership.organizationId,
-        updatedAt: new Date(),
-      })
-      .where(eq(sessions.id, session.session.id));
+    await ensureSessionActiveOrganization({
+      organizationId: membership.organizationId,
+      sessionId: session.session.id,
+    });
   }
 
   return {

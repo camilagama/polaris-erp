@@ -21,6 +21,7 @@ type RateLimitResult =
 
 const buckets = new Map<string, RateLimitBucket>();
 const upstashLimiters = new Map<string, Ratelimit>();
+let redis: Redis | null | undefined;
 
 const getWindowLabel = (windowMs: number): Duration => {
   const seconds = Math.max(1, Math.ceil(windowMs / 1000));
@@ -28,16 +29,23 @@ const getWindowLabel = (windowMs: number): Duration => {
 };
 
 const getUpstashRedis = () => {
+  if (redis !== undefined) {
+    return redis;
+  }
+
   if (
     !(serverEnv.UPSTASH_REDIS_REST_URL && serverEnv.UPSTASH_REDIS_REST_TOKEN)
   ) {
+    redis = null;
     return null;
   }
 
-  return new Redis({
+  redis = new Redis({
     token: serverEnv.UPSTASH_REDIS_REST_TOKEN,
     url: serverEnv.UPSTASH_REDIS_REST_URL,
   });
+
+  return redis;
 };
 
 const getUpstashLimiter = ({

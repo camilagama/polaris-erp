@@ -1,9 +1,12 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { authMocks, serverEnvMock } = vi.hoisted(() => ({
+const { authMocks, rateLimitMocks, serverEnvMock } = vi.hoisted(() => ({
   authMocks: {
     handler: vi.fn(),
+  },
+  rateLimitMocks: {
+    checkRateLimit: vi.fn(),
   },
   serverEnvMock: {
     BETTER_AUTH_URL: "https://app.example.com",
@@ -20,6 +23,11 @@ vi.mock("@/lib/env", () => ({
   serverEnv: serverEnvMock,
 }));
 
+vi.mock("@/lib/rate-limit", () => ({
+  checkRateLimit: rateLimitMocks.checkRateLimit,
+  getRateLimitKeyFromRequest: vi.fn(() => "auth-google:127.0.0.1"),
+}));
+
 vi.mock("server-only", () => ({}));
 
 const { GET } = await import("@/app/api/auth/google/route");
@@ -29,6 +37,12 @@ const createRequest = (url: string) => new NextRequest(url);
 describe("GET /api/auth/google", () => {
   beforeEach(() => {
     authMocks.handler.mockReset();
+    rateLimitMocks.checkRateLimit.mockReset();
+    rateLimitMocks.checkRateLimit.mockResolvedValue({
+      ok: true,
+      remaining: 9,
+      resetAt: Date.now() + 60_000,
+    });
     serverEnvMock.BETTER_AUTH_URL = "https://app.example.com";
   });
 
@@ -112,5 +126,25 @@ describe("GET /api/auth/google", () => {
       "https://app.example.com/api/auth/sign-in/social"
     );
     expect(authRequest.headers.get("origin")).toBe("https://app.example.com");
+  });
+
+  it("returns 429 before starting OAuth when the route rate limit is exceeded", async () => {
+    rateLimitMocks.checkRateLimit.mockResolvedValue({
+      ok: false,
+      resetAt: Date.now() + 60_000,
+      retryAfterSeconds: 60,
+    });
+
+    const response = await GET(
+      createRequest(
+        "https://app.example.com/api/auth/google?callbackUrl=%2Fprodutos"
+      )
+    );
+
+    await expect(response.json()).resolves.toEqual({
+      error: "Muitas tentativas de login. Tente novamente em instantes.",
+    });
+    expect(response.status).toBe(429);
+    expect(authMocks.handler).not.toHaveBeenCalled();
   });
 });

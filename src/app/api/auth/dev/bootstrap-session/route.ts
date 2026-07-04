@@ -12,6 +12,10 @@ const isBootstrapEnabled = () => {
     return true;
   }
 
+  if (serverEnv.VERCEL_ENV === "production") {
+    return false;
+  }
+
   if (serverEnv.NODE_ENV === "production") {
     return serverEnv.ALLOW_PLAYWRIGHT_BOOTSTRAP === "true";
   }

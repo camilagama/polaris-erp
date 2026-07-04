@@ -26,6 +26,11 @@ const { authContext, serverEnvMock } = vi.hoisted(() => ({
     ALLOW_PLAYWRIGHT_BOOTSTRAP: undefined as "false" | "true" | undefined,
     INTERNAL_BOOTSTRAP_SECRET: "bootstrap-secret" as string | undefined,
     NODE_ENV: "test" as "development" | "production" | "test",
+    VERCEL_ENV: undefined as
+      | "development"
+      | "preview"
+      | "production"
+      | undefined,
   },
 }));
 
@@ -45,6 +50,7 @@ describe("POST /api/auth/dev/bootstrap-session", () => {
     serverEnvMock.ALLOW_PLAYWRIGHT_BOOTSTRAP = undefined;
     serverEnvMock.INTERNAL_BOOTSTRAP_SECRET = "bootstrap-secret";
     serverEnvMock.NODE_ENV = "test";
+    serverEnvMock.VERCEL_ENV = undefined;
     authContext.internalAdapter.findUserByEmail.mockResolvedValue(null);
     authContext.internalAdapter.createUser.mockResolvedValue({
       email: "user@example.com",
@@ -77,9 +83,10 @@ describe("POST /api/auth/dev/bootstrap-session", () => {
     expect(response.status).toBe(403);
   });
 
-  it("allows bootstrap in production when ALLOW_PLAYWRIGHT_BOOTSTRAP is true", async () => {
+  it("allows bootstrap in production previews when ALLOW_PLAYWRIGHT_BOOTSTRAP is true", async () => {
     serverEnvMock.NODE_ENV = "production";
     serverEnvMock.ALLOW_PLAYWRIGHT_BOOTSTRAP = "true";
+    serverEnvMock.VERCEL_ENV = "preview";
 
     const response = await POST(
       new Request("http://localhost/api/auth/dev/bootstrap-session", {
@@ -95,6 +102,27 @@ describe("POST /api/auth/dev/bootstrap-session", () => {
     );
 
     expect(response.status).toBe(200);
+  });
+
+  it("returns 403 in production deployments even when ALLOW_PLAYWRIGHT_BOOTSTRAP is true", async () => {
+    serverEnvMock.NODE_ENV = "production";
+    serverEnvMock.ALLOW_PLAYWRIGHT_BOOTSTRAP = "true";
+    serverEnvMock.VERCEL_ENV = "production";
+
+    const response = await POST(
+      new Request("http://localhost/api/auth/dev/bootstrap-session", {
+        body: JSON.stringify({
+          email: "user@example.com",
+          name: "User",
+        }),
+        headers: {
+          Authorization: "Bearer bootstrap-secret",
+        },
+        method: "POST",
+      })
+    );
+
+    expect(response.status).toBe(403);
   });
 
   it("returns 401 when the bearer token is invalid", async () => {

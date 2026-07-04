@@ -10,57 +10,74 @@ const optionalNonEmptyString = z.preprocess((value) => {
   return trimmedValue.length === 0 ? undefined : trimmedValue;
 }, z.string().min(1).optional());
 
-const serverEnvSchema = z.object({
-  DATABASE_URL: z.string().min(1),
-  DATABASE_URL_DIRECT: z.string().min(1).optional(),
-  BETTER_AUTH_SECRET: z.string().min(1),
-  BETTER_AUTH_URL: z.string().url(),
-  BETTER_AUTH_API_KEY: optionalNonEmptyString,
-  ALLOW_PLAYWRIGHT_BOOTSTRAP: z.enum(["true", "false"]).optional(),
-  CRON_SECRET: optionalNonEmptyString,
-  INTERNAL_BOOTSTRAP_SECRET: optionalNonEmptyString,
-  GOOGLE_CLIENT_ID: optionalNonEmptyString,
-  GOOGLE_CLIENT_SECRET: optionalNonEmptyString,
-  NEXT_PUBLIC_APP_URL: z.string().url(),
-  NEXT_PUBLIC_GOOGLE_CLIENT_ID: optionalNonEmptyString,
-  NODE_ENV: z
-    .enum(["development", "test", "production"])
-    .default("development"),
-  R2_ACCESS_KEY_ID: optionalNonEmptyString,
-  R2_ACCOUNT_ID: optionalNonEmptyString,
-  R2_BUCKET_PUBLIC: optionalNonEmptyString,
-  R2_BUCKET_STAGING: optionalNonEmptyString,
-  R2_PUBLIC_BASE_URL: z.preprocess((value) => {
-    if (typeof value !== "string") {
-      return value;
-    }
+const MINIMUM_AUTH_SECRET_LENGTH = 32;
 
-    const trimmedValue = value.trim();
-    return trimmedValue.length === 0 ? undefined : trimmedValue;
-  }, z.string().url().optional()),
-  R2_SECRET_ACCESS_KEY: optionalNonEmptyString,
-  SENTRY_AUTH_TOKEN: optionalNonEmptyString,
-  SENTRY_DSN: optionalNonEmptyString,
-  SENTRY_ORG: optionalNonEmptyString,
-  SENTRY_PROJECT: optionalNonEmptyString,
-  NEXT_PUBLIC_SENTRY_DSN: z.preprocess((value) => {
-    if (typeof value !== "string") {
-      return value;
-    }
+const serverEnvSchema = z
+  .object({
+    DATABASE_URL: z.string().min(1),
+    DATABASE_URL_DIRECT: z.string().min(1).optional(),
+    BETTER_AUTH_SECRET: z.string().min(1),
+    BETTER_AUTH_URL: z.string().url(),
+    BETTER_AUTH_API_KEY: optionalNonEmptyString,
+    ALLOW_PLAYWRIGHT_BOOTSTRAP: z.enum(["true", "false"]).optional(),
+    CRON_SECRET: optionalNonEmptyString,
+    INTERNAL_BOOTSTRAP_SECRET: optionalNonEmptyString,
+    GOOGLE_CLIENT_ID: optionalNonEmptyString,
+    GOOGLE_CLIENT_SECRET: optionalNonEmptyString,
+    NEXT_PUBLIC_APP_URL: z.string().url(),
+    NEXT_PUBLIC_GOOGLE_CLIENT_ID: optionalNonEmptyString,
+    NODE_ENV: z
+      .enum(["development", "test", "production"])
+      .default("development"),
+    R2_ACCESS_KEY_ID: optionalNonEmptyString,
+    R2_ACCOUNT_ID: optionalNonEmptyString,
+    R2_BUCKET_PUBLIC: optionalNonEmptyString,
+    R2_BUCKET_STAGING: optionalNonEmptyString,
+    R2_PUBLIC_BASE_URL: z.preprocess((value) => {
+      if (typeof value !== "string") {
+        return value;
+      }
 
-    const trimmedValue = value.trim();
-    return trimmedValue.length === 0 ? undefined : trimmedValue;
-  }, z.string().url().optional()),
-  UPSTASH_REDIS_REST_TOKEN: optionalNonEmptyString,
-  UPSTASH_REDIS_REST_URL: z.preprocess((value) => {
-    if (typeof value !== "string") {
-      return value;
-    }
+      const trimmedValue = value.trim();
+      return trimmedValue.length === 0 ? undefined : trimmedValue;
+    }, z.string().url().optional()),
+    R2_SECRET_ACCESS_KEY: optionalNonEmptyString,
+    SENTRY_AUTH_TOKEN: optionalNonEmptyString,
+    SENTRY_DSN: optionalNonEmptyString,
+    SENTRY_ORG: optionalNonEmptyString,
+    SENTRY_PROJECT: optionalNonEmptyString,
+    NEXT_PUBLIC_SENTRY_DSN: z.preprocess((value) => {
+      if (typeof value !== "string") {
+        return value;
+      }
 
-    const trimmedValue = value.trim();
-    return trimmedValue.length === 0 ? undefined : trimmedValue;
-  }, z.string().url().optional()),
-});
+      const trimmedValue = value.trim();
+      return trimmedValue.length === 0 ? undefined : trimmedValue;
+    }, z.string().url().optional()),
+    UPSTASH_REDIS_REST_TOKEN: optionalNonEmptyString,
+    UPSTASH_REDIS_REST_URL: z.preprocess((value) => {
+      if (typeof value !== "string") {
+        return value;
+      }
+
+      const trimmedValue = value.trim();
+      return trimmedValue.length === 0 ? undefined : trimmedValue;
+    }, z.string().url().optional()),
+    VERCEL_ENV: z.enum(["development", "preview", "production"]).optional(),
+  })
+  .superRefine((env, context) => {
+    if (
+      env.NODE_ENV === "production" &&
+      env.BETTER_AUTH_SECRET.length < MINIMUM_AUTH_SECRET_LENGTH
+    ) {
+      context.addIssue({
+        code: "custom",
+        message:
+          "BETTER_AUTH_SECRET must be at least 32 characters in production.",
+        path: ["BETTER_AUTH_SECRET"],
+      });
+    }
+  });
 
 export const serverEnv = serverEnvSchema.parse({
   DATABASE_URL: process.env.DATABASE_URL,
@@ -89,4 +106,5 @@ export const serverEnv = serverEnvSchema.parse({
   NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
   UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
   UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,
+  VERCEL_ENV: process.env.VERCEL_ENV,
 });
