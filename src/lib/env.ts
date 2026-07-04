@@ -58,6 +58,15 @@ const serverEnvSchema = z.object({
     const trimmedValue = value.trim();
     return trimmedValue.length === 0 ? undefined : trimmedValue;
   }, z.string().url().optional()),
+  UPSTASH_REDIS_REST_TOKEN: optionalNonEmptyString,
+  UPSTASH_REDIS_REST_URL: z.preprocess((value) => {
+    if (typeof value !== "string") {
+      return value;
+    }
+
+    const trimmedValue = value.trim();
+    return trimmedValue.length === 0 ? undefined : trimmedValue;
+  }, z.string().url().optional()),
 });
 
 export const serverEnv = serverEnvSchema.parse({
@@ -85,4 +94,6 @@ export const serverEnv = serverEnvSchema.parse({
   SENTRY_ORG: process.env.SENTRY_ORG,
   SENTRY_PROJECT: process.env.SENTRY_PROJECT,
   NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
+  UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
+  UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,
 });

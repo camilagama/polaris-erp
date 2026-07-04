@@ -1,9 +1,4 @@
-export const ORGANIZATION_ROLES = [
-  "viewer",
-  "operator",
-  "admin",
-  "owner",
-] as const;
+export const ORGANIZATION_ROLES = ["operator", "admin", "owner"] as const;
 
 export type OrganizationRole = (typeof ORGANIZATION_ROLES)[number];
 
@@ -20,12 +15,11 @@ const roleRank: Record<OrganizationRole, number> = {
   admin: 3,
   operator: 2,
   owner: 4,
-  viewer: 1,
 };
 
 const permissionMinimumRole: Record<AppPermission, OrganizationRole> = {
-  "analytics:read": "viewer",
-  "catalog:read": "viewer",
+  "analytics:read": "operator",
+  "catalog:read": "operator",
   "members:write": "admin",
   "organization:delete": "owner",
   "products:write": "operator",

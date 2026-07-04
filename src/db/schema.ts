@@ -125,6 +125,10 @@ export const member = pgTable(
       table.organizationId,
       table.userId
     ),
+    check(
+      "member_role_known_check",
+      sql`${table.role} in ('owner', 'admin', 'operator')`
+    ),
   ]
 );
 
@@ -256,7 +260,7 @@ export const systemSettings = pgTable(
     organizationId: text("organization_id")
       .notNull()
       .references(() => organization.id, { onDelete: "cascade" }),
-    id: text("id").primaryKey(),
+    id: text("id").notNull(),
     minimumMarkupPercent: decimal("minimum_markup_percent", {
       precision: 12,
       scale: 2,

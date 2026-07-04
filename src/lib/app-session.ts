@@ -173,19 +173,38 @@ export const requirePageAppContext = async (): Promise<AppContext> => {
 };
 
 export const createInitialOrganizationForUser = async ({
+  cardInstallmentRules = [{ feePercent: 0, installments: 1 }],
+  idealMarkupPercent = 0,
+  minimumMarkupPercent = 0,
   name,
   userId,
 }: {
+  cardInstallmentRules?: Array<{ feePercent: number; installments: number }>;
+  idealMarkupPercent?: number;
+  minimumMarkupPercent?: number;
   name: string;
   userId: string;
 }): Promise<string> => {
-  const organizationId = crypto.randomUUID();
-  const slugBase = resolveDefaultOrganizationSlug(name);
-  const slug = `${slugBase}-${organizationId.slice(0, 8)}`;
-
   const db = await getDb();
 
-  await db.transaction(async (tx) => {
+  const organizationId = await db.transaction(async (tx) => {
+    const [existingMembership] = await tx
+      .select({
+        organizationId: member.organizationId,
+      })
+      .from(member)
+      .where(eq(member.userId, userId))
+      .orderBy(asc(member.createdAt))
+      .limit(1);
+
+    if (existingMembership) {
+      return existingMembership.organizationId;
+    }
+
+    const organizationId = crypto.randomUUID();
+    const slugBase = resolveDefaultOrganizationSlug(name);
+    const slug = `${slugBase}-${organizationId.slice(0, 8)}`;
+
     await tx.insert(organization).values({
       id: organizationId,
       name: name.trim(),
@@ -210,10 +229,10 @@ export const createInitialOrganizationForUser = async ({
 
     await tx.insert(systemSettings).values({
       id: GLOBAL_SETTINGS_ID,
-      idealMarkupPercent: "0",
-      minimumMarkupPercent: "0",
+      idealMarkupPercent: idealMarkupPercent.toFixed(2),
+      minimumMarkupPercent: minimumMarkupPercent.toFixed(2),
       organizationId,
-      paymentFeeRules: [],
+      paymentFeeRules: cardInstallmentRules,
     });
 
     await tx.insert(auditEvents).values({
@@ -223,6 +242,8 @@ export const createInitialOrganizationForUser = async ({
       subjectType: "organization",
       type: "organization.created",
     });
+
+    return organizationId;
   });
 
   return organizationId;

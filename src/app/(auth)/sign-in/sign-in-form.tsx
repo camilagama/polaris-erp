@@ -8,19 +8,70 @@ import { Google } from "@/components/ui/svgs/google";
 import { DGImportsLogo } from "@/components/ui/svgs/logo";
 import { authClient, hasGoogleAuthClient } from "@/lib/auth-client";
 
+type AuthFormMode = "register" | "sign-in";
+
 const isLocalHostEnvironment = () => {
   const hostname = window.location.hostname;
 
   return hostname === "127.0.0.1" || hostname === "localhost";
 };
 
-export function SignInForm() {
+const getSafeCallbackUrl = (callbackUrl: string) =>
+  callbackUrl.startsWith("/") && !callbackUrl.startsWith("//")
+    ? callbackUrl
+    : "/onboarding";
+
+const getMagicLinkButtonLabel = ({
+  isRegister,
+  pending,
+}: {
+  isRegister: boolean;
+  pending: boolean;
+}) => {
+  if (pending) {
+    return "Enviando...";
+  }
+
+  return isRegister ? "Enviar link de cadastro" : "Enviar link de acesso";
+};
+
+const getGoogleButtonLabel = ({
+  isRegister,
+  pending,
+}: {
+  isRegister: boolean;
+  pending: boolean;
+}) => {
+  if (pending) {
+    return "Redirecionando...";
+  }
+
+  return isRegister ? "Cadastrar com Google" : "Continuar com Google";
+};
+
+export function SignInForm({
+  callbackUrl = "/onboarding",
+  mode = "sign-in",
+}: {
+  callbackUrl?: string;
+  mode?: AuthFormMode;
+}) {
   const [googlePending, setGooglePending] = useState(false);
   const [googleError, setGoogleError] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [magicLinkPending, setMagicLinkPending] = useState(false);
   const [magicLinkMessage, setMagicLinkMessage] = useState<string | null>(null);
   const [isLocalhost, setIsLocalhost] = useState(false);
+  const safeCallbackUrl = getSafeCallbackUrl(callbackUrl);
+  const isRegister = mode === "register";
+  const magicLinkButtonLabel = getMagicLinkButtonLabel({
+    isRegister,
+    pending: magicLinkPending,
+  });
+  const googleButtonLabel = getGoogleButtonLabel({
+    isRegister,
+    pending: googlePending,
+  });
 
   useEffect(() => {
     setIsLocalhost(isLocalHostEnvironment());
@@ -36,8 +87,8 @@ export function SignInForm() {
     const initializeOneTap = async () => {
       try {
         await authClient.oneTap({
-          callbackURL: "/onboarding",
-          context: "signin",
+          callbackURL: safeCallbackUrl,
+          context: isRegister ? "signup" : "signin",
         });
       } catch {
         if (!cancelled) {
@@ -51,7 +102,7 @@ export function SignInForm() {
     return () => {
       cancelled = true;
     };
-  }, [isLocalhost]);
+  }, [isLocalhost, isRegister, safeCallbackUrl]);
 
   const handleGoogleSignIn = async () => {
     setGooglePending(true);
@@ -64,7 +115,7 @@ export function SignInForm() {
     }
 
     const result = await authClient.signIn.social({
-      callbackURL: "/onboarding",
+      callbackURL: safeCallbackUrl,
       provider: "google",
     });
 
@@ -81,9 +132,9 @@ export function SignInForm() {
     setMagicLinkMessage(null);
 
     const result = await authClient.signIn.magicLink({
-      callbackURL: "/onboarding",
+      callbackURL: safeCallbackUrl,
       email,
-      newUserCallbackURL: "/onboarding",
+      newUserCallbackURL: safeCallbackUrl,
     });
 
     if (result.error) {
@@ -111,10 +162,12 @@ export function SignInForm() {
           <div className="w-full max-w-xs sm:max-w-sm">
             <div className="mb-8 flex flex-col items-center text-center">
               <h1 className="font-heading text-3xl tracking-tight">
-                Entrar na sua conta
+                {isRegister ? "Criar sua conta" : "Entrar na sua conta"}
               </h1>
               <p className="mt-2 text-muted-foreground text-sm">
-                Use Google ou receba um link magico por email
+                {isRegister
+                  ? "Comece com Google ou receba um link magico por email"
+                  : "Use Google ou receba um link magico por email"}
               </p>
             </div>
 
@@ -135,7 +188,7 @@ export function SignInForm() {
                   onClick={handleMagicLinkSignIn}
                   type="button"
                 >
-                  {magicLinkPending ? "Enviando..." : "Enviar link de acesso"}
+                  {magicLinkButtonLabel}
                 </Button>
               </div>
 
@@ -153,7 +206,7 @@ export function SignInForm() {
                 variant="outline"
               >
                 {googlePending ? null : <Google className="size-4" />}
-                {googlePending ? "Redirecionando..." : "Continuar com Google"}
+                {googleButtonLabel}
               </Button>
 
               {googleError ? (
@@ -170,7 +223,9 @@ export function SignInForm() {
               ) : null}
 
               <p className="mt-8 text-center text-muted-foreground/70 text-xs leading-relaxed">
-                Novas contas criam uma organizacao propria no primeiro acesso.
+                {isRegister
+                  ? "Depois do primeiro acesso voce configura sua organizacao."
+                  : "Ainda nao tem conta? Acesse /register para criar seu workspace."}
               </p>
             </div>
           </div>

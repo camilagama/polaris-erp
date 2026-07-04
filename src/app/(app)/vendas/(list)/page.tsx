@@ -47,6 +47,7 @@ export default async function VendasPage(props: PageProps<"/vendas">) {
       cardInstallmentRules={catalogSettings.cardInstallmentRules}
       dateBounds={bounds}
       initialCursor={salesResult.nextCursor}
+      role={context.role}
       saleProducts={saleProducts}
       sales={salesResult.items}
       selectedRange={selectedRange}

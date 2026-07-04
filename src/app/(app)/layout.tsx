@@ -23,6 +23,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           email: session.user.email,
           image: session.user.image,
           name: session.user.name,
+          role: context.role,
         }}
       />
       <SidebarInset>

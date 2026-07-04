@@ -52,6 +52,7 @@ import {
   formatSaleListPaymentMethodLabel,
   getOperationalSaleStatusLabel,
 } from "@/features/sales/sale-display-labels";
+import { canRolePerform, type OrganizationRole } from "@/lib/app-context";
 import { formatCurrency, formatDate, formatPercent } from "@/lib/formatters";
 
 const getStatusLabel = (status: SaleListItem["status"]) =>
@@ -234,6 +235,7 @@ export function SalesPanel({
   cardInstallmentRules,
   dateBounds,
   initialCursor,
+  role,
   saleProducts,
   sales: initialSales,
   selectedRange,
@@ -247,11 +249,13 @@ export function SalesPanel({
     to: string;
   };
   initialCursor: string | null;
+  role: OrganizationRole;
   saleProducts: SaleProductOption[];
   sales: SaleListItem[];
   selectedRange: SalesDateRange;
   status: SaleStatusFilter;
 }) {
+  const canWriteSales = canRolePerform(role, "sales:write");
   const pathname = usePathname();
   const router = useRouter();
   const [sales, setSales] = useState(initialSales);
@@ -375,10 +379,12 @@ export function SalesPanel({
             </p>
           </div>
 
-          <CreateSaleDialog
-            cardInstallmentRules={cardInstallmentRules}
-            products={saleProducts}
-          />
+          {canWriteSales ? (
+            <CreateSaleDialog
+              cardInstallmentRules={cardInstallmentRules}
+              products={saleProducts}
+            />
+          ) : null}
         </div>
 
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">

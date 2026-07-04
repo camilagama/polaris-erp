@@ -3,11 +3,20 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 
 vi.mock("@/lib/app-session", () => ({
-  getAppContext: vi.fn(),
+  requireAppContext: vi.fn(),
 }));
 
 vi.mock("@/lib/audit-log", () => ({
   recordAuditEvent: vi.fn(),
+}));
+
+vi.mock("@/lib/rate-limit", () => ({
+  checkRateLimit: vi.fn(async () => ({
+    ok: true,
+    remaining: 10,
+    resetAt: Date.now() + 1000,
+  })),
+  getRateLimitKeyFromRequest: vi.fn(() => "test-ip"),
 }));
 
 vi.mock("@/lib/auth", () => ({
@@ -71,7 +80,7 @@ describe("POST /api/product-images/presign", () => {
   });
 
   it("returns the signed upload contract for valid requests", async () => {
-    const { getAppContext } = await import("@/lib/app-session");
+    const { requireAppContext } = await import("@/lib/app-session");
     const auditLog = await import("@/lib/audit-log");
     const { auth } = await import("@/lib/auth");
     const { POST } = await import("@/app/api/product-images/presign/route");
@@ -84,7 +93,7 @@ describe("POST /api/product-images/presign", () => {
         id: "user-1",
       },
     } as never);
-    vi.mocked(getAppContext).mockResolvedValue({
+    vi.mocked(requireAppContext).mockResolvedValue({
       organizationId: "org_dg_imports",
       organizationName: "DG Imports",
       role: "owner",

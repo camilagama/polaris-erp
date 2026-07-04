@@ -10,20 +10,24 @@ R2_ACCESS_KEY_ID=
 R2_SECRET_ACCESS_KEY=
 R2_BUCKET_STAGING=product-images-staging
 R2_BUCKET_PUBLIC=product-images-public
-R2_PUBLIC_BASE_URL=https://media.seu-dominio.com
 CRON_SECRET=
 ```
 
-## Modelo de entrega (producao vs fallback)
+`R2_PUBLIC_BASE_URL` pode existir em ambientes antigos, mas o app SaaS nao usa URL publica direta para imagens de produto. A entrega passa pela rota autenticada do Next.js para validar sessao, tenant e produto antes de retornar bytes.
 
-- **Producao recomendada**: `R2_PUBLIC_BASE_URL` deve ser o **dominio publico do bucket** (custom domain na Cloudflare apontando para o R2 publico ou URL `*.r2.dev` do bucket publico), **nao** a origem do Next (`NEXT_PUBLIC_APP_URL` / `BETTER_AUTH_URL`). O app gera URLs diretas `https://media.../products/.../detail.webp` com cache longo no objeto.
-- **Fallback autenticado**: se `R2_PUBLIC_BASE_URL` estiver ausente, for placeholder (`seu-dominio.com`), apontar para `localhost`/`127.0.0.1`, ou coincidir com a origem do app, o codigo usa `/api/product-images/...`, servido **com sessao** e com `Cache-Control` privado (nao reutiliza politica de CDN publica).
-- Evite configurar `R2_PUBLIC_BASE_URL` igual ao host do site: os ficheiros `products/...` nao existem nesse host e as imagens quebram.
+## Modelo de entrega SaaS
+
+- O bucket final continua armazenando variantes `detail.webp` e `table.webp`.
+- A UI usa `/api/product-images/{organizationId}/{productId}/{version}/{variant}`.
+- A rota valida sessao, membership na organizacao da URL, produto pertencente a mesma organizacao e versao da imagem igual ao banco.
+- A resposta usa cache privado (`Cache-Control: private`) e `Vary: Cookie`.
+
+Esse modelo evita que uma URL de CDN/R2 exponha imagem de outro tenant para alguem sem membership.
 
 ## Buckets
 
 - `product-images-staging`: bucket privado para upload temporario.
-- `product-images-public`: bucket publico para servir as variantes finais `detail.webp` e `table.webp`.
+- `product-images-public`: bucket final para as variantes processadas. Apesar do nome historico, os bytes sao servidos pelo app.
 
 ## CORS do bucket de staging
 
@@ -35,8 +39,6 @@ Use uma politica equivalente a esta no bucket de staging:
     "AllowedOrigins": [
       "http://127.0.0.1:3000",
       "http://localhost:3000",
-      "https://dgimports-1yer-1cyy8sh3u-summit-studios-projects.vercel.app",
-      "https://tiagogama.vercel.app",
       "https://seu-app.com"
     ],
     "AllowedMethods": ["PUT", "HEAD"],
@@ -47,30 +49,7 @@ Use uma politica equivalente a esta no bucket de staging:
 ]
 ```
 
-### Script local (`scripts/configure-r2-staging-cors.mjs`)
-
-Com variaveis `R2_*` em `.env.local`, rode:
-
-```bash
-node scripts/configure-r2-staging-cors.mjs
-```
-
-O script aplica `PUT` + `HEAD`, `Content-Type`, `Content-Length` (o navegador envia `Content-Length` no `PUT` com corpo; o pre-sign fixa o tamanho no lado S3 e o header automatico deve coincidir), `ETag` e inclui por padrao `localhost`, `127.0.0.1`, `https://dgimports-1yer-1cyy8sh3u-summit-studios-projects.vercel.app` e `https://tiagogama.vercel.app`. Para outras origens (ex.: outra preview), defina `R2_STAGING_CORS_EXTRA_ORIGINS` com URLs separadas por virgula.
-
-### Diagnostico (`/api/internal/health/r2`)
-
-Com `CRON_SECRET` configurado, o servidor pode reler o CORS atual do bucket de staging (sem expor chaves):
-
-```bash
-curl -sS "https://SEU_DOMINIO/api/internal/health/r2" \
-  -H "Authorization: Bearer $CRON_SECRET"
-```
-
-Se o navegador bloquear o `PUT` com erro de preflight:
-
-- confirme que o origin exato do app esta em `AllowedOrigins`
-- configure o CORS no bucket `product-images-staging`, nao no Next.js
-- lembre que a URL pre-assinada aponta direto para o host do bucket, entao sem essa policy o navegador bloqueia antes de enviar o arquivo
+O browser envia o upload direto para o bucket de staging com URL pre-assinada. A policy deve estar no bucket de staging, nao no Next.js.
 
 ## Lifecycle recomendado
 
@@ -79,21 +58,24 @@ No bucket de staging:
 - apagar objetos com prefixo `staging/` apos `1 dia`
 - abortar uploads incompletos apos `1 dia`
 
-No bucket publico:
+No bucket final:
 
 - nao aplicar expiracao automatica
-- a limpeza e feita pelo app na substituicao/remocao e pela reconciliacao diaria
+- limpeza por substituicao/remocao no app e reconciliacao diaria
 
 ## Cron de reconciliacao
 
-O projeto inclui `vercel.json` com um cron diario para:
+O projeto inclui `vercel.json` com cron diario para:
 
-- apagar variantes orfas em `products/`
-- manter o bucket publico consistente com o banco
+- listar variantes finais em `organizations/`
+- comparar com produtos e `image_version` no banco
+- apagar variantes orfas
 
-Se nao usar Vercel Cron, chame manualmente:
+Teste manual:
 
 ```bash
 curl -X POST https://seu-app.com/api/internal/product-images/reconcile \
   -H "Authorization: Bearer $CRON_SECRET"
 ```
+
+O payload retorna contagens (`deletedCount`, `orphanedCount`, `scannedCount`) e nao retorna as chaves completas dos objetos, para reduzir exposicao operacional entre tenants.

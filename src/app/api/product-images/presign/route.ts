@@ -3,7 +3,7 @@ import {
   createPresignedProductImageUpload,
   createStagingObjectKey,
 } from "@/features/products/image-storage";
-import { getAppContext } from "@/lib/app-session";
+import { requireAppContext } from "@/lib/app-session";
 import { recordAuditEvent } from "@/lib/audit-log";
 import { auth } from "@/lib/auth";
 import { checkRateLimit, getRateLimitKeyFromRequest } from "@/lib/rate-limit";
@@ -23,13 +23,15 @@ export async function POST(request: Request) {
     );
   }
 
-  const ipRateLimit = checkRateLimit({
+  const context = await requireAppContext("products:write");
+
+  const ipRateLimit = await checkRateLimit({
     key: getRateLimitKeyFromRequest(request, "product-image-presign"),
     limit: 60,
     windowMs: 60 * 1000,
   });
 
-  const userRateLimit = checkRateLimit({
+  const userRateLimit = await checkRateLimit({
     key: `product-image-presign:user:${session.user.id}`,
     limit: 120,
     windowMs: 60 * 1000,
@@ -59,20 +61,16 @@ export async function POST(request: Request) {
       objectKey,
       size: parsed.data.size,
     });
-    const context = await getAppContext();
-
-    if (context) {
-      await recordAuditEvent({
-        context,
-        metadata: {
-          contentType: parsed.data.contentType,
-          size: parsed.data.size,
-        },
-        subjectId: objectKey,
-        subjectType: "product_image",
-        type: "product_image.presign_created",
-      });
-    }
+    await recordAuditEvent({
+      context,
+      metadata: {
+        contentType: parsed.data.contentType,
+        size: parsed.data.size,
+      },
+      subjectId: objectKey,
+      subjectType: "product_image",
+      type: "product_image.presign_created",
+    });
 
     return Response.json({
       objectKey,

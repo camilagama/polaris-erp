@@ -36,13 +36,34 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { DGImportsLogo } from "@/components/ui/svgs/logo";
+import { canRolePerform, type OrganizationRole } from "@/lib/app-context";
 import { cn } from "@/lib/utils";
 
 const navigationItems = [
-  { href: "/", label: "Dashboard", icon: Home01Icon },
-  { href: "/produtos", label: "Produtos", icon: ShoppingBag01Icon },
-  { href: "/vendas", label: "Vendas", icon: Invoice01Icon },
-  { href: "/configuracoes", label: "Configuracoes", icon: Settings01Icon },
+  {
+    href: "/",
+    icon: Home01Icon,
+    label: "Dashboard",
+    permission: "analytics:read",
+  },
+  {
+    href: "/produtos",
+    icon: ShoppingBag01Icon,
+    label: "Produtos",
+    permission: "catalog:read",
+  },
+  {
+    href: "/vendas",
+    icon: Invoice01Icon,
+    label: "Vendas",
+    permission: "catalog:read",
+  },
+  {
+    href: "/configuracoes",
+    icon: Settings01Icon,
+    label: "Configuracoes",
+    permission: "settings:write",
+  },
 ] as const;
 
 type AppSidebarProps = ComponentProps<typeof Sidebar> & {
@@ -51,6 +72,7 @@ type AppSidebarProps = ComponentProps<typeof Sidebar> & {
     email: string;
     image?: string | null;
     name: string;
+    role: OrganizationRole;
   };
 };
 
@@ -92,32 +114,34 @@ export function AppSidebar({ onSignOut, user, ...props }: AppSidebarProps) {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu className="gap-2">
-              {navigationItems.map((item) => {
-                const active =
-                  item.href === "/"
-                    ? pathname === "/"
-                    : pathname === item.href ||
-                      pathname?.startsWith(`${item.href}/`);
+              {navigationItems
+                .filter((item) => canRolePerform(user.role, item.permission))
+                .map((item) => {
+                  const active =
+                    item.href === "/"
+                      ? pathname === "/"
+                      : pathname === item.href ||
+                        pathname?.startsWith(`${item.href}/`);
 
-                return (
-                  <SidebarMenuItem key={item.label}>
-                    <SidebarMenuButton
-                      asChild
-                      className={cn(
-                        active &&
-                          "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
-                      )}
-                      isActive={active}
-                      tooltip={item.label}
-                    >
-                      <Link href={item.href}>
-                        <HugeiconsIcon icon={item.icon} strokeWidth={2} />
-                        <span>{item.label}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
+                  return (
+                    <SidebarMenuItem key={item.label}>
+                      <SidebarMenuButton
+                        asChild
+                        className={cn(
+                          active &&
+                            "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
+                        )}
+                        isActive={active}
+                        tooltip={item.label}
+                      >
+                        <Link href={item.href}>
+                          <HugeiconsIcon icon={item.icon} strokeWidth={2} />
+                          <span>{item.label}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

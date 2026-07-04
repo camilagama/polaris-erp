@@ -19,6 +19,13 @@ vi.mock("@/features/catalog/server", () => ({
   updateCategory: vi.fn(),
 }));
 
+vi.mock("@/features/organization/server", () => ({
+  cancelOrganizationInvitation: vi.fn(),
+  inviteOrganizationMember: vi.fn(),
+  removeOrganizationMember: vi.fn(),
+  updateOrganizationMemberRole: vi.fn(),
+}));
+
 type MockFn = ReturnType<typeof vi.fn>;
 
 const resolveMocks = async () => {

@@ -10,7 +10,7 @@ import { checkRateLimit, getRateLimitKeyFromRequest } from "@/lib/rate-limit";
 import { jsonError } from "@/lib/server-api-error";
 
 async function reconcile(request: Request): Promise<Response> {
-  const rateLimit = checkRateLimit({
+  const rateLimit = await checkRateLimit({
     key: getRateLimitKeyFromRequest(request, "internal-image-reconcile"),
     limit: 10,
     windowMs: 60 * 1000,
@@ -62,7 +62,7 @@ async function reconcile(request: Request): Promise<Response> {
 
     return Response.json({
       deletedCount: orphanedKeys.length,
-      orphanedKeys,
+      orphanedCount: orphanedKeys.length,
       scannedCount: storedKeys.length,
     });
   } catch (error) {

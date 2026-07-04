@@ -46,19 +46,18 @@ A aplicacao continua gerencial e nao fiscal/contabil.
 
 Nao esta implementado neste momento:
 
-- cadastro publico de usuario
 - exclusao fisica de produto como fluxo operacional suportado
 - compras como modulo dedicado
 - recebimentos como modulo dedicado
 - importacao em massa via CSV
-- auditoria avancada de alteracoes
+- billing/planos/assinaturas
 
 ## 4. Contexto operacional
 
-- uso interno e fechado
-- operacao pequena de revenda
+- SaaS self-serve com organizacoes isoladas por tenant
+- operacao de revenda por organizacao
 - uso em desktop e celular
-- estoque unico global
+- estoque isolado por organizacao
 - sem variacoes por produto
 - historico leve de alteracao de preco por produto
 
@@ -217,9 +216,10 @@ Observacoes:
 
 Decisao operacional atual:
 
-- o sistema e fechado
-- o cadastro publico por email nao faz parte do contrato suportado
-- usuarios precisam ser provisionados previamente
+- o sistema aceita cadastro publico por `/register`
+- Google e magic link sao os metodos de autenticacao suportados
+- usuarios novos concluem onboarding para criar organizacao
+- roles suportadas: `owner`, `admin`, `operator`
 - o bootstrap interno de usuario existe apenas para desenvolvimento e automacao autorizada
 
 ## 11. Regras de interface operacional
@@ -251,4 +251,4 @@ Decisao operacional atual:
 
 ---
 
-Este documento reflete o estado implementado hoje e substitui premissas antigas de exclusao destrutiva e cadastro publico.
+Este documento reflete o estado implementado hoje e substitui premissas antigas de exclusao destrutiva e app interno fechado.

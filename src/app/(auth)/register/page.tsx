@@ -9,11 +9,11 @@ const getSafeCallbackUrl = (callbackUrl: string) =>
     : "/onboarding";
 
 export const metadata: Metadata = {
-  title: "Entrar | DG Imports",
-  description: "Acesso autenticado a operacao interna do DG Imports.",
+  title: "Criar conta | DG Imports",
+  description: "Cadastro self-serve para criar uma organizacao no DG Imports.",
 };
 
-export default async function SignInPage(props: PageProps<"/sign-in">) {
+export default async function RegisterPage(props: PageProps<"/register">) {
   const session = await getSession();
   const searchParams = await props.searchParams;
   const callbackUrl =
@@ -25,9 +25,10 @@ export default async function SignInPage(props: PageProps<"/sign-in">) {
   if (session) {
     redirect(safeCallbackUrl);
   }
+
   return (
     <main className="min-h-screen w-full">
-      <SignInForm callbackUrl={safeCallbackUrl} />
+      <SignInForm callbackUrl={safeCallbackUrl} mode="register" />
     </main>
   );
 }

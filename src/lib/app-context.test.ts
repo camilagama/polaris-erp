@@ -9,10 +9,8 @@ import {
 describe("organization roles", () => {
   it("orders roles by operational authority", () => {
     expect(
-      (["owner", "admin", "operator", "viewer"] as OrganizationRole[]).map(
-        getRoleRank
-      )
-    ).toEqual([4, 3, 2, 1]);
+      (["owner", "admin", "operator"] as OrganizationRole[]).map(getRoleRank)
+    ).toEqual([4, 3, 2]);
   });
 
   it("allows operators to manage sales but not catalog settings", () => {

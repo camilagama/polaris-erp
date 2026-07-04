@@ -30,7 +30,7 @@ describe("loadMoreSalesAction", () => {
 
     mockRequireAppContext.mockResolvedValue({
       organizationId: "org_dg_imports",
-      role: "viewer",
+      role: "operator",
       userId: "user-1",
     });
     mockGetSalesQuery.mockResolvedValue({

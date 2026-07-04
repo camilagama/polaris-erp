@@ -62,6 +62,7 @@ import type {
   ProductAnalytics,
   ProductListItem,
 } from "@/features/products/contracts";
+import { canRolePerform, type OrganizationRole } from "@/lib/app-context";
 import { formatCurrency } from "@/lib/formatters";
 import { InventoryCategoriesChart } from "../dashboard/inventory-categories-chart";
 
@@ -247,6 +248,7 @@ export function ProductsPanel({
   categories,
   initialCursor,
   products: initialProducts,
+  role,
   settings,
   status,
 }: {
@@ -255,12 +257,14 @@ export function ProductsPanel({
   categories: ProductCategoryOption[];
   initialCursor: string | null;
   products: ProductListItem[];
+  role: OrganizationRole;
   settings: {
     idealMarkupPercent: number;
     minimumMarkupPercent: number;
   };
   status: ProductStatusFilter;
 }) {
+  const canWriteProducts = canRolePerform(role, "products:write");
   const pathname = usePathname();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -469,7 +473,12 @@ export function ProductsPanel({
             </p>
           </div>
 
-          <RegisterProductDialog categories={categories} settings={settings} />
+          {canWriteProducts ? (
+            <RegisterProductDialog
+              categories={categories}
+              settings={settings}
+            />
+          ) : null}
         </div>
 
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">

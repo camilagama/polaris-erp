@@ -65,7 +65,7 @@ const sendMagicLink = async ({
   email: string;
   url: string;
 }) => {
-  const rateLimit = checkRateLimit({
+  const rateLimit = await checkRateLimit({
     key: `auth:magic-link:${email.toLowerCase()}`,
     limit: 5,
     windowMs: 10 * 60 * 1000,

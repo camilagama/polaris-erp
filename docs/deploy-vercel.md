@@ -1,118 +1,107 @@
-# Deploy na Vercel (guia iniciante)
+# Deploy na Vercel
 
-Este projeto usa **Next.js 16**, **Bun** no repositório e **PostgreSQL (Neon)**. O deploy mais simples é conectar o GitHub à Vercel e deixar cada push gerar um deployment.
+Guia operacional para publicar o DG Imports como SaaS self-serve em Next.js 16 com Neon, Better Auth, R2, Upstash e Sentry.
 
-## 1. Pré-requisitos
+## Pre-requisitos
 
-- Conta Vercel com acesso ao time (no Cursor, o plugin da Vercel já pode listar times e projetos).
-- Repositório Git remoto (GitHub/GitLab/Bitbucket) com este código.
-- Projeto **Neon** com branch de **produção** e, idealmente, branch separada para **preview/E2E** (ver [database-environments.md](./database-environments.md)).
-- OAuth Google configurado para a URL real do app.
-- Buckets **Cloudflare R2** (staging + público) e CORS do staging alinhado ao domínio do app (ver [product-images-r2.md](./product-images-r2.md)).
+- Projeto Vercel conectado ao repositorio.
+- Branch Neon de producao e branch separada para preview/E2E.
+- OAuth Google configurado para a origem real do app.
+- Webhook de email para magic link e convites.
+- Buckets Cloudflare R2 para staging e variantes finais.
+- Upstash Redis para rate limit distribuido.
 
-## 2. Criar o projeto na Vercel
+## Variaveis de ambiente
 
-1. Em [vercel.com/new](https://vercel.com/new), **Import** o repositório `dgimports`.
-2. **Framework Preset**: Next.js (detectado automaticamente).
-3. **Root Directory**: raiz do repo (padrão).
-4. **Build & Install**:
-   - Se a Vercel oferecer escolha de gerenciador, prefira alinhar com o repo (**Bun**), já que o `bun.lock` existe.
-   - Comandos típicos: **Build** `bun run build` ou deixar o default do Next; **Install** `bun install` (ou equivalente na UI).
+Configure em Production e replique/adapte para Preview:
 
-## 3. Variáveis de ambiente (Production)
+| Variavel | Uso |
+| --- | --- |
+| `DATABASE_URL` | Runtime com connection string pooler da branch Neon. |
+| `DATABASE_URL_DIRECT` | Migrações locais/CI quando necessario. |
+| `BETTER_AUTH_SECRET` | Segredo forte do Better Auth. |
+| `BETTER_AUTH_URL` | URL canonica do app, sem barra final. |
+| `NEXT_PUBLIC_APP_URL` | Mesma origem publica usada pelo navegador. |
+| `GOOGLE_CLIENT_ID` | OAuth Google server-side. |
+| `GOOGLE_CLIENT_SECRET` | OAuth Google server-side. |
+| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | OAuth Google client-side/One Tap. |
+| `MAGIC_LINK_EMAIL_WEBHOOK_URL` | Entrega de magic links e convites. |
+| `UPSTASH_REDIS_REST_URL` | Rate limit distribuido. |
+| `UPSTASH_REDIS_REST_TOKEN` | Token REST do Upstash. |
+| `R2_ACCOUNT_ID` | Cloudflare R2. |
+| `R2_ACCESS_KEY_ID` | Cloudflare R2. |
+| `R2_SECRET_ACCESS_KEY` | Cloudflare R2. |
+| `R2_BUCKET_STAGING` | Upload temporario. |
+| `R2_BUCKET_PUBLIC` | Variantes finais. |
+| `CRON_SECRET` | Endpoints internos/cron. |
+| `SENTRY_DSN` | Sentry server-side. |
+| `NEXT_PUBLIC_SENTRY_DSN` | Sentry client-side. |
+| `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN` | Source maps no build. |
+| `ALLOW_PLAYWRIGHT_BOOTSTRAP` | Nunca em producao real; apenas E2E com banco isolado. |
 
-Configure em **Project → Settings → Environment Variables**, escopo **Production** (e depois replique/adapte para **Preview**).
+Em producao, sem Upstash configurado o rate limit falha fechado para endpoints sensiveis.
 
-| Variável | Onde usar | Notas |
-|----------|-----------|--------|
-| `DATABASE_URL` | Runtime | Connection string **pooler** da branch Neon de produção. |
-| `DATABASE_URL_DIRECT` | Apenas ferramentas locais/CI de migração | Opcional na Vercel se você só migra fora da plataforma. |
-| `BETTER_AUTH_SECRET` | Runtime | Segredo forte (32+ caracteres). |
-| `BETTER_AUTH_URL` | Runtime | URL canônica do site, ex. `https://seu-dominio.com` (sem barra final). |
-| `NEXT_PUBLIC_APP_URL` | Build + runtime | Mesma origem pública, URL válida. |
-| `GOOGLE_CLIENT_ID` | Runtime | Obrigatório em produção (`auth.ts` valida). |
-| `GOOGLE_CLIENT_SECRET` | Runtime | Idem. |
-| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Build + runtime | Idem. |
-| `R2_*` + `CRON_SECRET` | Runtime / cron | Ver [product-images-r2.md](./product-images-r2.md). **`CRON_SECRET`** deve existir para o reconcile diário autenticar. |
-| `SENTRY_DSN` | Runtime | DSN do projeto (server). |
-| `NEXT_PUBLIC_SENTRY_DSN` | Build + runtime | Mesmo projeto (browser); necessário para erros no cliente. |
-| `SENTRY_ORG` | Build | Slug da org (upload de source maps). |
-| `SENTRY_PROJECT` | Build | Slug do projeto. |
-| `SENTRY_AUTH_TOKEN` | Build | Token com permissão de release/upload (CI ou Vercel build). Opcional: sem ele, o build continua, mas **source maps não sobem**. |
-| `ALLOW_PLAYWRIGHT_BOOTSTRAP` | Nunca em produção real | Só E2E com banco isolado. |
+## Google OAuth
 
-**Preview**: use **outra** `DATABASE_URL` (branch Neon de preview/dev). Se Preview herdar a URL de produção, qualquer teste na preview **escreve em produção**.
+No Google Cloud Console:
 
-Referência de validação no código: [`src/lib/env.ts`](../src/lib/env.ts).
+- Authorized JavaScript origins: `https://seu-dominio.com`.
+- Authorized redirect URIs: `https://seu-dominio.com/api/auth/callback/google`.
 
-## 4. Domínio e Google OAuth
+Se usar preview com login real, inclua tambem a origem de preview.
 
-1. Em **Vercel → Domains**, associe o domínio de produção (e opcionalmente subdomínio de preview).
-2. No **Google Cloud Console**, em credenciais OAuth:
-   - **Authorized JavaScript origins**: `https://seu-dominio.com`, `https://*.vercel.app` (se usar login em preview).
-   - **Authorized redirect URIs**: inclua o callback do Better Auth (normalmente `https://seu-dominio.com/api/auth/callback/google` e equivalente em preview se aplicável).
+## Banco e migracoes
 
-`BETTER_AUTH_URL` e `NEXT_PUBLIC_APP_URL` devem refletir exatamente a origem usada no navegador.
+As migracoes nao rodam automaticamente no deploy por padrao.
 
-### Origem exata na Vercel (ex.: `https://tiagogama.vercel.app`)
+1. Aponte `DATABASE_URL` ou `DATABASE_URL_DIRECT` para a branch correta.
+2. Rode `bun run db:migrate`.
+3. Confira o runbook em `docs/saas-organization-migration-runbook.md`.
 
-- Defina `BETTER_AUTH_URL` e `NEXT_PUBLIC_APP_URL` com a **mesma origem** que o usuário abre no navegador (mesmo `https`, host e porta), **sem barra final** (o schema em `src/lib/env.ts` valida como URL).
-- Se a produção ficar no subdomínio padrão da Vercel, use literalmente `https://tiagogama.vercel.app` nas duas variáveis. Com domínio próprio, use o `https://` desse domínio.
-- Essa origem precisa estar em **AllowedOrigins** do CORS do bucket de staging do R2 para o upload direto do browser funcionar (ver [product-images-r2.md](./product-images-r2.md)). O Better Auth também usa essas URLs em `trustedOrigins` (`src/lib/auth.ts`).
+## R2
 
-## 5. Migrações do banco
+O upload usa URL pre-assinada para o bucket de staging. Configure CORS do bucket de staging conforme `docs/product-images-r2.md`.
 
-As migrações **não** rodam automaticamente no deploy por padrão. Antes do primeiro tráfego real:
+As imagens finais sao servidas por rota autenticada:
 
-1. Aponte `DATABASE_URL` localmente para a branch de produção (ou use `DATABASE_URL_DIRECT` no Drizzle).
-2. Execute: `bun run db:migrate`
+```text
+/api/product-images/{organizationId}/{productId}/{version}/{variant}
+```
 
-## 6. Cron (reconcile de imagens)
+Nao exponha imagens de produto via URL publica direta de CDN/R2 em SaaS multi-tenant.
 
-O [`vercel.json`](../vercel.json) agenda o path `/api/internal/product-images/reconcile` contra o deployment de **produção**. O **Cron da Vercel chama esse URL com GET**; a rota aceita **GET e POST** com a mesma checagem de `Authorization`.
+## Cron
 
-- Defina `CRON_SECRET` na Vercel (a plataforma envia `Authorization: Bearer <CRON_SECRET>` nas invocações agendadas, quando a variável existe).
+O `vercel.json` agenda `/api/internal/product-images/reconcile`.
 
-Teste manual (POST ou GET):
+Teste manual:
 
 ```bash
 curl -X POST "https://SEU_DOMINIO/api/internal/product-images/reconcile" \
   -H "Authorization: Bearer $CRON_SECRET"
-
-curl -X GET "https://SEU_DOMINIO/api/internal/product-images/reconcile" \
-  -H "Authorization: Bearer $CRON_SECRET"
 ```
 
-## 7. Sentry + Vercel
+## Smoke checks
 
-- No Sentry: integração **Vercel** (releases e, se desejar, upload de source maps alinhado ao deploy).
-- Em produção, defina `SENTRY_DSN` e `NEXT_PUBLIC_SENTRY_DSN`.
-- Para stack traces legíveis: configure `SENTRY_ORG`, `SENTRY_PROJECT` e `SENTRY_AUTH_TOKEN` no ambiente de **build** (Vercel).
+Depois do deploy:
 
-## 8. Smoke checks pós-deploy
+1. `GET /api/health`.
+2. `/register` com magic link ou Google.
+3. Onboarding cria organizacao, owner, categoria `Outros` e settings.
+4. Dashboard carrega vazio para tenant novo.
+5. Owner/admin cria convite em Configuracoes.
+6. Link de convite so e aceito pelo email convidado.
+7. Produto, estoque, venda e cancelamento funcionam.
+8. Upload de imagem funciona e bytes saem por rota autenticada.
+9. Reconcile de imagens retorna contagens, nao chaves completas.
+10. Logs/Sentry sem erros recorrentes.
 
-1. `GET /api/health` → `{ "ok": true, ... }`
-2. `GET /api/internal/health/r2` com `Authorization: Bearer $CRON_SECRET` → JSON com `stagingCors`, `stagingHead` e `summary` (diagnóstico de CORS/credenciais do bucket de staging; ver [product-images-r2.md](./product-images-r2.md)).
-3. Login Google com usuário já provisionado na tabela `users`.
-4. Upload de imagem de produto (valida R2 + CORS).
-5. No dashboard Vercel: **Logs** do último deployment e execução do cron.
+## CI
 
-```bash
-curl -sS "https://SEU_DOMINIO/api/internal/health/r2" \
-  -H "Authorization: Bearer $CRON_SECRET"
-```
+O workflow `.github/workflows/ci.yml` roda:
 
-## 9. Ajuda via plugin da Vercel (Cursor)
+- `bun run check`
+- `bun run test`
+- `bun run build`
 
-Com o plugin autenticado, dá para:
-
-- **`list_teams`**: descobrir o `teamId` / slug.
-- **`list_projects`** / **`get_project`**: inspecionar projeto após o import.
-- **`list_deployments`** / **`get_deployment`** / **`get_deployment_build_logs`** / **`get_runtime_logs`**: depurar build e runtime.
-- **`deploy_to_vercel`**: disparar deploy do contexto atual (útil após o projeto existir e estar linkado).
-
-Se **`list_projects`** vier vazio, ainda não há projeto no time: complete o passo **Import** no site da Vercel primeiro.
-
-## 10. CI (GitHub Actions)
-
-O workflow [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) roda `check`, `test` e `build` com env mínima. Para **subir source maps no CI**, adicione secrets `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT` e repasse no step de `build` (opcional).
+Antes de promover producao, rode tambem `bun run knip` e E2E com `E2E_DATABASE_URL` isolado.

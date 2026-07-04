@@ -1,3 +1,9 @@
+import "server-only";
+
+import { type Duration, Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
+import { serverEnv } from "@/lib/env";
+
 interface RateLimitInput {
   key: string;
   limit: number;
@@ -9,15 +15,64 @@ interface RateLimitBucket {
   resetAt: number;
 }
 
-const buckets = new Map<string, RateLimitBucket>();
+type RateLimitResult =
+  | { ok: true; remaining: number; resetAt: number }
+  | { ok: false; retryAfterSeconds: number; resetAt: number };
 
-export const checkRateLimit = ({
+const buckets = new Map<string, RateLimitBucket>();
+const upstashLimiters = new Map<string, Ratelimit>();
+
+const getWindowLabel = (windowMs: number): Duration => {
+  const seconds = Math.max(1, Math.ceil(windowMs / 1000));
+  return `${seconds} s`;
+};
+
+const getUpstashRedis = () => {
+  if (
+    !(serverEnv.UPSTASH_REDIS_REST_URL && serverEnv.UPSTASH_REDIS_REST_TOKEN)
+  ) {
+    return null;
+  }
+
+  return new Redis({
+    token: serverEnv.UPSTASH_REDIS_REST_TOKEN,
+    url: serverEnv.UPSTASH_REDIS_REST_URL,
+  });
+};
+
+const getUpstashLimiter = ({
+  limit,
+  windowMs,
+}: Omit<RateLimitInput, "key">) => {
+  const redis = getUpstashRedis();
+
+  if (!redis) {
+    return null;
+  }
+
+  const cacheKey = `${limit}:${windowMs}`;
+  const existing = upstashLimiters.get(cacheKey);
+
+  if (existing) {
+    return existing;
+  }
+
+  const limiter = new Ratelimit({
+    analytics: true,
+    limiter: Ratelimit.slidingWindow(limit, getWindowLabel(windowMs)),
+    prefix: "dgimports:ratelimit",
+    redis,
+  });
+
+  upstashLimiters.set(cacheKey, limiter);
+  return limiter;
+};
+
+const checkLocalRateLimit = ({
   key,
   limit,
   windowMs,
-}: RateLimitInput):
-  | { ok: true; remaining: number; resetAt: number }
-  | { ok: false; retryAfterSeconds: number; resetAt: number } => {
+}: RateLimitInput): RateLimitResult => {
   const now = Date.now();
   const current = buckets.get(key);
 
@@ -42,6 +97,45 @@ export const checkRateLimit = ({
     ok: true,
     remaining: limit - current.count,
     resetAt: current.resetAt,
+  };
+};
+
+export const checkRateLimit = async (
+  input: RateLimitInput
+): Promise<RateLimitResult> => {
+  const limiter = getUpstashLimiter(input);
+
+  if (!limiter) {
+    if (serverEnv.NODE_ENV === "production") {
+      const resetAt = Date.now() + input.windowMs;
+
+      return {
+        ok: false,
+        resetAt,
+        retryAfterSeconds: Math.ceil(input.windowMs / 1000),
+      };
+    }
+
+    return checkLocalRateLimit(input);
+  }
+
+  const result = await limiter.limit(input.key);
+
+  if (!result.success) {
+    return {
+      ok: false,
+      resetAt: result.reset,
+      retryAfterSeconds: Math.max(
+        1,
+        Math.ceil((result.reset - Date.now()) / 1000)
+      ),
+    };
+  }
+
+  return {
+    ok: true,
+    remaining: result.remaining,
+    resetAt: result.reset,
   };
 };
 

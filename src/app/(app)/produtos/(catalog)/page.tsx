@@ -40,6 +40,7 @@ export default async function ProdutosPage(props: PageProps<"/produtos">) {
       }))}
       initialCursor={productsResult.nextCursor}
       products={productsResult.items}
+      role={context.role}
       settings={settings}
       status={status}
     />

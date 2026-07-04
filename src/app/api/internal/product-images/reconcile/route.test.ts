@@ -18,6 +18,15 @@ vi.mock("@/features/products/image-storage", () => ({
   listAllStoredProductImageKeys: vi.fn(),
 }));
 
+vi.mock("@/lib/rate-limit", () => ({
+  checkRateLimit: vi.fn(async () => ({
+    ok: true,
+    remaining: 10,
+    resetAt: Date.now() + 1000,
+  })),
+  getRateLimitKeyFromRequest: vi.fn(() => "test-ip"),
+}));
+
 describe("/api/internal/product-images/reconcile", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -100,5 +109,6 @@ describe("/api/internal/product-images/reconcile", () => {
       "products/product-2/v1/detail.webp",
     ]);
     expect(payload.deletedCount).toBe(1);
+    expect(payload.orphanedKeys).toBeUndefined();
   });
 });
