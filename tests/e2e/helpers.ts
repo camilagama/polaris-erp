@@ -8,7 +8,7 @@ import {
 import { E2E_DEFAULT_INTERNAL_BOOTSTRAP_SECRET } from "./constants";
 
 const e2eBaseUrl = process.env.E2E_BASE_URL ?? "http://127.0.0.1:3001";
-const e2eUserName = process.env.E2E_NAME ?? "DG Imports E2E";
+const e2eUserName = process.env.E2E_NAME ?? "Polaris E2E";
 const e2eBootstrapSecret =
   process.env.E2E_INTERNAL_BOOTSTRAP_SECRET ??
   process.env.INTERNAL_BOOTSTRAP_SECRET ??

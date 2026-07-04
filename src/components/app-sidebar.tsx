@@ -98,14 +98,10 @@ export function AppSidebar({ onSignOut, user, ...props }: AppSidebarProps) {
             href="/"
           >
             <DGImportsLogo className="size-6 shrink-0" />
-            <span className="truncate">DG Imports.</span>
+            <span className="truncate">Polaris.</span>
           </Link>
         ) : (
-          <Link
-            className="flex w-full items-center"
-            href="/"
-            title="DG Imports."
-          >
+          <Link className="flex w-full items-center" href="/" title="Polaris.">
             <DGImportsLogo className="size-6 shrink-0" />
           </Link>
         )}

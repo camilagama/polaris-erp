@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "DG Imports",
+  title: "Polaris",
   description:
     "Operacao web para revenda com autenticacao, produtos, estoque e configuracoes.",
 };

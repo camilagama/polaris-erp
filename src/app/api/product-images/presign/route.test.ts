@@ -95,7 +95,7 @@ describe("POST /api/product-images/presign", () => {
     } as never);
     vi.mocked(requireAppContext).mockResolvedValue({
       organizationId: "org_dg_imports",
-      organizationName: "DG Imports",
+      organizationName: "Polaris",
       role: "owner",
       userId: "user-1",
     });
@@ -139,7 +139,7 @@ describe("POST /api/product-images/presign", () => {
     expect(auditLog.recordAuditEvent).toHaveBeenCalledWith({
       context: {
         organizationId: "org_dg_imports",
-        organizationName: "DG Imports",
+        organizationName: "Polaris",
         role: "owner",
         userId: "user-1",
       },

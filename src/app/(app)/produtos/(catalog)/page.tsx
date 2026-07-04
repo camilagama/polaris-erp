@@ -9,8 +9,8 @@ import { requirePageAppContext } from "@/lib/app-session";
 import { getProductsQuery } from "../queries";
 
 export const metadata: Metadata = {
-  title: "Produtos | DG Imports",
-  description: "Catalogo, estoque atual e operacoes de produto do DG Imports.",
+  title: "Produtos | Polaris",
+  description: "Catalogo, estoque atual e operacoes de produto do Polaris.",
 };
 
 export default async function ProdutosPage(props: PageProps<"/produtos">) {

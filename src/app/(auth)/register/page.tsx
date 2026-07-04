@@ -9,8 +9,8 @@ const getSafeCallbackUrl = (callbackUrl: string) =>
     : "/onboarding";
 
 export const metadata: Metadata = {
-  title: "Criar conta | DG Imports",
-  description: "Cadastro self-serve para criar uma organizacao no DG Imports.",
+  title: "Criar conta | Polaris",
+  description: "Cadastro self-serve para criar uma organizacao no Polaris.",
 };
 
 export default async function RegisterPage(props: PageProps<"/register">) {

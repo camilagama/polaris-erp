@@ -9,8 +9,8 @@ const getSafeCallbackUrl = (callbackUrl: string) =>
     : "/onboarding";
 
 export const metadata: Metadata = {
-  title: "Entrar | DG Imports",
-  description: "Acesso autenticado a operacao interna do DG Imports.",
+  title: "Entrar | Polaris",
+  description: "Acesso autenticado a operacao interna do Polaris.",
 };
 
 export default async function SignInPage(props: PageProps<"/sign-in">) {

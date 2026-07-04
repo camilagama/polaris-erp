@@ -15,7 +15,7 @@
 ## Entregas confirmadas
 
 - [x] Shell `(app)` protegida com autenticacao
-- [x] Better Auth com Google/magic link e base de organizacoes
+- [x] Better Auth com Google e base de organizacoes
 - [x] Cadastro publico reintroduzido na fase SaaS em `/register`
 - [x] Bootstrap interno de usuario para dev/E2E protegido por `INTERNAL_BOOTSTRAP_SECRET` e bloqueado fora de `development/test`
 - [x] Modulo `Produtos` com cadastro, edicao e ciclo `ativo/arquivado`

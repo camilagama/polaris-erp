@@ -7,8 +7,8 @@ import { requirePageAppContext } from "@/lib/app-session";
 import { getSaleProductsQuery, getSalesQuery } from "../queries";
 
 export const metadata: Metadata = {
-  title: "Vendas | DG Imports",
-  description: "Registro, consulta e cancelamento de vendas do DG Imports.",
+  title: "Vendas | Polaris",
+  description: "Registro, consulta e cancelamento de vendas do Polaris.",
 };
 
 export default async function VendasPage(props: PageProps<"/vendas">) {

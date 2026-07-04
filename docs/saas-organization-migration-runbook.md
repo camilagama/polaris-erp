@@ -17,8 +17,10 @@ This runbook covers the SaaS foundation migration: Better Auth organization tabl
    - `BETTER_AUTH_SECRET`
    - `BETTER_AUTH_URL`
    - `NEXT_PUBLIC_APP_URL`
-5. Configure `MAGIC_LINK_EMAIL_WEBHOOK_URL` before enabling magic-link sign-in in a shared environment.
-6. Configure `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` before production traffic. Production rate limit fails closed without them.
+   - `GOOGLE_CLIENT_ID`
+   - `GOOGLE_CLIENT_SECRET`
+   - `NEXT_PUBLIC_GOOGLE_CLIENT_ID`
+5. Configure `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` before production traffic. Production rate limit fails closed without them.
 
 ## Staging Migration
 

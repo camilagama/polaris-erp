@@ -1,6 +1,7 @@
 "use client";
 
-import { magicLinkClient, oneTapClient } from "better-auth/client/plugins";
+import { sentinelClient } from "@better-auth/infra/client";
+import { oneTapClient } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
 
 const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
@@ -13,13 +14,16 @@ const isLocalhostRuntime = () => {
   return hostname === "127.0.0.1" || hostname === "localhost";
 };
 
-export const hasGoogleAuthClient = typeof googleClientId === "string";
+export const hasGoogleAuthClient =
+  typeof googleClientId === "string" && googleClientId.trim().length > 0;
 const hasGoogleOneTapClient = hasGoogleAuthClient && !isLocalhostRuntime();
 
 const authClientPlugins =
   hasGoogleOneTapClient && googleClientId
     ? [
-        magicLinkClient(),
+        sentinelClient({
+          autoSolveChallenge: true,
+        }),
         oneTapClient({
           autoSelect: false,
           cancelOnTapOutside: true,
@@ -32,7 +36,11 @@ const authClientPlugins =
           },
         }),
       ]
-    : [magicLinkClient()];
+    : [
+        sentinelClient({
+          autoSolveChallenge: true,
+        }),
+      ];
 
 export const authClient = createAuthClient({
   plugins: authClientPlugins,

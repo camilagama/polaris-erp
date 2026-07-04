@@ -7,7 +7,6 @@ vi.mock("@/lib/auth-client", () => ({
   authClient: {
     oneTap: vi.fn(),
     signIn: {
-      magicLink: vi.fn(),
       social: vi.fn(),
     },
   },
@@ -15,12 +14,12 @@ vi.mock("@/lib/auth-client", () => ({
 }));
 
 describe("SignInForm", () => {
-  it("renders magic link and Google sign-in options without password fields", () => {
+  it("renders Google sign-in without email or password fields", () => {
     const markup = renderToStaticMarkup(createElement(SignInForm));
 
     expect(markup).toContain("Continuar com Google");
-    expect(markup).toContain(">Email<");
-    expect(markup).toContain("Enviar link de acesso");
+    expect(markup).not.toContain(">Email<");
+    expect(markup).not.toContain("Enviar link de acesso");
     expect(markup).not.toContain(">Senha<");
     expect(markup).not.toContain("Entrar no painel");
   });

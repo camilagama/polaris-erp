@@ -9,8 +9,8 @@ import { getSession } from "@/lib/session";
 import { completeOnboardingAction } from "./actions";
 
 export const metadata: Metadata = {
-  title: "Onboarding | DG Imports",
-  description: "Crie sua organizacao para comecar a usar o DG Imports.",
+  title: "Onboarding | Polaris",
+  description: "Crie sua organizacao para comecar a usar o Polaris.",
 };
 
 export default async function OnboardingPage() {
@@ -35,7 +35,7 @@ export default async function OnboardingPage() {
         <div className="mb-8 flex flex-col items-center text-center">
           <div className="mb-4 flex items-center gap-2 font-medium uppercase tracking-[0.24em]">
             <DGImportsLogo className="size-6 shrink-0" />
-            DG Imports.
+            Polaris.
           </div>
           <h1 className="font-heading text-3xl tracking-tight">
             Criar organizacao

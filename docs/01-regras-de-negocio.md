@@ -217,7 +217,7 @@ Observacoes:
 Decisao operacional atual:
 
 - o sistema aceita cadastro publico por `/register`
-- Google e magic link sao os metodos de autenticacao suportados
+- Google e o metodo de autenticacao suportado para cadastro e login publicos
 - usuarios novos concluem onboarding para criar organizacao
 - roles suportadas: `owner`, `admin`, `operator`
 - o bootstrap interno de usuario existe apenas para desenvolvimento e automacao autorizada

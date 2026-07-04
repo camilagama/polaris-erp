@@ -1,4 +1,4 @@
-# DG Imports
+# Polaris
 
 SaaS self-serve em `Next.js 16` para operacao de revenda com organizacoes, isolamento por tenant, catalogo, estoque, vendas e metas.
 
@@ -6,7 +6,7 @@ SaaS self-serve em `Next.js 16` para operacao de revenda com organizacoes, isola
 
 - `Next.js 16` com App Router
 - `React 19`
-- `Better Auth` com Google, magic link e organization plugin
+- `Better Auth` com Google OAuth, organization plugin, Infrastructure Dashboard e Sentinel
 - `Drizzle ORM` com PostgreSQL/Neon
 - `Tailwind CSS 4` e `shadcn/ui`
 - `Vitest` para testes unitarios e de integracao
@@ -30,8 +30,8 @@ bun run db:migrate
 
 ## Modelo de acesso
 
-- Cadastro publico em `/register` com Google ou magic link.
-- Login em `/sign-in` com Google ou magic link.
+- Cadastro publico em `/register` com Google.
+- Login em `/sign-in` com Google.
 - Primeiro acesso sem organizacao redireciona para `/onboarding`.
 - Onboarding pede apenas o nome da organizacao e cria membership `owner`, categoria `Outros` e settings padrao silenciosas.
 - Roles suportadas: `owner`, `admin`, `operator`. A role `viewer` foi removida.
@@ -122,4 +122,4 @@ Fluxos E2E cobertos hoje:
 - cartao com taxa no cliente e no vendedor
 - arquivamento de produto
 
-Gap conhecido: E2E com OAuth/magic-link real depende do provedor externo de email/OAuth e deve rodar como smoke controlado em staging.
+Gap conhecido: E2E com OAuth Google real depende do provedor externo e deve rodar como smoke controlado em staging.

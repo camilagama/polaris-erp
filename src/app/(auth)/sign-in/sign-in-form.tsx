@@ -3,8 +3,6 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Google } from "@/components/ui/svgs/google";
 import { DGImportsLogo } from "@/components/ui/svgs/logo";
 import { authClient, hasGoogleAuthClient } from "@/lib/auth-client";
@@ -21,20 +19,6 @@ const getSafeCallbackUrl = (callbackUrl: string) =>
   callbackUrl.startsWith("/") && !callbackUrl.startsWith("//")
     ? callbackUrl
     : "/onboarding";
-
-const getMagicLinkButtonLabel = ({
-  isRegister,
-  pending,
-}: {
-  isRegister: boolean;
-  pending: boolean;
-}) => {
-  if (pending) {
-    return "Enviando...";
-  }
-
-  return isRegister ? "Enviar link de cadastro" : "Enviar link de acesso";
-};
 
 const getGoogleButtonLabel = ({
   isRegister,
@@ -59,16 +43,9 @@ export function SignInForm({
 }) {
   const [googlePending, setGooglePending] = useState(false);
   const [googleError, setGoogleError] = useState<string | null>(null);
-  const [email, setEmail] = useState("");
-  const [magicLinkPending, setMagicLinkPending] = useState(false);
-  const [magicLinkMessage, setMagicLinkMessage] = useState<string | null>(null);
   const [isLocalhost, setIsLocalhost] = useState(false);
   const safeCallbackUrl = getSafeCallbackUrl(callbackUrl);
   const isRegister = mode === "register";
-  const magicLinkButtonLabel = getMagicLinkButtonLabel({
-    isRegister,
-    pending: magicLinkPending,
-  });
   const googleButtonLabel = getGoogleButtonLabel({
     isRegister,
     pending: googlePending,
@@ -117,7 +94,11 @@ export function SignInForm({
 
     const result = await authClient.signIn.social({
       callbackURL: safeCallbackUrl,
+      disableRedirect: true,
+      errorCallbackURL: "/sign-in?error=google",
+      newUserCallbackURL: "/onboarding",
       provider: "google",
+      requestSignUp: isRegister,
     });
 
     if (result.error) {
@@ -125,29 +106,16 @@ export function SignInForm({
         result.error.message ?? "Nao foi possivel entrar com Google."
       );
       setGooglePending(false);
-    }
-  };
-
-  const handleMagicLinkSignIn = async () => {
-    setMagicLinkPending(true);
-    setMagicLinkMessage(null);
-
-    const result = await authClient.signIn.magicLink({
-      callbackURL: safeCallbackUrl,
-      email,
-      newUserCallbackURL: safeCallbackUrl,
-    });
-
-    if (result.error) {
-      setMagicLinkMessage(
-        result.error.message ?? "Nao foi possivel enviar o link de acesso."
-      );
-      setMagicLinkPending(false);
       return;
     }
 
-    setMagicLinkMessage("Enviamos um link de acesso para o seu email.");
-    setMagicLinkPending(false);
+    if (result.data?.url) {
+      window.location.assign(result.data.url);
+      return;
+    }
+
+    setGoogleError("Nao recebemos a URL de redirecionamento do Google.");
+    setGooglePending(false);
   };
 
   return (
@@ -156,7 +124,7 @@ export function SignInForm({
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 font-medium uppercase tracking-[0.24em]">
             <DGImportsLogo className="size-6 shrink-0" />
-            DG Imports.
+            Polaris.
           </div>
         </div>
         <div className="flex flex-1 items-center justify-center">
@@ -167,38 +135,12 @@ export function SignInForm({
               </h1>
               <p className="mt-2 text-muted-foreground text-sm">
                 {isRegister
-                  ? "Comece com Google ou receba um link magico por email"
-                  : "Use Google ou receba um link magico por email"}
+                  ? "Comece com sua conta Google"
+                  : "Use sua conta Google para continuar"}
               </p>
             </div>
 
             <div className="flex flex-col gap-4">
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="magic-link-email">Email</Label>
-                <Input
-                  autoComplete="email"
-                  id="magic-link-email"
-                  onChange={(event) => setEmail(event.target.value)}
-                  placeholder="voce@empresa.com"
-                  type="email"
-                  value={email}
-                />
-                <Button
-                  className="h-11 w-full"
-                  disabled={magicLinkPending || email.trim().length === 0}
-                  onClick={handleMagicLinkSignIn}
-                  type="button"
-                >
-                  {magicLinkButtonLabel}
-                </Button>
-              </div>
-
-              {magicLinkMessage ? (
-                <div className="rounded-md border border-border/60 bg-muted/30 p-3 text-center text-muted-foreground text-sm">
-                  {magicLinkMessage}
-                </div>
-              ) : null}
-
               <Button
                 className="relative h-11 w-full gap-3"
                 disabled={googlePending || !hasGoogleAuthClient}

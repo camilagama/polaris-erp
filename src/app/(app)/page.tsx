@@ -36,8 +36,8 @@ import { requirePageAppContext } from "@/lib/app-session";
 import { formatCurrency } from "@/lib/formatters";
 
 export const metadata: Metadata = {
-  title: "Dashboard | DG Imports",
-  description: "Painel inicial da operacao protegida do DG Imports.",
+  title: "Dashboard | Polaris",
+  description: "Painel inicial da operacao protegida do Polaris.",
 };
 
 const layoutContainmentStyle = {

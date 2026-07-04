@@ -1,9 +1,9 @@
 import "server-only";
+import { dash, sentinel } from "@better-auth/infra";
 import { APIError, betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import {
-  magicLink,
   oneTap,
   organization as organizationPlugin,
 } from "better-auth/plugins";
@@ -19,7 +19,6 @@ import {
 } from "@/db/schema";
 import { recordActorAuditEvent } from "@/lib/audit-log";
 import { serverEnv } from "@/lib/env";
-import { checkRateLimit } from "@/lib/rate-limit";
 
 const googleClientId = serverEnv.GOOGLE_CLIENT_ID;
 const googleClientSecret = serverEnv.GOOGLE_CLIENT_SECRET;
@@ -57,47 +56,6 @@ const socialProviders = hasGoogleAuth
       },
     }
   : {};
-
-const sendMagicLink = async ({
-  email,
-  url,
-}: {
-  email: string;
-  url: string;
-}) => {
-  const rateLimit = await checkRateLimit({
-    key: `auth:magic-link:${email.toLowerCase()}`,
-    limit: 5,
-    windowMs: 10 * 60 * 1000,
-  });
-
-  if (!rateLimit.ok) {
-    throw new Error(
-      "Muitas tentativas de login. Tente novamente em instantes."
-    );
-  }
-
-  const webhookUrl = serverEnv.MAGIC_LINK_EMAIL_WEBHOOK_URL;
-
-  if (!webhookUrl) {
-    throw new Error("Magic link email delivery is not configured.");
-  }
-
-  const response = await fetch(webhookUrl, {
-    body: JSON.stringify({
-      email,
-      url,
-    }),
-    headers: {
-      "Content-Type": "application/json",
-    },
-    method: "POST",
-  });
-
-  if (!response.ok) {
-    throw new Error("Magic link email delivery failed.");
-  }
-};
 
 const rejectWorkspaceUserManagement = (): never => {
   throw new APIError("FORBIDDEN", {
@@ -139,15 +97,21 @@ const authPlugins = hasGoogleAuth
         clientId: googleClientId,
         disableSignup: false,
       }),
-      magicLink({
-        sendMagicLink,
+      dash({
+        apiKey: serverEnv.BETTER_AUTH_API_KEY,
+      }),
+      sentinel({
+        apiKey: serverEnv.BETTER_AUTH_API_KEY,
       }),
       createOrganizationAuthPlugin(),
       nextCookies(),
     ]
   : [
-      magicLink({
-        sendMagicLink,
+      dash({
+        apiKey: serverEnv.BETTER_AUTH_API_KEY,
+      }),
+      sentinel({
+        apiKey: serverEnv.BETTER_AUTH_API_KEY,
       }),
       createOrganizationAuthPlugin(),
       nextCookies(),

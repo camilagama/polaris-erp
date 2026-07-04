@@ -1,13 +1,12 @@
 # Deploy na Vercel
 
-Guia operacional para publicar o DG Imports como SaaS self-serve em Next.js 16 com Neon, Better Auth, R2, Upstash e Sentry.
+Guia operacional para publicar o Polaris como SaaS self-serve em Next.js 16 com Neon, Better Auth, R2, Upstash e Sentry.
 
 ## Pre-requisitos
 
 - Projeto Vercel conectado ao repositorio.
 - Branch Neon de producao e branch separada para preview/E2E.
 - OAuth Google configurado para a origem real do app.
-- Webhook de email para magic link.
 - Buckets Cloudflare R2 para staging e variantes finais.
 - Upstash Redis para rate limit distribuido.
 
@@ -21,11 +20,11 @@ Configure em Production e replique/adapte para Preview:
 | `DATABASE_URL_DIRECT` | Migrações locais/CI quando necessario. |
 | `BETTER_AUTH_SECRET` | Segredo forte do Better Auth. |
 | `BETTER_AUTH_URL` | URL canonica do app, sem barra final. |
+| `BETTER_AUTH_API_KEY` | Chave do Better Auth Infrastructure para Dashboard e Sentinel. |
 | `NEXT_PUBLIC_APP_URL` | Mesma origem publica usada pelo navegador. |
 | `GOOGLE_CLIENT_ID` | OAuth Google server-side. |
 | `GOOGLE_CLIENT_SECRET` | OAuth Google server-side. |
 | `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | OAuth Google client-side/One Tap. |
-| `MAGIC_LINK_EMAIL_WEBHOOK_URL` | Entrega de magic links. |
 | `UPSTASH_REDIS_REST_URL` | Rate limit distribuido. |
 | `UPSTASH_REDIS_REST_TOKEN` | Token REST do Upstash. |
 | `R2_ACCOUNT_ID` | Cloudflare R2. |
@@ -86,13 +85,14 @@ curl -X POST "https://SEU_DOMINIO/api/internal/product-images/reconcile" \
 Depois do deploy:
 
 1. `GET /api/health`.
-2. `/register` com magic link ou Google.
+2. `/register` com Google.
 3. Onboarding cria organizacao, owner, categoria `Outros` e settings.
 4. Dashboard carrega vazio para tenant novo.
 5. Produto, estoque, venda e cancelamento funcionam.
 6. Upload de imagem funciona e bytes saem por rota autenticada.
 7. Reconcile de imagens retorna contagens, nao chaves completas.
-8. Logs/Sentry sem erros recorrentes.
+8. Better Auth Dashboard conecta e Sentinel nao bloqueia login legitimo.
+9. Logs/Sentry sem erros recorrentes.
 
 ## CI
 

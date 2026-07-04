@@ -95,7 +95,7 @@ const getAppContextFromSession = async (
   if (!("session" in session && session.session)) {
     return {
       organizationId: "org_dg_imports",
-      organizationName: "DG Imports",
+      organizationName: "Polaris",
       role: "owner",
       userId,
     };
