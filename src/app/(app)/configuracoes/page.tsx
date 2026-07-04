@@ -11,7 +11,7 @@ import { getGoalsSettingsData } from "@/features/goals/server";
 import { requireAppContext } from "@/lib/app-session";
 
 export const metadata: Metadata = {
-  title: "Configuracoes | DG Imports",
+  title: "Configuracoes | Polaris",
   description: "Categorias, markup, metas e regras operacionais de pagamento.",
 };
 

@@ -35,8 +35,8 @@ This runbook covers the SaaS foundation migration: Better Auth organization tabl
    - Composite tenant constraints exist for product/category, product histories and sale items.
    - Tenant indexes exist for product histories, sale items and goals.
 3. Smoke test:
-   - `/register` creates a user session and redirects new users to `/onboarding`.
-   - Google login redirects to `/onboarding` only for users without membership.
+   - `/sign-in` with Google creates a user session.
+   - New Google users are redirected to `/onboarding`.
    - Existing users land on `/`.
    - Onboarding asks only for organization name and creates organization, owner membership, category `Outros` and default catalog settings.
    - Product list, product detail, sales list, dashboard and settings load.
@@ -51,7 +51,7 @@ This runbook covers the SaaS foundation migration: Better Auth organization tabl
 3. Apply migrations.
 4. Run smoke checks:
    - `/api/health`
-   - `/register`
+   - `/sign-in`
    - login
    - onboarding
    - dashboard

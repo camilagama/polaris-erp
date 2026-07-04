@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { login } from "./helpers";
 
 const gsiWarningRegex = /GSI_LOGGER|origin is not allowed/i;
-const localOneTapDisabledRegex = /One Tap fica desativado localmente/i;
+const implicitGoogleAccountRegex = /sua conta sera criada automaticamente/i;
 const rootRouteRegex = /\/$/;
 const signInRouteRegex = /\/sign-in$/;
 
@@ -17,7 +17,7 @@ test("redirects unauthenticated protected routes to sign-in", async ({
   ).toBeVisible();
 });
 
-test("keeps the local sign-in screen usable without Google One Tap noise", async ({
+test("keeps the local sign-in screen usable without Google client noise", async ({
   page,
 }) => {
   const gsiMessages: string[] = [];
@@ -35,7 +35,7 @@ test("keeps the local sign-in screen usable without Google One Tap noise", async
   await expect(
     page.getByRole("button", { name: "Continuar com Google" })
   ).toBeVisible();
-  await expect(page.getByText(localOneTapDisabledRegex)).toBeVisible();
+  await expect(page.getByText(implicitGoogleAccountRegex)).toBeVisible();
   expect(gsiMessages).toEqual([]);
 });
 

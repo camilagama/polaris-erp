@@ -25,7 +25,7 @@ describe("organization roles", () => {
 
   it("normalizes organization slugs from names", () => {
     expect(resolveDefaultOrganizationSlug("  Polaris Brasil  ")).toBe(
-      "dg-imports-brasil"
+      "polaris-brasil"
     );
   });
 });

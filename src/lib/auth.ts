@@ -22,11 +22,8 @@ import { serverEnv } from "@/lib/env";
 
 const googleClientId = serverEnv.GOOGLE_CLIENT_ID;
 const googleClientSecret = serverEnv.GOOGLE_CLIENT_SECRET;
-const publicGoogleClientId = serverEnv.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 const hasGoogleAuth =
-  typeof googleClientId === "string" &&
-  typeof googleClientSecret === "string" &&
-  typeof publicGoogleClientId === "string";
+  typeof googleClientId === "string" && typeof googleClientSecret === "string";
 
 if (!hasGoogleAuth && serverEnv.NODE_ENV === "production") {
   throw new Error(
@@ -91,31 +88,24 @@ const createOrganizationAuthPlugin = () =>
     },
   });
 
-const authPlugins = hasGoogleAuth
-  ? [
-      oneTap({
-        clientId: googleClientId,
-        disableSignup: false,
-      }),
-      dash({
-        apiKey: serverEnv.BETTER_AUTH_API_KEY,
-      }),
-      sentinel({
-        apiKey: serverEnv.BETTER_AUTH_API_KEY,
-      }),
-      createOrganizationAuthPlugin(),
-      nextCookies(),
-    ]
-  : [
-      dash({
-        apiKey: serverEnv.BETTER_AUTH_API_KEY,
-      }),
-      sentinel({
-        apiKey: serverEnv.BETTER_AUTH_API_KEY,
-      }),
-      createOrganizationAuthPlugin(),
-      nextCookies(),
-    ];
+const authPlugins = [
+  dash({
+    apiKey: serverEnv.BETTER_AUTH_API_KEY,
+  }),
+  sentinel({
+    apiKey: serverEnv.BETTER_AUTH_API_KEY,
+  }),
+  ...(hasGoogleAuth
+    ? [
+        oneTap({
+          clientId: googleClientId,
+          disableSignup: false,
+        }),
+      ]
+    : []),
+  createOrganizationAuthPlugin(),
+  nextCookies(),
+];
 
 const DEFAULT_ORGANIZATION_ID = "org_dg_imports";
 

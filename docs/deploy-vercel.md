@@ -24,7 +24,7 @@ Configure em Production e replique/adapte para Preview:
 | `NEXT_PUBLIC_APP_URL` | Mesma origem publica usada pelo navegador. |
 | `GOOGLE_CLIENT_ID` | OAuth Google server-side. |
 | `GOOGLE_CLIENT_SECRET` | OAuth Google server-side. |
-| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | OAuth Google client-side/One Tap. |
+| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Google One Tap client-side. Deve ser o mesmo OAuth client id. |
 | `UPSTASH_REDIS_REST_URL` | Rate limit distribuido. |
 | `UPSTASH_REDIS_REST_TOKEN` | Token REST do Upstash. |
 | `R2_ACCOUNT_ID` | Cloudflare R2. |
@@ -48,6 +48,8 @@ No Google Cloud Console:
 - Authorized redirect URIs: `https://seu-dominio.com/api/auth/callback/google`.
 
 Se usar preview com login real, inclua tambem a origem de preview.
+
+O login usa OAuth server-side do Better Auth e Google One Tap no cliente.
 
 ## Banco e migracoes
 
@@ -85,14 +87,15 @@ curl -X POST "https://SEU_DOMINIO/api/internal/product-images/reconcile" \
 Depois do deploy:
 
 1. `GET /api/health`.
-2. `/register` com Google.
-3. Onboarding cria organizacao, owner, categoria `Outros` e settings.
-4. Dashboard carrega vazio para tenant novo.
-5. Produto, estoque, venda e cancelamento funcionam.
-6. Upload de imagem funciona e bytes saem por rota autenticada.
-7. Reconcile de imagens retorna contagens, nao chaves completas.
-8. Better Auth Dashboard conecta e Sentinel nao bloqueia login legitimo.
-9. Logs/Sentry sem erros recorrentes.
+2. `/sign-in` com Google redireciona para `accounts.google.com`.
+3. Usuario novo criado pelo Google vai para onboarding.
+4. Onboarding cria organizacao, owner, categoria `Outros` e settings.
+5. Dashboard carrega vazio para tenant novo.
+6. Produto, estoque, venda e cancelamento funcionam.
+7. Upload de imagem funciona e bytes saem por rota autenticada.
+8. Reconcile de imagens retorna contagens, nao chaves completas.
+9. Better Auth Dashboard conecta e Sentinel nao bloqueia login legitimo.
+10. Logs/Sentry sem erros recorrentes.
 
 ## CI
 

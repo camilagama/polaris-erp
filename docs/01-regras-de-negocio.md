@@ -216,7 +216,7 @@ Observacoes:
 
 Decisao operacional atual:
 
-- o sistema aceita cadastro publico por `/register`
+- o sistema cria a conta automaticamente no primeiro login com Google por `/sign-in`
 - Google e o metodo de autenticacao suportado para cadastro e login publicos
 - usuarios novos concluem onboarding para criar organizacao
 - roles suportadas: `owner`, `admin`, `operator`

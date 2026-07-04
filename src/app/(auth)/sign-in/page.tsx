@@ -10,7 +10,7 @@ const getSafeCallbackUrl = (callbackUrl: string) =>
 
 export const metadata: Metadata = {
   title: "Entrar | Polaris",
-  description: "Acesso autenticado a operacao interna do Polaris.",
+  description: "Acesso com Google ao Polaris.",
 };
 
 export default async function SignInPage(props: PageProps<"/sign-in">) {
@@ -19,7 +19,7 @@ export default async function SignInPage(props: PageProps<"/sign-in">) {
   const callbackUrl =
     typeof searchParams.callbackUrl === "string"
       ? searchParams.callbackUrl
-      : "/onboarding";
+      : "/";
   const safeCallbackUrl = getSafeCallbackUrl(callbackUrl);
 
   if (session) {

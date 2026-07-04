@@ -16,7 +16,7 @@
 
 - [x] Shell `(app)` protegida com autenticacao
 - [x] Better Auth com Google e base de organizacoes
-- [x] Cadastro publico reintroduzido na fase SaaS em `/register`
+- [x] Login publico com Google cria conta automaticamente sem rota `/register`
 - [x] Bootstrap interno de usuario para dev/E2E protegido por `INTERNAL_BOOTSTRAP_SECRET` e bloqueado fora de `development/test`
 - [x] Modulo `Produtos` com cadastro, edicao e ciclo `ativo/arquivado`
 - [x] Exclusao fisica retirada do fluxo operacional documentado
@@ -34,7 +34,7 @@
 - [x] Cursor opaco composto em produtos e vendas
 - [x] Ressincronizacao de paineis client-side apos `refresh()`
 - [x] Server actions auxiliares de paginacao protegidas por sessao
-- [x] One Tap desativado em localhost com mensagem explicita
+- [x] Login com Google via OAuth server-side e One Tap
 - [x] Suite Vitest verde
 - [x] Suite Playwright verde
 - [x] `check`, `build` e `knip` tratados como baseline obrigatorio
