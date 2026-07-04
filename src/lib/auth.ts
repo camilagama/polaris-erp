@@ -22,12 +22,22 @@ import { serverEnv } from "@/lib/env";
 
 const googleClientId = serverEnv.GOOGLE_CLIENT_ID;
 const googleClientSecret = serverEnv.GOOGLE_CLIENT_SECRET;
+const googlePublicClientId = serverEnv.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 const hasGoogleAuth =
   typeof googleClientId === "string" && typeof googleClientSecret === "string";
 
 if (!hasGoogleAuth && serverEnv.NODE_ENV === "production") {
   throw new Error(
     "Google auth must be configured in production and staging environments."
+  );
+}
+
+if (
+  serverEnv.NODE_ENV === "production" &&
+  (!googlePublicClientId || googlePublicClientId !== googleClientId)
+) {
+  throw new Error(
+    "NEXT_PUBLIC_GOOGLE_CLIENT_ID must match GOOGLE_CLIENT_ID in production and staging environments."
   );
 }
 
@@ -201,9 +211,6 @@ export const auth = betterAuth({
       disableImplicitLinking: false,
       trustedProviders: ["google"],
     },
-  },
-  user: {
-    // Tenta atualizar se dados vierem da rede social depois:
   },
   socialProviders,
   // Better Auth recommends nextCookies() as the final plugin so

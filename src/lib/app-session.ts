@@ -93,12 +93,7 @@ const getAppContextFromSession = async (
   }
 
   if (!("session" in session && session.session)) {
-    return {
-      organizationId: "org_dg_imports",
-      organizationName: "Polaris",
-      role: "owner",
-      userId,
-    };
+    return null;
   }
 
   const activeOrganizationId = (

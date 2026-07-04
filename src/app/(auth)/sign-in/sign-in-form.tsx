@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Google } from "@/components/ui/svgs/google";
 import { DGImportsLogo } from "@/components/ui/svgs/logo";
@@ -20,7 +20,6 @@ const getGoogleAuthHref = (callbackUrl: string) => {
 };
 
 export function SignInForm({ callbackUrl = "/" }: { callbackUrl?: string }) {
-  const [googleError, setGoogleError] = useState<string | null>(null);
   const safeCallbackUrl = getSafeCallbackUrl(callbackUrl);
   const googleAuthHref = getGoogleAuthHref(safeCallbackUrl);
 
@@ -28,8 +27,6 @@ export function SignInForm({ callbackUrl = "/" }: { callbackUrl?: string }) {
     if (!hasGoogleOneTapClient) {
       return;
     }
-
-    let cancelled = false;
 
     const initializeOneTap = async () => {
       try {
@@ -39,17 +36,11 @@ export function SignInForm({ callbackUrl = "/" }: { callbackUrl?: string }) {
           onPromptNotification: () => undefined,
         });
       } catch {
-        if (!cancelled) {
-          setGoogleError(null);
-        }
+        return;
       }
     };
 
     initializeOneTap();
-
-    return () => {
-      cancelled = true;
-    };
   }, [safeCallbackUrl]);
 
   return (
@@ -83,12 +74,6 @@ export function SignInForm({ callbackUrl = "/" }: { callbackUrl?: string }) {
                   Continuar com Google
                 </a>
               </Button>
-
-              {googleError ? (
-                <div className="mt-1 rounded-md bg-destructive/10 p-3 text-center text-destructive text-sm">
-                  {googleError}
-                </div>
-              ) : null}
 
               <p className="mt-8 text-center text-muted-foreground/70 text-xs leading-relaxed">
                 Ao continuar, sua conta sera criada automaticamente se for o

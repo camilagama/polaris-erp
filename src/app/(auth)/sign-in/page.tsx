@@ -6,7 +6,7 @@ import { getSession } from "@/lib/session";
 const getSafeCallbackUrl = (callbackUrl: string) =>
   callbackUrl.startsWith("/") && !callbackUrl.startsWith("//")
     ? callbackUrl
-    : "/onboarding";
+    : "/";
 
 export const metadata: Metadata = {
   title: "Entrar | Polaris",

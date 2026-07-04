@@ -50,6 +50,26 @@ No Google Cloud Console:
 Se usar preview com login real, inclua tambem a origem de preview.
 
 O login usa OAuth server-side do Better Auth e Google One Tap no cliente.
+`BETTER_AUTH_URL`, `NEXT_PUBLIC_APP_URL`, a origem aberta no navegador e as
+URLs autorizadas no Google precisam apontar para a mesma origem canonica. A rota
+`/api/auth/google` redireciona automaticamente para `BETTER_AUTH_URL` antes de
+iniciar o OAuth para que o cookie de estado do Better Auth e o callback do
+Google fiquem no mesmo host.
+
+Em desenvolvimento local, use uma das duas configuracoes de ponta a ponta:
+
+- Localhost: `BETTER_AUTH_URL=http://localhost:3000`,
+  `NEXT_PUBLIC_APP_URL=http://localhost:3000`, origem autorizada
+  `http://localhost:3000` e redirect
+  `http://localhost:3000/api/auth/callback/google`.
+- Tunnel publico: `BETTER_AUTH_URL=https://seu-tunnel`,
+  `NEXT_PUBLIC_APP_URL=https://seu-tunnel`, origem autorizada
+  `https://seu-tunnel` e redirect
+  `https://seu-tunnel/api/auth/callback/google`.
+
+Nao misture `localhost` no navegador com `BETTER_AUTH_URL` apontando para tunnel
+offline ou outra origem; nesse caso o clique sera redirecionado para a origem
+canonica e o fluxo so continua se ela estiver ativa.
 
 ## Banco e migracoes
 
