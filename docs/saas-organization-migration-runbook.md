@@ -36,7 +36,7 @@ This runbook covers the SaaS foundation migration: Better Auth organization tabl
    - `/register` creates a user session and redirects new users to `/onboarding`.
    - Google login redirects to `/onboarding` only for users without membership.
    - Existing users land on `/`.
-   - Onboarding creates organization, owner membership, category `Outros` and catalog settings.
+   - Onboarding asks only for organization name and creates organization, owner membership, category `Outros` and default catalog settings.
    - Owner/admin can create and cancel invitations.
    - Invitation links can be accepted only by the invited email.
    - Product list, product detail, sales list, dashboard and settings load.

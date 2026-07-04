@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -225,8 +226,13 @@ export function SignInForm({
               <p className="mt-8 text-center text-muted-foreground/70 text-xs leading-relaxed">
                 {isRegister
                   ? "Depois do primeiro acesso voce configura sua organizacao."
-                  : "Ainda nao tem conta? Acesse /register para criar seu workspace."}
+                  : "Ainda nao tem conta?"}
               </p>
+              <Button asChild className="w-full" type="button" variant="ghost">
+                <Link href={isRegister ? "/sign-in" : "/register"}>
+                  {isRegister ? "Ja tenho conta" : "Criar conta"}
+                </Link>
+              </Button>
             </div>
           </div>
         </div>

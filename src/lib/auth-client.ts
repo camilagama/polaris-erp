@@ -1,6 +1,10 @@
 "use client";
 
-import { magicLinkClient, oneTapClient } from "better-auth/client/plugins";
+import {
+  magicLinkClient,
+  oneTapClient,
+  organizationClient,
+} from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
 
 const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
@@ -20,6 +24,7 @@ const authClientPlugins =
   hasGoogleOneTapClient && googleClientId
     ? [
         magicLinkClient(),
+        organizationClient(),
         oneTapClient({
           autoSelect: false,
           cancelOnTapOutside: true,
@@ -32,7 +37,7 @@ const authClientPlugins =
           },
         }),
       ]
-    : [magicLinkClient()];
+    : [magicLinkClient(), organizationClient()];
 
 export const authClient = createAuthClient({
   plugins: authClientPlugins,

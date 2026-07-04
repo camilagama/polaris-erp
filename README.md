@@ -33,10 +33,11 @@ bun run db:migrate
 - Cadastro publico em `/register` com Google ou magic link.
 - Login em `/sign-in` com Google ou magic link.
 - Primeiro acesso sem organizacao redireciona para `/onboarding`.
-- Onboarding cria organizacao, membership `owner`, categoria `Outros` e settings iniciais.
+- Onboarding pede apenas o nome da organizacao e cria membership `owner`, categoria `Outros` e settings padrao silenciosas.
 - Roles suportadas: `owner`, `admin`, `operator`. A role `viewer` foi removida.
 - `owner` e `admin` gerenciam configuracoes, membros e convites.
 - `operator` acessa operacao de catalogo, estoque e vendas.
+- Margens, parcelas e taxas ficam em `Configuracoes`, nao no onboarding.
 - Billing fica fora deste sprint.
 
 Em `development` e `test` existe bootstrap interno de sessao em `/api/auth/dev/bootstrap-session`, protegido por `INTERNAL_BOOTSTRAP_SECRET`. Em `production`, esse endpoint so aceita bootstrap quando `ALLOW_PLAYWRIGHT_BOOTSTRAP=true`, para E2E com banco isolado.

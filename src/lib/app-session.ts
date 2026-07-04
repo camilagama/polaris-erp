@@ -20,6 +20,9 @@ import {
 } from "@/lib/app-context";
 
 const DEFAULT_CATEGORY_NAME = "Outros";
+const DEFAULT_CARD_INSTALLMENT_RULES = [{ feePercent: 0, installments: 1 }];
+const DEFAULT_IDEAL_MARKUP_PERCENT = 0;
+const DEFAULT_MINIMUM_MARKUP_PERCENT = 0;
 const GLOBAL_SETTINGS_ID = "global";
 
 export interface AppContext {
@@ -173,15 +176,9 @@ export const requirePageAppContext = async (): Promise<AppContext> => {
 };
 
 export const createInitialOrganizationForUser = async ({
-  cardInstallmentRules = [{ feePercent: 0, installments: 1 }],
-  idealMarkupPercent = 0,
-  minimumMarkupPercent = 0,
   name,
   userId,
 }: {
-  cardInstallmentRules?: Array<{ feePercent: number; installments: number }>;
-  idealMarkupPercent?: number;
-  minimumMarkupPercent?: number;
   name: string;
   userId: string;
 }): Promise<string> => {
@@ -229,10 +226,10 @@ export const createInitialOrganizationForUser = async ({
 
     await tx.insert(systemSettings).values({
       id: GLOBAL_SETTINGS_ID,
-      idealMarkupPercent: idealMarkupPercent.toFixed(2),
-      minimumMarkupPercent: minimumMarkupPercent.toFixed(2),
+      idealMarkupPercent: DEFAULT_IDEAL_MARKUP_PERCENT.toFixed(2),
+      minimumMarkupPercent: DEFAULT_MINIMUM_MARKUP_PERCENT.toFixed(2),
       organizationId,
-      paymentFeeRules: cardInstallmentRules,
+      paymentFeeRules: DEFAULT_CARD_INSTALLMENT_RULES,
     });
 
     await tx.insert(auditEvents).values({
