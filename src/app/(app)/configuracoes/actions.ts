@@ -11,12 +11,6 @@ import {
   saveCatalogSettings,
   updateCategory,
 } from "@/features/catalog/server";
-import {
-  cancelOrganizationInvitation,
-  inviteOrganizationMember,
-  removeOrganizationMember,
-  updateOrganizationMemberRole,
-} from "@/features/organization/server";
 import { requireAppContext } from "@/lib/app-session";
 import { recordAuditEvent } from "@/lib/audit-log";
 import { buildOrganizationCacheTags } from "@/lib/cache-tags";
@@ -72,27 +66,4 @@ export async function saveCatalogSettingsAction(data: CatalogSettingsInput) {
     subjectType: "settings",
     type: "settings.updated",
   });
-}
-
-export async function inviteOrganizationMemberAction(data: unknown) {
-  const context = await requireAppContext("members:write");
-  return inviteOrganizationMember(context, data);
-}
-
-export async function cancelOrganizationInvitationAction(data: unknown) {
-  const context = await requireAppContext("members:write");
-  await cancelOrganizationInvitation(context, data);
-  refresh();
-}
-
-export async function updateOrganizationMemberRoleAction(data: unknown) {
-  const context = await requireAppContext("members:write");
-  await updateOrganizationMemberRole(context, data);
-  refresh();
-}
-
-export async function removeOrganizationMemberAction(data: unknown) {
-  const context = await requireAppContext("members:write");
-  await removeOrganizationMember(context, data);
-  refresh();
 }

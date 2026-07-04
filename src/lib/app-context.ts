@@ -8,7 +8,6 @@ export type AppPermission =
   | "products:write"
   | "sales:write"
   | "settings:write"
-  | "members:write"
   | "organization:delete";
 
 const roleRank: Record<OrganizationRole, number> = {
@@ -20,7 +19,6 @@ const roleRank: Record<OrganizationRole, number> = {
 const permissionMinimumRole: Record<AppPermission, OrganizationRole> = {
   "analytics:read": "operator",
   "catalog:read": "operator",
-  "members:write": "admin",
   "organization:delete": "owner",
   "products:write": "operator",
   "sales:write": "operator",

@@ -18,9 +18,9 @@ describe("organization roles", () => {
     expect(canRolePerform("operator", "settings:write")).toBe(false);
   });
 
-  it("allows admins to manage members but not owner-only organization deletion", () => {
-    expect(canRolePerform("admin", "members:write")).toBe(true);
+  it("keeps organization deletion restricted to the owner", () => {
     expect(canRolePerform("admin", "organization:delete")).toBe(false);
+    expect(canRolePerform("owner", "organization:delete")).toBe(true);
   });
 
   it("normalizes organization slugs from names", () => {

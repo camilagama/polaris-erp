@@ -2,7 +2,7 @@
 
 ## Scope
 
-This runbook covers the SaaS foundation migration: Better Auth organization tables, tenant backfill, tenant-scoped cache/storage paths, self-serve registration, onboarding, members/invitations, RBAC context, and distributed rate limit. Billing is intentionally out of scope.
+This runbook covers the SaaS foundation migration: Better Auth organization tables, tenant backfill, tenant-scoped cache/storage paths, self-serve registration, onboarding, single-user workspace membership, RBAC context, and distributed rate limit. Billing and multi-user workspace management are intentionally out of scope.
 
 ## Preflight
 
@@ -37,12 +37,10 @@ This runbook covers the SaaS foundation migration: Better Auth organization tabl
    - Google login redirects to `/onboarding` only for users without membership.
    - Existing users land on `/`.
    - Onboarding asks only for organization name and creates organization, owner membership, category `Outros` and default catalog settings.
-   - Owner/admin can create and cancel invitations.
-   - Invitation links can be accepted only by the invited email.
    - Product list, product detail, sales list, dashboard and settings load.
    - Product image URLs include `/api/product-images/{organizationId}/...`.
    - R2 reconcile scans `organizations/` keys and does not return raw object keys.
-   - `audit_events` receives auth login, invitation, settings, product, stock, sale and image events.
+   - `audit_events` receives auth login, settings, product, stock, sale and image events.
 
 ## Production Deploy
 
@@ -55,7 +53,6 @@ This runbook covers the SaaS foundation migration: Better Auth organization tabl
    - login
    - onboarding
    - dashboard
-   - member invite/accept
    - product upload
    - sale creation/cancel
    - image reconcile endpoint with cron secret

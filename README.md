@@ -1,6 +1,6 @@
 # DG Imports
 
-SaaS self-serve em `Next.js 16` para operacao de revenda com organizacoes, isolamento por tenant, catalogo, estoque, vendas, metas, membros e convites.
+SaaS self-serve em `Next.js 16` para operacao de revenda com organizacoes, isolamento por tenant, catalogo, estoque, vendas e metas.
 
 ## Stack
 
@@ -35,7 +35,9 @@ bun run db:migrate
 - Primeiro acesso sem organizacao redireciona para `/onboarding`.
 - Onboarding pede apenas o nome da organizacao e cria membership `owner`, categoria `Outros` e settings padrao silenciosas.
 - Roles suportadas: `owner`, `admin`, `operator`. A role `viewer` foi removida.
-- `owner` e `admin` gerenciam configuracoes, membros e convites.
+- Nesta fase, cada workspace opera com um unico usuario `owner`.
+- Gestao de membros e convites esta desativada ate o sprint multiusuario.
+- `owner` e `admin` gerenciam configuracoes quando houver mais de uma role ativa.
 - `operator` acessa operacao de catalogo, estoque e vendas.
 - Margens, parcelas e taxas ficam em `Configuracoes`, nao no onboarding.
 - Billing fica fora deste sprint.
@@ -49,8 +51,7 @@ O schema principal fica em `src/db/schema.ts` e as migracoes em `src/db/migratio
 Tabelas SaaS:
 
 - `organization`: workspace/tenant com `status`
-- `member`: membership e role por organizacao
-- `invitation`: convites pendentes/cancelados/aceitos
+- `member`: membership interna que liga o owner ao workspace
 - `audit_events`: trilha de auditoria por organizacao
 
 Tabelas de dominio com `organization_id` obrigatorio:

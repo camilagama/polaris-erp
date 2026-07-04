@@ -1,5 +1,5 @@
 import "server-only";
-import { betterAuth } from "better-auth";
+import { APIError, betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import {
@@ -99,6 +99,40 @@ const sendMagicLink = async ({
   }
 };
 
+const rejectWorkspaceUserManagement = (): never => {
+  throw new APIError("FORBIDDEN", {
+    code: "WORKSPACE_USER_MANAGEMENT_DISABLED",
+    message: "Workspace user management is disabled for this sprint.",
+  });
+};
+
+const createOrganizationAuthPlugin = () =>
+  organizationPlugin({
+    allowUserToCreateOrganization: false,
+    creatorRole: "owner",
+    disableOrganizationDeletion: true,
+    membershipLimit: 1,
+    organizationHooks: {
+      beforeAddMember: rejectWorkspaceUserManagement,
+      beforeCreateInvitation: rejectWorkspaceUserManagement,
+      beforeRemoveMember: rejectWorkspaceUserManagement,
+      beforeUpdateMemberRole: rejectWorkspaceUserManagement,
+    },
+    requireEmailVerificationOnInvitation: true,
+    schema: {
+      organization: {
+        additionalFields: {
+          status: {
+            defaultValue: "active",
+            input: false,
+            required: true,
+            type: "string",
+          },
+        },
+      },
+    },
+  });
+
 const authPlugins = hasGoogleAuth
   ? [
       oneTap({
@@ -108,44 +142,14 @@ const authPlugins = hasGoogleAuth
       magicLink({
         sendMagicLink,
       }),
-      organizationPlugin({
-        creatorRole: "owner",
-        requireEmailVerificationOnInvitation: true,
-        schema: {
-          organization: {
-            additionalFields: {
-              status: {
-                defaultValue: "active",
-                input: false,
-                required: true,
-                type: "string",
-              },
-            },
-          },
-        },
-      }),
+      createOrganizationAuthPlugin(),
       nextCookies(),
     ]
   : [
       magicLink({
         sendMagicLink,
       }),
-      organizationPlugin({
-        creatorRole: "owner",
-        requireEmailVerificationOnInvitation: true,
-        schema: {
-          organization: {
-            additionalFields: {
-              status: {
-                defaultValue: "active",
-                input: false,
-                required: true,
-                type: "string",
-              },
-            },
-          },
-        },
-      }),
+      createOrganizationAuthPlugin(),
       nextCookies(),
     ];
 
@@ -160,14 +164,6 @@ interface AuthSessionHookPayload {
   activeOrganizationId?: unknown;
   id?: string;
   userId?: string;
-}
-
-interface AuthInvitationHookPayload {
-  email?: string;
-  id?: string;
-  inviterId?: string;
-  organizationId?: string;
-  role?: string;
 }
 
 const recordAuthAuditEvent = async ({
@@ -236,23 +232,6 @@ export const auth = betterAuth({
             subjectId: session.id,
             subjectType: "session",
             type: "auth.login",
-          });
-        },
-      },
-    },
-    invitation: {
-      create: {
-        after: async (createdInvitation: AuthInvitationHookPayload) => {
-          await recordAuthAuditEvent({
-            actorUserId: createdInvitation.inviterId ?? null,
-            metadata: {
-              email: createdInvitation.email ?? null,
-              role: createdInvitation.role ?? null,
-            },
-            organizationId: createdInvitation.organizationId,
-            subjectId: createdInvitation.id ?? null,
-            subjectType: "invitation",
-            type: "invitation.created",
           });
         },
       },

@@ -7,7 +7,7 @@ Guia operacional para publicar o DG Imports como SaaS self-serve em Next.js 16 c
 - Projeto Vercel conectado ao repositorio.
 - Branch Neon de producao e branch separada para preview/E2E.
 - OAuth Google configurado para a origem real do app.
-- Webhook de email para magic link e convites.
+- Webhook de email para magic link.
 - Buckets Cloudflare R2 para staging e variantes finais.
 - Upstash Redis para rate limit distribuido.
 
@@ -25,7 +25,7 @@ Configure em Production e replique/adapte para Preview:
 | `GOOGLE_CLIENT_ID` | OAuth Google server-side. |
 | `GOOGLE_CLIENT_SECRET` | OAuth Google server-side. |
 | `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | OAuth Google client-side/One Tap. |
-| `MAGIC_LINK_EMAIL_WEBHOOK_URL` | Entrega de magic links e convites. |
+| `MAGIC_LINK_EMAIL_WEBHOOK_URL` | Entrega de magic links. |
 | `UPSTASH_REDIS_REST_URL` | Rate limit distribuido. |
 | `UPSTASH_REDIS_REST_TOKEN` | Token REST do Upstash. |
 | `R2_ACCOUNT_ID` | Cloudflare R2. |
@@ -89,12 +89,10 @@ Depois do deploy:
 2. `/register` com magic link ou Google.
 3. Onboarding cria organizacao, owner, categoria `Outros` e settings.
 4. Dashboard carrega vazio para tenant novo.
-5. Owner/admin cria convite em Configuracoes.
-6. Link de convite so e aceito pelo email convidado.
-7. Produto, estoque, venda e cancelamento funcionam.
-8. Upload de imagem funciona e bytes saem por rota autenticada.
-9. Reconcile de imagens retorna contagens, nao chaves completas.
-10. Logs/Sentry sem erros recorrentes.
+5. Produto, estoque, venda e cancelamento funcionam.
+6. Upload de imagem funciona e bytes saem por rota autenticada.
+7. Reconcile de imagens retorna contagens, nao chaves completas.
+8. Logs/Sentry sem erros recorrentes.
 
 ## CI
 
