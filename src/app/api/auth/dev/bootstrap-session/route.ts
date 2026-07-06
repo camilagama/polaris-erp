@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { serverEnv } from "@/lib/env";
+import { checkRateLimit, getRateLimitKeyFromRequest } from "@/lib/rate-limit";
 
 const bootstrapSessionSchema = z.object({
   email: z.string().trim().email(),
@@ -132,6 +133,24 @@ export async function POST(request: Request) {
         error: "Bootstrap interno indisponivel neste ambiente.",
       },
       { status: 503 }
+    );
+  }
+
+  const rateLimit = await checkRateLimit({
+    key: getRateLimitKeyFromRequest(request, "internal-bootstrap-session"),
+    limit: 10,
+    windowMs: 60 * 1000,
+  });
+
+  if (!rateLimit.ok) {
+    return Response.json(
+      { error: "Muitas tentativas. Tente novamente em instantes." },
+      {
+        headers: {
+          "Retry-After": rateLimit.retryAfterSeconds.toString(),
+        },
+        status: 429,
+      }
     );
   }
 

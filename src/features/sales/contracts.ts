@@ -1,5 +1,6 @@
 export type SalePaymentMethod = "card" | "pix";
 export type SalePaymentFeePayer = "customer" | "not_applicable" | "seller";
+export type SaleStatusFilter = "all" | "cancelled" | "completed";
 
 export interface SaleProductOption {
   id: string;

@@ -11,13 +11,13 @@ import {
 } from "@/components/ui/table";
 import { calculateSaleReceivedAmount } from "@/features/sales/calculations";
 import type { SaleDetail } from "@/features/sales/contracts";
+import { getSaleByIdQuery } from "@/features/sales/queries";
 import {
   formatSaleDetailPaymentMethodLabel,
   getOperationalSaleStatusLabel,
 } from "@/features/sales/sale-display-labels";
 import { requirePageAppContext } from "@/lib/app-session";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/formatters";
-import { getSaleByIdQuery } from "../queries";
 
 const getStatusLabel = (status: SaleDetail["status"]) =>
   getOperationalSaleStatusLabel(status);

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { isIP } from "node:net";
 import { type Duration, Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import { serverEnv } from "@/lib/env";
@@ -108,6 +109,12 @@ const checkLocalRateLimit = ({
   };
 };
 
+const getFirstValidIp = (value: string | null) =>
+  value
+    ?.split(",")
+    .map((candidate) => candidate.trim())
+    .find((candidate) => isIP(candidate) !== 0);
+
 export const checkRateLimit = async (
   input: RateLimitInput
 ): Promise<RateLimitResult> => {
@@ -127,7 +134,11 @@ export const checkRateLimit = async (
     return checkLocalRateLimit(input);
   }
 
-  const result = await limiter.limit(input.key);
+  const result = await limiter.limit(input.key).catch(() => null);
+
+  if (!result) {
+    return checkLocalRateLimit(input);
+  }
 
   if (!result.success) {
     return {
@@ -148,11 +159,10 @@ export const checkRateLimit = async (
 };
 
 export const getRateLimitKeyFromRequest = (request: Request, scope: string) => {
-  const forwardedFor = request.headers.get("x-forwarded-for")?.split(",")[0];
   const ip =
-    forwardedFor?.trim() ||
-    request.headers.get("x-real-ip") ||
-    request.headers.get("cf-connecting-ip") ||
+    getFirstValidIp(request.headers.get("x-forwarded-for")) ||
+    getFirstValidIp(request.headers.get("x-real-ip")) ||
+    getFirstValidIp(request.headers.get("cf-connecting-ip")) ||
     "unknown";
 
   return `${scope}:${ip}`;

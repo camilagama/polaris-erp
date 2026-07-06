@@ -447,7 +447,7 @@ describe("product server actions", () => {
       purchasedOn: "2026-03-31",
       stagedImage: {
         contentType: "image/png",
-        objectKey: "staging/user-1/image-1",
+        objectKey: "staging/org_dg_imports/user-1/image-1",
         size: 128,
       },
       stock: 1,
@@ -581,10 +581,12 @@ describe("product server actions", () => {
 
     mockDb.update.mockReturnValue({
       set: (payload: Record<string, unknown>) => ({
-        where: () => {
-          updatePayloads.push(payload);
-          return Promise.resolve([]);
-        },
+        where: () => ({
+          returning: () => {
+            updatePayloads.push(payload);
+            return Promise.resolve([{ id: "product-1" }]);
+          },
+        }),
       }),
     });
 
@@ -602,6 +604,49 @@ describe("product server actions", () => {
       productId: "product-1",
       version: 3,
     });
+  });
+
+  it("does not delete the stored image when removal loses the version race", async () => {
+    const { removeProductImageAction } = await import(
+      "@/app/(app)/produtos/actions"
+    );
+    const {
+      mockDb,
+      mockDeleteProductImageVersion,
+      mockRecordAuditEvent,
+      mockRefresh,
+      mockUpdateTag,
+    } = await resolveMocks();
+
+    mockDb.select.mockReturnValue({
+      from: () => ({
+        where: () => ({
+          limit: async () => [
+            {
+              id: "product-1",
+              imageVersion: 3,
+            },
+          ],
+        }),
+      }),
+    });
+
+    mockDb.update.mockReturnValue({
+      set: () => ({
+        where: () => ({
+          returning: () => Promise.resolve([]),
+        }),
+      }),
+    });
+
+    await expect(removeProductImageAction("product-1")).rejects.toThrow(
+      "Imagem do produto foi atualizada por outra operacao. Recarregue e tente novamente."
+    );
+
+    expect(mockDeleteProductImageVersion).not.toHaveBeenCalled();
+    expect(mockUpdateTag).not.toHaveBeenCalled();
+    expect(mockRefresh).not.toHaveBeenCalled();
+    expect(mockRecordAuditEvent).not.toHaveBeenCalled();
   });
 
   it("rolls back the new image when replace loses the version race", async () => {
@@ -646,7 +691,7 @@ describe("product server actions", () => {
     await expect(
       replaceProductImageAction("product-1", {
         contentType: "image/png",
-        objectKey: "staging/user-1/image-1",
+        objectKey: "staging/org_dg_imports/user-1/image-1",
         size: 128,
       })
     ).rejects.toThrow(

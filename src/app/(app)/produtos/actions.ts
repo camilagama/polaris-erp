@@ -346,7 +346,7 @@ export async function removeProductImageAction(id: string) {
     return { success: true } as const;
   }
 
-  await db
+  const updatedProducts = await db
     .update(products)
     .set({
       ...emptyProductImagePayload,
@@ -355,9 +355,17 @@ export async function removeProductImageAction(id: string) {
     .where(
       and(
         eq(products.id, id),
-        eq(products.organizationId, context.organizationId)
+        eq(products.organizationId, context.organizationId),
+        eq(products.imageVersion, product.imageVersion)
       )
+    )
+    .returning({ id: products.id });
+
+  if (updatedProducts.length === 0) {
+    throw new Error(
+      "Imagem do produto foi atualizada por outra operacao. Recarregue e tente novamente."
     );
+  }
 
   await deleteProductImageVersion({
     organizationId: context.organizationId,

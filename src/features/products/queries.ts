@@ -1,3 +1,5 @@
+import "server-only";
+
 import {
   and,
   asc,
@@ -26,6 +28,7 @@ import type {
   ProductListItem,
   ProductPriceChangeItem,
   ProductSaleHistoryItem,
+  ProductStatusFilter,
   ProductStockEntryItem,
   ProductStockWriteOffItem,
 } from "@/features/products/contracts";
@@ -33,15 +36,12 @@ import { buildProductImageUrl } from "@/features/products/image-urls";
 import { decodeOpaqueCursor, encodeOpaqueCursor } from "@/lib/opaque-cursor";
 
 const DEFAULT_PAGE_SIZE = 15;
-const productStatusFilterSchema = z.enum(["active", "archived"]);
 const productCursorSchema = z.object({
   createdAt: z.string().min(1),
   id: z.string().min(1),
   name: z.string(),
   version: z.literal(1),
 });
-
-export type ProductStatusFilter = z.infer<typeof productStatusFilterSchema>;
 
 interface ProductsQueryInput {
   cursor?: string;

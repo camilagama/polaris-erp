@@ -11,11 +11,7 @@ vi.mock("@/lib/audit-log", () => ({
 }));
 
 vi.mock("@/lib/rate-limit", () => ({
-  checkRateLimit: vi.fn(async () => ({
-    ok: true,
-    remaining: 10,
-    resetAt: Date.now() + 1000,
-  })),
+  checkRateLimit: vi.fn(),
   getRateLimitKeyFromRequest: vi.fn(() => "test-ip"),
 }));
 
@@ -35,6 +31,52 @@ vi.mock("@/features/products/image-storage", () => ({
 describe("POST /api/product-images/presign", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it("returns 429 with Retry-After when the upload rate limit is exceeded", async () => {
+    const { requireAppContext } = await import("@/lib/app-session");
+    const { auth } = await import("@/lib/auth");
+    const { checkRateLimit } = await import("@/lib/rate-limit");
+    const { POST } = await import("@/app/api/product-images/presign/route");
+
+    vi.mocked(auth.api.getSession).mockResolvedValue({
+      user: {
+        id: "user-1",
+      },
+    } as never);
+    vi.mocked(requireAppContext).mockResolvedValue({
+      organizationId: "org_dg_imports",
+      organizationName: "Polaris",
+      role: "owner",
+      userId: "user-1",
+    });
+    vi.mocked(checkRateLimit)
+      .mockResolvedValueOnce({
+        ok: false,
+        resetAt: Date.now() + 45_000,
+        retryAfterSeconds: 45,
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        remaining: 10,
+        resetAt: Date.now() + 60_000,
+      });
+
+    const response = await POST(
+      new Request("http://localhost/api/product-images/presign", {
+        body: JSON.stringify({
+          contentType: "image/png",
+          size: 120,
+        }),
+        method: "POST",
+      })
+    );
+
+    await expect(response.json()).resolves.toEqual({
+      error: "Muitas tentativas de upload. Tente novamente em instantes.",
+    });
+    expect(response.status).toBe(429);
+    expect(response.headers.get("retry-after")).toBe("45");
   });
 
   it("returns 401 when the request has no authenticated session", async () => {
@@ -58,6 +100,7 @@ describe("POST /api/product-images/presign", () => {
 
   it("returns 400 when the payload is invalid", async () => {
     const { auth } = await import("@/lib/auth");
+    const { checkRateLimit } = await import("@/lib/rate-limit");
     const { POST } = await import("@/app/api/product-images/presign/route");
 
     vi.mocked(auth.api.getSession).mockResolvedValue({
@@ -65,6 +108,11 @@ describe("POST /api/product-images/presign", () => {
         id: "user-1",
       },
     } as never);
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      ok: true,
+      remaining: 10,
+      resetAt: Date.now() + 60_000,
+    });
 
     const response = await POST(
       new Request("http://localhost/api/product-images/presign", {
@@ -83,6 +131,7 @@ describe("POST /api/product-images/presign", () => {
     const { requireAppContext } = await import("@/lib/app-session");
     const auditLog = await import("@/lib/audit-log");
     const { auth } = await import("@/lib/auth");
+    const { checkRateLimit } = await import("@/lib/rate-limit");
     const { POST } = await import("@/app/api/product-images/presign/route");
     const imageStorageModule = await import(
       "@/features/products/image-storage"
@@ -99,8 +148,13 @@ describe("POST /api/product-images/presign", () => {
       role: "owner",
       userId: "user-1",
     });
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      ok: true,
+      remaining: 10,
+      resetAt: Date.now() + 60_000,
+    });
     vi.mocked(imageStorageModule.createStagingObjectKey).mockReturnValue(
-      "staging/user-1/file"
+      "staging/org_dg_imports/user-1/file"
     );
     vi.mocked(
       imageStorageModule.createPresignedProductImageUpload
@@ -126,14 +180,18 @@ describe("POST /api/product-images/presign", () => {
 
     expect(response.status).toBe(200);
     expect(payload).toMatchObject({
-      objectKey: "staging/user-1/file",
+      objectKey: "staging/org_dg_imports/user-1/file",
       uploadUrl: "https://example.com/upload",
     });
+    expect(imageStorageModule.createStagingObjectKey).toHaveBeenCalledWith(
+      "org_dg_imports",
+      "user-1"
+    );
     expect(
       imageStorageModule.createPresignedProductImageUpload
     ).toHaveBeenCalledWith({
       contentType: "image/png",
-      objectKey: "staging/user-1/file",
+      objectKey: "staging/org_dg_imports/user-1/file",
       size: 120,
     });
     expect(auditLog.recordAuditEvent).toHaveBeenCalledWith({
@@ -147,7 +205,7 @@ describe("POST /api/product-images/presign", () => {
         contentType: "image/png",
         size: 120,
       },
-      subjectId: "staging/user-1/file",
+      subjectId: "staging/org_dg_imports/user-1/file",
       subjectType: "product_image",
       type: "product_image.presign_created",
     });

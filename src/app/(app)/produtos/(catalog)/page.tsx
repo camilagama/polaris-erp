@@ -4,9 +4,9 @@ import {
   getCatalogSettings,
   listCategoriesWithUsage,
 } from "@/features/catalog/server";
+import { getProductsQuery } from "@/features/products/queries";
 import { getProductAnalytics } from "@/features/products/server";
 import { requirePageAppContext } from "@/lib/app-session";
-import { getProductsQuery } from "../queries";
 
 export const metadata: Metadata = {
   title: "Produtos | Polaris",

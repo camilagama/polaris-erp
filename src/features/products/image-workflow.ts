@@ -36,6 +36,7 @@ export const storeProductImageFromStage = async ({
     const stagedBuffer = await readStagedProductImage({
       contentType: stagedImage.contentType,
       objectKey: stagedImage.objectKey,
+      organizationId,
       size: stagedImage.size,
       userId,
     });

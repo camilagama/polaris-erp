@@ -1,3 +1,5 @@
+export type ProductStatusFilter = "active" | "archived";
+
 export interface ProductImageAsset {
   blurDataURL: string;
   detailUrl: string;

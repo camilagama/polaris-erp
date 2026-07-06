@@ -145,6 +145,7 @@ describe("GET /api/auth/google", () => {
       error: "Muitas tentativas de login. Tente novamente em instantes.",
     });
     expect(response.status).toBe(429);
+    expect(response.headers.get("retry-after")).toBe("60");
     expect(authMocks.handler).not.toHaveBeenCalled();
   });
 });

@@ -26,6 +26,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -116,14 +117,36 @@ export function CatalogSettingsPanel({
   const [cardInstallmentRules, setCardInstallmentRules] = useState(() =>
     toRuleDrafts(settings.cardInstallmentRules)
   );
+  const [cardInstallmentRuleDrafts, setCardInstallmentRuleDrafts] = useState(
+    () => toRuleDrafts(settings.cardInstallmentRules)
+  );
 
   useEffect(() => {
     setMinimumMarkupPercent(settings.minimumMarkupPercent.toString());
     setIdealMarkupPercent(settings.idealMarkupPercent.toString());
-    setCardInstallmentRules(toRuleDrafts(settings.cardInstallmentRules));
+    const nextCardInstallmentRules = toRuleDrafts(
+      settings.cardInstallmentRules
+    );
+    setCardInstallmentRules(nextCardInstallmentRules);
+    setCardInstallmentRuleDrafts(nextCardInstallmentRules);
   }, [settings]);
 
   const selectedMaxInstallments = String(cardInstallmentRules.length);
+
+  const handleOpenRatesDialog = () => {
+    setCardInstallmentRuleDrafts(cardInstallmentRules);
+    setRatesOpen(true);
+  };
+
+  const handleCancelRatesDialog = () => {
+    setCardInstallmentRuleDrafts(cardInstallmentRules);
+    setRatesOpen(false);
+  };
+
+  const handleApplyRatesDialog = () => {
+    setCardInstallmentRules(cardInstallmentRuleDrafts);
+    setRatesOpen(false);
+  };
 
   const handleCreateCategory = () => {
     startTransition(async () => {
@@ -340,7 +363,7 @@ export function CatalogSettingsPanel({
               </Select>
             </div>
             <Button
-              onClick={() => setRatesOpen(true)}
+              onClick={handleOpenRatesDialog}
               size="sm"
               type="button"
               variant="outline"
@@ -489,7 +512,17 @@ export function CatalogSettingsPanel({
         </DialogContent>
       </Dialog>
 
-      <Dialog onOpenChange={setRatesOpen} open={ratesOpen}>
+      <Dialog
+        onOpenChange={(open) => {
+          if (open) {
+            handleOpenRatesDialog();
+            return;
+          }
+
+          handleCancelRatesDialog();
+        }}
+        open={ratesOpen}
+      >
         <DialogContent
           className="sm:max-w-3xl"
           onInteractOutside={(e) => e.preventDefault()}
@@ -502,7 +535,7 @@ export function CatalogSettingsPanel({
           </DialogHeader>
 
           <div className="grid gap-4 sm:grid-cols-3">
-            {cardInstallmentRules.map((rule) => (
+            {cardInstallmentRuleDrafts.map((rule) => (
               <InputGroup key={rule.installments}>
                 <InputGroupAddon align="inline-start">
                   <InputGroupText>{rule.installments}x</InputGroupText>
@@ -513,7 +546,7 @@ export function CatalogSettingsPanel({
                   onChange={(event) => {
                     const nextValue = event.target.value;
 
-                    setCardInstallmentRules((currentRules) =>
+                    setCardInstallmentRuleDrafts((currentRules) =>
                       currentRules.map((currentRule) =>
                         currentRule.installments === rule.installments
                           ? {
@@ -534,6 +567,19 @@ export function CatalogSettingsPanel({
               </InputGroup>
             ))}
           </div>
+
+          <DialogFooter>
+            <Button
+              onClick={handleCancelRatesDialog}
+              type="button"
+              variant="outline"
+            >
+              Cancelar
+            </Button>
+            <Button onClick={handleApplyRatesDialog} type="button">
+              Aplicar taxas
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>

@@ -1,5 +1,6 @@
 import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
+import { getSecurityHeaders } from "@/lib/security-headers";
 
 const TRAILING_SLASH_PATTERN = /\/$/;
 const PLACEHOLDER_DOMAIN_PATTERN = /seu-dominio\.com/i;
@@ -79,6 +80,14 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   images: {
     remotePatterns: imageRemotePatterns,
+  },
+  async headers() {
+    return [
+      {
+        headers: getSecurityHeaders(),
+        source: "/:path*",
+      },
+    ];
   },
   reactStrictMode: true,
   reactCompiler: true,

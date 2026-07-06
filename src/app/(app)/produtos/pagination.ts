@@ -1,7 +1,10 @@
 "use server";
 
+import {
+  getProductsQuery,
+  type PaginatedProductsList,
+} from "@/features/products/queries";
 import { requireAppContext } from "@/lib/app-session";
-import { getProductsQuery, type PaginatedProductsList } from "./queries";
 
 export async function loadMoreProductsAction(
   input: Omit<Parameters<typeof getProductsQuery>[0], "organizationId">

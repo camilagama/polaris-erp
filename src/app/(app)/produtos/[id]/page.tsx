@@ -9,16 +9,16 @@ import {
   listCategoriesWithUsage,
 } from "@/features/catalog/server";
 import { buildProductInventorySummary } from "@/features/products/history";
-import { getProductSalesHistoryMetrics } from "@/features/products/server";
-import { requirePageAppContext } from "@/lib/app-session";
-import { formatCurrency } from "@/lib/formatters";
 import {
   getProductByIdQuery,
   getProductPriceChangesByProductIdQuery,
   getProductSalesByProductIdQuery,
   getProductStockEntriesByProductIdQuery,
   getProductStockWriteOffsByProductIdQuery,
-} from "../queries";
+} from "@/features/products/queries";
+import { getProductSalesHistoryMetrics } from "@/features/products/server";
+import { requirePageAppContext } from "@/lib/app-session";
+import { formatCurrency } from "@/lib/formatters";
 
 export default async function ProdutoDetalhePage(
   props: PageProps<"/produtos/[id]">

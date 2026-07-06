@@ -7,6 +7,10 @@
 - 2026-07-06: PR 2 ampliou prova tenant A/B em imagens de produto: remover imagem agora diferencia produto inexistente/outro tenant de produto existente sem imagem.
 - 2026-07-06: PR 2 avancou em configuracoes/catalogo: update/delete de categoria agora confirmam linha afetada com `returning()` e actions nao auditam/revalidam quando o dominio rejeita categoria inexistente/outro tenant.
 - 2026-07-06: PR 2 avancou em metas: update/archive/unarchive agora confirmam linha afetada com `returning()` e actions nao auditam/refresham quando o dominio rejeita meta inexistente/outro tenant.
+- 2026-07-06: PR 2 avancou em vendas: cancelamento agora confirma o update final da venda com `returning()` e nao audita/revalida quando a venda nao e atualizada.
+- 2026-07-06: PR 2 avancou em estoque de vendas: baixa na criacao e estorno no cancelamento agora confirmam update do produto com `returning()` e bloqueiam auditoria/revalidacao quando o estoque nao e atualizado.
+- 2026-07-06: PR 2 avancou em upload de imagens: chaves staged agora incluem organizacao e usuario (`staging/{org}/{user}/...`) e o consumo valida o mesmo escopo.
+- 2026-07-06: PR 2/R2 avancou em remocao de imagem: remocao agora confirma update condicional por `imageVersion` antes de apagar o objeto R2, evitando sucesso falso em corrida com replace.
 - 2026-07-06: PR 2/R2 avancou em corrida de replace: troca de imagem agora checa `returning()` do update condicional, remove a nova versao se perder a corrida e nao apaga a versao antiga.
 - 2026-07-06: PR 2/R2 avancou em reconcile: objetos de imagem recem-enviados agora sao preservados por janela minima antes de limpeza de orfaos.
 - 2026-07-06: PR 7 iniciado parcialmente. Concluidos nesta fatia: `SEC-001` (bootstrap bloqueado em qualquer `NODE_ENV=production`) e `SEC-002` (secrets internos fracos rejeitados em producao).
@@ -14,13 +18,28 @@
 - 2026-07-06: PR 7 avancou em observabilidade: Sentry agora usa sampling configuravel para tracing/replay, ativa replay em erro no client e remove log ruidoso de startup.
 - 2026-07-06: PR 7 avancou em docs de deploy: `docs/deploy-vercel.md` agora cobre envs obrigatorias, sampling Sentry, health checks, cron, build com env de Production e smoke checklist.
 - 2026-07-06: PR 7 avancou em guardrails de producao: `CRON_SECRET` agora e obrigatorio em `VERCEL_ENV=production`, sem quebrar build local, alem de rejeitar secrets internos fracos.
+- 2026-07-06: PR 7 avancou em resiliencia de rate limit: falha transitoria do Upstash agora cai para limiter local em vez de derrubar login/upload, com teste direto em `src/lib/rate-limit.test.ts`.
+- 2026-07-06: PR 7 avancou em chaves de rate limit: headers de IP invalidos agora sao ignorados antes de montar o bucket, reduzindo spoof trivial por valor arbitrario.
+- 2026-07-06: PR 7 avancou em respostas de rate limit: login Google, presign de imagens e reconcile interno agora retornam `Retry-After` nos 429.
+- 2026-07-06: PR 7 avancou em endpoints internos: health do R2 agora tambem tem rate limit com `Retry-After` antes de consultar o bucket.
+- 2026-07-06: PR 7 avancou em headers de seguranca: `next.config.ts` agora aplica HSTS, nosniff, frame policy, referrer policy e permissions policy globais.
+- 2026-07-06: PR 7 avancou em bootstrap interno: mesmo em development/test, `/api/auth/dev/bootstrap-session` agora tem rate limit com `Retry-After` antes de validar bearer.
 - 2026-07-06: PR 3 iniciado. `STOCK-001` corrigido: entrada de estoque em produto arquivado agora limpa `archivedAt` e reativa o produto.
 - 2026-07-06: PR 3 avancou em `DB-002`: banco agora rejeita venda de cartao com `payment_fee_payer = not_applicable`, com migration e precheck de dados legados.
 - 2026-07-06: PR 3 avancou em `GOAL-001`: banco agora limita a uma meta ativa por organizacao com indice unico parcial e precheck de dados legados.
 - 2026-07-06: PR 3 fechou decisao de idempotency key de venda: formulario envia UUID por tentativa, action retorna venda existente para chave repetida e banco garante unicidade por organizacao quando a chave existe.
+- 2026-07-06: PR 3 reforcou idempotency de venda em corrida: conflito unico `23505` no insert agora busca a venda vencedora e retorna o ID sem auditar/revalidar de novo.
+- 2026-07-06: PR 8 iniciado em cleanup seguro: export morto `getDb` de `src/db/index.ts` removido, deixando o helper privado ao proxy `db`.
+- 2026-07-06: PR 8 reduziu acoplamento de tipos: `ProductStatusFilter` e `SaleStatusFilter` sairam de `app/**/queries` para contracts de dominio, removendo imports de `queries` pelos componentes.
+- 2026-07-06: PR 8 moveu queries de listagem/detalhe de produtos e vendas para `src/features/**/queries.ts`, deixando o App Router apenas como composicao/paginacao.
+- 2026-07-06: PR 6 iniciado em UX critica: botoes "carregar mais" de produtos e vendas agora exibem toast de erro e liberam o estado de loading quando a paginacao falha.
+- 2026-07-06: PR 6 avancou em taxas de cartao: modal de parcelas agora edita rascunho local, permite cancelar sem persistir no estado principal e exige "Aplicar taxas" antes do "Salvar cartao".
+- 2026-07-06: PR 6 avancou em acessibilidade: buscas de produtos/vendas e filtro de status de vendas agora tem nomes acessiveis explicitos.
+- 2026-07-06: PR 5 iniciado em CI/E2E: GitHub Actions agora tem job `e2e` com Playwright, dependente de `E2E_DATABASE_URL` em secret para impedir uso acidental de banco compartilhado.
+- 2026-07-06: PR 9 iniciado em produto pos-MVP: `docs/roadmap.md` criado com ordem para convites, billing, exportacao, admin/suporte, LGPD e relatorios sem misturar com hardening.
 - Pendencias antes de declarar PR 2 completo: ampliar provas tenant A vs tenant B para outros actions/route handlers, decisao/implementacao de RLS ou repository tenant-scoped, e dry-run das migrations em branch Neon isolada.
 - PR 3 implementado localmente. Antes de tratar como pronto para deploy real, ainda falta dry-run/aplicacao das migrations em banco isolado.
-- PR 7 implementado localmente. Antes de tratar como pronto para deploy real, ainda falta validar `vercel env run -e production -- bun run build` com envs reais e smoke checks no preview/producao.
+- PR 7 implementado localmente. Antes de tratar como pronto para deploy real, ainda falta validar `vercel env run -e production -- bun run build` com envs reais, smoke checks no preview/producao, limites reais do Upstash e quais headers de IP sao confiaveis na borda.
 
 **Ordem Recomendada**
 1. PR 1 pode ser pulado se continuarmos aceitando que não há P0 confirmado.
@@ -295,7 +314,7 @@ Achados endereçados:
 - relatórios e recebimentos pós-MVP.
 
 Arquivos prováveis:
-- `docs/roadmap.md` ou `docs/product-readiness.md`
+- `docs/roadmap.md`
 - futuras áreas em `src/features/organization`
 - futuras telas em `src/app/(app)/configuracoes`
 - futuras APIs/admin ainda não existentes
@@ -310,6 +329,9 @@ Critério de aceite:
 - roadmap priorizado.
 - itens claramente marcados como pós-MVP.
 - nada crítico de segurança/financeiro misturado aqui.
+
+Status local:
+- `docs/roadmap.md` criado com corte pos-MVP. Nenhuma feature foi implementada nesta fatia.
 
 Ordem: último.
 

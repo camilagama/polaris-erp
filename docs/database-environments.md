@@ -17,6 +17,14 @@ Evitar que Playwright, desenvolvimento local ou preview escrevam na mesma branch
 3. Em CI, defina o secret `E2E_DATABASE_URL` com a connection string dessa branch.
 4. Proteja a branch de producao no Neon contra reset acidental.
 
+## GitHub Actions
+
+O workflow `.github/workflows/ci.yml` possui um job `e2e` separado do `verify`.
+Ele executa `bun run test:e2e` depois de `check`, Vitest e build passarem.
+Como o Playwright roda com `CI=true` no GitHub Actions, a ausencia do secret
+`E2E_DATABASE_URL` falha a suite antes de subir o servidor. Isso e intencional:
+nao use banco de producao, preview compartilhado ou `.env.local` para E2E em CI.
+
 ## Playwright
 
 O servidor de teste injeta `DATABASE_URL` a partir de `E2E_DATABASE_URL` quando definido (veja [playwright.config.ts](../playwright.config.ts)). Em `CI=true`, a suite falha se `E2E_DATABASE_URL` nao estiver definido.

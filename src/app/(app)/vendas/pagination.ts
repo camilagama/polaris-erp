@@ -1,7 +1,10 @@
 "use server";
 
+import {
+  getSalesQuery,
+  type PaginatedSalesList,
+} from "@/features/sales/queries";
 import { requireAppContext } from "@/lib/app-session";
-import { getSalesQuery, type PaginatedSalesList } from "./queries";
 
 export async function loadMoreSalesAction(
   input: Omit<Parameters<typeof getSalesQuery>[0], "organizationId">

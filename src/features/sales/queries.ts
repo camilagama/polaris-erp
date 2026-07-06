@@ -1,3 +1,5 @@
+import "server-only";
+
 import {
   and,
   asc,
@@ -18,19 +20,17 @@ import type {
   SaleDetail,
   SaleListItem,
   SaleProductOption,
+  SaleStatusFilter,
 } from "@/features/sales/contracts";
 import { decodeOpaqueCursor, encodeOpaqueCursor } from "@/lib/opaque-cursor";
 
 const DEFAULT_PAGE_SIZE = 15;
-const saleStatusFilterSchema = z.enum(["all", "cancelled", "completed"]);
 const salesCursorSchema = z.object({
   createdAt: z.string().min(1),
   id: z.string().min(1),
   occurredOn: z.string().min(1),
   version: z.literal(1),
 });
-
-export type SaleStatusFilter = z.infer<typeof saleStatusFilterSchema>;
 
 interface SalesQueryInput {
   cursor?: string;

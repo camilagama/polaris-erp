@@ -8,6 +8,10 @@ Status de execucao em 2026-07-06:
 - PR 2: remocao de imagem de produto agora falha para produto inexistente/outro tenant em vez de retornar sucesso.
 - PR 2: update/delete de categoria agora confirmam linha afetada e evitam auditoria/revalidacao em categoria inexistente/outro tenant.
 - PR 2: update/archive/unarchive de metas agora confirmam linha afetada e evitam auditoria/refresh em meta inexistente/outro tenant.
+- PR 2: cancelamento de venda agora confirma o update final da venda e evita auditoria/revalidacao quando a venda nao e atualizada.
+- PR 2: baixa de estoque na venda e estorno no cancelamento agora confirmam update do produto e evitam auditoria/revalidacao quando o estoque nao e atualizado.
+- PR 2: upload staged de imagem agora e escopado por organizacao e usuario antes de virar imagem publica do produto.
+- PR 2/R2: remocao de imagem agora confirma `imageVersion` atual antes de apagar o objeto R2.
 - PR 2/R2: replace de imagem agora desfaz a nova versao quando perde a corrida de update condicional.
 - PR 2/R2: reconcile de imagens agora preserva uploads recentes antes de limpar orfaos.
 - PR 7: iniciado parcialmente. `SEC-001` e `SEC-002` foram enderecados nesta fatia.
@@ -15,10 +19,25 @@ Status de execucao em 2026-07-06:
 - PR 7: Sentry agora tem tracing/replay configuravel e replay em erro no client.
 - PR 7: runbook de deploy Vercel atualizado com envs, guardrails, cron, health checks e smoke checklist.
 - PR 7: `CRON_SECRET` agora e obrigatorio em Vercel Production para proteger endpoints internos acionados por cron, sem quebrar build local.
+- PR 7: rate limit agora faz fallback local quando Upstash falha temporariamente, reduzindo risco de outage em login/upload.
+- PR 7: chaves de rate limit agora ignoram headers de IP invalidos antes de usar o valor no bucket.
+- PR 7: endpoints com 429 de rate limit, incluindo reconcile interno, agora retornam `Retry-After` para orientar retry.
+- PR 7: health interno do R2 agora passa por rate limit antes de consultar o storage.
+- PR 7: headers de seguranca globais agora cobrem HSTS, nosniff, frame policy, referrer policy e permissions policy.
+- PR 7: bootstrap interno continua bloqueado em producao e agora tambem tem rate limit em development/test.
 - PR 3: iniciado. Entrada de estoque agora reativa produto arquivado ao limpar `archivedAt`.
 - PR 3: banco agora rejeita venda de cartao com `payment_fee_payer = not_applicable`.
 - PR 3: banco agora limita a uma meta ativa por organizacao com indice unico parcial.
 - PR 3: venda agora usa idempotency key opcional para evitar duplicacao por retry/duplo submit.
+- PR 3: retry concorrente com mesma idempotency key agora retorna a venda vencedora apos conflito unico, sem auditoria/cache duplicados.
+- PR 8: cleanup seguro iniciado; export morto `getDb` removido de `src/db/index.ts`.
+- PR 8: filtros de status de produtos/vendas agora vivem em contracts de dominio, reduzindo imports de queries do App Router pelos componentes.
+- PR 8: queries de produtos/vendas foram movidas do App Router para `features`, preservando os wrappers de pagina/paginacao.
+- PR 6: falha em "carregar mais" de produtos/vendas agora mostra toast de erro e libera o loading.
+- PR 6: modal de taxas de cartao agora tem cancelar/aplicar em rascunho local antes do save explicito.
+- PR 6: filtros de busca/status em produtos e vendas ganharam nomes acessiveis explicitos.
+- PR 5: CI agora inclui job Playwright E2E que exige `E2E_DATABASE_URL` isolado.
+- PR 9: roadmap pos-MVP criado em `docs/roadmap.md`, separando convites, billing, exportacao, admin/suporte, LGPD e relatorios do hardening inicial.
 - Ainda nao declarar producao pronta: PR 2/3/5/7 seguem com pendencias relevantes.
 
 Veredito: **quase pronto para piloto controlado, não recomendado para produção self-serve aberta ainda**.
@@ -34,7 +53,7 @@ Forças reais:
 
 Top bloqueadores antes de clientes reais:
 1. `sessions.id` sem PK/unique.
-2. Bootstrap interno pode ser habilitado em preview/prod-like.
+2. Bootstrap interno bloqueado localmente em prod-like; ainda exige smoke em Vercel Production.
 3. Corridas em onboarding, metas ativas e substituição/reconcile de imagens.
 4. Falta de constraint para “1 meta ativa” e “1 membership por usuário” se essa for a regra.
 5. Playwright não verificado com banco isolado neste ambiente.
@@ -69,9 +88,9 @@ Teste: migration/teste SQL rejeitando dois `sessions.id`.
 
 `SEC-001` P1, Auth/Operação  
 Evidência: [route.ts](</c:/Users/Junior/Documents/0 - Dev/Hub Imports/src/app/api/auth/dev/bootstrap-session/route.ts:10>) e [route.ts](</c:/Users/Junior/Documents/0 - Dev/Hub Imports/src/app/api/auth/dev/bootstrap-session/route.ts:150>).  
-Status: Confirmado no código.  
-Descrição: bootstrap interno cria usuário verificado e sessão se `ALLOW_PLAYWRIGHT_BOOTSTRAP=true` em prod-like preview.  
-Impacto: bypass de Google OAuth se segredo vazar/fraco.  
+Status: Corrigido localmente.  
+Descrição: bootstrap interno cria usuário verificado e sessão apenas em `development`/`test`; `NODE_ENV=production` retorna 403 mesmo com `ALLOW_PLAYWRIGHT_BOOTSTRAP=true`.  
+Impacto residual: precisa smoke em Vercel Production para confirmar env real e segredo forte.  
 Correção: negar sempre em `NODE_ENV=production`, ou restringir a CI/banco isolado com token curto e allowlist.  
 Teste: preview/prod-like deve retornar 403 e não criar sessão.
 
@@ -153,7 +172,8 @@ Correção: configurar branch Neon E2E e rodar `bun run test:e2e`.
 - Server actions/APIs: Parcial. Boa checagem de contexto, mas bootstrap/internal hardening faltando. P1/P2.
 - IDOR: OK nos fluxos revisados. Produtos, imagens, categorias e metas agora tem provas contra sucesso falso em recurso inexistente/outro tenant.
 - R2 upload/serve: Parcial. Boa autorização, corrida em replace/reconcile. P1.
-- Rate limit: Parcial. Upstash fail-closed em prod, IP spoof possível via header. P3.
+- Rate limit: Parcial. Upstash tem fallback local em falha transitoria, descarta IPs invalidos e retorna `Retry-After`; ainda falta validar limites reais e headers confiaveis no deploy. P3.
+- Security headers: Parcial. Baseline global aplicado; CSP completa ainda exige validacao separada para nao quebrar Next/Sentry. P3.
 - Catálogo/estoque/vendas: Parcial. Núcleo bom; falta reativação por entrada e constraints extras. P2.
 - Cancelamento/estorno: OK no fluxo normal. Usa lock e estorna estoque.
 - Metas: Parcial. Regra de 1 ativa sem constraint. P2.
@@ -186,12 +206,11 @@ Ausente/pós-MVP: billing, planos, suporte/admin, importação CSV, recebimentos
 
 **7. Roadmap Recomendado**
 Antes de produção:
-1. Corrigir `sessions.id`.
-2. Fechar bootstrap em prod-like.
-3. Segredos mínimos fortes.
-4. Unique/lock para onboarding e metas.
-5. Corrigir corrida de imagem.
-6. Rodar Playwright com Neon branch isolada.
+1. Validar migrations de `sessions.id`, constraints financeiras e FKs tenant-scoped em branch Neon isolada.
+2. Rodar smoke em Vercel Production para confirmar bootstrap 403 em prod-like e envs fortes.
+3. Validar limites reais do Upstash e headers confiáveis na borda.
+4. Rodar Playwright com Neon branch isolada.
+5. Validar flows críticos no preview: auth, onboarding, produto, estoque, venda, cancelamento, imagem e health checks.
 
 Estabilizar MVP:
 - Índices de paginação.

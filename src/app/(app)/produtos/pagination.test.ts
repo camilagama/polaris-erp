@@ -6,7 +6,7 @@ vi.mock("@/lib/app-session", () => ({
   requireAppContext: vi.fn(),
 }));
 
-vi.mock("@/app/(app)/produtos/queries", () => ({
+vi.mock("@/features/products/queries", () => ({
   getProductsQuery: vi.fn(),
 }));
 
@@ -14,7 +14,7 @@ type MockFn = ReturnType<typeof vi.fn>;
 
 const resolveMocks = async () => {
   const authModule = await import("@/lib/app-session");
-  const queriesModule = await import("@/app/(app)/produtos/queries");
+  const queriesModule = await import("@/features/products/queries");
 
   return {
     mockGetProductsQuery: queriesModule.getProductsQuery as MockFn,

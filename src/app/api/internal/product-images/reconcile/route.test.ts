@@ -67,6 +67,34 @@ describe("/api/internal/product-images/reconcile", () => {
     expect(response.status).toBe(401);
   });
 
+  it("returns 429 with Retry-After when the reconcile rate limit is exceeded", async () => {
+    const { checkRateLimit } = await import("@/lib/rate-limit");
+    const { POST } = await import(
+      "@/app/api/internal/product-images/reconcile/route"
+    );
+
+    vi.mocked(checkRateLimit).mockResolvedValueOnce({
+      ok: false,
+      resetAt: Date.now() + 30_000,
+      retryAfterSeconds: 30,
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/internal/product-images/reconcile", {
+        headers: {
+          Authorization: "Bearer secret",
+        },
+        method: "POST",
+      })
+    );
+
+    await expect(response.json()).resolves.toEqual({
+      error: "Muitas tentativas. Tente novamente em instantes.",
+    });
+    expect(response.status).toBe(429);
+    expect(response.headers.get("retry-after")).toBe("30");
+  });
+
   it("deletes public keys that are not referenced by products", async () => {
     const { POST } = await import(
       "@/app/api/internal/product-images/reconcile/route"

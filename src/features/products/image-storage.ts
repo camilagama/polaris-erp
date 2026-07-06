@@ -108,8 +108,11 @@ const readBodyToBuffer = async (
   return Buffer.from(await body.transformToByteArray());
 };
 
-export const createStagingObjectKey = (userId: string) =>
-  `${STAGING_IMAGE_PREFIX}${userId}/${crypto.randomUUID()}`;
+export const createStagingObjectKey = (
+  organizationId: string,
+  userId: string
+) =>
+  `${STAGING_IMAGE_PREFIX}${organizationId}/${userId}/${crypto.randomUUID()}`;
 
 export const createPresignedProductImageUpload = async ({
   contentType,
@@ -149,16 +152,18 @@ export const createPresignedProductImageUpload = async ({
 export const readStagedProductImage = async ({
   contentType,
   objectKey,
+  organizationId,
   size,
   userId,
 }: {
   contentType: ProductImageMimeType;
   objectKey: string;
+  organizationId: string;
   size: number;
   userId: string;
 }) => {
   const env = getRequiredStorageEnv();
-  const expectedPrefix = `${STAGING_IMAGE_PREFIX}${userId}/`;
+  const expectedPrefix = `${STAGING_IMAGE_PREFIX}${organizationId}/${userId}/`;
   if (!objectKey.startsWith(expectedPrefix)) {
     throw new Error("Chave de upload temporario invalida.");
   }

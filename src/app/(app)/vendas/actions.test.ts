@@ -11,6 +11,10 @@ vi.mock("@/lib/app-session", () => ({
   requireAppContext: vi.fn(),
 }));
 
+vi.mock("@/lib/audit-log", () => ({
+  recordAuditEvent: vi.fn(),
+}));
+
 vi.mock("next/cache", () => ({
   refresh: vi.fn(),
   revalidatePath: vi.fn(),
@@ -67,6 +71,7 @@ interface CancelSaleHarness {
 const resolveMocks = async () => {
   const sessionModule = await import("@/lib/session");
   const appSessionModule = await import("@/lib/app-session");
+  const auditLogModule = await import("@/lib/audit-log");
   const dbModule = await import("@/db");
   const cache = await import("next/cache");
 
@@ -80,6 +85,7 @@ const resolveMocks = async () => {
       };
       transaction: MockFn;
     },
+    mockRecordAuditEvent: auditLogModule.recordAuditEvent as MockFn,
     mockRefresh: cache.refresh as MockFn,
     mockRequireAppContext: appSessionModule.requireAppContext as MockFn,
     mockSession: sessionModule.getSession as MockFn,
@@ -87,7 +93,10 @@ const resolveMocks = async () => {
   };
 };
 
-const createSalesHarness = (productsState: ProductState[]): SalesHarness => {
+const createSalesHarness = (
+  productsState: ProductState[],
+  options: { loseStockUpdate?: boolean } = {}
+): SalesHarness => {
   const productById = new Map(
     productsState.map((product) => [product.id, { ...product }])
   );
@@ -151,17 +160,25 @@ const createSalesHarness = (productsState: ProductState[]): SalesHarness => {
               throw new Error("Tabela de update nao suportada no teste.");
             }
 
-            for (const product of productById.values()) {
-              if (
-                typeof payload.stock === "number" &&
-                payload.stock <= product.stock
-              ) {
-                product.stock = payload.stock;
-                break;
-              }
-            }
+            return {
+              returning: () => {
+                if (options.loseStockUpdate) {
+                  return [];
+                }
 
-            return Promise.resolve([]);
+                for (const product of productById.values()) {
+                  if (
+                    typeof payload.stock === "number" &&
+                    payload.stock <= product.stock
+                  ) {
+                    product.stock = payload.stock;
+                    return [{ id: product.id }];
+                  }
+                }
+
+                return [];
+              },
+            };
           },
         }),
       }),
@@ -187,6 +204,8 @@ const createCancelSaleHarness = (params: {
     productId: string;
     quantity: number;
   }>;
+  loseSaleStatusUpdate?: boolean;
+  loseStockUpdate?: boolean;
   productsState: ProductState[];
   saleStatus?: "cancelled" | "completed";
 }): CancelSaleHarness => {
@@ -260,18 +279,37 @@ const createCancelSaleHarness = (params: {
                 throw new Error("Cancelamento deve atualizar o estoque.");
               }
 
-              product.stock = payload.stock;
-              productUpdateCount += 1;
-              return Promise.resolve([]);
+              return {
+                returning: () => {
+                  productUpdateCount += 1;
+
+                  if (params.loseStockUpdate) {
+                    return [];
+                  }
+
+                  product.stock = payload.stock;
+                  return [{ id: product.id }];
+                },
+              };
             }
 
             if ("status" in payload || "cancelledAt" in payload) {
-              state.saleStatus = payload.status as "cancelled" | "completed";
-              state.cancelledAt =
-                payload.cancelledAt instanceof Date
-                  ? payload.cancelledAt
-                  : null;
-              return Promise.resolve([]);
+              return {
+                returning: () => {
+                  if (params.loseSaleStatusUpdate) {
+                    return [];
+                  }
+
+                  state.saleStatus = payload.status as
+                    | "cancelled"
+                    | "completed";
+                  state.cancelledAt =
+                    payload.cancelledAt instanceof Date
+                      ? payload.cancelledAt
+                      : null;
+                  return [{ id: "sale-1" }];
+                },
+              };
             }
 
             throw new Error("Tabela de update nao suportada no teste.");
@@ -398,6 +436,46 @@ describe("sales server actions", () => {
 
     expect(mockDb.transaction).not.toHaveBeenCalled();
     expect(mockUpdateTag).not.toHaveBeenCalled();
+  });
+
+  it("returns the existing sale when a concurrent idempotency insert wins first", async () => {
+    const { createSaleAction } = await import("@/app/(app)/vendas/actions");
+    const { mockDb, mockRecordAuditEvent, mockRefresh, mockUpdateTag } =
+      await resolveMocks();
+
+    mockDb.query.sales.findFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ id: "sale-existing" });
+    mockDb.transaction.mockRejectedValueOnce(
+      Object.assign(
+        new Error("duplicate key value violates unique constraint"),
+        {
+          code: "23505",
+          constraint: "sales_organization_idempotency_key_unique_idx",
+        }
+      )
+    );
+
+    await expect(
+      createSaleAction({
+        idempotencyKey: "550e8400-e29b-41d4-a716-446655440000",
+        items: [
+          {
+            expectedUnitPrice: 90,
+            productId: "product-1",
+            quantity: 1,
+          },
+        ],
+        occurredOn: "2026-03-31",
+        paymentFeePayer: "not_applicable",
+        paymentInstallments: 0,
+        paymentMethod: "pix",
+      })
+    ).resolves.toBe("sale-existing");
+
+    expect(mockUpdateTag).not.toHaveBeenCalled();
+    expect(mockRefresh).not.toHaveBeenCalled();
+    expect(mockRecordAuditEvent).not.toHaveBeenCalled();
   });
 
   it("serializes concurrent sales and blocks negative stock", async () => {
@@ -674,6 +752,49 @@ describe("sales server actions", () => {
     expect(harness.productById.get("product-1")?.stock).toBe(10);
   });
 
+  it("does not audit or revalidate when sale stock update is lost", async () => {
+    const { createSaleAction } = await import("@/app/(app)/vendas/actions");
+    const { mockDb, mockRecordAuditEvent, mockRefresh, mockUpdateTag } =
+      await resolveMocks();
+
+    const harness = createSalesHarness(
+      [
+        {
+          archivedAt: null,
+          costPrice: 50,
+          id: "product-1",
+          name: "Produto 1",
+          price: 90,
+          stock: 5,
+        },
+      ],
+      { loseStockUpdate: true }
+    );
+
+    mockDb.transaction.mockImplementation(harness.transaction as never);
+
+    await expect(
+      createSaleAction({
+        items: [
+          {
+            expectedUnitPrice: 90,
+            productId: "product-1",
+            quantity: 1,
+          },
+        ],
+        occurredOn: "2026-03-31",
+        paymentFeePayer: "not_applicable",
+        paymentInstallments: 0,
+        paymentMethod: "pix",
+      })
+    ).rejects.toThrow("Produto nao encontrado.");
+
+    expect(harness.productById.get("product-1")?.stock).toBe(5);
+    expect(mockUpdateTag).not.toHaveBeenCalled();
+    expect(mockRefresh).not.toHaveBeenCalled();
+    expect(mockRecordAuditEvent).not.toHaveBeenCalled();
+  });
+
   it("cancels a sale and restores stock", async () => {
     const { cancelSaleAction } = await import("@/app/(app)/vendas/actions");
     const { mockDb, mockRefresh, mockUpdateTag } = await resolveMocks();
@@ -708,5 +829,80 @@ describe("sales server actions", () => {
       buildOrganizationCacheTags("org_dg_imports").analytics
     );
     expect(mockRefresh).toHaveBeenCalled();
+  });
+
+  it("does not audit or revalidate when cancellation stock restore is lost", async () => {
+    const { cancelSaleAction } = await import("@/app/(app)/vendas/actions");
+    const { mockDb, mockRecordAuditEvent, mockRefresh, mockUpdateTag } =
+      await resolveMocks();
+
+    const harness = createCancelSaleHarness({
+      items: [
+        {
+          productId: "product-1",
+          quantity: 2,
+        },
+      ],
+      loseStockUpdate: true,
+      productsState: [
+        {
+          archivedAt: null,
+          costPrice: 50,
+          id: "product-1",
+          name: "Produto 1",
+          price: 90,
+          stock: 3,
+        },
+      ],
+    });
+
+    mockDb.transaction.mockImplementation(harness.transaction as never);
+
+    await expect(cancelSaleAction("sale-1")).rejects.toThrow(
+      "Produto nao encontrado para estorno."
+    );
+
+    expect(harness.productById.get("product-1")?.stock).toBe(3);
+    expect(harness.state.saleStatus).toBe("completed");
+    expect(mockUpdateTag).not.toHaveBeenCalled();
+    expect(mockRefresh).not.toHaveBeenCalled();
+    expect(mockRecordAuditEvent).not.toHaveBeenCalled();
+  });
+
+  it("does not audit or revalidate when the final sale cancellation update is lost", async () => {
+    const { cancelSaleAction } = await import("@/app/(app)/vendas/actions");
+    const { mockDb, mockRecordAuditEvent, mockRefresh, mockUpdateTag } =
+      await resolveMocks();
+
+    const harness = createCancelSaleHarness({
+      items: [
+        {
+          productId: "product-1",
+          quantity: 2,
+        },
+      ],
+      loseSaleStatusUpdate: true,
+      productsState: [
+        {
+          archivedAt: null,
+          costPrice: 50,
+          id: "product-1",
+          name: "Produto 1",
+          price: 90,
+          stock: 3,
+        },
+      ],
+    });
+
+    mockDb.transaction.mockImplementation(harness.transaction as never);
+
+    await expect(cancelSaleAction("sale-1")).rejects.toThrow(
+      "Venda nao encontrada."
+    );
+
+    expect(harness.state.saleStatus).toBe("completed");
+    expect(mockUpdateTag).not.toHaveBeenCalled();
+    expect(mockRefresh).not.toHaveBeenCalled();
+    expect(mockRecordAuditEvent).not.toHaveBeenCalled();
   });
 });

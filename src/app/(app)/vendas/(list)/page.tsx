@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { SalesPanel } from "@/components/sales/sales-panel";
 import { getCatalogSettings } from "@/features/catalog/server";
 import { resolveSalesDateRange } from "@/features/sales/date-range";
+import { getSaleProductsQuery, getSalesQuery } from "@/features/sales/queries";
 import { getSalesAnalytics, getSalesDateBounds } from "@/features/sales/server";
 import { requirePageAppContext } from "@/lib/app-session";
-import { getSaleProductsQuery, getSalesQuery } from "../queries";
 
 export const metadata: Metadata = {
   title: "Vendas | Polaris",

@@ -34,6 +34,12 @@ const { authContext, serverEnvMock } = vi.hoisted(() => ({
   },
 }));
 
+const { rateLimitMocks } = vi.hoisted(() => ({
+  rateLimitMocks: {
+    checkRateLimit: vi.fn(),
+  },
+}));
+
 vi.mock("@/lib/env", () => ({
   serverEnv: serverEnvMock,
 }));
@@ -42,6 +48,11 @@ vi.mock("@/lib/auth", () => ({
   auth: {
     $context: Promise.resolve(authContext),
   },
+}));
+
+vi.mock("@/lib/rate-limit", () => ({
+  checkRateLimit: rateLimitMocks.checkRateLimit,
+  getRateLimitKeyFromRequest: vi.fn(() => "bootstrap:127.0.0.1"),
 }));
 
 describe("POST /api/auth/dev/bootstrap-session", () => {
@@ -60,6 +71,12 @@ describe("POST /api/auth/dev/bootstrap-session", () => {
     authContext.internalAdapter.createSession.mockResolvedValue({
       id: "session-1",
       token: "session-token",
+    });
+    rateLimitMocks.checkRateLimit.mockReset();
+    rateLimitMocks.checkRateLimit.mockResolvedValue({
+      ok: true,
+      remaining: 10,
+      resetAt: Date.now() + 60_000,
     });
   });
 
@@ -157,6 +174,34 @@ describe("POST /api/auth/dev/bootstrap-session", () => {
     );
 
     expect(response.status).toBe(503);
+  });
+
+  it("returns 429 with Retry-After when the bootstrap rate limit is exceeded", async () => {
+    rateLimitMocks.checkRateLimit.mockResolvedValueOnce({
+      ok: false,
+      resetAt: Date.now() + 20_000,
+      retryAfterSeconds: 20,
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/auth/dev/bootstrap-session", {
+        body: JSON.stringify({
+          email: "user@example.com",
+          name: "User",
+        }),
+        headers: {
+          Authorization: "Bearer wrong",
+        },
+        method: "POST",
+      })
+    );
+
+    await expect(response.json()).resolves.toEqual({
+      error: "Muitas tentativas. Tente novamente em instantes.",
+    });
+    expect(response.status).toBe(429);
+    expect(response.headers.get("retry-after")).toBe("20");
+    expect(authContext.internalAdapter.findUserByEmail).not.toHaveBeenCalled();
   });
 
   it("creates a session cookie when the environment and secret are valid", async () => {

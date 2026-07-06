@@ -31,9 +31,51 @@ interface LockedSaleRow extends Record<string, unknown> {
   status: "cancelled" | "completed";
 }
 
+const SALES_IDEMPOTENCY_CONSTRAINT =
+  "sales_organization_idempotency_key_unique_idx";
+
 const revalidateSalesViews = (organizationId: string) => {
   updateTag(buildOrganizationCacheTags(organizationId).analytics);
   refresh();
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const isIdempotencyConflict = (error: unknown): boolean => {
+  if (!isRecord(error)) {
+    return false;
+  }
+
+  if (
+    error.code === "23505" &&
+    error.constraint === SALES_IDEMPOTENCY_CONSTRAINT
+  ) {
+    return true;
+  }
+
+  return isIdempotencyConflict(error.cause);
+};
+
+const findExistingSaleByIdempotencyKey = async (
+  organizationId: string,
+  idempotencyKey: string | undefined
+): Promise<string | null> => {
+  if (!idempotencyKey) {
+    return null;
+  }
+
+  const existingSale = await db.query.sales.findFirst({
+    columns: {
+      id: true,
+    },
+    where: and(
+      eq(sales.organizationId, organizationId),
+      eq(sales.idempotencyKey, idempotencyKey)
+    ),
+  });
+
+  return existingSale?.id ?? null;
 };
 
 const lockProductsForUpdate = async (
@@ -86,167 +128,182 @@ export async function createSaleAction(data: {
 }): Promise<string> {
   const context = await requireAppContext("sales:write");
   const parsed = createSaleSchema.parse(data);
-  if (parsed.idempotencyKey) {
-    const existingSale = await db.query.sales.findFirst({
-      columns: {
-        id: true,
-      },
-      where: and(
-        eq(sales.organizationId, context.organizationId),
-        eq(sales.idempotencyKey, parsed.idempotencyKey)
-      ),
-    });
+  const existingSaleId = await findExistingSaleByIdempotencyKey(
+    context.organizationId,
+    parsed.idempotencyKey
+  );
 
-    if (existingSale) {
-      return existingSale.id;
-    }
+  if (existingSaleId) {
+    return existingSaleId;
   }
 
   const catalogSettings = await getCatalogSettings(context.organizationId);
 
-  const createdSaleId = await db.transaction(async (tx) => {
-    const productIds = parsed.items
-      .map((item) => item.productId)
-      .sort((left, right) => left.localeCompare(right));
+  let createdSaleId: string;
 
-    const lockedProducts = await lockProductsForUpdate(
-      tx,
-      context.organizationId,
-      productIds
-    );
+  try {
+    createdSaleId = await db.transaction(async (tx) => {
+      const productIds = parsed.items
+        .map((item) => item.productId)
+        .sort((left, right) => left.localeCompare(right));
 
-    if (lockedProducts.length !== productIds.length) {
-      throw new Error("Um ou mais produtos nao foram encontrados.");
-    }
+      const lockedProducts = await lockProductsForUpdate(
+        tx,
+        context.organizationId,
+        productIds
+      );
 
-    const productById = new Map(
-      lockedProducts.map((product) => [product.id, product])
-    );
+      if (lockedProducts.length !== productIds.length) {
+        throw new Error("Um ou mais produtos nao foram encontrados.");
+      }
 
-    const snapshot = buildSaleSnapshot(
-      parsed.items.map((item) => {
+      const productById = new Map(
+        lockedProducts.map((product) => [product.id, product])
+      );
+
+      const snapshot = buildSaleSnapshot(
+        parsed.items.map((item) => {
+          const product = productById.get(item.productId);
+
+          if (!product) {
+            throw new Error("Produto nao encontrado.");
+          }
+
+          if (product.archivedAt) {
+            throw new Error(
+              `Produto arquivado nao pode ser vendido: ${product.name}.`
+            );
+          }
+
+          if (item.quantity > product.stock) {
+            throw new Error(`Estoque insuficiente para ${product.name}.`);
+          }
+
+          if (toCurrencyString(item.expectedUnitPrice) !== product.price) {
+            throw new Error(
+              `Preco do produto ${product.name} foi atualizado para ${formatCurrency(product.price)}. Revise a venda e tente novamente.`
+            );
+          }
+
+          return {
+            productId: item.productId,
+            productNameSnapshot: product.name,
+            quantity: item.quantity,
+            unitCostSnapshot: Number(product.costPrice),
+            unitPriceSnapshot: Number(product.price),
+          };
+        })
+      );
+      const installmentFeePercent =
+        parsed.paymentMethod === "card"
+          ? findCardInstallmentRule(
+              catalogSettings.cardInstallmentRules,
+              parsed.paymentInstallments
+            )?.feePercent
+          : 0;
+
+      if (
+        parsed.paymentMethod === "card" &&
+        installmentFeePercent === undefined
+      ) {
+        throw new Error(
+          "O parcelamento selecionado nao esta mais disponivel. Revise a venda."
+        );
+      }
+
+      const financials = calculateSaleFinancials({
+        additionalAmount: parsed.additionalAmount,
+        discountAmount: parsed.discountAmount,
+        freightAmount: parsed.freightAmount,
+        installmentFeePercent: installmentFeePercent ?? 0,
+        itemSubtotal: snapshot.totalAmount,
+        paymentFeePayer: parsed.paymentFeePayer,
+        paymentInstallments: parsed.paymentInstallments,
+        paymentMethod: parsed.paymentMethod,
+      });
+
+      if (financials.totalAmount < 0) {
+        throw new Error(
+          "Desconto nao pode ser maior que o subtotal somado com frete e adicional."
+        );
+      }
+
+      const [createdSale] = await tx
+        .insert(sales)
+        .values({
+          additionalAmount: toCurrencyString(parsed.additionalAmount),
+          chargedAmount: toCurrencyString(financials.chargedAmount),
+          customerName: parsed.customerName || undefined,
+          discountAmount: toCurrencyString(parsed.discountAmount),
+          feeAmount: toCurrencyString(financials.feeAmount),
+          freightAmount: toCurrencyString(parsed.freightAmount),
+          idempotencyKey: parsed.idempotencyKey,
+          notes: parsed.notes || undefined,
+          occurredOn: parsed.occurredOn,
+          organizationId: context.organizationId,
+          paymentFeePayer: parsed.paymentFeePayer,
+          paymentFeePercent: toCurrencyString(financials.paymentFeePercent),
+          paymentInstallments: parsed.paymentInstallments,
+          paymentMethod: parsed.paymentMethod,
+          status: "completed",
+          totalAmount: toCurrencyString(financials.totalAmount),
+        })
+        .returning({ id: sales.id });
+
+      await tx.insert(saleItems).values(
+        snapshot.items.map((item) => ({
+          lineTotal: toCurrencyString(item.lineTotal),
+          organizationId: context.organizationId,
+          productId: item.productId,
+          productNameSnapshot: item.productNameSnapshot,
+          quantity: item.quantity,
+          saleId: createdSale.id,
+          unitCostSnapshot: toCurrencyString(item.unitCostSnapshot),
+          unitPriceSnapshot: toCurrencyString(item.unitPriceSnapshot),
+        }))
+      );
+
+      for (const item of snapshot.items) {
         const product = productById.get(item.productId);
 
         if (!product) {
           throw new Error("Produto nao encontrado.");
         }
 
-        if (product.archivedAt) {
-          throw new Error(
-            `Produto arquivado nao pode ser vendido: ${product.name}.`
-          );
+        const updatedProductRows = await tx
+          .update(products)
+          .set({
+            stock: product.stock - item.quantity,
+          })
+          .where(
+            and(
+              eq(products.id, item.productId),
+              eq(products.organizationId, context.organizationId)
+            )
+          )
+          .returning({ id: products.id });
+
+        if (updatedProductRows.length === 0) {
+          throw new Error("Produto nao encontrado.");
         }
-
-        if (item.quantity > product.stock) {
-          throw new Error(`Estoque insuficiente para ${product.name}.`);
-        }
-
-        if (toCurrencyString(item.expectedUnitPrice) !== product.price) {
-          throw new Error(
-            `Preco do produto ${product.name} foi atualizado para ${formatCurrency(product.price)}. Revise a venda e tente novamente.`
-          );
-        }
-
-        return {
-          productId: item.productId,
-          productNameSnapshot: product.name,
-          quantity: item.quantity,
-          unitCostSnapshot: Number(product.costPrice),
-          unitPriceSnapshot: Number(product.price),
-        };
-      })
-    );
-    const installmentFeePercent =
-      parsed.paymentMethod === "card"
-        ? findCardInstallmentRule(
-            catalogSettings.cardInstallmentRules,
-            parsed.paymentInstallments
-          )?.feePercent
-        : 0;
-
-    if (
-      parsed.paymentMethod === "card" &&
-      installmentFeePercent === undefined
-    ) {
-      throw new Error(
-        "O parcelamento selecionado nao esta mais disponivel. Revise a venda."
-      );
-    }
-
-    const financials = calculateSaleFinancials({
-      additionalAmount: parsed.additionalAmount,
-      discountAmount: parsed.discountAmount,
-      freightAmount: parsed.freightAmount,
-      installmentFeePercent: installmentFeePercent ?? 0,
-      itemSubtotal: snapshot.totalAmount,
-      paymentFeePayer: parsed.paymentFeePayer,
-      paymentInstallments: parsed.paymentInstallments,
-      paymentMethod: parsed.paymentMethod,
-    });
-
-    if (financials.totalAmount < 0) {
-      throw new Error(
-        "Desconto nao pode ser maior que o subtotal somado com frete e adicional."
-      );
-    }
-
-    const [createdSale] = await tx
-      .insert(sales)
-      .values({
-        additionalAmount: toCurrencyString(parsed.additionalAmount),
-        chargedAmount: toCurrencyString(financials.chargedAmount),
-        customerName: parsed.customerName || undefined,
-        discountAmount: toCurrencyString(parsed.discountAmount),
-        feeAmount: toCurrencyString(financials.feeAmount),
-        freightAmount: toCurrencyString(parsed.freightAmount),
-        idempotencyKey: parsed.idempotencyKey,
-        notes: parsed.notes || undefined,
-        occurredOn: parsed.occurredOn,
-        organizationId: context.organizationId,
-        paymentFeePayer: parsed.paymentFeePayer,
-        paymentFeePercent: toCurrencyString(financials.paymentFeePercent),
-        paymentInstallments: parsed.paymentInstallments,
-        paymentMethod: parsed.paymentMethod,
-        status: "completed",
-        totalAmount: toCurrencyString(financials.totalAmount),
-      })
-      .returning({ id: sales.id });
-
-    await tx.insert(saleItems).values(
-      snapshot.items.map((item) => ({
-        lineTotal: toCurrencyString(item.lineTotal),
-        organizationId: context.organizationId,
-        productId: item.productId,
-        productNameSnapshot: item.productNameSnapshot,
-        quantity: item.quantity,
-        saleId: createdSale.id,
-        unitCostSnapshot: toCurrencyString(item.unitCostSnapshot),
-        unitPriceSnapshot: toCurrencyString(item.unitPriceSnapshot),
-      }))
-    );
-
-    for (const item of snapshot.items) {
-      const product = productById.get(item.productId);
-
-      if (!product) {
-        throw new Error("Produto nao encontrado.");
       }
 
-      await tx
-        .update(products)
-        .set({
-          stock: product.stock - item.quantity,
-        })
-        .where(
-          and(
-            eq(products.id, item.productId),
-            eq(products.organizationId, context.organizationId)
-          )
-        );
+      return createdSale.id;
+    });
+  } catch (error) {
+    if (isIdempotencyConflict(error)) {
+      const concurrentSaleId = await findExistingSaleByIdempotencyKey(
+        context.organizationId,
+        parsed.idempotencyKey
+      );
+
+      if (concurrentSaleId) {
+        return concurrentSaleId;
+      }
     }
 
-    return createdSale.id;
-  });
+    throw error;
+  }
 
   revalidateSalesViews(context.organizationId);
   await recordAuditEvent({
@@ -328,7 +385,7 @@ export async function cancelSaleAction(id: string) {
         throw new Error("Produto nao encontrado para estorno.");
       }
 
-      await tx
+      const updatedProductRows = await tx
         .update(products)
         .set({
           stock: product.stock + Number(item.quantity),
@@ -338,10 +395,15 @@ export async function cancelSaleAction(id: string) {
             eq(products.id, item.productId),
             eq(products.organizationId, context.organizationId)
           )
-        );
+        )
+        .returning({ id: products.id });
+
+      if (updatedProductRows.length === 0) {
+        throw new Error("Produto nao encontrado para estorno.");
+      }
     }
 
-    await tx
+    const cancelledRows = await tx
       .update(sales)
       .set({
         cancelledAt: new Date(),
@@ -349,7 +411,12 @@ export async function cancelSaleAction(id: string) {
       })
       .where(
         and(eq(sales.id, id), eq(sales.organizationId, context.organizationId))
-      );
+      )
+      .returning({ id: sales.id });
+
+    if (cancelledRows.length === 0) {
+      throw new Error("Venda nao encontrada.");
+    }
   });
 
   revalidateSalesViews(context.organizationId);

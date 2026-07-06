@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { loadMoreSalesAction } from "@/app/(app)/vendas/pagination";
-import type { SaleStatusFilter } from "@/app/(app)/vendas/queries";
 import { DashboardDateRangeFilter } from "@/components/dashboard/dashboard-date-range-filter";
 import { CreateSaleDialog } from "@/components/sales/create-sale-dialog";
 import { PaymentMethodChart } from "@/components/sales/payment-method-chart";
@@ -22,6 +21,7 @@ import {
 } from "@/components/ui/card";
 import { Empty } from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -30,6 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { toast } from "@/components/ui/sonner";
 import {
   Table,
   TableBody,
@@ -42,6 +43,7 @@ import type { CardInstallmentRule } from "@/features/catalog/payment-rules";
 import type {
   SaleListItem,
   SaleProductOption,
+  SaleStatusFilter,
   SalesAnalytics,
 } from "@/features/sales/contracts";
 import {
@@ -360,6 +362,12 @@ export function SalesPanel({
       });
       setCursor(result.nextCursor);
       cursorRef.current = result.nextCursor;
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Nao foi possivel carregar mais vendas."
+      );
     } finally {
       setLoadingMore(false);
     }
@@ -395,8 +403,12 @@ export function SalesPanel({
               applyFilters({});
             }}
           >
+            <Label className="sr-only" htmlFor="sales-search">
+              Buscar vendas
+            </Label>
             <Input
               className="w-full sm:w-80"
+              id="sales-search"
               onChange={(event) => setSearchTerm(event.target.value)}
               placeholder="Buscar por cliente ou ID da venda"
               value={searchTerm}
@@ -417,7 +429,11 @@ export function SalesPanel({
             }
             value={status}
           >
-            <SelectTrigger className="w-full sm:w-48">
+            <SelectTrigger
+              aria-label="Filtrar vendas por status"
+              className="w-full sm:w-48"
+              id="sales-status-filter"
+            >
               <SelectValue placeholder="Filtrar status" />
             </SelectTrigger>
             <SelectContent>

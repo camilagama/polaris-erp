@@ -81,7 +81,12 @@ export const GET = async (request: NextRequest) => {
   if (!rateLimit.ok) {
     return Response.json(
       { error: "Muitas tentativas de login. Tente novamente em instantes." },
-      { status: 429 }
+      {
+        headers: {
+          "Retry-After": rateLimit.retryAfterSeconds.toString(),
+        },
+        status: 429,
+      }
     );
   }
 

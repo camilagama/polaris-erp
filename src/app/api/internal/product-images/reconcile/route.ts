@@ -28,7 +28,12 @@ async function reconcile(request: Request): Promise<Response> {
   if (!rateLimit.ok) {
     return Response.json(
       { error: "Muitas tentativas. Tente novamente em instantes." },
-      { status: 429 }
+      {
+        headers: {
+          "Retry-After": rateLimit.retryAfterSeconds.toString(),
+        },
+        status: 429,
+      }
     );
   }
 

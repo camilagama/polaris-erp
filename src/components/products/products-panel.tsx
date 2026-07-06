@@ -18,7 +18,6 @@ import {
   updateProductAction,
 } from "@/app/(app)/produtos/actions";
 import { loadMoreProductsAction } from "@/app/(app)/produtos/pagination";
-import type { ProductStatusFilter } from "@/app/(app)/produtos/queries";
 import { ProductEditFields } from "@/components/products/product-edit-fields";
 import { ProductImageFrame } from "@/components/products/product-image-frame";
 import { uploadProductImageToStaging } from "@/components/products/product-image-upload";
@@ -40,6 +39,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Empty } from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import {
   Sheet,
@@ -61,6 +61,7 @@ import {
 import type {
   ProductAnalytics,
   ProductListItem,
+  ProductStatusFilter,
 } from "@/features/products/contracts";
 import { canRolePerform, type OrganizationRole } from "@/lib/app-context";
 import { formatCurrency } from "@/lib/formatters";
@@ -369,6 +370,12 @@ export function ProductsPanel({
       });
       setCursor(result.nextCursor);
       cursorRef.current = result.nextCursor;
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Nao foi possivel carregar mais produtos."
+      );
     } finally {
       setLoadingMore(false);
     }
@@ -489,8 +496,12 @@ export function ProductsPanel({
               applyFilters({});
             }}
           >
+            <Label className="sr-only" htmlFor="products-search">
+              Buscar produtos
+            </Label>
             <Input
               className="w-full sm:w-80"
+              id="products-search"
               onChange={(event) => setSearchTerm(event.target.value)}
               placeholder="Buscar por nome ou categoria"
               value={searchTerm}

@@ -38,9 +38,22 @@ export async function POST(request: Request) {
   });
 
   if (!(ipRateLimit.ok && userRateLimit.ok)) {
+    let retryAfterSeconds = 1;
+
+    if (!ipRateLimit.ok) {
+      retryAfterSeconds = ipRateLimit.retryAfterSeconds;
+    } else if (!userRateLimit.ok) {
+      retryAfterSeconds = userRateLimit.retryAfterSeconds;
+    }
+
     return Response.json(
       { error: "Muitas tentativas de upload. Tente novamente em instantes." },
-      { status: 429 }
+      {
+        headers: {
+          "Retry-After": retryAfterSeconds.toString(),
+        },
+        status: 429,
+      }
     );
   }
 
@@ -55,7 +68,10 @@ export async function POST(request: Request) {
   }
 
   try {
-    const objectKey = createStagingObjectKey(session.user.id);
+    const objectKey = createStagingObjectKey(
+      context.organizationId,
+      session.user.id
+    );
     const presigned = await createPresignedProductImageUpload({
       contentType: parsed.data.contentType,
       objectKey,

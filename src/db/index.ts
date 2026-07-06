@@ -24,7 +24,7 @@ const getPool = () => {
   return pool;
 };
 
-export const getDb = (): Database => {
+const getDb = (): Database => {
   if (!database) {
     database = drizzle(getPool(), { schema });
   }
