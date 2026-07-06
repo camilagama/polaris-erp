@@ -1,5 +1,6 @@
 import { captureRequestError, init } from "@sentry/nextjs";
 import type { Instrumentation } from "next";
+import { getSentrySamplingConfig } from "@/lib/sentry-config";
 
 function initSentryServer(): void {
   const dsn = process.env.SENTRY_DSN;
@@ -11,14 +12,17 @@ function initSentryServer(): void {
     dsn,
     environment:
       process.env.VERCEL_ENV ?? process.env.NODE_ENV ?? "development",
-    tracesSampleRate: 0,
+    enableLogs: true,
+    tracesSampleRate: getSentrySamplingConfig({
+      nodeEnv: process.env.NODE_ENV,
+      tracesSampleRate: process.env.SENTRY_TRACES_SAMPLE_RATE,
+    }).tracesSampleRate,
   });
 }
 
 export function register(): void {
   if (process.env.NEXT_RUNTIME === "nodejs") {
     initSentryServer();
-    console.info("[dgimports] instrumentation register (nodejs)");
   }
 
   if (process.env.NEXT_RUNTIME === "edge") {

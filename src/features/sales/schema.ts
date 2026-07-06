@@ -32,6 +32,7 @@ export const createSaleSchema = z
       .number()
       .min(0, "Frete nao pode ser negativo.")
       .default(0),
+    idempotencyKey: z.string().uuid("Chave de venda invalida.").optional(),
     items: z
       .array(saleItemSchema)
       .min(1, "Adicione pelo menos um item na venda."),

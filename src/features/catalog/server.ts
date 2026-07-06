@@ -125,12 +125,17 @@ export const updateCategory = async (
     throw new Error("A categoria Outros e protegida pelo sistema.");
   }
 
-  await db
+  const updatedRows = await db
     .update(categories)
     .set(parsed)
     .where(
       and(eq(categories.id, id), eq(categories.organizationId, organizationId))
-    );
+    )
+    .returning({ id: categories.id });
+
+  if (updatedRows.length === 0) {
+    throw new Error("Categoria nao encontrada.");
+  }
 };
 
 export const deleteCategory = async (organizationId: string, id: string) => {
@@ -167,11 +172,16 @@ export const deleteCategory = async (organizationId: string, id: string) => {
     );
   }
 
-  await db
+  const deletedRows = await db
     .delete(categories)
     .where(
       and(eq(categories.id, id), eq(categories.organizationId, organizationId))
-    );
+    )
+    .returning({ id: categories.id });
+
+  if (deletedRows.length === 0) {
+    throw new Error("Categoria nao encontrada.");
+  }
 };
 
 export const saveCatalogSettings = async (

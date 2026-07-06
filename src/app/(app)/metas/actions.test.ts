@@ -17,10 +17,15 @@ vi.mock("@/features/goals/server", () => ({
   updateGoal: vi.fn(),
 }));
 
+vi.mock("@/lib/audit-log", () => ({
+  recordAuditEvent: vi.fn(),
+}));
+
 type MockFn = ReturnType<typeof vi.fn>;
 
 const resolveMocks = async () => {
   const auth = await import("@/lib/app-session");
+  const auditLog = await import("@/lib/audit-log");
   const goalsServer = await import("@/features/goals/server");
   const cache = await import("next/cache");
 
@@ -28,6 +33,7 @@ const resolveMocks = async () => {
     mockArchiveGoal: goalsServer.archiveGoal as MockFn,
     mockCreateGoal: goalsServer.createGoal as MockFn,
     mockRefresh: cache.refresh as MockFn,
+    mockRecordAuditEvent: auditLog.recordAuditEvent as MockFn,
     mockRequireAppContext: auth.requireAppContext as MockFn,
     mockUnarchiveGoal: goalsServer.unarchiveGoal as MockFn,
     mockUpdateGoal: goalsServer.updateGoal as MockFn,
@@ -135,6 +141,68 @@ describe("metas server actions", () => {
     expect(mockRefresh).toHaveBeenCalled();
   });
 
+  it("does not audit or refresh when goal update is rejected", async () => {
+    const {
+      mockRecordAuditEvent,
+      mockRefresh,
+      mockRequireAppContext,
+      mockUpdateGoal,
+    } = await resolveMocks();
+
+    mockRequireAppContext.mockResolvedValue({
+      organizationId: "org_dg_imports",
+      role: "admin",
+      userId: "user-1",
+    });
+    mockUpdateGoal.mockRejectedValue(
+      new Error("Meta nao encontrada ou nao esta ativa.")
+    );
+
+    const { updateGoalAction } = await import("@/app/(app)/metas/actions");
+
+    await expect(
+      updateGoalAction({
+        displayMode: "percentage",
+        id: "550e8400-e29b-41d4-a716-446655440000",
+        metric: "revenue",
+        name: "A",
+        periodEnd: "2025-06-30",
+        periodStart: "2025-06-01",
+        targetValue: 100,
+      })
+    ).rejects.toThrow("Meta nao encontrada ou nao esta ativa.");
+
+    expect(mockRefresh).not.toHaveBeenCalled();
+    expect(mockRecordAuditEvent).not.toHaveBeenCalled();
+  });
+
+  it("does not audit or refresh when goal archive is rejected", async () => {
+    const {
+      mockArchiveGoal,
+      mockRecordAuditEvent,
+      mockRefresh,
+      mockRequireAppContext,
+    } = await resolveMocks();
+
+    mockRequireAppContext.mockResolvedValue({
+      organizationId: "org_dg_imports",
+      role: "admin",
+      userId: "user-1",
+    });
+    mockArchiveGoal.mockRejectedValue(new Error("Meta nao encontrada."));
+
+    const { archiveGoalAction } = await import("@/app/(app)/metas/actions");
+
+    await expect(
+      archiveGoalAction({
+        id: "550e8400-e29b-41d4-a716-446655440000",
+      })
+    ).rejects.toThrow("Meta nao encontrada.");
+
+    expect(mockRefresh).not.toHaveBeenCalled();
+    expect(mockRecordAuditEvent).not.toHaveBeenCalled();
+  });
+
   it("unarchives a goal after authentication", async () => {
     const { mockRefresh, mockRequireAppContext, mockUnarchiveGoal } =
       await resolveMocks();
@@ -156,5 +224,32 @@ describe("metas server actions", () => {
       "550e8400-e29b-41d4-a716-446655440000"
     );
     expect(mockRefresh).toHaveBeenCalled();
+  });
+
+  it("does not audit or refresh when goal unarchive is rejected", async () => {
+    const {
+      mockRecordAuditEvent,
+      mockRefresh,
+      mockRequireAppContext,
+      mockUnarchiveGoal,
+    } = await resolveMocks();
+
+    mockRequireAppContext.mockResolvedValue({
+      organizationId: "org_dg_imports",
+      role: "admin",
+      userId: "user-1",
+    });
+    mockUnarchiveGoal.mockRejectedValue(new Error("Meta nao encontrada."));
+
+    const { unarchiveGoalAction } = await import("@/app/(app)/metas/actions");
+
+    await expect(
+      unarchiveGoalAction({
+        id: "550e8400-e29b-41d4-a716-446655440000",
+      })
+    ).rejects.toThrow("Meta nao encontrada.");
+
+    expect(mockRefresh).not.toHaveBeenCalled();
+    expect(mockRecordAuditEvent).not.toHaveBeenCalled();
   });
 });

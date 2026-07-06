@@ -23,6 +23,10 @@ vi.mock("@/features/products/image-workflow", () => ({
   storeProductImageFromStage: vi.fn(),
 }));
 
+vi.mock("@/lib/audit-log", () => ({
+  recordAuditEvent: vi.fn(),
+}));
+
 vi.mock("next/cache", () => ({
   refresh: vi.fn(),
   revalidatePath: vi.fn(),
@@ -44,6 +48,7 @@ const ISO_DATE_ERROR_REGEX = /ISO YYYY-MM-DD/;
 interface InventoryHarness {
   entryLog: Record<string, unknown>[];
   state: {
+    archivedAt: Date | null;
     costPrice: number;
     stock: number;
   };
@@ -68,6 +73,7 @@ const resolveMocks = async () => {
   const imageWorkflowModule = await import(
     "@/features/products/image-workflow"
   );
+  const auditLogModule = await import("@/lib/audit-log");
   const cache = await import("next/cache");
 
   return {
@@ -81,6 +87,7 @@ const resolveMocks = async () => {
     mockGetProductCategoryById: catalogModule.getProductCategoryById as MockFn,
     mockRefresh: cache.refresh as MockFn,
     mockRequireAppContext: appSessionModule.requireAppContext as MockFn,
+    mockRecordAuditEvent: auditLogModule.recordAuditEvent as MockFn,
     mockSession: sessionModule.getSession as MockFn,
     mockStoreProductImageFromStage:
       imageWorkflowModule.storeProductImageFromStage as MockFn,
@@ -89,10 +96,11 @@ const resolveMocks = async () => {
 };
 
 const createInventoryHarness = (initialState: {
+  archivedAt?: Date | null;
   costPrice: number;
   stock: number;
 }): InventoryHarness => {
-  const state = { ...initialState };
+  const state = { archivedAt: null, ...initialState };
   const entryLog: Record<string, unknown>[] = [];
   const writeOffLog: Record<string, unknown>[] = [];
   let queue = Promise.resolve();
@@ -110,7 +118,7 @@ const createInventoryHarness = (initialState: {
       execute: async () => ({
         rows: [
           {
-            archivedAt: null,
+            archivedAt: state.archivedAt,
             costPrice: state.costPrice.toFixed(2),
             id: "product-1",
             price: "20.00",
@@ -146,6 +154,11 @@ const createInventoryHarness = (initialState: {
 
             if (typeof payload.costPrice === "string") {
               state.costPrice = Number(payload.costPrice);
+            }
+
+            if ("archivedAt" in payload) {
+              state.archivedAt =
+                payload.archivedAt instanceof Date ? payload.archivedAt : null;
             }
 
             return Promise.resolve([]);
@@ -377,6 +390,30 @@ describe("product server actions", () => {
     expect(mockRefresh).toHaveBeenCalledTimes(1);
   });
 
+  it("reactivates an archived product when stock is added", async () => {
+    const { addProductStockAction } = await import(
+      "@/app/(app)/produtos/actions"
+    );
+    const { mockDb } = await resolveMocks();
+
+    const harness = createInventoryHarness({
+      archivedAt: new Date("2026-03-01T00:00:00.000Z"),
+      costPrice: 10,
+      stock: 0,
+    });
+
+    mockDb.transaction.mockImplementation(harness.transaction as never);
+
+    await addProductStockAction("product-1", {
+      quantity: 2,
+      stockedOn: "2026-03-31",
+      unitCost: "14.00",
+    });
+
+    expect(harness.state.archivedAt).toBeNull();
+    expect(harness.state.stock).toBe(2);
+  });
+
   it("creates a product with processed image metadata when a staged image is provided", async () => {
     const { createProductAction } = await import(
       "@/app/(app)/produtos/actions"
@@ -567,6 +604,96 @@ describe("product server actions", () => {
     });
   });
 
+  it("rolls back the new image when replace loses the version race", async () => {
+    const { replaceProductImageAction } = await import(
+      "@/app/(app)/produtos/actions"
+    );
+    const {
+      mockDb,
+      mockDeleteProductImageVersion,
+      mockRecordAuditEvent,
+      mockRefresh,
+      mockStoreProductImageFromStage,
+      mockUpdateTag,
+    } = await resolveMocks();
+
+    mockDb.select.mockReturnValue({
+      from: () => ({
+        where: () => ({
+          limit: async () => [
+            {
+              id: "product-1",
+              imageVersion: 3,
+            },
+          ],
+        }),
+      }),
+    });
+    mockStoreProductImageFromStage.mockResolvedValue({
+      blurDataURL: "data:image/webp;base64,new",
+      height: 900,
+      version: 4,
+      width: 1200,
+    });
+    mockDb.update.mockReturnValue({
+      set: () => ({
+        where: () => ({
+          returning: () => Promise.resolve([]),
+        }),
+      }),
+    });
+
+    await expect(
+      replaceProductImageAction("product-1", {
+        contentType: "image/png",
+        objectKey: "staging/user-1/image-1",
+        size: 128,
+      })
+    ).rejects.toThrow(
+      "Imagem do produto foi atualizada por outra operacao. Recarregue e tente novamente."
+    );
+
+    expect(mockDeleteProductImageVersion).toHaveBeenCalledTimes(1);
+    expect(mockDeleteProductImageVersion).toHaveBeenCalledWith({
+      organizationId: "org_dg_imports",
+      productId: "product-1",
+      version: 4,
+    });
+    expect(mockUpdateTag).not.toHaveBeenCalled();
+    expect(mockRefresh).not.toHaveBeenCalled();
+    expect(mockRecordAuditEvent).not.toHaveBeenCalled();
+  });
+
+  it("does not treat another tenant product as image removal success", async () => {
+    const { removeProductImageAction } = await import(
+      "@/app/(app)/produtos/actions"
+    );
+    const {
+      mockDb,
+      mockDeleteProductImageVersion,
+      mockRecordAuditEvent,
+      mockRefresh,
+      mockUpdateTag,
+    } = await resolveMocks();
+
+    mockDb.select.mockReturnValue({
+      from: () => ({
+        where: () => ({
+          limit: async () => [],
+        }),
+      }),
+    });
+
+    await expect(
+      removeProductImageAction("product-from-other-tenant")
+    ).rejects.toThrow("Produto nao encontrado.");
+
+    expect(mockDeleteProductImageVersion).not.toHaveBeenCalled();
+    expect(mockUpdateTag).not.toHaveBeenCalled();
+    expect(mockRefresh).not.toHaveBeenCalled();
+    expect(mockRecordAuditEvent).not.toHaveBeenCalled();
+  });
+
   it("archives a product by stamping archivedAt", async () => {
     const { archiveProductAction } = await import(
       "@/app/(app)/produtos/actions"
@@ -576,16 +703,42 @@ describe("product server actions", () => {
 
     mockDb.update.mockReturnValue({
       set: (payload: Record<string, unknown>) => ({
-        where: () => {
-          updatePayloads.push(payload);
-          return Promise.resolve([]);
-        },
+        where: () => ({
+          returning: () => {
+            updatePayloads.push(payload);
+            return Promise.resolve([{ id: "product-1" }]);
+          },
+        }),
       }),
     });
 
     await archiveProductAction("product-1");
 
     expect(updatePayloads[0]?.archivedAt).toBeInstanceOf(Date);
+  });
+
+  it("does not audit or revalidate when archive targets another tenant", async () => {
+    const { archiveProductAction } = await import(
+      "@/app/(app)/produtos/actions"
+    );
+    const { mockDb, mockRecordAuditEvent, mockRefresh, mockUpdateTag } =
+      await resolveMocks();
+
+    mockDb.update.mockReturnValue({
+      set: () => ({
+        where: () => ({
+          returning: () => Promise.resolve([]),
+        }),
+      }),
+    });
+
+    await expect(
+      archiveProductAction("product-from-other-tenant")
+    ).rejects.toThrow("Produto nao encontrado.");
+
+    expect(mockUpdateTag).not.toHaveBeenCalled();
+    expect(mockRefresh).not.toHaveBeenCalled();
+    expect(mockRecordAuditEvent).not.toHaveBeenCalled();
   });
 
   it("unarchives a product by clearing archivedAt", async () => {
@@ -597,10 +750,12 @@ describe("product server actions", () => {
 
     mockDb.update.mockReturnValue({
       set: (payload: Record<string, unknown>) => ({
-        where: () => {
-          updatePayloads.push(payload);
-          return Promise.resolve([]);
-        },
+        where: () => ({
+          returning: () => {
+            updatePayloads.push(payload);
+            return Promise.resolve([{ id: "product-1" }]);
+          },
+        }),
       }),
     });
 
@@ -609,5 +764,29 @@ describe("product server actions", () => {
     expect(updatePayloads[0]).toMatchObject({
       archivedAt: null,
     });
+  });
+
+  it("does not audit or revalidate when unarchive targets another tenant", async () => {
+    const { unarchiveProductAction } = await import(
+      "@/app/(app)/produtos/actions"
+    );
+    const { mockDb, mockRecordAuditEvent, mockRefresh, mockUpdateTag } =
+      await resolveMocks();
+
+    mockDb.update.mockReturnValue({
+      set: () => ({
+        where: () => ({
+          returning: () => Promise.resolve([]),
+        }),
+      }),
+    });
+
+    await expect(
+      unarchiveProductAction("product-from-other-tenant")
+    ).rejects.toThrow("Produto nao encontrado.");
+
+    expect(mockUpdateTag).not.toHaveBeenCalled();
+    expect(mockRefresh).not.toHaveBeenCalled();
+    expect(mockRecordAuditEvent).not.toHaveBeenCalled();
   });
 });

@@ -307,9 +307,14 @@ export const deleteProductImageVersion = async ({
   );
 };
 
-export const listAllStoredProductImageKeys = async () => {
+export interface StoredProductImageObject {
+  key: string;
+  lastModified: Date | null;
+}
+
+export const listAllStoredProductImageObjects = async () => {
   const env = getRequiredStorageEnv();
-  const keys: string[] = [];
+  const objects: StoredProductImageObject[] = [];
   let continuationToken: string | undefined;
 
   do {
@@ -323,15 +328,21 @@ export const listAllStoredProductImageKeys = async () => {
 
     for (const item of response.Contents ?? []) {
       if (item.Key) {
-        keys.push(item.Key);
+        objects.push({
+          key: item.Key,
+          lastModified: item.LastModified ?? null,
+        });
       }
     }
 
     continuationToken = response.NextContinuationToken;
   } while (continuationToken);
 
-  return keys;
+  return objects;
 };
+
+export const listAllStoredProductImageKeys = async () =>
+  (await listAllStoredProductImageObjects()).map((object) => object.key);
 
 export const deleteManyProductImageKeys = async (keys: string[]) => {
   const env = getRequiredStorageEnv();

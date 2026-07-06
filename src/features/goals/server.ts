@@ -286,7 +286,7 @@ export const updateGoal = async (
     throw new Error("Meta nao encontrada ou nao esta ativa.");
   }
 
-  await db
+  const updatedRows = await db
     .update(goals)
     .set({
       displayMode: input.displayMode,
@@ -299,7 +299,12 @@ export const updateGoal = async (
     })
     .where(
       and(eq(goals.id, input.id), eq(goals.organizationId, organizationId))
-    );
+    )
+    .returning({ id: goals.id });
+
+  if (updatedRows.length === 0) {
+    throw new Error("Meta nao encontrada ou nao esta ativa.");
+  }
 };
 
 export const archiveGoal = async (
@@ -325,7 +330,7 @@ export const archiveGoal = async (
   });
   const actual = getGoalActualValue(metric, metrics);
 
-  await db
+  const archivedRows = await db
     .update(goals)
     .set({
       resolvedAt: new Date(),
@@ -333,7 +338,12 @@ export const archiveGoal = async (
       status: "archived",
       updatedAt: new Date(),
     })
-    .where(and(eq(goals.id, goalId), eq(goals.organizationId, organizationId)));
+    .where(and(eq(goals.id, goalId), eq(goals.organizationId, organizationId)))
+    .returning({ id: goals.id });
+
+  if (archivedRows.length === 0) {
+    throw new Error("Meta nao encontrada.");
+  }
 };
 
 export const unarchiveGoal = async (
@@ -372,7 +382,7 @@ export const unarchiveGoal = async (
     throw new Error(unarchiveCapacityErrorMessage());
   }
 
-  await db
+  const unarchivedRows = await db
     .update(goals)
     .set({
       resolvedAt: null,
@@ -380,5 +390,10 @@ export const unarchiveGoal = async (
       status: "active",
       updatedAt: new Date(),
     })
-    .where(and(eq(goals.id, goalId), eq(goals.organizationId, organizationId)));
+    .where(and(eq(goals.id, goalId), eq(goals.organizationId, organizationId)))
+    .returning({ id: goals.id });
+
+  if (unarchivedRows.length === 0) {
+    throw new Error("Meta nao encontrada.");
+  }
 };

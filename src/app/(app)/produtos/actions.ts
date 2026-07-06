@@ -284,7 +284,7 @@ export async function replaceProductImageAction(
     return { success: true } as const;
   }
 
-  await db
+  const updatedProducts = await db
     .update(products)
     .set({
       imageBlurDataUrl: storedImage.blurDataURL,
@@ -302,7 +302,19 @@ export async function replaceProductImageAction(
           ? isNull(products.imageVersion)
           : eq(products.imageVersion, oldVersion)
       )
+    )
+    .returning({ id: products.id });
+
+  if (updatedProducts.length === 0) {
+    await deleteProductImageVersion({
+      organizationId: context.organizationId,
+      productId: id,
+      version: storedImage.version,
+    });
+    throw new Error(
+      "Imagem do produto foi atualizada por outra operacao. Recarregue e tente novamente."
     );
+  }
 
   if (oldVersion !== null) {
     await deleteProductImageVersion({
@@ -326,7 +338,11 @@ export async function removeProductImageAction(id: string) {
   const context = await requireAppContext("products:write");
   const product = await getProductImageState(context.organizationId, id);
 
-  if (!product?.imageVersion) {
+  if (!product) {
+    throw new Error("Produto nao encontrado.");
+  }
+
+  if (!product.imageVersion) {
     return { success: true } as const;
   }
 
@@ -396,6 +412,7 @@ export async function addProductStockAction(productId: string, input: unknown) {
     await tx
       .update(products)
       .set({
+        archivedAt: null,
         costPrice: toCurrencyString(nextCostPrice),
         stock: nextStock,
         updatedAt: new Date(),
@@ -479,7 +496,7 @@ export async function writeOffProductStockAction(
 export async function archiveProductAction(id: string) {
   const context = await requireAppContext("products:write");
 
-  await db
+  const archivedProducts = await db
     .update(products)
     .set({ archivedAt: new Date(), updatedAt: new Date() })
     .where(
@@ -487,7 +504,12 @@ export async function archiveProductAction(id: string) {
         eq(products.id, id),
         eq(products.organizationId, context.organizationId)
       )
-    );
+    )
+    .returning({ id: products.id });
+
+  if (archivedProducts.length === 0) {
+    throw new Error("Produto nao encontrado.");
+  }
 
   revalidateCatalogViews(context.organizationId);
   await recordAuditEvent({
@@ -501,7 +523,7 @@ export async function archiveProductAction(id: string) {
 export async function unarchiveProductAction(id: string) {
   const context = await requireAppContext("products:write");
 
-  await db
+  const unarchivedProducts = await db
     .update(products)
     .set({ archivedAt: null, updatedAt: new Date() })
     .where(
@@ -509,7 +531,12 @@ export async function unarchiveProductAction(id: string) {
         eq(products.id, id),
         eq(products.organizationId, context.organizationId)
       )
-    );
+    )
+    .returning({ id: products.id });
+
+  if (unarchivedProducts.length === 0) {
+    throw new Error("Produto nao encontrado.");
+  }
 
   revalidateCatalogViews(context.organizationId);
   await recordAuditEvent({

@@ -8,6 +8,48 @@
       "when": 1783142170268,
       "tag": "20260704051610_initial",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1783346972555,
+      "tag": "20260706140932_groovy_tarantula",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1783347395907,
+      "tag": "20260706141635_solid_photon",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1783347630890,
+      "tag": "20260706142030_magenta_karnak",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1783348956639,
+      "tag": "20260706144236_oval_scorpion",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1783349465730,
+      "tag": "20260706145105_pale_franklin_richards",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1783349693902,
+      "tag": "20260706145453_fluffy_onslaught",
+      "breakpoints": true
     }
   ]
 }

@@ -12,14 +12,6 @@ const isBootstrapEnabled = () => {
     return true;
   }
 
-  if (serverEnv.VERCEL_ENV === "production") {
-    return false;
-  }
-
-  if (serverEnv.NODE_ENV === "production") {
-    return serverEnv.ALLOW_PLAYWRIGHT_BOOTSTRAP === "true";
-  }
-
   return false;
 };
 
@@ -128,7 +120,7 @@ export async function POST(request: Request) {
     return Response.json(
       {
         error:
-          "Bootstrap interno disponivel em development/test ou em build de producao apenas com ALLOW_PLAYWRIGHT_BOOTSTRAP=true (uso exclusivo Playwright local/CI).",
+          "Bootstrap interno disponivel apenas em development/test (uso exclusivo Playwright local/CI).",
       },
       { status: 403 }
     );

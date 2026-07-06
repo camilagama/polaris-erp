@@ -39,12 +39,47 @@ describe("serverEnv", () => {
   it("accepts strong Better Auth secrets in production", async () => {
     stubRequiredEnv({
       BETTER_AUTH_SECRET: "a".repeat(32),
+      CRON_SECRET: "c".repeat(32),
       NODE_ENV: "production",
     });
 
     await expect(import("@/lib/env")).resolves.toMatchObject({
       serverEnv: expect.objectContaining({
         BETTER_AUTH_SECRET: "a".repeat(32),
+      }),
+    });
+  });
+
+  it("rejects weak internal secrets in production", async () => {
+    stubRequiredEnv({
+      CRON_SECRET: "short-cron-secret",
+      INTERNAL_BOOTSTRAP_SECRET: "short-bootstrap-secret",
+      NODE_ENV: "production",
+    });
+
+    await expect(import("@/lib/env")).rejects.toThrow();
+  });
+
+  it("requires a cron secret in Vercel production", async () => {
+    stubRequiredEnv({
+      CRON_SECRET: undefined,
+      NODE_ENV: "production",
+      VERCEL_ENV: "production",
+    });
+
+    await expect(import("@/lib/env")).rejects.toThrow();
+  });
+
+  it("allows local production builds without cron secret", async () => {
+    stubRequiredEnv({
+      CRON_SECRET: undefined,
+      NODE_ENV: "production",
+    });
+
+    await expect(import("@/lib/env")).resolves.toMatchObject({
+      serverEnv: expect.objectContaining({
+        CRON_SECRET: undefined,
+        VERCEL_ENV: undefined,
       }),
     });
   });

@@ -73,6 +73,11 @@ const resolveMocks = async () => {
   return {
     mockCatalogSettings: mockGetCatalogSettings as MockFn,
     mockDb: dbModule.db as unknown as {
+      query: {
+        sales: {
+          findFirst: MockFn;
+        };
+      };
       transaction: MockFn;
     },
     mockRefresh: cache.refresh as MockFn,
@@ -366,6 +371,35 @@ describe("sales server actions", () => {
     ).rejects.toThrowError("Nao repita o mesmo produto na venda.");
   });
 
+  it("returns the existing sale for a repeated idempotency key", async () => {
+    const { createSaleAction } = await import("@/app/(app)/vendas/actions");
+    const { mockDb, mockUpdateTag } = await resolveMocks();
+
+    mockDb.query.sales.findFirst.mockResolvedValueOnce({
+      id: "sale-existing",
+    });
+
+    await expect(
+      createSaleAction({
+        idempotencyKey: "550e8400-e29b-41d4-a716-446655440000",
+        items: [
+          {
+            expectedUnitPrice: 90,
+            productId: "product-1",
+            quantity: 1,
+          },
+        ],
+        occurredOn: "2026-03-31",
+        paymentFeePayer: "not_applicable",
+        paymentInstallments: 0,
+        paymentMethod: "pix",
+      })
+    ).resolves.toBe("sale-existing");
+
+    expect(mockDb.transaction).not.toHaveBeenCalled();
+    expect(mockUpdateTag).not.toHaveBeenCalled();
+  });
+
   it("serializes concurrent sales and blocks negative stock", async () => {
     const { createSaleAction } = await import("@/app/(app)/vendas/actions");
     const { mockDb } = await resolveMocks();
@@ -472,6 +506,7 @@ describe("sales server actions", () => {
     await createSaleAction({
       additionalAmount: 10,
       discountAmount: 0,
+      idempotencyKey: "550e8400-e29b-41d4-a716-446655440000",
       items: [
         {
           expectedUnitPrice: 90,
@@ -498,6 +533,9 @@ describe("sales server actions", () => {
       paymentMethod: "pix",
       totalAmount: "100.00",
     });
+    expect(createdSalePayload?.idempotencyKey).toBe(
+      "550e8400-e29b-41d4-a716-446655440000"
+    );
     expect(mockUpdateTag).toHaveBeenCalledWith(
       buildOrganizationCacheTags("org_dg_imports").analytics
     );

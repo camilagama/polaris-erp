@@ -83,7 +83,7 @@ describe("POST /api/auth/dev/bootstrap-session", () => {
     expect(response.status).toBe(403);
   });
 
-  it("allows bootstrap in production previews when ALLOW_PLAYWRIGHT_BOOTSTRAP is true", async () => {
+  it("returns 403 in production previews even when ALLOW_PLAYWRIGHT_BOOTSTRAP is true", async () => {
     serverEnvMock.NODE_ENV = "production";
     serverEnvMock.ALLOW_PLAYWRIGHT_BOOTSTRAP = "true";
     serverEnvMock.VERCEL_ENV = "preview";
@@ -101,7 +101,8 @@ describe("POST /api/auth/dev/bootstrap-session", () => {
       })
     );
 
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(403);
+    expect(authContext.internalAdapter.createSession).not.toHaveBeenCalled();
   });
 
   it("returns 403 in production deployments even when ALLOW_PLAYWRIGHT_BOOTSTRAP is true", async () => {

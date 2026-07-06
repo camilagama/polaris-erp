@@ -77,6 +77,7 @@ export async function createSaleAction(data: {
     productId: string;
     quantity: number;
   }>;
+  idempotencyKey?: string;
   notes?: string;
   occurredOn: string;
   paymentFeePayer: "customer" | "not_applicable" | "seller";
@@ -85,6 +86,22 @@ export async function createSaleAction(data: {
 }): Promise<string> {
   const context = await requireAppContext("sales:write");
   const parsed = createSaleSchema.parse(data);
+  if (parsed.idempotencyKey) {
+    const existingSale = await db.query.sales.findFirst({
+      columns: {
+        id: true,
+      },
+      where: and(
+        eq(sales.organizationId, context.organizationId),
+        eq(sales.idempotencyKey, parsed.idempotencyKey)
+      ),
+    });
+
+    if (existingSale) {
+      return existingSale.id;
+    }
+  }
+
   const catalogSettings = await getCatalogSettings(context.organizationId);
 
   const createdSaleId = await db.transaction(async (tx) => {
@@ -182,6 +199,7 @@ export async function createSaleAction(data: {
         discountAmount: toCurrencyString(parsed.discountAmount),
         feeAmount: toCurrencyString(financials.feeAmount),
         freightAmount: toCurrencyString(parsed.freightAmount),
+        idempotencyKey: parsed.idempotencyKey,
         notes: parsed.notes || undefined,
         occurredOn: parsed.occurredOn,
         organizationId: context.organizationId,

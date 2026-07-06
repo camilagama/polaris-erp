@@ -15,6 +15,7 @@ vi.mock("@/db", () => ({
 vi.mock("@/features/products/image-storage", () => ({
   deleteManyProductImageKeys: vi.fn(),
   getExpectedProductImageKeys: vi.fn(),
+  listAllStoredProductImageObjects: vi.fn(),
   listAllStoredProductImageKeys: vi.fn(),
 }));
 
@@ -75,11 +76,19 @@ describe("/api/internal/product-images/reconcile", () => {
       "@/features/products/image-storage"
     );
 
+    const oldDate = new Date(Date.now() - 20 * 60 * 1000);
+
     vi.mocked(
-      imageStorageModule.listAllStoredProductImageKeys
+      imageStorageModule.listAllStoredProductImageObjects
     ).mockResolvedValue([
-      "products/product-1/v1/detail.webp",
-      "products/product-2/v1/detail.webp",
+      {
+        key: "products/product-1/v1/detail.webp",
+        lastModified: oldDate,
+      },
+      {
+        key: "products/product-2/v1/detail.webp",
+        lastModified: oldDate,
+      },
     ]);
     vi.mocked(imageStorageModule.getExpectedProductImageKeys).mockReturnValue([
       "products/product-1/v1/detail.webp",
@@ -110,5 +119,58 @@ describe("/api/internal/product-images/reconcile", () => {
     ]);
     expect(payload.deletedCount).toBe(1);
     expect(payload.orphanedKeys).toBeUndefined();
+  });
+
+  it("keeps recently uploaded orphaned keys for the next reconcile pass", async () => {
+    const { POST } = await import(
+      "@/app/api/internal/product-images/reconcile/route"
+    );
+    const dbModule = await import("@/db");
+    const imageStorageModule = await import(
+      "@/features/products/image-storage"
+    );
+
+    const recentOrphanedKey = "products/product-2/v1/detail.webp";
+
+    vi.mocked(
+      imageStorageModule.listAllStoredProductImageKeys
+    ).mockResolvedValue([recentOrphanedKey]);
+    vi.mocked(
+      imageStorageModule.listAllStoredProductImageObjects
+    ).mockResolvedValue([
+      {
+        key: recentOrphanedKey,
+        lastModified: new Date(),
+      },
+    ]);
+    vi.mocked(imageStorageModule.getExpectedProductImageKeys).mockReturnValue([
+      "products/product-1/v1/detail.webp",
+    ]);
+    vi.mocked(dbModule.db.select).mockReturnValue({
+      from: async () => [
+        {
+          id: "product-1",
+          imageVersion: 1,
+        },
+      ],
+    } as never);
+
+    const response = await POST(
+      new Request("http://localhost/api/internal/product-images/reconcile", {
+        headers: {
+          Authorization: "Bearer secret",
+        },
+        method: "POST",
+      })
+    );
+
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(imageStorageModule.deleteManyProductImageKeys).toHaveBeenCalledWith(
+      []
+    );
+    expect(payload.deletedCount).toBe(0);
+    expect(payload.skippedRecentCount).toBe(1);
   });
 });

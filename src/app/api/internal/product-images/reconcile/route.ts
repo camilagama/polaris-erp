@@ -3,11 +3,20 @@ import { products } from "@/db/schema";
 import {
   deleteManyProductImageKeys,
   getExpectedProductImageKeys,
-  listAllStoredProductImageKeys,
+  listAllStoredProductImageObjects,
 } from "@/features/products/image-storage";
 import { serverEnv } from "@/lib/env";
 import { checkRateLimit, getRateLimitKeyFromRequest } from "@/lib/rate-limit";
 import { jsonError } from "@/lib/server-api-error";
+
+const PRODUCT_IMAGE_RECONCILE_MIN_AGE_MS = 15 * 60 * 1000;
+
+const isOldEnoughForReconcileDelete = (
+  lastModified: Date | null,
+  now: Date
+): boolean =>
+  lastModified !== null &&
+  now.getTime() - lastModified.getTime() >= PRODUCT_IMAGE_RECONCILE_MIN_AGE_MS;
 
 async function reconcile(request: Request): Promise<Response> {
   const rateLimit = await checkRateLimit({
@@ -33,8 +42,8 @@ async function reconcile(request: Request): Promise<Response> {
   }
 
   try {
-    const [storedKeys, productRows] = await Promise.all([
-      listAllStoredProductImageKeys(),
+    const [storedObjects, productRows] = await Promise.all([
+      listAllStoredProductImageObjects(),
       db
         .select({
           id: products.id,
@@ -56,14 +65,23 @@ async function reconcile(request: Request): Promise<Response> {
       )
     );
 
-    const orphanedKeys = storedKeys.filter((key) => !expectedKeys.has(key));
+    const now = new Date();
+    const orphanedObjects = storedObjects.filter(
+      (object) => !expectedKeys.has(object.key)
+    );
+    const orphanedKeys = orphanedObjects
+      .filter((object) =>
+        isOldEnoughForReconcileDelete(object.lastModified, now)
+      )
+      .map((object) => object.key);
 
     await deleteManyProductImageKeys(orphanedKeys);
 
     return Response.json({
       deletedCount: orphanedKeys.length,
-      orphanedCount: orphanedKeys.length,
-      scannedCount: storedKeys.length,
+      orphanedCount: orphanedObjects.length,
+      scannedCount: storedObjects.length,
+      skippedRecentCount: orphanedObjects.length - orphanedKeys.length,
     });
   } catch (error) {
     return jsonError(

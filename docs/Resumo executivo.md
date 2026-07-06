@@ -1,4 +1,26 @@
 **1. Resumo Executivo**
+Status de execucao em 2026-07-06:
+- PR 1: validado como skip/sem P0 confirmado neste snapshot.
+- PR 2: iniciado. `DB-001`, parte de `RACE-001` e rota de imagem com organizacao ativa foram enderecados nesta fatia.
+- PR 2: atores em audit/price changes/goals agora sao tenant-scoped por FK composta contra membership.
+- PR 2: convites tambem passam a exigir inviter pertencente a mesma organizacao via FK composta.
+- PR 2: arquivar/desarquivar produto agora detecta zero linhas alteradas para bloquear sucesso falso com ID de outro tenant.
+- PR 2: remocao de imagem de produto agora falha para produto inexistente/outro tenant em vez de retornar sucesso.
+- PR 2: update/delete de categoria agora confirmam linha afetada e evitam auditoria/revalidacao em categoria inexistente/outro tenant.
+- PR 2: update/archive/unarchive de metas agora confirmam linha afetada e evitam auditoria/refresh em meta inexistente/outro tenant.
+- PR 2/R2: replace de imagem agora desfaz a nova versao quando perde a corrida de update condicional.
+- PR 2/R2: reconcile de imagens agora preserva uploads recentes antes de limpar orfaos.
+- PR 7: iniciado parcialmente. `SEC-001` e `SEC-002` foram enderecados nesta fatia.
+- PR 7: `/api/health` agora verifica banco e retorna 503 em falha sem expor detalhes sensiveis.
+- PR 7: Sentry agora tem tracing/replay configuravel e replay em erro no client.
+- PR 7: runbook de deploy Vercel atualizado com envs, guardrails, cron, health checks e smoke checklist.
+- PR 7: `CRON_SECRET` agora e obrigatorio em Vercel Production para proteger endpoints internos acionados por cron, sem quebrar build local.
+- PR 3: iniciado. Entrada de estoque agora reativa produto arquivado ao limpar `archivedAt`.
+- PR 3: banco agora rejeita venda de cartao com `payment_fee_payer = not_applicable`.
+- PR 3: banco agora limita a uma meta ativa por organizacao com indice unico parcial.
+- PR 3: venda agora usa idempotency key opcional para evitar duplicacao por retry/duplo submit.
+- Ainda nao declarar producao pronta: PR 2/3/5/7 seguem com pendencias relevantes.
+
 Veredito: **quase pronto para piloto controlado, não recomendado para produção self-serve aberta ainda**.
 
 Maturidade estimada: **72/100**. Confiança: **média-alta**. Limites: não rodei Playwright porque `E2E_DATABASE_URL` está ausente; não rodei migrações contra banco real; 4 subagents bateram limite de uso e foram cobertos manualmente.
@@ -96,11 +118,11 @@ Correção: check DB exigindo `seller|customer` para cartão.
 Teste: migration rejeita estado inválido.
 
 `SEC-002` P2, Secrets  
-Evidência: `optionalNonEmptyString` para `CRON_SECRET` e `INTERNAL_BOOTSTRAP_SECRET` em [env.ts](</c:/Users/Junior/Documents/0 - Dev/Hub Imports/src/lib/env.ts:21>).  
-Status: Confirmado no código.  
+Evidência: validação de `CRON_SECRET` e `INTERNAL_BOOTSTRAP_SECRET` em [env.ts](</c:/Users/Junior/Documents/0 - Dev/Hub Imports/src/lib/env.ts:24>).  
+Status: Corrigido localmente.  
 Impacto: segredo curto protege endpoints internos destrutivos/sensíveis.  
-Correção: mínimo 32/48 chars em produção.  
-Teste: env production rejeita segredo curto.
+Correção: `CRON_SECRET` obrigatório em `VERCEL_ENV=production`; secrets internos presentes precisam ter pelo menos 32 caracteres em `NODE_ENV=production`.  
+Teste: env production rejeita segredo curto; Vercel Production rejeita ausencia de `CRON_SECRET`; build local sem `VERCEL_ENV` continua aceito.
 
 `PERF-001` P2, Listagens  
 Evidência: produtos ordenam por `organizationId/name/createdAt/id`, mas índice ativo é só `name`; vendas ordenam `occurredOn/createdAt/id`, índice não inclui `id`.  
@@ -129,13 +151,13 @@ Correção: configurar branch Neon E2E e rodar `bun run test:e2e`.
 - Multi-tenancy: Parcial. Filtros bons no app, sem RLS. P1.
 - RBAC: Parcial. Roles existem, multiusuário/convites desativados. P2.
 - Server actions/APIs: Parcial. Boa checagem de contexto, mas bootstrap/internal hardening faltando. P1/P2.
-- IDOR: OK no fluxo revisado. Sem IDOR direto confirmado.
+- IDOR: OK nos fluxos revisados. Produtos, imagens, categorias e metas agora tem provas contra sucesso falso em recurso inexistente/outro tenant.
 - R2 upload/serve: Parcial. Boa autorização, corrida em replace/reconcile. P1.
 - Rate limit: Parcial. Upstash fail-closed em prod, IP spoof possível via header. P3.
 - Catálogo/estoque/vendas: Parcial. Núcleo bom; falta reativação por entrada e constraints extras. P2.
 - Cancelamento/estorno: OK no fluxo normal. Usa lock e estorna estoque.
 - Metas: Parcial. Regra de 1 ativa sem constraint. P2.
-- Logs/Sentry: Parcial. Errors sim; tracing/replays off; sem alertas definidos. P3.
+- Logs/Sentry: Parcial. Errors, tracing e replay em erro configurados; alertas ainda precisam ser definidos na plataforma. P3.
 - Backups/rollback: Parcial. Docs existem; execução não verificada. P2.
 - Tests unit/integration: OK razoável. 146 passando.
 - E2E: Parcial/não verificado localmente. P2.

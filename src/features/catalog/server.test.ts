@@ -10,12 +10,17 @@ vi.mock("next/cache", () => ({
 
 vi.mock("@/db", () => ({
   db: {
+    delete: vi.fn(),
     query: {
+      categories: {
+        findFirst: vi.fn(),
+      },
       systemSettings: {
         findFirst: vi.fn(),
       },
     },
     select: vi.fn(),
+    update: vi.fn(),
   },
 }));
 
@@ -29,12 +34,17 @@ const resolveMocks = async () => {
     mockCacheLife: cache.cacheLife as MockFn,
     mockCacheTag: cache.cacheTag as MockFn,
     mockDb: dbModule.db as unknown as {
+      delete: MockFn;
       query: {
+        categories: {
+          findFirst: MockFn;
+        };
         systemSettings: {
           findFirst: MockFn;
         };
       };
       select: MockFn;
+      update: MockFn;
     },
   };
 };
@@ -109,5 +119,57 @@ describe("catalog server caching", () => {
         productCount: 3,
       },
     ]);
+  });
+
+  it("does not treat a lost category update race as success", async () => {
+    const { updateCategory } = await import("@/features/catalog/server");
+    const { mockDb } = await resolveMocks();
+
+    mockDb.query.categories.findFirst.mockResolvedValue({
+      id: "category-1",
+      isSystem: false,
+      key: "category-1",
+      name: "Antiga",
+    });
+    mockDb.update.mockReturnValue({
+      set: () => ({
+        where: () => ({
+          returning: () => Promise.resolve([]),
+        }),
+      }),
+    });
+
+    await expect(
+      updateCategory("org_dg_imports", "category-1", {
+        description: "Nova descricao",
+        name: "Nova",
+      })
+    ).rejects.toThrow("Categoria nao encontrada.");
+  });
+
+  it("does not treat a lost category delete race as success", async () => {
+    const { deleteCategory } = await import("@/features/catalog/server");
+    const { mockDb } = await resolveMocks();
+
+    mockDb.query.categories.findFirst.mockResolvedValue({
+      id: "category-1",
+      isSystem: false,
+      key: "category-1",
+      name: "Roupas",
+    });
+    mockDb.select.mockReturnValue({
+      from: () => ({
+        where: async () => [{ total: 0 }],
+      }),
+    });
+    mockDb.delete.mockReturnValue({
+      where: () => ({
+        returning: () => Promise.resolve([]),
+      }),
+    });
+
+    await expect(
+      deleteCategory("org_dg_imports", "category-1")
+    ).rejects.toThrow("Categoria nao encontrada.");
   });
 });

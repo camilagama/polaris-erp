@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import {
   auditEvents,
@@ -24,6 +24,7 @@ const DEFAULT_CARD_INSTALLMENT_RULES = [{ feePercent: 0, installments: 1 }];
 const DEFAULT_IDEAL_MARKUP_PERCENT = 0;
 const DEFAULT_MINIMUM_MARKUP_PERCENT = 0;
 const GLOBAL_SETTINGS_ID = "global";
+const ONBOARDING_LOCK_NAMESPACE = 208_544;
 
 export interface AppContext {
   organizationId: string;
@@ -193,6 +194,10 @@ export const createInitialOrganizationForUser = async ({
   const db = await getDb();
 
   const organizationId = await db.transaction(async (tx) => {
+    await tx.execute(
+      sql`SELECT pg_advisory_xact_lock(${ONBOARDING_LOCK_NAMESPACE}, hashtext(${userId}))`
+    );
+
     const [existingMembership] = await tx
       .select({
         organizationId: member.organizationId,

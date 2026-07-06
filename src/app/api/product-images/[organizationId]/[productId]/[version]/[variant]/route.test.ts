@@ -24,6 +24,9 @@ vi.mock("@/db", () => ({
       member: {
         findFirst: vi.fn(),
       },
+      organization: {
+        findFirst: vi.fn(),
+      },
       products: {
         findFirst: vi.fn(),
       },
@@ -41,14 +44,25 @@ const resolveMocks = async () => {
       dbModule.db as unknown as {
         query: {
           member: { findFirst: MockFn };
+          organization: { findFirst: MockFn };
           products: { findFirst: MockFn };
         };
       }
     ).query.member.findFirst,
+    mockFindOrganization: (
+      dbModule.db as unknown as {
+        query: {
+          member: { findFirst: MockFn };
+          organization: { findFirst: MockFn };
+          products: { findFirst: MockFn };
+        };
+      }
+    ).query.organization.findFirst,
     mockFindProduct: (
       dbModule.db as unknown as {
         query: {
           member: { findFirst: MockFn };
+          organization: { findFirst: MockFn };
           products: { findFirst: MockFn };
         };
       }
@@ -60,9 +74,11 @@ describe("GET /api/product-images/[organizationId]/[productId]/[version]/[varian
   beforeEach(async () => {
     vi.clearAllMocks();
 
-    const { mockFindMember, mockFindProduct } = await resolveMocks();
+    const { mockFindMember, mockFindOrganization, mockFindProduct } =
+      await resolveMocks();
     mockFindProduct.mockResolvedValue({ id: "p1" });
     mockFindMember.mockResolvedValue({ id: "member-1" });
+    mockFindOrganization.mockResolvedValue({ id: "org_dg_imports" });
   });
 
   it("returns 401 when the request has no authenticated session", async () => {
@@ -244,5 +260,34 @@ describe("GET /api/product-images/[organizationId]/[productId]/[version]/[varian
     );
 
     expect(response.status).toBe(404);
+  });
+
+  it("returns 404 for an inactive organization without reading storage", async () => {
+    const { auth } = await import("@/lib/auth");
+    const imageStorage = await import("@/features/products/image-storage");
+    const { GET } = await import("./route");
+    const { mockFindOrganization } = await resolveMocks();
+
+    vi.mocked(auth.api.getSession).mockResolvedValue({
+      user: { id: "user-1" },
+    } as never);
+    mockFindOrganization.mockResolvedValue(null);
+
+    const response = await GET(
+      new Request(
+        "http://localhost/api/product-images/org_dg_imports/p1/1/detail"
+      ),
+      {
+        params: Promise.resolve({
+          organizationId: "org_dg_imports",
+          productId: "p1",
+          variant: "detail",
+          version: "1",
+        }),
+      }
+    );
+
+    expect(response.status).toBe(404);
+    expect(imageStorage.readPublicProductImageVariant).not.toHaveBeenCalled();
   });
 });

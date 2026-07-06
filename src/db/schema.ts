@@ -71,6 +71,7 @@ export const sessions = pgTable(
     ...timestamps,
   },
   (table) => [
+    uniqueIndex("sessions_id_unique_idx").on(table.id),
     index("sessions_user_id_idx").on(table.userId),
     index("sessions_active_organization_id_idx").on(table.activeOrganizationId),
   ]
@@ -152,6 +153,11 @@ export const invitation = pgTable(
     index("invitation_organization_id_idx").on(table.organizationId),
     index("invitation_email_idx").on(table.email),
     index("invitation_status_idx").on(table.status),
+    foreignKey({
+      columns: [table.organizationId, table.inviterId],
+      foreignColumns: [member.organizationId, member.userId],
+      name: "invitation_organization_inviter_member_fk",
+    }),
   ]
 );
 
@@ -180,6 +186,11 @@ export const auditEvents = pgTable(
       table.createdAt
     ),
     index("audit_events_actor_user_id_idx").on(table.actorUserId),
+    foreignKey({
+      columns: [table.organizationId, table.actorUserId],
+      foreignColumns: [member.organizationId, member.userId],
+      name: "audit_events_organization_actor_member_fk",
+    }),
   ]
 );
 
@@ -407,6 +418,11 @@ export const productPriceChanges = pgTable(
       foreignColumns: [products.organizationId, products.id],
       name: "product_price_changes_organization_product_fk",
     }),
+    foreignKey({
+      columns: [table.organizationId, table.changedByUserId],
+      foreignColumns: [member.organizationId, member.userId],
+      name: "product_price_changes_organization_actor_member_fk",
+    }),
   ]
 );
 
@@ -533,6 +549,7 @@ export const sales = pgTable(
       .notNull()
       .default("0"),
     cancelledAt: timestamp("cancelled_at", tz),
+    idempotencyKey: text("idempotency_key"),
     ...timestamps,
   },
   (table) => [
@@ -563,6 +580,10 @@ export const sales = pgTable(
     check(
       "sales_payment_method_fee_payer_valid",
       sql`(${table.paymentMethod} = 'pix' and ${table.paymentFeePayer} = 'not_applicable') or (${table.paymentMethod} = 'card' and ${table.paymentFeePayer} in ('not_applicable', 'seller', 'customer'))`
+    ),
+    check(
+      "sales_card_fee_payer_required",
+      sql`${table.paymentMethod} <> 'card' or ${table.paymentFeePayer} in ('seller', 'customer')`
     ),
     check("sales_fee_amount_non_negative", sql`${table.feeAmount} >= 0`),
     check("sales_total_amount_non_negative", sql`${table.totalAmount} >= 0`),
@@ -598,6 +619,9 @@ export const sales = pgTable(
       table.organizationId,
       table.id
     ),
+    uniqueIndex("sales_organization_idempotency_key_unique_idx")
+      .on(table.organizationId, table.idempotencyKey)
+      .where(sql`idempotency_key IS NOT NULL`),
   ]
 );
 
@@ -700,10 +724,18 @@ export const goals = pgTable(
       sql`${table.periodEnd} >= ${table.periodStart}`
     ),
     index("goals_status_idx").on(table.organizationId, table.status),
+    uniqueIndex("goals_one_active_per_organization_idx")
+      .on(table.organizationId)
+      .where(sql`status = 'active'`),
     index("goals_period_end_idx").on(table.organizationId, table.periodEnd),
     index("goals_created_by_user_id_idx").on(
       table.organizationId,
       table.createdByUserId
     ),
+    foreignKey({
+      columns: [table.organizationId, table.createdByUserId],
+      foreignColumns: [member.organizationId, member.userId],
+      name: "goals_organization_actor_member_fk",
+    }),
   ]
 );

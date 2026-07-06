@@ -384,6 +384,9 @@ export function CreateSaleDialog({
   const [freightAmount, setFreightAmount] = useState("0");
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<SaleRowDraft[]>([createSaleRow()]);
+  const [idempotencyKey, setIdempotencyKey] = useState(() =>
+    crypto.randomUUID()
+  );
 
   const productById = new Map(products.map((product) => [product.id, product]));
   const itemSubtotal = items.reduce((acc, item) => {
@@ -446,6 +449,7 @@ export function CreateSaleDialog({
     setFreightAmount("0");
     setNotes("");
     setItems([createSaleRow()]);
+    setIdempotencyKey(crypto.randomUUID());
   };
 
   const removeItem = (rowId: string) => {
@@ -487,6 +491,7 @@ export function CreateSaleDialog({
       customerName,
       discountAmount: parsedDiscountAmount,
       freightAmount: parsedFreightAmount,
+      idempotencyKey,
       items: payloadItemsResult.items,
       notes,
       occurredOn,

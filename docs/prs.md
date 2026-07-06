@@ -1,3 +1,26 @@
+**Status de Execucao**
+- 2026-07-06: PR 1 validado como skip/sem P0 confirmado neste snapshot.
+- 2026-07-06: PR 2 iniciado. Concluidos nesta fatia: `DB-001` (`sessions.id` unico com migration), `RACE-001` mitigado por advisory lock transacional no onboarding, e rota de imagem passa a exigir organizacao ativa.
+- 2026-07-06: PR 2 avancou em atores tenant-scoped. `audit_events.actor_user_id`, `product_price_changes.changed_by_user_id` e `goals.created_by_user_id` agora ganham FKs compostas contra `member(organization_id,user_id)` com pre-check de dados legados.
+- 2026-07-06: PR 2 fechou mais uma borda futura de tenant: `invitation.inviter_id` tambem ganha FK composta contra `member(organization_id,user_id)` com pre-check.
+- 2026-07-06: PR 2 adicionou prova tenant A/B em product actions: arquivar/desarquivar produto agora falha quando nenhum produto do tenant atual e alterado, sem auditar nem revalidar.
+- 2026-07-06: PR 2 ampliou prova tenant A/B em imagens de produto: remover imagem agora diferencia produto inexistente/outro tenant de produto existente sem imagem.
+- 2026-07-06: PR 2 avancou em configuracoes/catalogo: update/delete de categoria agora confirmam linha afetada com `returning()` e actions nao auditam/revalidam quando o dominio rejeita categoria inexistente/outro tenant.
+- 2026-07-06: PR 2 avancou em metas: update/archive/unarchive agora confirmam linha afetada com `returning()` e actions nao auditam/refresham quando o dominio rejeita meta inexistente/outro tenant.
+- 2026-07-06: PR 2/R2 avancou em corrida de replace: troca de imagem agora checa `returning()` do update condicional, remove a nova versao se perder a corrida e nao apaga a versao antiga.
+- 2026-07-06: PR 2/R2 avancou em reconcile: objetos de imagem recem-enviados agora sao preservados por janela minima antes de limpeza de orfaos.
+- 2026-07-06: PR 7 iniciado parcialmente. Concluidos nesta fatia: `SEC-001` (bootstrap bloqueado em qualquer `NODE_ENV=production`) e `SEC-002` (secrets internos fracos rejeitados em producao).
+- 2026-07-06: PR 7 avancou em health checks: `/api/health` agora verifica banco com resposta sanitizada e retorna 503 quando a checagem falha.
+- 2026-07-06: PR 7 avancou em observabilidade: Sentry agora usa sampling configuravel para tracing/replay, ativa replay em erro no client e remove log ruidoso de startup.
+- 2026-07-06: PR 7 avancou em docs de deploy: `docs/deploy-vercel.md` agora cobre envs obrigatorias, sampling Sentry, health checks, cron, build com env de Production e smoke checklist.
+- 2026-07-06: PR 7 avancou em guardrails de producao: `CRON_SECRET` agora e obrigatorio em `VERCEL_ENV=production`, sem quebrar build local, alem de rejeitar secrets internos fracos.
+- 2026-07-06: PR 3 iniciado. `STOCK-001` corrigido: entrada de estoque em produto arquivado agora limpa `archivedAt` e reativa o produto.
+- 2026-07-06: PR 3 avancou em `DB-002`: banco agora rejeita venda de cartao com `payment_fee_payer = not_applicable`, com migration e precheck de dados legados.
+- 2026-07-06: PR 3 avancou em `GOAL-001`: banco agora limita a uma meta ativa por organizacao com indice unico parcial e precheck de dados legados.
+- 2026-07-06: PR 3 fechou decisao de idempotency key de venda: formulario envia UUID por tentativa, action retorna venda existente para chave repetida e banco garante unicidade por organizacao quando a chave existe.
+- Pendencias antes de declarar PR 2 completo: ampliar provas tenant A vs tenant B para outros actions/route handlers, decisao/implementacao de RLS ou repository tenant-scoped, e dry-run das migrations em branch Neon isolada.
+- PR 3 implementado localmente. Antes de tratar como pronto para deploy real, ainda falta dry-run/aplicacao das migrations em banco isolado.
+- PR 7 implementado localmente. Antes de tratar como pronto para deploy real, ainda falta validar `vercel env run -e production -- bun run build` com envs reais e smoke checks no preview/producao.
 
 **Ordem Recomendada**
 1. PR 1 pode ser pulado se continuarmos aceitando que não há P0 confirmado.
@@ -218,7 +241,7 @@ Testes exigidos:
 - smoke checklist documentado.
 
 Critério de aceite:
-- production rejeita secrets fracos.
+- production rejeita secrets fracos e Vercel Production rejeita ausencia de `CRON_SECRET`.
 - bootstrap impossível em produção real.
 - health checks úteis sem expor segredo/dados sensíveis.
 - deploy docs atualizados.

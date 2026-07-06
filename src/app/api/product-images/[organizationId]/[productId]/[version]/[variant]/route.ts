@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { member, products } from "@/db/schema";
+import { member, organization, products } from "@/db/schema";
 import { readPublicProductImageVariant } from "@/features/products/image-storage";
 import { recordActorAuditEvent } from "@/lib/audit-log";
 import { auth } from "@/lib/auth";
@@ -33,7 +33,7 @@ export async function GET(
     return new Response("Not Found", { status: 404 });
   }
 
-  const [product, membership] = await Promise.all([
+  const [product, membership, activeOrganization] = await Promise.all([
     db.query.products.findFirst({
       columns: {
         id: true,
@@ -53,9 +53,18 @@ export async function GET(
         eq(member.userId, session.user.id)
       ),
     }),
+    db.query.organization.findFirst({
+      columns: {
+        id: true,
+      },
+      where: and(
+        eq(organization.id, organizationId),
+        eq(organization.status, "active")
+      ),
+    }),
   ]);
 
-  if (!(product && membership)) {
+  if (!(product && membership && activeOrganization)) {
     return new Response("Not Found", { status: 404 });
   }
 

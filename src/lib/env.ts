@@ -11,6 +11,7 @@ const optionalNonEmptyString = z.preprocess((value) => {
 }, z.string().min(1).optional());
 
 const MINIMUM_AUTH_SECRET_LENGTH = 32;
+const MINIMUM_INTERNAL_SECRET_LENGTH = 32;
 
 const serverEnvSchema = z
   .object({
@@ -76,6 +77,33 @@ const serverEnvSchema = z
           "BETTER_AUTH_SECRET must be at least 32 characters in production.",
         path: ["BETTER_AUTH_SECRET"],
       });
+    }
+
+    if (env.NODE_ENV !== "production") {
+      return;
+    }
+
+    if (env.VERCEL_ENV === "production" && !env.CRON_SECRET) {
+      context.addIssue({
+        code: "custom",
+        message: "CRON_SECRET is required in Vercel production.",
+        path: ["CRON_SECRET"],
+      });
+    }
+
+    for (const secretName of [
+      "CRON_SECRET",
+      "INTERNAL_BOOTSTRAP_SECRET",
+    ] as const) {
+      const secretValue = env[secretName];
+
+      if (secretValue && secretValue.length < MINIMUM_INTERNAL_SECRET_LENGTH) {
+        context.addIssue({
+          code: "custom",
+          message: `${secretName} must be at least 32 characters in production.`,
+          path: [secretName],
+        });
+      }
     }
   });
 
