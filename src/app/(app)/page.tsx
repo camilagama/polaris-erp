@@ -6,6 +6,7 @@ import Link from "next/link";
 import type { CSSProperties } from "react";
 import { DashboardDateRangeFilter } from "@/components/dashboard/dashboard-date-range-filter";
 import { GoalDashboardCompactCard } from "@/components/dashboard/goal-dashboard-compact-card";
+import { InsightBanner } from "@/components/dashboard/insight-banner";
 import { OperationalCostsChart } from "@/components/dashboard/operational-costs-chart";
 import { ProfitMarginChart } from "@/components/dashboard/profit-margin-chart";
 import { RevenueProfitChart } from "@/components/dashboard/revenue-profit-chart";
@@ -115,14 +116,16 @@ export default async function DashboardPage(props: PageProps<"/">) {
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-col gap-1.5">
-          <h1 className="font-heading font-semibold text-xl tracking-tight">
+          <h1 className="text-balance font-heading font-semibold text-xl tracking-tight">
             Dashboard
           </h1>
         </div>
       </div>
 
+      <InsightBanner metrics={metrics} />
+
       <div
-        className={`grid gap-4 md:grid-cols-2 ${goalsPayload.active.length > 0 ? "lg:grid-cols-3" : "lg:grid-cols-2"}`}
+        className={`fade-in-0 slide-in-from-bottom-2 grid animate-in gap-4 duration-300 ease-out md:grid-cols-2 ${goalsPayload.active.length > 0 ? "lg:grid-cols-3" : "lg:grid-cols-2"}`}
       >
         <div className="flex h-full flex-col" style={layoutContainmentStyle}>
           <SalesContributionGraphCard
@@ -156,7 +159,7 @@ export default async function DashboardPage(props: PageProps<"/">) {
               </div>
             </CardHeader>
             <CardContent className="flex flex-col gap-1.5">
-              <strong className="font-mono text-2xl leading-none tracking-tight">
+              <strong className="font-mono text-2xl tabular-nums leading-none tracking-tight">
                 {marginPercentage.toFixed(1)}%
               </strong>
               <ProfitMarginChart
@@ -169,7 +172,7 @@ export default async function DashboardPage(props: PageProps<"/">) {
       </div>
 
       <div className="flex items-center justify-between pt-2">
-        <h2 className="font-heading font-medium text-foreground/80 text-lg tracking-tight">
+        <h2 className="text-balance font-heading font-medium text-foreground/80 text-lg tracking-tight">
           Visão por período
         </h2>
         <div className="flex flex-wrap gap-2 sm:min-w-72 sm:justify-end">
@@ -184,7 +187,9 @@ export default async function DashboardPage(props: PageProps<"/">) {
         </div>
       </div>
 
-      <div className={`grid gap-4 md:grid-cols-2 ${bottomGridCols}`}>
+      <div
+        className={`fade-in-0 slide-in-from-bottom-2 grid animate-in gap-4 fill-mode-both duration-300 ease-out [animation-delay:150ms] md:grid-cols-2 ${bottomGridCols}`}
+      >
         {summaryCards.map((card) => (
           <Card
             className="flex h-full flex-col justify-center"
@@ -214,7 +219,7 @@ export default async function DashboardPage(props: PageProps<"/">) {
             )}
             <CardContent className="flex flex-col gap-1.5">
               {card.id !== "revenue" && card.id !== "count" && (
-                <strong className="font-mono text-2xl leading-none tracking-tight">
+                <strong className="font-mono text-2xl tabular-nums leading-none tracking-tight">
                   {card.value}
                 </strong>
               )}
@@ -240,7 +245,7 @@ export default async function DashboardPage(props: PageProps<"/">) {
                     return (
                       <div className="flex items-end justify-between gap-4">
                         <div className="flex flex-col gap-1">
-                          <strong className="font-mono text-2xl leading-none tracking-tight">
+                          <strong className="font-mono text-2xl tabular-nums leading-none tracking-tight">
                             {card.value}
                           </strong>
                           {card.note && (
@@ -264,7 +269,7 @@ export default async function DashboardPage(props: PageProps<"/">) {
       </div>
 
       <div
-        className="grid gap-4 xl:grid-cols-[1.35fr_0.95fr]"
+        className="fade-in-0 slide-in-from-bottom-2 grid animate-in gap-4 fill-mode-both duration-300 ease-out [animation-delay:300ms] xl:grid-cols-[1.35fr_0.95fr]"
         style={deferredAnalyticsSectionStyle}
       >
         <Card
@@ -319,7 +324,7 @@ export default async function DashboardPage(props: PageProps<"/">) {
                           href={`/produtos/${product.id}`}
                           key={product.id}
                         >
-                          <div className="relative flex size-8 items-center justify-center overflow-hidden rounded-lg border border-border/40 bg-muted/10 text-muted-foreground/50">
+                          <div className="relative flex size-8 items-center justify-center overflow-hidden rounded-lg border border-border/40 bg-muted/10 text-muted-foreground/50 ring-1 ring-foreground/[0.06] dark:ring-white/[0.08]">
                             {imageUrl ? (
                               <Image
                                 alt={product.name}
