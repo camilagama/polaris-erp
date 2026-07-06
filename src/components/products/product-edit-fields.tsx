@@ -107,6 +107,11 @@ export function ProductEditFields({
           onChange={(event) => onNameChange(event.target.value)}
           value={name}
         />
+        {name.trim().length === 0 ? (
+          <em className="text-[11px] text-destructive">
+            O nome do produto e obrigatorio.
+          </em>
+        ) : null}
       </div>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="product-edit-category">Categoria</Label>
@@ -214,6 +219,13 @@ export function ProductEditFields({
             </InputGroupText>
           </InputGroupAddon>
         </InputGroup>
+        {price.trim().length === 0 ||
+        Number(price) < 0 ||
+        Number.isNaN(Number(price)) ? (
+          <em className="text-[11px] text-destructive">
+            Forneca um preco valido e maior ou igual a zero.
+          </em>
+        ) : null}
       </div>
     </div>
   );

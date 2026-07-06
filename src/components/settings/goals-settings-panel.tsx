@@ -264,7 +264,10 @@ export function GoalsSettingsPanel({
       </Card>
 
       <Dialog onOpenChange={setHistoryOpen} open={historyOpen}>
-        <DialogContent className="max-h-[85vh] sm:max-w-4xl">
+        <DialogContent
+          className="max-h-[85vh] sm:max-w-4xl"
+          onInteractOutside={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle>Historico de metas</DialogTitle>
             <DialogDescription>

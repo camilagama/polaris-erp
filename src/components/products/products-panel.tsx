@@ -33,14 +33,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -49,6 +41,14 @@ import {
 import { Empty } from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { toast } from "@/components/ui/sonner";
 import {
   Table,
@@ -689,7 +689,7 @@ export function ProductsPanel({
 
       <MobileAnalyticsSection analytics={analytics} />
 
-      <Dialog
+      <Sheet
         onOpenChange={(open) => {
           if (!open) {
             setEditingProduct(null);
@@ -700,49 +700,55 @@ export function ProductsPanel({
         }}
         open={Boolean(editingProduct)}
       >
-        <DialogContent className="sm:max-w-105">
-          <DialogHeader>
-            <DialogTitle>Editar produto</DialogTitle>
-            <DialogDescription>
+        <SheetContent
+          className="overflow-y-auto sm:max-w-md"
+          onInteractOutside={(e) => e.preventDefault()}
+        >
+          <SheetHeader className="mb-6">
+            <SheetTitle>Editar produto</SheetTitle>
+            <SheetDescription>
               Atualize dados principais e ajuste a imagem quando necessario.
-            </DialogDescription>
-          </DialogHeader>
-          <ProductEditFields
-            categories={categories}
-            categoryId={editCategoryId}
-            costPrice={editingProduct?.costPrice ?? "0"}
-            description={editDescription}
-            image={editingProduct?.image ?? null}
-            imageDisabled={pending}
-            imageMarkedForRemoval={editImageMarkedForRemoval}
-            name={editName}
-            onCategoryIdChange={setEditCategoryId}
-            onDescriptionChange={setEditDescription}
-            onImageFileChange={setEditImageFile}
-            onImageRemovalChange={setEditImageMarkedForRemoval}
-            onNameChange={setEditName}
-            onPriceChange={setEditPrice}
-            price={editPrice}
-            productName={editName || editingProduct?.name || "produto"}
-            settings={settings}
-          />
-          <DialogFooter>
-            <Button
-              disabled={
-                pending ||
-                editName.trim().length === 0 ||
-                editPrice.trim().length === 0 ||
-                Number(editPrice) < 0 ||
-                Number.isNaN(Number(editPrice))
-              }
-              onClick={handleEditProduct}
-              type="button"
-            >
-              Salvar alteracoes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            </SheetDescription>
+          </SheetHeader>
+          <div className="flex flex-col gap-6">
+            <ProductEditFields
+              categories={categories}
+              categoryId={editCategoryId}
+              costPrice={editingProduct?.costPrice ?? "0"}
+              description={editDescription}
+              image={editingProduct?.image ?? null}
+              imageDisabled={pending}
+              imageMarkedForRemoval={editImageMarkedForRemoval}
+              name={editName}
+              onCategoryIdChange={setEditCategoryId}
+              onDescriptionChange={setEditDescription}
+              onImageFileChange={setEditImageFile}
+              onImageRemovalChange={setEditImageMarkedForRemoval}
+              onNameChange={setEditName}
+              onPriceChange={setEditPrice}
+              price={editPrice}
+              productName={editName || editingProduct?.name || "produto"}
+              settings={settings}
+            />
+            <SheetFooter className="mt-4">
+              <Button
+                className="w-full sm:w-auto"
+                disabled={
+                  pending ||
+                  editName.trim().length === 0 ||
+                  editPrice.trim().length === 0 ||
+                  Number(editPrice) < 0 ||
+                  Number.isNaN(Number(editPrice))
+                }
+                onClick={handleEditProduct}
+                type="button"
+              >
+                {pending ? "Salvando..." : "Salvar alteracoes"}
+              </Button>
+            </SheetFooter>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

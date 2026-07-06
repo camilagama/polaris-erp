@@ -289,27 +289,9 @@ function SaleProductRow({
         </Label>
         <Input
           className="h-7 bg-background"
-          max={selectedProduct?.stock}
           min="1"
           onChange={(event) => {
             const nextQuantityValue = event.target.value;
-            const parsedValue = Number.parseInt(nextQuantityValue, 10);
-
-            if (
-              selectedProduct &&
-              !Number.isNaN(parsedValue) &&
-              parsedValue > selectedProduct.stock
-            ) {
-              toast.error(
-                `Estoque insuficiente. Maximo disponivel: ${selectedProduct.stock} unidades.`
-              );
-              updateItem(item.id, (currentItem) => ({
-                ...currentItem,
-                quantity: String(selectedProduct.stock),
-              }));
-              return;
-            }
-
             updateItem(item.id, (currentItem) => ({
               ...currentItem,
               quantity: nextQuantityValue,
@@ -319,6 +301,12 @@ function SaleProductRow({
           type="number"
           value={item.quantity}
         />
+        {selectedProduct &&
+        Number.parseInt(item.quantity, 10) > selectedProduct.stock ? (
+          <span className="mt-1 text-[10px] text-amber-500 leading-tight">
+            Quantidade excede o estoque atual ({selectedProduct.stock}).
+          </span>
+        ) : null}
       </div>
 
       <div className="flex flex-col gap-1">
@@ -544,7 +532,10 @@ export function CreateSaleDialog({
       <DialogTrigger asChild>
         <Button type="button">Nova venda</Button>
       </DialogTrigger>
-      <DialogContent className="flex h-[100svh] max-h-[100svh] w-screen max-w-none flex-col overflow-hidden rounded-none p-0 sm:h-auto sm:max-h-[90vh] sm:max-w-5xl sm:rounded-3xl">
+      <DialogContent
+        className="flex h-[100svh] max-h-[100svh] w-screen max-w-none flex-col overflow-hidden rounded-none p-0 sm:h-auto sm:max-h-[90vh] sm:max-w-5xl sm:rounded-3xl"
+        onInteractOutside={(e) => e.preventDefault()}
+      >
         <div className="border-border/40 border-b px-6 py-4">
           <DialogHeader>
             <DialogTitle className="text-lg">Registrar nova venda</DialogTitle>

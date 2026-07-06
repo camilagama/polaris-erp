@@ -147,7 +147,10 @@ export function RegisterProductDialog({
       <DialogTrigger asChild>
         <Button>Cadastrar Produto</Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-130">
+      <DialogContent
+        className="sm:max-w-130"
+        onInteractOutside={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>Novo Produto</DialogTitle>
           <DialogDescription>

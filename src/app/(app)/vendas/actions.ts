@@ -279,7 +279,9 @@ export async function cancelSaleAction(id: string) {
     }
 
     if (sale.status === "cancelled") {
-      throw new Error("Venda ja foi cancelada.");
+      throw new Error(
+        "A venda ja se encontra cancelada e o estoque estornado."
+      );
     }
 
     const saleRows = await tx
@@ -311,7 +313,7 @@ export async function cancelSaleAction(id: string) {
 
     if (lockedProducts.length !== productIds.length) {
       throw new Error(
-        "Nao foi possivel estornar o estoque porque um produto foi removido."
+        "Nao foi possivel estornar o estoque: um dos produtos foi removido do catalogo. Contate o suporte ou ajuste o estoque manualmente."
       );
     }
 

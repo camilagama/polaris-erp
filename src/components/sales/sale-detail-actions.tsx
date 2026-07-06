@@ -34,7 +34,7 @@ export function SaleDetailActions({
         toast.error(
           error instanceof Error
             ? error.message
-            : "Nao foi possivel cancelar a venda."
+            : "Erro de conexao ou timeout. Nao foi possivel confirmar o cancelamento da venda."
         );
       }
     });
@@ -65,7 +65,8 @@ export function SaleDetailActions({
             <AlertDialogTitle>Cancelar venda</AlertDialogTitle>
             <AlertDialogDescription>
               O cancelamento estorna automaticamente as quantidades para o
-              estoque e preserva o historico financeiro da operacao.
+              estoque. O historico da operacao e mantido, mas o valor faturado e
+              abatido das metas e relatorios. Esta acao e irreversivel.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

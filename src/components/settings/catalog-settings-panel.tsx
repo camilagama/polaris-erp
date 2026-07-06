@@ -361,7 +361,10 @@ export function CatalogSettingsPanel({
       </Card>
 
       <Dialog onOpenChange={setCategoriesOpen} open={categoriesOpen}>
-        <DialogContent className="max-h-[85vh] sm:max-w-4xl">
+        <DialogContent
+          className="max-h-[85vh] sm:max-w-4xl"
+          onInteractOutside={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle>Tabela de categorias</DialogTitle>
             <DialogDescription>
@@ -487,7 +490,10 @@ export function CatalogSettingsPanel({
       </Dialog>
 
       <Dialog onOpenChange={setRatesOpen} open={ratesOpen}>
-        <DialogContent className="sm:max-w-3xl">
+        <DialogContent
+          className="sm:max-w-3xl"
+          onInteractOutside={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle>Taxas por parcela</DialogTitle>
             <DialogDescription>
