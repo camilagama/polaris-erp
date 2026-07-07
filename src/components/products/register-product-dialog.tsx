@@ -38,10 +38,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "@/components/ui/sonner";
-import { OTHERS_CATEGORY_KEY } from "@/features/catalog/constants";
 import { calculateSuggestedPrices } from "@/features/catalog/pricing";
 import { createProductAction } from "@/features/products/actions";
 import { createProductSchema as productSchema } from "@/features/products/schema";
+import { OTHERS_CATEGORY_KEY } from "@/lib/catalog-defaults";
 import { formatDateInputValue } from "@/lib/domain/date";
 import {
   formatCurrency,

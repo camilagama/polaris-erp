@@ -1,4 +1,4 @@
-import { OTHERS_CATEGORY_KEY } from "./constants";
+import { OTHERS_CATEGORY_KEY } from "@/lib/catalog-defaults";
 
 interface CategoryGuardInput {
   isSystem: boolean;

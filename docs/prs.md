@@ -43,7 +43,8 @@
 - 2026-07-07: Resumo executivo alinhado ao estado atual: achados DB/R2/metas/estoque agora distinguem corrigido localmente de pendente externo (Neon/Vercel/R2/E2E).
 - 2026-07-07: PR 5/CI avancou: job `verify` agora tambem roda `bun run knip` antes do build; docs de CI foram alinhados para check/test/knip/build + E2E isolado.
 - 2026-07-07: PR 5/CI reforcou guardrail de Playwright: validacao de `E2E_DATABASE_URL` em CI foi extraida e coberta por teste unitario.
-- 2026-07-07: PR 5/QA estabilizou a suite local apos hardening, refactors seguros e UX destrutiva: `bun run test` passou com 67 arquivos e 243 testes.
+- 2026-07-07: PR 5/CI teve o guardrail Playwright verificado por comando real: `CI=true bun run test:e2e` sem `E2E_DATABASE_URL` falha no load do config antes de subir servidor ou tocar banco.
+- 2026-07-07: PR 5/QA estabilizou a suite local apos hardening, refactors seguros e UX destrutiva: `bun run test` passou com 68 arquivos e 247 testes.
 - 2026-07-07: PR 5/QA fechou verificacoes ampliadas locais: `bun run knip` e `bun run build` passaram apos limpar exports mortos das extracoes e ajustar tipo do env E2E.
 - 2026-07-07: Resumo executivo alinhado em riscos financeiros: estoque arquivado, idempotency, taxa de cartao e R2 agora constam como mitigados localmente, com validacao externa pendente.
 - 2026-07-07: PR 3 reforcou prova de idempotency: teste agora valida que a migration preserva o indice unico parcial apenas para `idempotency_key IS NOT NULL`.
@@ -78,9 +79,14 @@
 - 2026-07-07: PR 8 reforcou o boundary do App Router: qualquer novo `src/app/**/actions.ts` agora falha no guardrail estrutural.
 - 2026-07-07: PR 8 reforcou o boundary de dominio: qualquer import de `@/app` em `src/features` agora falha em teste estrutural.
 - 2026-07-07: PR 8 reforcou separacao dominio/UI: `src/features` tambem nao pode importar `@/components`.
+- 2026-07-07: PR 8 reforcou server actions de dominio: `src/features/**/actions.ts` nao pode importar `@/db`, mantendo persistencia em camadas server/domain.
 - 2026-07-07: PR 8 reforcou o boundary de infra compartilhada: runtime em `src/lib` nao pode importar `@/app`.
+- 2026-07-07: PR 8 removeu acoplamento reverso de `src/lib` para `features`: `OTHERS_CATEGORY_KEY` virou default compartilhado em `src/lib/catalog-defaults.ts` e runtime de `src/lib` nao pode importar `@/features`.
 - 2026-07-07: PR 8 reforcou boundaries de base: componentes nao podem importar `@/db`, e `src/db` nao pode depender de `app`, `components` ou `features`.
-- 2026-07-07: PR 6/QA reconciliou as evidencias atuais apos confirmacao destrutiva de categoria e consolidacao de guardrail: suite local passou com 67 arquivos e 243 testes.
+- 2026-07-07: PR 8 reduziu duplicacao dos guardrails estruturais com helper compartilhado para listagem/leitura de arquivos em testes de boundary.
+- 2026-07-07: PR 8 reforcou os guardrails de import: regras de boundary agora cobrem imports estaticos, side-effect imports e imports dinamicos (`import("...")`) para evitar bypass simples.
+- 2026-07-07: PR 8 consolidou a regex de imports internos em helper testado diretamente, cobrindo formas estaticas, dinamicas e side-effect sem duplicacao por boundary.
+- 2026-07-07: PR 6/QA reconciliou as evidencias atuais apos confirmacao destrutiva de categoria e consolidacao de guardrail: suite local passou com 68 arquivos e 247 testes.
 - 2026-07-06: PR 6 iniciado em UX critica: botoes "carregar mais" de produtos e vendas agora exibem toast de erro e liberam o estado de loading quando a paginacao falha.
 - 2026-07-06: PR 6 avancou em taxas de cartao: modal de parcelas agora edita rascunho local, permite cancelar sem persistir no estado principal e exige "Aplicar taxas" antes do "Salvar cartao".
 - 2026-07-06: PR 6 avancou em acessibilidade: buscas de produtos/vendas e filtro de status de vendas agora tem nomes acessiveis explicitos.

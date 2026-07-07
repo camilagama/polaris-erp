@@ -10,7 +10,6 @@ import {
   sessions,
   systemSettings,
 } from "@/db/schema";
-import { OTHERS_CATEGORY_KEY } from "@/features/catalog/constants";
 import {
   type AppPermission,
   canRolePerform,
@@ -18,6 +17,7 @@ import {
   type OrganizationRole,
   resolveDefaultOrganizationSlug,
 } from "@/lib/app-context";
+import { OTHERS_CATEGORY_KEY } from "@/lib/catalog-defaults";
 
 const DEFAULT_CATEGORY_NAME = "Outros";
 const DEFAULT_CARD_INSTALLMENT_RULES = [{ feePercent: 0, installments: 1 }];

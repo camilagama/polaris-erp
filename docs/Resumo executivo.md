@@ -51,7 +51,8 @@ Status de execucao em 2026-07-06:
 - PR 7: headers globais agora tem teste direto contra `next.config.ts`, alem do helper isolado.
 - PR 5/CI: workflow agora roda `knip` no job `verify` antes do build; E2E segue isolado por `E2E_DATABASE_URL`.
 - PR 5/CI: guardrail de Playwright agora tem teste unitario garantindo falha em CI sem `E2E_DATABASE_URL`.
-- PR 5/QA: apos as fatias de hardening, refactors seguros e UX destrutiva, `bun run test` passou localmente com 67 arquivos e 243 testes.
+- PR 5/CI: `CI=true bun run test:e2e` sem `E2E_DATABASE_URL` foi executado e falhou no load do config antes de subir servidor, confirmando o bloqueio contra banco compartilhado.
+- PR 5/QA: apos as fatias de hardening, refactors seguros e UX destrutiva, `bun run test` passou localmente com 68 arquivos e 247 testes.
 - PR 5/QA: `bun run knip` e `bun run build` passaram apos remover exports mortos das extracoes e ajustar o tipo do env E2E.
 - PR 3: iniciado. Entrada de estoque agora reativa produto arquivado ao limpar `archivedAt`.
 - PR 3: banco agora rejeita venda de cartao com `payment_fee_payer = not_applicable`.
@@ -75,8 +76,13 @@ Status de execucao em 2026-07-06:
 - PR 8: componentes agora tem guardrail estrutural unico contra qualquer import de `@/app`, reduzindo acoplamento futuro com a route tree.
 - PR 8: `src/app` agora tem guardrail estrutural contra qualquer novo arquivo `actions.ts`, mantendo server actions fora da route tree.
 - PR 8: `src/features` agora tem guardrail estrutural contra qualquer import de `@/app` ou `@/components`, mantendo o dominio independente da route tree e da UI.
+- PR 8: server actions em `src/features/**/actions.ts` agora tem guardrail contra import direto de `@/db`, preservando delegacao para camadas server/domain.
 - PR 8: runtime em `src/lib` agora tem guardrail estrutural contra import de `@/app`, mantendo infra compartilhada independente da route tree.
+- PR 8: runtime em `src/lib` tambem nao pode importar `@/features`; default compartilhado de categoria agora vive em `src/lib/catalog-defaults.ts`.
 - PR 8: componentes agora tambem tem guardrail contra import de `@/db`, e `src/db` nao pode depender de camadas superiores.
+- PR 8: guardrails estruturais agora compartilham helper de teste para reduzir duplicacao e facilitar novas regras.
+- PR 8: guardrails estruturais agora cobrem imports estaticos, side-effect imports e imports dinamicos (`import("...")`), reduzindo bypass simples dos boundaries.
+- PR 8: regex de imports internos agora fica em helper testado diretamente, evitando divergencia entre boundaries.
 - PR 6: falha em "carregar mais" de produtos/vendas agora mostra toast de erro e libera o loading.
 - PR 6: modal de taxas de cartao agora tem cancelar/aplicar em rascunho local antes do save explicito.
 - PR 6: filtros de busca/status em produtos e vendas ganharam nomes acessiveis explicitos.
@@ -118,11 +124,11 @@ Arquitetura:
 - Proxy Next 16 em `proxy.ts`, como barreira otimista.
 
 Verificações:
-- `bun run check` => passou, 262 arquivos.
-- `bun run test` => passou, 67 arquivos, 243 testes.
+- `bun run check` => passou, 265 arquivos.
+- `bun run test` => passou, 68 arquivos, 247 testes.
 - `bun run build` => passou.
 - `bun run knip` => passou.
-- `bun run test:e2e` => não executado; `E2E_DATABASE_URL=missing`.
+- `CI=true bun run test:e2e` sem `E2E_DATABASE_URL` => falhou intencionalmente no load do config; E2E completo ainda não executado por falta de banco isolado.
 
 **3. Achados Priorizados**
 `DB-001` P1, Banco/Auth  
@@ -226,7 +232,7 @@ Correção: configurar branch Neon E2E e rodar `bun run test:e2e`.
 - Metas: Parcial. Regra de 1 ativa tem constraint local; falta aplicar/validar migration em Neon isolado. P2.
 - Logs/Sentry: Parcial. Errors, tracing e replay em erro configurados; alertas ainda precisam ser definidos na plataforma. P3.
 - Backups/rollback: Parcial. Docs existem; execução não verificada. P2.
-- Tests unit/integration: OK razoável. 243 testes passando no ultimo run registrado.
+- Tests unit/integration: OK razoável. 247 testes passando no ultimo run registrado.
 - E2E: Parcial/não verificado localmente. P2.
 - CI/CD: Parcial. CI roda check/test/knip/build e job E2E isolado, mas ainda depende do secret `E2E_DATABASE_URL` real. P2.
 - LGPD/privacidade/suporte/admin/billing: Ausente/parcial. P2/P3.
