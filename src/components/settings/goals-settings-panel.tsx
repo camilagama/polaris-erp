@@ -4,6 +4,7 @@ import {
   Archive01Icon,
   CheckmarkCircle02Icon,
   Clock01Icon,
+  Target02Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { format, parseISO } from "date-fns";
@@ -186,15 +187,29 @@ export function GoalsSettingsPanel({
           </div>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <div className="divide-y divide-border/60">
+          <div className="flex flex-col gap-3">
             {payload.active.length === 0 ? (
-              <p className="py-3 text-muted-foreground text-sm">
-                Nenhuma meta ativa.
-              </p>
+              <div className="flex min-h-[86px] items-center gap-3.5 rounded-xl border border-dashed p-3">
+                <div className="flex shrink-0 items-center justify-center rounded-full bg-muted/50 p-2.5">
+                  <HugeiconsIcon
+                    className="text-muted-foreground/60"
+                    icon={Target02Icon}
+                    size={22}
+                  />
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <h3 className="font-medium text-foreground text-sm">
+                    Nenhuma meta ativa
+                  </h3>
+                  <p className="text-muted-foreground text-xs">
+                    Voce ainda nao definiu nenhuma meta de vendas para a loja.
+                  </p>
+                </div>
+              </div>
             ) : (
               payload.active.map((goal) => (
                 <div
-                  className="flex flex-col gap-2 py-3 first:pt-0"
+                  className="flex min-h-[86px] flex-col justify-center gap-2.5 rounded-xl border border-border/60 p-3.5"
                   key={goal.id}
                 >
                   <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
@@ -276,7 +291,23 @@ export function GoalsSettingsPanel({
           </DialogHeader>
 
           {payload.history.length === 0 ? (
-            <p className="text-muted-foreground text-sm">Vazio.</p>
+            <div className="flex min-h-[86px] items-center gap-3.5 rounded-xl border border-dashed p-3">
+              <div className="flex shrink-0 items-center justify-center rounded-full bg-muted/50 p-2.5">
+                <HugeiconsIcon
+                  className="text-muted-foreground/60"
+                  icon={Clock01Icon}
+                  size={22}
+                />
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <h3 className="font-medium text-foreground text-sm">
+                  Sem historico
+                </h3>
+                <p className="text-muted-foreground text-xs">
+                  Nenhuma meta concluida ou arquivada no historico.
+                </p>
+              </div>
+            </div>
           ) : (
             <div className="max-h-[65vh] overflow-auto">
               <Table>
