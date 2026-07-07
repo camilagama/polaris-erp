@@ -43,7 +43,7 @@
 - 2026-07-07: Resumo executivo alinhado ao estado atual: achados DB/R2/metas/estoque agora distinguem corrigido localmente de pendente externo (Neon/Vercel/R2/E2E).
 - 2026-07-07: PR 5/CI avancou: job `verify` agora tambem roda `bun run knip` antes do build; docs de CI foram alinhados para check/test/knip/build + E2E isolado.
 - 2026-07-07: PR 5/CI reforcou guardrail de Playwright: validacao de `E2E_DATABASE_URL` em CI foi extraida e coberta por teste unitario.
-- 2026-07-07: PR 5/QA estabilizou a suite local apos hardening: `bun run test` passou com 63 arquivos e 231 testes.
+- 2026-07-07: PR 5/QA estabilizou a suite local apos hardening, refactors seguros e UX destrutiva: `bun run test` passou com 67 arquivos e 243 testes.
 - 2026-07-07: PR 5/QA fechou verificacoes ampliadas locais: `bun run knip` e `bun run build` passaram apos limpar exports mortos das extracoes e ajustar tipo do env E2E.
 - 2026-07-07: Resumo executivo alinhado em riscos financeiros: estoque arquivado, idempotency, taxa de cartao e R2 agora constam como mitigados localmente, com validacao externa pendente.
 - 2026-07-07: PR 3 reforcou prova de idempotency: teste agora valida que a migration preserva o indice unico parcial apenas para `idempotency_key IS NOT NULL`.
@@ -54,7 +54,7 @@
 - 2026-07-07: PR 2 corrigiu auditoria pre-tenant: login sem organizacao ativa nao grava mais evento em `org_dg_imports`; login com organizacao ativa continua auditado no tenant correto.
 - 2026-07-07: PR 2 reforcou rota autenticada de leitura de imagem: usuario sem membership na organizacao da URL recebe 404 antes de storage ou auditoria.
 - 2026-07-07: PR 2 avancou em camada tenant-scoped: rota autenticada de leitura de imagem agora delega checagem de produto/org/membership para dominio e tem guardrail contra import direto de `db` no handler.
-- 2026-07-07: PR 2 consolidou guardrail de arquitetura: arquivos runtime em `src/app` agora tem teste global contra import direto de `db`/schema.
+- 2026-07-07: PR 2 consolidou guardrail de arquitetura: arquivos runtime em `src/app` agora tem teste global contra import direto de `@/db` e subpaths.
 - 2026-07-07: PR 2 reforcou contexto de app: organizacao inativa retorna contexto nulo e nao reescreve a organizacao ativa da sessao.
 - 2026-07-07: PR 4/Perf avancou em indices de listagem: produtos ativos/arquivados e vendas agora tem indices cobrindo paginacao seek por organizacao.
 - 2026-07-07: PR 6 teve documentacao reconciliada com o codigo: modal de taxas ja usa rascunho local com cancelar/aplicar; pendencia restante e E2E/smoke.
@@ -66,17 +66,26 @@
 - 2026-07-06: PR 8 iniciado em cleanup seguro: export morto `getDb` de `src/db/index.ts` removido, deixando o helper privado ao proxy `db`.
 - 2026-07-06: PR 8 reduziu acoplamento de tipos: `ProductStatusFilter` e `SaleStatusFilter` sairam de `app/**/queries` para contracts de dominio, removendo imports de `queries` pelos componentes.
 - 2026-07-06: PR 8 moveu queries de listagem/detalhe de produtos e vendas para `src/features/**/queries.ts`, deixando o App Router apenas como composicao/paginacao.
-- 2026-07-07: PR 8 reduziu acoplamento de paginacao: actions de carregar mais produtos/vendas sairam de `src/app/**/pagination` para `features`, mantendo wrappers finos e guardrail estrutural para componentes.
+- 2026-07-07: PR 8 reduziu acoplamento de paginacao: actions de carregar mais produtos/vendas sairam de `src/app/**/pagination` para `features`, removendo tambem os wrappers finos e mantendo guardrail estrutural contra qualquer novo `src/app/**/pagination.ts`.
 - 2026-07-07: PR 8 reduziu acoplamento de settings: actions de metas sairam de `src/app/(app)/metas/actions` para `features/goals/actions`, removendo o arquivo morto em `app` e mantendo guardrail estrutural nos componentes.
 - 2026-07-07: PR 8 reduziu acoplamento de catalogo: actions de configuracoes/categorias sairam de `src/app/(app)/configuracoes/actions` para `features/catalog/actions`, removendo arquivo morto e mantendo guardrail estrutural no painel de settings.
 - 2026-07-07: PR 8 reduziu acoplamento de vendas: actions de criar/cancelar venda sairam de `src/app/(app)/vendas/actions` para `features/sales/actions`, removendo arquivo morto e mantendo guardrail estrutural nos componentes.
 - 2026-07-07: PR 8 reduziu acoplamento de produtos: actions de produto/estoque/imagem sairam de `src/app/(app)/produtos/actions` para `features/products/actions`, removendo arquivo morto e mantendo guardrail estrutural nos componentes.
 - 2026-07-07: PR 8 reduziu acoplamento de onboarding: action de criacao inicial de organizacao saiu de `src/app/(auth)/onboarding/actions` para `features/onboarding/actions`, removendo arquivo morto e mantendo guardrail no formulario client.
 - 2026-07-07: PR 8 reduziu acoplamento da shell autenticada: action de logout saiu de `src/app/(app)/actions` para `features/auth/actions`, removendo o ultimo `actions.ts` da area autenticada em `app` e mantendo guardrail no layout.
+- 2026-07-07: PR 8 completou a realocacao dos testes de server actions: `actions.test.ts` de catalogo, metas, produtos, vendas e onboarding sairam de `src/app` para `features`, com guardrail estrutural contra regressao.
+- 2026-07-07: PR 8 consolidou o guardrail de componentes: qualquer import de `@/app` em `src/components` agora falha em uma regra estrutural unica.
+- 2026-07-07: PR 8 reforcou o boundary do App Router: qualquer novo `src/app/**/actions.ts` agora falha no guardrail estrutural.
+- 2026-07-07: PR 8 reforcou o boundary de dominio: qualquer import de `@/app` em `src/features` agora falha em teste estrutural.
+- 2026-07-07: PR 8 reforcou separacao dominio/UI: `src/features` tambem nao pode importar `@/components`.
+- 2026-07-07: PR 8 reforcou o boundary de infra compartilhada: runtime em `src/lib` nao pode importar `@/app`.
+- 2026-07-07: PR 8 reforcou boundaries de base: componentes nao podem importar `@/db`, e `src/db` nao pode depender de `app`, `components` ou `features`.
+- 2026-07-07: PR 6/QA reconciliou as evidencias atuais apos confirmacao destrutiva de categoria e consolidacao de guardrail: suite local passou com 67 arquivos e 243 testes.
 - 2026-07-06: PR 6 iniciado em UX critica: botoes "carregar mais" de produtos e vendas agora exibem toast de erro e liberam o estado de loading quando a paginacao falha.
 - 2026-07-06: PR 6 avancou em taxas de cartao: modal de parcelas agora edita rascunho local, permite cancelar sem persistir no estado principal e exige "Aplicar taxas" antes do "Salvar cartao".
 - 2026-07-06: PR 6 avancou em acessibilidade: buscas de produtos/vendas e filtro de status de vendas agora tem nomes acessiveis explicitos.
 - 2026-07-07: PR 6 avancou em onboarding: validacao invalida agora retorna erro recuperavel, o formulario anuncia a falha com `aria-live` e desabilita controles durante pending.
+- 2026-07-07: PR 6 reforcou acoes destrutivas: exclusao de categoria customizada agora abre confirmacao explicita antes de chamar a action de remocao.
 - 2026-07-06: PR 5 iniciado em CI/E2E: GitHub Actions agora tem job `e2e` com Playwright, dependente de `E2E_DATABASE_URL` em secret para impedir uso acidental de banco compartilhado.
 - 2026-07-06: PR 9 iniciado em produto pos-MVP: `docs/roadmap.md` criado com ordem para convites, billing, exportacao, admin/suporte, LGPD e relatorios sem misturar com hardening.
 - Pendencias antes de declarar PR 2 completo: ampliar provas tenant A vs tenant B para outros actions/route handlers, decisao/implementacao de RLS ou repository tenant-scoped, e dry-run das migrations em branch Neon isolada.
@@ -131,7 +140,7 @@ Arquivos prováveis:
 - `src/db/migrations/*`
 - `src/lib/app-session.ts`
 - `src/app/api/product-images/[organizationId]/[productId]/[version]/[variant]/route.ts`
-- `src/app/(auth)/onboarding/actions.ts`
+- `src/features/onboarding/actions.ts`
 - `src/app/api/**/route.test.ts`
 - `src/lib/app-context.test.ts`
 
@@ -160,7 +169,7 @@ Achados endereçados:
 - risco de venda duplicada por retry/duplo submit sem idempotency key.
 
 Arquivos prováveis:
-- `src/app/(app)/produtos/actions.ts`
+- `src/features/products/actions.ts`
 - `src/features/products/stock.ts`
 - `src/features/sales/schema.ts`
 - `src/features/sales/calculations.ts`
@@ -199,9 +208,9 @@ Achados endereçados:
 - lacunas de concorrência e validação de DB.
 
 Arquivos prováveis:
-- `src/app/(app)/produtos/actions.test.ts`
-- `src/app/(app)/vendas/actions.test.ts`
-- `src/app/(app)/metas/actions.test.ts`
+- `src/features/products/actions.test.ts`
+- `src/features/sales/actions.test.ts`
+- `src/features/goals/actions.test.ts`
 - `src/app/api/product-images/**/*.test.ts`
 - `src/lib/env.test.ts`
 - `src/features/**/**/*.test.ts`
@@ -265,7 +274,7 @@ Arquivos prováveis:
 - `src/components/sales/sales-panel.tsx`
 - `src/components/sales/create-sale-dialog.tsx`
 - `src/app/(auth)/onboarding/page.tsx`
-- `src/app/(auth)/onboarding/actions.ts`
+- `src/features/onboarding/actions.ts`
 
 Risco: médio. Pode afetar E2E por nomes acessíveis e textos.
 
@@ -284,9 +293,10 @@ Status local:
 - modal de taxas usa rascunho local com cancelar/aplicar antes do save.
 - paginação de produtos/vendas exibe erro e libera loading.
 - onboarding retorna erro recuperável de validação e mostra pending no formulário.
+- exclusão de categoria customizada exige confirmação explícita antes da action destrutiva.
 
 Pendente externo:
-- E2E/smoke para taxas, onboarding e paginação com banco isolado.
+- E2E/smoke para taxas, onboarding, paginação e exclusão de categoria com banco isolado.
 
 Ordem: depois de PR 5 para ter E2E protegendo regressão.
 
@@ -336,10 +346,10 @@ Achados endereçados:
 - `knip`: export não usado `getDb`.
 
 Arquivos prováveis:
-- `src/app/(app)/produtos/actions.ts`
-- `src/app/(app)/vendas/actions.ts`
-- `src/app/(app)/produtos/queries.ts`
-- `src/app/(app)/vendas/queries.ts`
+- `src/features/products/actions.ts`
+- `src/features/sales/actions.ts`
+- `src/features/products/queries.ts`
+- `src/features/sales/queries.ts`
 - `src/features/products/*`
 - `src/features/sales/*`
 - `src/db/index.ts`

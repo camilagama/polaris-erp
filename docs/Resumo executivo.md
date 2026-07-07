@@ -23,7 +23,7 @@ Status de execucao em 2026-07-06:
 - PR 2: auditoria de login sem organizacao ativa nao cai mais em `org_dg_imports`; login com organizacao ativa segue auditado no tenant correto.
 - PR 2: rota autenticada de leitura de imagem agora tem prova tenant A/B para usuario sem membership; retorna 404 antes de storage/auditoria.
 - PR 2: rota autenticada de leitura de imagem deixou de importar `db` diretamente; checagem tenant/produto/org ativa agora fica em camada de dominio com guardrail estrutural.
-- PR 2: guardrail global agora impede imports diretos de `db`/schema em arquivos runtime de `src/app`.
+- PR 2: guardrail global agora impede imports diretos de `@/db` e subpaths em arquivos runtime de `src/app`.
 - PR 2: `getAppContext` agora tem prova local de que organizacao inativa nao gera contexto nem atualiza a organizacao ativa da sessao.
 - PR 2/R2: remocao de imagem agora confirma `imageVersion` atual antes de apagar o objeto R2.
 - PR 2/R2: replace de imagem agora desfaz a nova versao quando perde a corrida de update condicional.
@@ -51,7 +51,7 @@ Status de execucao em 2026-07-06:
 - PR 7: headers globais agora tem teste direto contra `next.config.ts`, alem do helper isolado.
 - PR 5/CI: workflow agora roda `knip` no job `verify` antes do build; E2E segue isolado por `E2E_DATABASE_URL`.
 - PR 5/CI: guardrail de Playwright agora tem teste unitario garantindo falha em CI sem `E2E_DATABASE_URL`.
-- PR 5/QA: apos as fatias de hardening, `bun run test` passou localmente com 63 arquivos e 231 testes.
+- PR 5/QA: apos as fatias de hardening, refactors seguros e UX destrutiva, `bun run test` passou localmente com 67 arquivos e 243 testes.
 - PR 5/QA: `bun run knip` e `bun run build` passaram apos remover exports mortos das extracoes e ajustar o tipo do env E2E.
 - PR 3: iniciado. Entrada de estoque agora reativa produto arquivado ao limpar `archivedAt`.
 - PR 3: banco agora rejeita venda de cartao com `payment_fee_payer = not_applicable`.
@@ -63,19 +63,26 @@ Status de execucao em 2026-07-06:
 - PR 4/Perf: produtos ativos/arquivados e vendas agora tem indices compostos alinhados a paginacao seek por organizacao.
 - PR 8: cleanup seguro iniciado; export morto `getDb` removido de `src/db/index.ts`.
 - PR 8: filtros de status de produtos/vendas agora vivem em contracts de dominio, reduzindo imports de queries do App Router pelos componentes.
-- PR 8: queries de produtos/vendas foram movidas do App Router para `features`, preservando os wrappers de pagina/paginacao.
-- PR 8: actions de paginacao de produtos/vendas agora vivem em `features`, com wrappers finos em `app` e guardrail contra import de paginacao da route tree pelos componentes.
+- PR 8: queries de produtos/vendas foram movidas do App Router para `features`; wrappers de pagina/paginacao tambem foram removidos nas fatias seguintes.
+- PR 8: actions de paginacao de produtos/vendas agora vivem integralmente em `features`, sem wrappers em `app`, com guardrail estrutural contra qualquer novo `src/app/**/pagination.ts`.
 - PR 8: actions de metas agora vivem em `features/goals/actions`, removendo o arquivo morto em `app` e adicionando guardrail contra import direto pelos componentes de settings.
 - PR 8: actions de configuracoes/catalogo agora vivem em `features/catalog/actions`, removendo o arquivo morto em `app` e adicionando guardrail contra import direto pelo painel de settings.
 - PR 8: actions de vendas agora vivem em `features/sales/actions`, removendo o arquivo morto em `app` e adicionando guardrail contra import direto pelos componentes de vendas.
 - PR 8: actions de produtos agora vivem em `features/products/actions`, removendo o arquivo morto em `app` e adicionando guardrail contra import direto pelos componentes de produtos.
 - PR 8: action de onboarding agora vive em `features/onboarding/actions`, removendo o arquivo morto em `app` e mantendo o formulario client fora da route tree de actions.
 - PR 8: action de logout agora vive em `features/auth/actions`, removendo o ultimo `actions.ts` da shell autenticada em `app` e mantendo guardrail no layout.
+- PR 8: testes de server actions agora ficam junto das actions em `features`, deixando `src/app` sem actions/tests de actions e com guardrail estrutural contra regressao.
+- PR 8: componentes agora tem guardrail estrutural unico contra qualquer import de `@/app`, reduzindo acoplamento futuro com a route tree.
+- PR 8: `src/app` agora tem guardrail estrutural contra qualquer novo arquivo `actions.ts`, mantendo server actions fora da route tree.
+- PR 8: `src/features` agora tem guardrail estrutural contra qualquer import de `@/app` ou `@/components`, mantendo o dominio independente da route tree e da UI.
+- PR 8: runtime em `src/lib` agora tem guardrail estrutural contra import de `@/app`, mantendo infra compartilhada independente da route tree.
+- PR 8: componentes agora tambem tem guardrail contra import de `@/db`, e `src/db` nao pode depender de camadas superiores.
 - PR 6: falha em "carregar mais" de produtos/vendas agora mostra toast de erro e libera o loading.
 - PR 6: modal de taxas de cartao agora tem cancelar/aplicar em rascunho local antes do save explicito.
 - PR 6: filtros de busca/status em produtos e vendas ganharam nomes acessiveis explicitos.
 - PR 6: documentacao alinhada ao estado verificado do modal de taxas; `UX-001` agora fica como pendencia de E2E/smoke, nao de implementacao local.
 - PR 6: onboarding agora retorna erro recuperavel em validacao, anuncia a falha com `aria-live` e desabilita input/botao enquanto a action esta pendente.
+- PR 6: exclusao de categoria customizada agora exige confirmacao explicita antes de chamar a action destrutiva.
 - PR 5: CI agora inclui job Playwright E2E que exige `E2E_DATABASE_URL` isolado.
 - PR 9: roadmap pos-MVP criado em `docs/roadmap.md`, separando convites, billing, exportacao, admin/suporte, LGPD e relatorios do hardening inicial.
 - Ainda nao declarar producao pronta: PR 2/3/5/7 seguem com pendencias relevantes.
@@ -111,8 +118,8 @@ Arquitetura:
 - Proxy Next 16 em `proxy.ts`, como barreira otimista.
 
 Verificações:
-- `bun run check` => passou, 261 arquivos.
-- `bun run test` => passou, 63 arquivos, 231 testes.
+- `bun run check` => passou, 262 arquivos.
+- `bun run test` => passou, 67 arquivos, 243 testes.
 - `bun run build` => passou.
 - `bun run knip` => passou.
 - `bun run test:e2e` => não executado; `E2E_DATABASE_URL=missing`.
@@ -149,7 +156,7 @@ Correção: manter advisory lock e decidir se membership única por usuário é 
 Teste: duas chamadas paralelas de onboarding => uma org apenas.
 
 `R2-001` P1, Imagens/R2  
-Evidência: upload final antes do DB em [image-workflow.ts](</c:/Users/Junior/Documents/0 - Dev/Hub Imports/src/features/products/image-workflow.ts:45>); update condicional sem checar row count em [actions.ts](</c:/Users/Junior/Documents/0 - Dev/Hub Imports/src/app/(app)/produtos/actions.ts:287>); reconcile apaga não referenciadas em [route.ts](</c:/Users/Junior/Documents/0 - Dev/Hub Imports/src/app/api/internal/product-images/reconcile/route.ts:59>).  
+Evidência: upload final antes do DB em [image-workflow.ts](</c:/Users/Junior/Documents/0 - Dev/Hub Imports/src/features/products/image-workflow.ts:45>); update condicional agora fica no domínio de imagens em [image-workflow.ts](</c:/Users/Junior/Documents/0 - Dev/Hub Imports/src/features/products/image-workflow.ts:45>); reconcile apaga não referenciadas em [route.ts](</c:/Users/Junior/Documents/0 - Dev/Hub Imports/src/app/api/internal/product-images/reconcile/route.ts:59>).  
 Status: Corrigido localmente nos fluxos revisados; pendente validar contra R2 real/preview.  
 Impacto residual: imagem pode ficar orfa se deploy/R2 real divergir dos mocks ou se surgirem novos fluxos sem update condicional.  
 Correção: manter idade mínima no reconcile, `returning` no update e rollback da nova versão se conflito.  
@@ -163,7 +170,7 @@ Correção: aplicar precheck/migration e manter tratamento de erro de constraint
 Teste: `Promise.allSettled` de duas criações.
 
 `STOCK-001` P2, Estoque  
-Evidência: entrada de estoque limpa `archivedAt` em [actions.ts](</c:/Users/Junior/Documents/0 - Dev/Hub Imports/src/app/(app)/produtos/actions.ts:423>) e [actions.test.ts](</c:/Users/Junior/Documents/0 - Dev/Hub Imports/src/app/(app)/produtos/actions.test.ts:393>) cobre produto arquivado reativado.  
+Evidência: entrada de estoque limpa `archivedAt` via camada de produtos em [server.ts](</c:/Users/Junior/Documents/0 - Dev/Hub Imports/src/features/products/server.ts:1>) e [actions.test.ts](</c:/Users/Junior/Documents/0 - Dev/Hub Imports/src/features/products/actions.test.ts:1>) cobre produto arquivado reativado.  
 Status: Corrigido localmente.  
 Impacto residual: precisa smoke em preview/producao apos aplicar migrations e deploy para confirmar o fluxo real.  
 Correção: manter `archivedAt: null` na entrada de estoque.  
@@ -190,12 +197,12 @@ Impacto residual: planos podem divergir em volume real sem `EXPLAIN ANALYZE` pó
 Correção: aplicar migration de índices e validar planos em branch Neon isolada.  
 Teste: teste de schema/migration local e `EXPLAIN ANALYZE` com dataset multi-tenant.
 
-`UX-001` P2, Taxas de cartão  
-Evidência: [catalog-settings-panel.tsx](</c:/Users/Junior/Documents/0 - Dev/Hub Imports/src/components/settings/catalog-settings-panel.tsx:136>) abre o modal com rascunho local, [catalog-settings-panel.tsx](</c:/Users/Junior/Documents/0 - Dev/Hub Imports/src/components/settings/catalog-settings-panel.tsx:141>) cancela descartando o rascunho e [catalog-settings-panel.tsx](</c:/Users/Junior/Documents/0 - Dev/Hub Imports/src/components/settings/catalog-settings-panel.tsx:146>) aplica antes do save explícito. [catalog-settings-panel.test.ts](</c:/Users/Junior/Documents/0 - Dev/Hub Imports/src/components/settings/catalog-settings-panel.test.ts:109>) cobre cancelar e aplicar.  
+`UX-001` P2, Taxas de cartão e ações destrutivas  
+Evidência: [catalog-settings-panel.tsx](</c:/Users/Junior/Documents/0 - Dev/Hub Imports/src/components/settings/catalog-settings-panel.tsx:136>) abre o modal de taxas com rascunho local, cancela descartando o rascunho e aplica antes do save explícito; a exclusão de categoria customizada passa por confirmação antes da action destrutiva. [catalog-settings-panel.test.ts](</c:/Users/Junior/Documents/0 - Dev/Hub Imports/src/components/settings/catalog-settings-panel.test.ts:109>) cobre cancelar/aplicar taxas e confirmar exclusão de categoria.  
 Status: Corrigido localmente; pendente E2E/smoke em navegador com banco isolado.  
 Impacto residual: risco de regressão visual/operacional enquanto Playwright nao cobrir o fluxo completo.  
-Correção: manter rascunho local com `Cancelar`, `Aplicar taxas` e `Salvar cartao` explícitos.  
-Teste: E2E fechar modal sem aplicar, aplicar e recarregar.
+Correção: manter rascunho local com `Cancelar`, `Aplicar taxas` e `Salvar cartao` explícitos; manter confirmação antes de excluir categoria customizada.  
+Teste: E2E fechar modal sem aplicar, aplicar e recarregar; excluir categoria customizada somente após confirmar.
 
 `TEST-001` P2, E2E  
 Evidência: `playwright.config.ts` exige `E2E_DATABASE_URL` em CI; env local está ausente.  
@@ -219,7 +226,7 @@ Correção: configurar branch Neon E2E e rodar `bun run test:e2e`.
 - Metas: Parcial. Regra de 1 ativa tem constraint local; falta aplicar/validar migration em Neon isolado. P2.
 - Logs/Sentry: Parcial. Errors, tracing e replay em erro configurados; alertas ainda precisam ser definidos na plataforma. P3.
 - Backups/rollback: Parcial. Docs existem; execução não verificada. P2.
-- Tests unit/integration: OK razoável. 200 passando no ultimo run registrado.
+- Tests unit/integration: OK razoável. 243 testes passando no ultimo run registrado.
 - E2E: Parcial/não verificado localmente. P2.
 - CI/CD: Parcial. CI roda check/test/knip/build e job E2E isolado, mas ainda depende do secret `E2E_DATABASE_URL` real. P2.
 - LGPD/privacidade/suporte/admin/billing: Ausente/parcial. P2/P3.

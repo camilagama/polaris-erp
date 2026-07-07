@@ -6,75 +6,77 @@ vi.mock("@/lib/app-session", () => ({
   requireAppContext: vi.fn(),
 }));
 
-vi.mock("@/features/sales/queries", () => ({
-  getSalesQuery: vi.fn(),
+vi.mock("@/features/products/queries", () => ({
+  getProductsQuery: vi.fn(),
 }));
 
 type MockFn = ReturnType<typeof vi.fn>;
 
 const resolveMocks = async () => {
   const authModule = await import("@/lib/app-session");
-  const queriesModule = await import("@/features/sales/queries");
+  const queriesModule = await import("@/features/products/queries");
 
   return {
-    mockGetSalesQuery: queriesModule.getSalesQuery as MockFn,
+    mockGetProductsQuery: queriesModule.getProductsQuery as MockFn,
     mockRequireAppContext: authModule.requireAppContext as MockFn,
   };
 };
 
-describe("loadMoreSalesAction", () => {
+describe("loadMoreProductsAction", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
 
-    const { mockGetSalesQuery, mockRequireAppContext } = await resolveMocks();
+    const { mockGetProductsQuery, mockRequireAppContext } =
+      await resolveMocks();
 
     mockRequireAppContext.mockResolvedValue({
       organizationId: "org_dg_imports",
       role: "operator",
       userId: "user-1",
     });
-    mockGetSalesQuery.mockResolvedValue({
+    mockGetProductsQuery.mockResolvedValue({
       items: [],
       nextCursor: null,
     });
   });
 
-  it("requires authentication before loading more sales", async () => {
-    const { loadMoreSalesAction } = await import(
-      "@/app/(app)/vendas/pagination"
+  it("requires authentication before loading more products", async () => {
+    const { loadMoreProductsAction } = await import(
+      "@/features/products/pagination"
     );
-    const { mockGetSalesQuery, mockRequireAppContext } = await resolveMocks();
+    const { mockGetProductsQuery, mockRequireAppContext } =
+      await resolveMocks();
 
     mockRequireAppContext.mockRejectedValueOnce(
       new Error("Sessao invalida. Faca login novamente.")
     );
 
     await expect(
-      loadMoreSalesAction({
+      loadMoreProductsAction({
         cursor: "cursor-1",
       })
     ).rejects.toThrowError("Sessao invalida. Faca login novamente.");
 
-    expect(mockGetSalesQuery).not.toHaveBeenCalled();
+    expect(mockGetProductsQuery).not.toHaveBeenCalled();
   });
 
   it("forwards cursor and filters to the server query", async () => {
-    const { loadMoreSalesAction } = await import(
-      "@/app/(app)/vendas/pagination"
+    const { loadMoreProductsAction } = await import(
+      "@/features/products/pagination"
     );
-    const { mockGetSalesQuery } = await resolveMocks();
+    const { mockGetProductsQuery } = await resolveMocks();
 
-    await loadMoreSalesAction({
+    await loadMoreProductsAction({
       cursor: "cursor-1",
-      query: "maria",
-      status: "cancelled",
+      query: "iphone",
+      status: "archived",
     });
 
-    expect(mockGetSalesQuery).toHaveBeenCalledWith({
+    expect(mockGetProductsQuery).toHaveBeenCalledWith({
       cursor: "cursor-1",
       organizationId: "org_dg_imports",
-      query: "maria",
-      status: "cancelled",
+      query: "iphone",
+      status: "archived",
     });
   });
 });

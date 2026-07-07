@@ -2,10 +2,10 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const COMPONENTS_DIR = join(process.cwd(), "src", "components");
+const FEATURES_DIR = join(process.cwd(), "src", "features");
 const TYPESCRIPT_SOURCE_FILE_PATTERN = /\.(ts|tsx)$/;
 const APP_ROUTE_TREE_IMPORT_PATTERN = /from\s+["']@\/app(?:\/|["'])/;
-const DB_IMPORT_PATTERN = /from\s+["']@\/db(?:\/[^"']*)?["']/;
+const COMPONENT_IMPORT_PATTERN = /from\s+["']@\/components(?:\/|["'])/;
 
 const listSourceFiles = (directory: string): string[] => {
   const files: string[] = [];
@@ -27,9 +27,9 @@ const listSourceFiles = (directory: string): string[] => {
   return files;
 };
 
-describe("component boundaries", () => {
-  it("keeps components from importing the app route tree", () => {
-    const offenders = listSourceFiles(COMPONENTS_DIR)
+describe("feature boundaries", () => {
+  it("keeps domain features from importing the app route tree", () => {
+    const offenders = listSourceFiles(FEATURES_DIR)
       .filter((file) => {
         const source = readFileSync(file, "utf8");
         return APP_ROUTE_TREE_IMPORT_PATTERN.test(source);
@@ -39,11 +39,11 @@ describe("component boundaries", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("keeps components from importing the database layer", () => {
-    const offenders = listSourceFiles(COMPONENTS_DIR)
+  it("keeps domain features from importing UI components", () => {
+    const offenders = listSourceFiles(FEATURES_DIR)
       .filter((file) => {
         const source = readFileSync(file, "utf8");
-        return DB_IMPORT_PATTERN.test(source);
+        return COMPONENT_IMPORT_PATTERN.test(source);
       })
       .map((file) => relative(process.cwd(), file));
 

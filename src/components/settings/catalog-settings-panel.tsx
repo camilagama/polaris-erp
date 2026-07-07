@@ -8,6 +8,16 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useEffect, useState, useTransition } from "react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -106,6 +116,8 @@ export function CatalogSettingsPanel({
   const [newCategoryName, setNewCategoryName] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
+  const [categoryPendingDeletion, setCategoryPendingDeletion] =
+    useState<CatalogCategory | null>(null);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [ratesOpen, setRatesOpen] = useState(false);
   const [minimumMarkupPercent, setMinimumMarkupPercent] = useState(
@@ -492,7 +504,9 @@ export function CatalogSettingsPanel({
                             </Button>
                             <Button
                               disabled={!deleteAllowed || pending}
-                              onClick={() => handleDeleteCategory(category.id)}
+                              onClick={() =>
+                                setCategoryPendingDeletion(category)
+                              }
                               size="icon-sm"
                               title={deleteTitle}
                               type="button"
@@ -511,6 +525,41 @@ export function CatalogSettingsPanel({
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog
+        onOpenChange={(open) => {
+          if (!open) {
+            setCategoryPendingDeletion(null);
+          }
+        }}
+        open={Boolean(categoryPendingDeletion)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Remover {categoryPendingDeletion?.name}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acao remove a categoria do catalogo. Categorias com produtos
+              vinculados continuam bloqueadas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel type="button">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (categoryPendingDeletion) {
+                  handleDeleteCategory(categoryPendingDeletion.id);
+                }
+              }}
+              type="button"
+              variant="destructive"
+            >
+              Remover categoria
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog
         onOpenChange={(open) => {

@@ -54,14 +54,28 @@ const settings: CatalogSettings = {
   minimumMarkupPercent: 30,
 };
 
-const renderPanel = () => {
+const customCategory: CatalogCategory = {
+  description: null,
+  id: "category-2",
+  isSystem: false,
+  key: "smartphones",
+  name: "Smartphones",
+  productCount: 0,
+};
+
+const renderPanel = (panelCategories = categories) => {
   const container = document.createElement("div");
   document.body.append(container);
 
   let root: Root | null = null;
   act(() => {
     root = createRoot(container);
-    root.render(createElement(CatalogSettingsPanel, { categories, settings }));
+    root.render(
+      createElement(CatalogSettingsPanel, {
+        categories: panelCategories,
+        settings,
+      })
+    );
   });
 
   return { container, root };
@@ -70,6 +84,21 @@ const renderPanel = () => {
 const clickButton = async (label: string) => {
   const button = [...document.querySelectorAll("button")].find(
     (element) => element.textContent === label
+  );
+
+  expect(button).toBeTruthy();
+
+  await act(async () => {
+    button?.dispatchEvent(
+      new MouseEvent("click", { bubbles: true, cancelable: true })
+    );
+    await Promise.resolve();
+  });
+};
+
+const clickButtonByTitle = async (title: string) => {
+  const button = [...document.querySelectorAll("button")].find(
+    (element) => element.getAttribute("title") === title
   );
 
   expect(button).toBeTruthy();
@@ -144,6 +173,29 @@ describe("CatalogSettingsPanel", () => {
       idealMarkupPercent: 100,
       minimumMarkupPercent: 30,
     });
+
+    act(() => {
+      root?.unmount();
+    });
+  });
+
+  it("requires explicit confirmation before deleting a custom category", async () => {
+    const { root } = renderPanel([categories[0], customCategory]);
+
+    await clickButton("Gerenciar");
+    await clickButtonByTitle("Remover categoria");
+
+    expect(settingsMocks.deleteCategoryAction).not.toHaveBeenCalled();
+    expect(document.body.textContent).toContain("Remover Smartphones?");
+    expect(document.body.textContent).toContain(
+      "Esta acao remove a categoria do catalogo."
+    );
+
+    await clickButton("Remover categoria");
+
+    expect(settingsMocks.deleteCategoryAction).toHaveBeenCalledWith(
+      "category-2"
+    );
 
     act(() => {
       root?.unmount();
