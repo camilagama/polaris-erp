@@ -52,7 +52,11 @@ Status de execucao em 2026-07-06:
 - PR 5/CI: workflow agora roda `knip` no job `verify` antes do build; E2E segue isolado por `E2E_DATABASE_URL`.
 - PR 5/CI: guardrail de Playwright agora tem teste unitario garantindo falha em CI sem `E2E_DATABASE_URL`.
 - PR 5/CI: `CI=true bun run test:e2e` sem `E2E_DATABASE_URL` foi executado e falhou no load do config antes de subir servidor, confirmando o bloqueio contra banco compartilhado.
-- PR 5/QA: apos as fatias de hardening, refactors seguros e UX destrutiva, `bun run test` passou localmente com 68 arquivos e 247 testes.
+- PR 5/QA: apos as fatias de hardening, refactors seguros, RLS inicial e UX destrutiva, `bun run test` passou localmente com 69 arquivos e 250 testes.
+- PR 2/RLS: decisao arquitetural fechada; RLS e obrigatorio antes de producao, com escopo e sequencia segura definidos em `docs/rls-tenant-isolation.md`.
+- PR 2/RLS: plano executavel criado em `docs/superpowers/plans/2026-07-07-rls-tenant-isolation.md` para implementar helper tenant-scoped, migration RLS e validacao Neon temporaria.
+- PR 2/RLS: implementacao iniciada com helper transacional `withTenantContext`/`setTenantContext`, testado por TDD para usar `set_config(..., true)`.
+- PR 2/RLS: `src/features/catalog/server.ts` agora executa acessos tenant-scoped por `withTenantContext`, iniciando a migracao gradual do app para policies RLS.
 - PR 5/QA: `bun run knip` e `bun run build` passaram apos remover exports mortos das extracoes e ajustar o tipo do env E2E.
 - PR 3: iniciado. Entrada de estoque agora reativa produto arquivado ao limpar `archivedAt`.
 - PR 3: banco agora rejeita venda de cartao com `payment_fee_payer = not_applicable`.
@@ -107,7 +111,7 @@ Forças reais:
 Top bloqueadores antes de clientes reais:
 1. Migrations de `sessions.id`, constraints financeiras e FKs tenant-scoped ainda nao foram validadas em branch Neon isolada.
 2. Bootstrap interno bloqueado localmente em prod-like; ainda exige smoke em Vercel Production.
-3. RLS ou camada obrigatoria de repository tenant-scoped ainda nao foi decidida/implementada.
+3. RLS ja foi decidido como obrigatorio antes de producao, mas ainda nao foi implementado.
 4. Fluxos criticos ainda nao foram rodados em E2E com banco isolado.
 5. Playwright não verificado com banco isolado neste ambiente.
 
@@ -124,8 +128,8 @@ Arquitetura:
 - Proxy Next 16 em `proxy.ts`, como barreira otimista.
 
 Verificações:
-- `bun run check` => passou, 265 arquivos.
-- `bun run test` => passou, 68 arquivos, 247 testes.
+- `bun run check` => passou, 267 arquivos.
+- `bun run test` => passou, 69 arquivos, 250 testes.
 - `bun run build` => passou.
 - `bun run knip` => passou.
 - `CI=true bun run test:e2e` sem `E2E_DATABASE_URL` => falhou intencionalmente no load do config; E2E completo ainda não executado por falta de banco isolado.
@@ -149,9 +153,9 @@ Teste: preview/prod-like deve retornar 403 e não criar sessão.
 
 `TENANT-001` P1, Multi-tenancy  
 Evidência: ausência de RLS; isolamento está em app code. Schema tenant em [schema.ts](</c:/Users/Junior/Documents/0 - Dev/Hub Imports/src/db/schema.ts:303>).  
-Status: Não encontrado RLS; camada tenant-scoped comecou a ser reforcada incrementalmente em rotas sensiveis e product actions.  
+Status: Não encontrado RLS; decisao de produto/arquitetura agora exige RLS antes de producao, com desenho inicial em `docs/rls-tenant-isolation.md`.  
 Impacto: uma query futura sem filtro `organizationId` pode vazar dados.  
-Correção: planejar RLS ou concluir camada obrigatória de tenant-scoped repository.  
+Correção: implementar wrapper tenant-scoped por transacao, policies RLS e validacao em branch Neon temporaria.  
 Teste: tenant A não lê/escreve tenant B mesmo com query sem filtro de app.
 
 `RACE-001` P1, Onboarding/SaaS  
@@ -220,7 +224,7 @@ Correção: configurar branch Neon E2E e rodar `bun run test:e2e`.
 - Auth/Google/Better Auth: Parcial. Produção exige Google, secret forte e smoke real; bootstrap prod-like corrigido localmente. P1.
 - Sessões/cookies: Parcial. `sessions.id` tem unique local; falta aplicar/validar migration em Neon isolado. P1.
 - Organizações: Parcial. Onboarding tem advisory lock local e contexto bloqueia organizacao inativa; falta stress/smoke em banco real. P1.
-- Multi-tenancy: Parcial. Filtros bons no app, sem RLS. P1.
+- Multi-tenancy: Parcial. Filtros bons no app; RLS agora e obrigatorio antes de producao e ainda falta implementar. P1.
 - RBAC: Parcial. Roles existem, multiusuário/convites desativados. P2.
 - Server actions/APIs: Parcial. Boa checagem de contexto; hardening bootstrap/internal avancou, mas smoke real ainda falta. P1/P2.
 - IDOR: OK nos fluxos revisados. Produtos, imagens, categorias e metas agora tem provas contra sucesso falso em recurso inexistente/outro tenant.
@@ -232,7 +236,7 @@ Correção: configurar branch Neon E2E e rodar `bun run test:e2e`.
 - Metas: Parcial. Regra de 1 ativa tem constraint local; falta aplicar/validar migration em Neon isolado. P2.
 - Logs/Sentry: Parcial. Errors, tracing e replay em erro configurados; alertas ainda precisam ser definidos na plataforma. P3.
 - Backups/rollback: Parcial. Docs existem; execução não verificada. P2.
-- Tests unit/integration: OK razoável. 247 testes passando no ultimo run registrado.
+- Tests unit/integration: OK razoável. 250 testes passando no ultimo run registrado.
 - E2E: Parcial/não verificado localmente. P2.
 - CI/CD: Parcial. CI roda check/test/knip/build e job E2E isolado, mas ainda depende do secret `E2E_DATABASE_URL` real. P2.
 - LGPD/privacidade/suporte/admin/billing: Ausente/parcial. P2/P3.
@@ -256,7 +260,7 @@ Ausente/pós-MVP: billing, planos, suporte/admin, importação CSV, recebimentos
 - Estorno inconsistente: risco se produto removido fisicamente via DB.
 - Taxa errada: modal e constraint DB foram corrigidos localmente; falta migration/smoke real.
 - Lucro/margem errado: risco residual se dados legados ou migrations financeiras nao forem validados.
-- Vazamento entre orgs: sem IDOR confirmado, mas sem RLS.
+- Vazamento entre orgs: sem IDOR confirmado, mas RLS obrigatorio ainda nao implementado.
 - Imagem perdida/órfã: corridas principais foram corrigidas localmente; falta validar R2 real.
 - Auditoria pre-tenant: corrigida localmente; login sem organizacao ativa nao gera auditoria falsa em tenant padrao.
 
@@ -280,7 +284,7 @@ Pós-MVP:
 - Billing/planos.
 - Exportação.
 - Admin/support tooling.
-- RLS ou camada tenant hardening.
+- Implementar RLS obrigatorio com tenant por transacao e validacao em branch Neon temporaria.
 - Observabilidade com alertas.
 
 **8. Plano de Correção**
@@ -293,7 +297,7 @@ Aceite: migrations aplicam sem dados legados conflitantes; build Production pass
 Fase 1, tenant/dados:
 - Manter advisory lock de onboarding e testar concorrencia contra banco real.
 - Aplicar unique partial para `goals active` em branch Neon isolada.
-- Considerar RLS ou camada repository.
+- Implementar RLS obrigatorio conforme `docs/rls-tenant-isolation.md`.
 Aceite: testes concorrentes e migrations provam uma org/meta em banco real.
 
 Fase 2, estoque/venda/R2:

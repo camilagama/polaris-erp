@@ -44,7 +44,11 @@
 - 2026-07-07: PR 5/CI avancou: job `verify` agora tambem roda `bun run knip` antes do build; docs de CI foram alinhados para check/test/knip/build + E2E isolado.
 - 2026-07-07: PR 5/CI reforcou guardrail de Playwright: validacao de `E2E_DATABASE_URL` em CI foi extraida e coberta por teste unitario.
 - 2026-07-07: PR 5/CI teve o guardrail Playwright verificado por comando real: `CI=true bun run test:e2e` sem `E2E_DATABASE_URL` falha no load do config antes de subir servidor ou tocar banco.
-- 2026-07-07: PR 5/QA estabilizou a suite local apos hardening, refactors seguros e UX destrutiva: `bun run test` passou com 68 arquivos e 247 testes.
+- 2026-07-07: PR 5/QA estabilizou a suite local apos hardening, refactors seguros, RLS inicial e UX destrutiva: `bun run test` passou com 69 arquivos e 250 testes.
+- 2026-07-07: PR 2/RLS teve decisao arquitetural fechada: RLS e obrigatorio antes de producao; `docs/rls-tenant-isolation.md` define escopo, `FORCE RLS`, tenant por transacao e sequencia segura.
+- 2026-07-07: PR 2/RLS ganhou plano executavel em `docs/superpowers/plans/2026-07-07-rls-tenant-isolation.md`, ordenando helper tenant-scoped, migration RLS, validacao Neon temporaria e docs.
+- 2026-07-07: PR 2/RLS iniciou implementacao: `src/db/tenant-context.ts` define `withTenantContext`/`setTenantContext` com `set_config(..., true)` e teste TDD prova tenant transacional.
+- 2026-07-07: PR 2/RLS aplicou o primeiro uso do helper tenant-scoped em `src/features/catalog/server.ts`; settings, categorias e lookup de categoria agora executam dentro de contexto tenant transacional.
 - 2026-07-07: PR 5/QA fechou verificacoes ampliadas locais: `bun run knip` e `bun run build` passaram apos limpar exports mortos das extracoes e ajustar tipo do env E2E.
 - 2026-07-07: Resumo executivo alinhado em riscos financeiros: estoque arquivado, idempotency, taxa de cartao e R2 agora constam como mitigados localmente, com validacao externa pendente.
 - 2026-07-07: PR 3 reforcou prova de idempotency: teste agora valida que a migration preserva o indice unico parcial apenas para `idempotency_key IS NOT NULL`.
@@ -86,7 +90,7 @@
 - 2026-07-07: PR 8 reduziu duplicacao dos guardrails estruturais com helper compartilhado para listagem/leitura de arquivos em testes de boundary.
 - 2026-07-07: PR 8 reforcou os guardrails de import: regras de boundary agora cobrem imports estaticos, side-effect imports e imports dinamicos (`import("...")`) para evitar bypass simples.
 - 2026-07-07: PR 8 consolidou a regex de imports internos em helper testado diretamente, cobrindo formas estaticas, dinamicas e side-effect sem duplicacao por boundary.
-- 2026-07-07: PR 6/QA reconciliou as evidencias atuais apos confirmacao destrutiva de categoria e consolidacao de guardrail: suite local passou com 68 arquivos e 247 testes.
+- 2026-07-07: PR 6/QA reconciliou as evidencias atuais apos confirmacao destrutiva de categoria e consolidacao de guardrail: suite local passou com 69 arquivos e 250 testes.
 - 2026-07-06: PR 6 iniciado em UX critica: botoes "carregar mais" de produtos e vendas agora exibem toast de erro e liberam o estado de loading quando a paginacao falha.
 - 2026-07-06: PR 6 avancou em taxas de cartao: modal de parcelas agora edita rascunho local, permite cancelar sem persistir no estado principal e exige "Aplicar taxas" antes do "Salvar cartao".
 - 2026-07-06: PR 6 avancou em acessibilidade: buscas de produtos/vendas e filtro de status de vendas agora tem nomes acessiveis explicitos.
@@ -94,7 +98,7 @@
 - 2026-07-07: PR 6 reforcou acoes destrutivas: exclusao de categoria customizada agora abre confirmacao explicita antes de chamar a action de remocao.
 - 2026-07-06: PR 5 iniciado em CI/E2E: GitHub Actions agora tem job `e2e` com Playwright, dependente de `E2E_DATABASE_URL` em secret para impedir uso acidental de banco compartilhado.
 - 2026-07-06: PR 9 iniciado em produto pos-MVP: `docs/roadmap.md` criado com ordem para convites, billing, exportacao, admin/suporte, LGPD e relatorios sem misturar com hardening.
-- Pendencias antes de declarar PR 2 completo: ampliar provas tenant A vs tenant B para outros actions/route handlers, decisao/implementacao de RLS ou repository tenant-scoped, e dry-run das migrations em branch Neon isolada.
+- Pendencias antes de declarar PR 2 completo: implementar RLS obrigatorio antes de producao, ampliar provas tenant A vs tenant B para outros actions/route handlers, e dry-run das migrations em branch Neon isolada.
 - PR 3 implementado localmente. Antes de tratar como pronto para deploy real, ainda falta dry-run/aplicacao das migrations em banco isolado.
 - PR 7 implementado localmente. Antes de tratar como pronto para deploy real, ainda falta validar `vercel env run -e production -- bun run build` com envs reais, smoke checks no preview/producao, limites reais do Upstash e quais headers de IP sao confiaveis na borda.
 

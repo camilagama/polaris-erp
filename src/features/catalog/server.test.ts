@@ -19,7 +19,10 @@ vi.mock("@/db", () => ({
         findFirst: vi.fn(),
       },
     },
+    execute: vi.fn(),
+    insert: vi.fn(),
     select: vi.fn(),
+    transaction: vi.fn(),
     update: vi.fn(),
   },
 }));
@@ -43,7 +46,10 @@ const resolveMocks = async () => {
           findFirst: MockFn;
         };
       };
+      execute: MockFn;
+      insert: MockFn;
       select: MockFn;
+      transaction: MockFn;
       update: MockFn;
     },
   };
@@ -52,6 +58,22 @@ const resolveMocks = async () => {
 describe("catalog server caching", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it("runs catalog settings lookup inside tenant database context", async () => {
+    const { getCatalogSettings } = await import("@/features/catalog/server");
+    const { mockDb } = await resolveMocks();
+
+    mockDb.transaction.mockImplementation(async (callback) => callback(mockDb));
+    mockDb.query.systemSettings.findFirst.mockResolvedValue({
+      idealMarkupPercent: "30.00",
+      minimumMarkupPercent: "15.00",
+      paymentFeeRules: [],
+    });
+
+    await getCatalogSettings("org_dg_imports");
+
+    expect(mockDb.transaction).toHaveBeenCalledTimes(1);
   });
 
   it("tags and caches catalog settings with the catalog profile", async () => {
@@ -63,6 +85,7 @@ describe("catalog server caching", () => {
       minimumMarkupPercent: "15.00",
       paymentFeeRules: [{ feePercent: 3, installments: 3 }],
     });
+    mockDb.transaction.mockImplementation(async (callback) => callback(mockDb));
 
     const result = await getCatalogSettings("org_dg_imports");
 
@@ -102,6 +125,7 @@ describe("catalog server caching", () => {
         }),
       }),
     });
+    mockDb.transaction.mockImplementation(async (callback) => callback(mockDb));
 
     const result = await listCategoriesWithUsage("org_dg_imports");
 
@@ -131,6 +155,7 @@ describe("catalog server caching", () => {
       key: "category-1",
       name: "Antiga",
     });
+    mockDb.transaction.mockImplementation(async (callback) => callback(mockDb));
     mockDb.update.mockReturnValue({
       set: () => ({
         where: () => ({
@@ -157,6 +182,7 @@ describe("catalog server caching", () => {
       key: "category-1",
       name: "Roupas",
     });
+    mockDb.transaction.mockImplementation(async (callback) => callback(mockDb));
     mockDb.select.mockReturnValue({
       from: () => ({
         where: async () => [{ total: 0 }],
