@@ -54,7 +54,7 @@ export function GoalDashboardCompactCard({
 
   return (
     <Card className={cn("flex flex-col justify-center", className)}>
-      <CardHeader className="gap-0 space-y-0">
+      <CardHeader className="gap-0">
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="min-w-0 flex-1 font-medium text-[10px] text-muted-foreground uppercase leading-tight tracking-[0.14em]">
             <span className="line-clamp-2">{goal.name}</span>

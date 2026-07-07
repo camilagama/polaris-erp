@@ -100,7 +100,7 @@ export default async function ProdutoDetalhePage(
   return (
     <div className="flex flex-col gap-6 p-4 pb-20 sm:p-6 sm:pb-6">
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-        <div className="space-y-6 xl:col-span-2">
+        <div className="flex flex-col gap-6 xl:col-span-2">
           <Card className="border-border/50 shadow-sm">
             <CardContent className="pt-6">
               <div className="flex flex-col gap-6 sm:flex-row">
@@ -112,7 +112,7 @@ export default async function ProdutoDetalhePage(
                     sizes="128px"
                   />
                 </div>
-                <div className="flex-1 space-y-4">
+                <div className="flex flex-1 flex-col gap-4">
                   <div className="flex items-center justify-between">
                     <h1 className="font-semibold text-2xl tracking-tight">
                       {product.name}
@@ -194,14 +194,14 @@ export default async function ProdutoDetalhePage(
           </Card>
         </div>
 
-        <div className="space-y-6">
+        <div className="flex flex-col gap-6">
           <Card className="border-border/50 bg-muted/10 shadow-sm">
             <CardHeader className="pb-4">
               <CardTitle className="text-base">
                 Indicadores Financeiros
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="flex flex-col gap-3">
               <div className="flex items-center justify-between border-border/40 border-b pb-3">
                 <span className="text-muted-foreground text-sm">
                   Preco de Venda

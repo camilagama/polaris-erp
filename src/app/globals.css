@@ -168,7 +168,17 @@
     @apply font-sans;
   }
   body {
+    font-variant-numeric: tabular-nums;
+    text-wrap: pretty;
     @apply bg-background text-foreground;
+  }
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    text-wrap: balance;
   }
   strong,
   code,
@@ -177,4 +187,11 @@
   pre {
     font-family: var(--font-mono);
   }
+}
+
+:root {
+  /* Strong ease-out for UI interactions */
+  --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+  /* Strong ease-in-out for on-screen movement */
+  --ease-in-out-strong: cubic-bezier(0.77, 0, 0.175, 1);
 }

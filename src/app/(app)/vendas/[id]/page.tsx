@@ -71,14 +71,14 @@ export default async function VendaDetalhePage(
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-4 pb-20 sm:p-6 sm:pb-6">
       <div className="flex items-center justify-between gap-3 border-border/40 border-b pb-6">
-        <div className="space-y-1">
+        <div className="flex flex-col gap-1">
           <h1 className="font-semibold text-2xl tracking-tight">{saleTitle}</h1>
         </div>
         <SaleDetailActions sale={sale} />
       </div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-        <div className="space-y-8 lg:col-span-2">
+        <div className="flex flex-col gap-8 lg:col-span-2">
           {isCancelled ? (
             <div className="rounded-2xl border border-destructive/40 bg-destructive/5 px-4 py-3">
               <p className="font-medium text-destructive text-sm">
@@ -212,7 +212,7 @@ export default async function VendaDetalhePage(
         <div className="lg:col-start-3">
           <div className="sticky top-6 rounded-xl border border-border/50 bg-card p-6 shadow-sm">
             <h3 className="mb-4 font-medium text-base">Resumo financeiro</h3>
-            <div className="space-y-3 text-sm">
+            <div className="flex flex-col gap-3 text-sm">
               {isCancelled ? (
                 <div className="rounded-xl border border-border/60 bg-muted/20 px-3 py-2 text-muted-foreground text-xs">
                   Resumo historico da venda original. O efeito operacional atual

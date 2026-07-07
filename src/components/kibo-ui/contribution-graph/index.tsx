@@ -2,7 +2,6 @@
 
 import type { Day as WeekDay } from "date-fns";
 import {
-  differenceInCalendarDays,
   eachDayOfInterval,
   formatISO,
   getDay,
@@ -107,12 +106,14 @@ const useContributionGraph = () => {
   return context;
 };
 
-const fillHoles = (activities: Activity[]): Activity[] => {
+const normalizeAndAlignActivities = (
+  activities: Activity[],
+  weekStart: WeekDay = 0
+): Activity[] => {
   if (activities.length === 0) {
     return [];
   }
 
-  // Sort activities by date to ensure correct date range
   const sortedActivities = [...activities].sort((a, b) =>
     a.date.localeCompare(b.date)
   );
@@ -121,23 +122,22 @@ const fillHoles = (activities: Activity[]): Activity[] => {
     activities.map((a) => [a.date, a])
   );
 
-  const firstActivity = sortedActivities[0] as Activity;
-  const lastActivity = sortedActivities.at(-1);
+  const firstDate = parseISO(sortedActivities[0].date);
+  const lastDate = parseISO((sortedActivities.at(-1) as Activity).date);
 
-  if (!lastActivity) {
-    return [];
-  }
+  const firstCalendarDate =
+    getDay(firstDate) === weekStart
+      ? firstDate
+      : subWeeks(nextDay(firstDate, weekStart), 1);
 
   return eachDayOfInterval({
-    start: parseISO(firstActivity.date),
-    end: parseISO(lastActivity.date),
+    start: firstCalendarDate,
+    end: lastDate,
   }).map((day) => {
     const date = formatISO(day, { representation: "date" });
-
     if (calendar.has(date)) {
       return calendar.get(date) as Activity;
     }
-
     return {
       date,
       count: 0,
@@ -154,28 +154,12 @@ const groupByWeeks = (
     return [];
   }
 
-  const normalizedActivities = fillHoles(activities);
-  const firstActivity = normalizedActivities[0] as Activity;
-  const firstDate = parseISO(firstActivity.date);
-  const firstCalendarDate =
-    getDay(firstDate) === weekStart
-      ? firstDate
-      : subWeeks(nextDay(firstDate, weekStart), 1);
-
-  const paddedActivities = [
-    ...(new Array(differenceInCalendarDays(firstDate, firstCalendarDate)).fill(
-      undefined
-    ) as Activity[]),
-    ...normalizedActivities,
-  ];
-
-  const numberOfWeeks = Math.ceil(paddedActivities.length / 7);
+  const aligned = normalizeAndAlignActivities(activities, weekStart);
+  const numberOfWeeks = Math.ceil(aligned.length / 7);
 
   return new Array(numberOfWeeks)
     .fill(undefined)
-    .map((_, weekIndex) =>
-      paddedActivities.slice(weekIndex * 7, weekIndex * 7 + 7)
-    );
+    .map((_, weekIndex) => aligned.slice(weekIndex * 7, weekIndex * 7 + 7));
 };
 
 const getMonthLabels = (

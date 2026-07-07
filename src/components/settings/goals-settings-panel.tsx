@@ -156,7 +156,7 @@ export function GoalsSettingsPanel({
       <Card>
         <CardHeader>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="space-y-1.5">
+            <div className="flex flex-col gap-1.5">
               <CardTitle>Metas</CardTitle>
               <CardDescription>
                 {MAX_ACTIVE_GOALS === 1
@@ -185,7 +185,7 @@ export function GoalsSettingsPanel({
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="flex flex-col gap-4">
           <div className="divide-y divide-border/60">
             {payload.active.length === 0 ? (
               <p className="py-3 text-muted-foreground text-sm">
@@ -237,7 +237,7 @@ export function GoalsSettingsPanel({
                     </div>
                   </div>
 
-                  <div className="space-y-1">
+                  <div className="flex flex-col gap-1">
                     <div className="h-2 overflow-hidden rounded-full bg-secondary">
                       <div
                         className="h-full rounded-full bg-chart-6 transition-[width]"

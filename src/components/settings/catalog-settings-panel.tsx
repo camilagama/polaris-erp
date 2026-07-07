@@ -223,7 +223,7 @@ export function CatalogSettingsPanel({
       <Card className="h-full">
         <CardHeader>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="space-y-1.5">
+            <div className="flex flex-col gap-1.5">
               <CardTitle>Categorias</CardTitle>
               <CardDescription>
                 Organize o catalogo fora do fluxo de cadastro. A categoria
@@ -240,9 +240,9 @@ export function CatalogSettingsPanel({
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="flex flex-col gap-3">
           <div className="flex items-end gap-2">
-            <div className="flex-1 space-y-1">
+            <div className="flex flex-1 flex-col gap-1">
               <Label htmlFor="new-category-name">Nova categoria</Label>
               <Input
                 id="new-category-name"
@@ -276,9 +276,9 @@ export function CatalogSettingsPanel({
             ideal no cadastro de produtos.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="flex flex-col gap-3">
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1">
+            <div className="flex flex-col gap-1">
               <Label htmlFor="minimum-markup-percent">Margem minima (%)</Label>
               <InputGroup>
                 <InputGroupInput
@@ -296,7 +296,7 @@ export function CatalogSettingsPanel({
                 </InputGroupAddon>
               </InputGroup>
             </div>
-            <div className="space-y-1">
+            <div className="flex flex-col gap-1">
               <Label htmlFor="ideal-markup-percent">Margem ideal (%)</Label>
               <InputGroup>
                 <InputGroupInput
@@ -335,9 +335,9 @@ export function CatalogSettingsPanel({
             aplicada sobre o valor total da transacao.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="flex flex-col gap-4">
           <div className="flex items-end gap-2">
-            <div className="flex-1 space-y-1">
+            <div className="flex flex-1 flex-col gap-1">
               <Label htmlFor="card-max-installments">Maximo de parcelas</Label>
               <Select
                 onValueChange={(value) => {

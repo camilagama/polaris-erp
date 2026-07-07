@@ -52,13 +52,13 @@ export function ProductHistoryPanel({
             <TabsTrigger value="precos">Preços</TabsTrigger>
           </TabsList>
 
-          <TabsContent className="space-y-4" value="movimentacoes">
+          <TabsContent className="flex flex-col gap-4" value="movimentacoes">
             {inventoryItems.length === 0 ? (
               <p className="text-muted-foreground text-sm">
                 Sem movimentações registradas.
               </p>
             ) : (
-              <div className="relative ml-2 space-y-6 border-border/50 border-l pl-5 sm:ml-3">
+              <div className="relative ml-2 flex flex-col gap-6 border-border/50 border-l pl-5 sm:ml-3">
                 {visibleInventoryItems.map((item) => (
                   <div className="relative" key={item.id}>
                     <div className="absolute top-1.5 -left-[1.60rem] size-2.5 rounded-full border border-border bg-muted sm:-left-[1.65rem]" />
@@ -125,9 +125,9 @@ export function ProductHistoryPanel({
             )}
           </TabsContent>
 
-          <TabsContent className="space-y-4" value="precos">
+          <TabsContent className="flex flex-col gap-4" value="precos">
             {priceChanges.length > 0 ? (
-              <div className="relative ml-2 space-y-6 border-border/50 border-l pl-5 sm:ml-3">
+              <div className="relative ml-2 flex flex-col gap-6 border-border/50 border-l pl-5 sm:ml-3">
                 {visiblePriceChanges.map((change) => (
                   <div className="relative" key={change.id}>
                     <div className="absolute top-1.5 -left-[1.60rem] size-2.5 rounded-full border border-border bg-muted sm:-left-[1.65rem]" />

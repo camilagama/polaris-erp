@@ -27,7 +27,7 @@ export default async function ConfiguracoesPage() {
 
   return (
     <div className="flex flex-col gap-6 px-6 pb-6">
-      <div className="space-y-2">
+      <div className="flex flex-col gap-2">
         <h1 className="font-semibold text-2xl tracking-tight">Configuracoes</h1>
         <p className="max-w-3xl text-muted-foreground text-sm">
           Ajuste categorias, precificacao, metas do negocio e regras de
