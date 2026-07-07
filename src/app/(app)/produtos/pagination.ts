@@ -1,19 +1,9 @@
 "use server";
 
-import {
-  getProductsQuery,
-  type PaginatedProductsList,
-} from "@/features/products/queries";
-import { requireAppContext } from "@/lib/app-session";
+import { loadMoreProductsAction as loadMoreProducts } from "@/features/products/pagination";
 
 export async function loadMoreProductsAction(
-  input: Omit<Parameters<typeof getProductsQuery>[0], "organizationId">
-): Promise<PaginatedProductsList> {
-  const context = await requireAppContext("catalog:read");
-  const result = await getProductsQuery({
-    ...input,
-    organizationId: context.organizationId,
-  });
-
-  return result;
+  input: Parameters<typeof loadMoreProducts>[0]
+): Promise<Awaited<ReturnType<typeof loadMoreProducts>>> {
+  return await loadMoreProducts(input);
 }

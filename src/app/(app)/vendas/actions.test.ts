@@ -364,7 +364,7 @@ describe("sales server actions", () => {
   });
 
   it("requires authentication before creating a sale", async () => {
-    const { createSaleAction } = await import("@/app/(app)/vendas/actions");
+    const { createSaleAction } = await import("@/features/sales/actions");
     const { mockDb, mockRequireAppContext } = await resolveMocks();
 
     mockRequireAppContext.mockRejectedValueOnce(
@@ -391,7 +391,7 @@ describe("sales server actions", () => {
   });
 
   it("rejects duplicated products in the same sale payload", async () => {
-    const { createSaleAction } = await import("@/app/(app)/vendas/actions");
+    const { createSaleAction } = await import("@/features/sales/actions");
 
     await expect(
       createSaleAction({
@@ -416,7 +416,7 @@ describe("sales server actions", () => {
   });
 
   it("returns the existing sale for a repeated idempotency key", async () => {
-    const { createSaleAction } = await import("@/app/(app)/vendas/actions");
+    const { createSaleAction } = await import("@/features/sales/actions");
     const { mockDb, mockUpdateTag } = await resolveMocks();
 
     mockDb.query.sales.findFirst.mockResolvedValueOnce({
@@ -445,7 +445,7 @@ describe("sales server actions", () => {
   });
 
   it("returns the existing sale when a concurrent idempotency insert wins first", async () => {
-    const { createSaleAction } = await import("@/app/(app)/vendas/actions");
+    const { createSaleAction } = await import("@/features/sales/actions");
     const { mockDb, mockRecordAuditEvent, mockRefresh, mockUpdateTag } =
       await resolveMocks();
 
@@ -485,7 +485,7 @@ describe("sales server actions", () => {
   });
 
   it("serializes concurrent sales and blocks negative stock", async () => {
-    const { createSaleAction } = await import("@/app/(app)/vendas/actions");
+    const { createSaleAction } = await import("@/features/sales/actions");
     const { mockDb } = await resolveMocks();
 
     const harness = createSalesHarness([
@@ -571,7 +571,7 @@ describe("sales server actions", () => {
   });
 
   it("stores pix sales without fee and keeps total based on items only", async () => {
-    const { createSaleAction } = await import("@/app/(app)/vendas/actions");
+    const { createSaleAction } = await import("@/features/sales/actions");
     const { mockDb, mockRefresh, mockUpdateTag } = await resolveMocks();
 
     const harness = createSalesHarness([
@@ -627,7 +627,7 @@ describe("sales server actions", () => {
   });
 
   it("stores card sales with seller fee as operational cost", async () => {
-    const { createSaleAction } = await import("@/app/(app)/vendas/actions");
+    const { createSaleAction } = await import("@/features/sales/actions");
     const { mockDb } = await resolveMocks();
 
     const harness = createSalesHarness([
@@ -674,7 +674,7 @@ describe("sales server actions", () => {
   });
 
   it("stores card sales with customer fee only in charged amount", async () => {
-    const { createSaleAction } = await import("@/app/(app)/vendas/actions");
+    const { createSaleAction } = await import("@/features/sales/actions");
     const { mockDb } = await resolveMocks();
 
     const harness = createSalesHarness([
@@ -721,7 +721,7 @@ describe("sales server actions", () => {
   });
 
   it("rejects the sale when the visible price is stale and asks for review", async () => {
-    const { createSaleAction } = await import("@/app/(app)/vendas/actions");
+    const { createSaleAction } = await import("@/features/sales/actions");
     const { mockDb } = await resolveMocks();
 
     const harness = createSalesHarness([
@@ -759,7 +759,7 @@ describe("sales server actions", () => {
   });
 
   it("does not audit or revalidate when sale stock update is lost", async () => {
-    const { createSaleAction } = await import("@/app/(app)/vendas/actions");
+    const { createSaleAction } = await import("@/features/sales/actions");
     const { mockDb, mockRecordAuditEvent, mockRefresh, mockUpdateTag } =
       await resolveMocks();
 
@@ -802,7 +802,7 @@ describe("sales server actions", () => {
   });
 
   it("cancels a sale and restores stock", async () => {
-    const { cancelSaleAction } = await import("@/app/(app)/vendas/actions");
+    const { cancelSaleAction } = await import("@/features/sales/actions");
     const { mockDb, mockRefresh, mockUpdateTag } = await resolveMocks();
 
     const harness = createCancelSaleHarness({
@@ -838,7 +838,7 @@ describe("sales server actions", () => {
   });
 
   it("does not audit or revalidate when cancellation targets another tenant", async () => {
-    const { cancelSaleAction } = await import("@/app/(app)/vendas/actions");
+    const { cancelSaleAction } = await import("@/features/sales/actions");
     const { mockDb, mockRecordAuditEvent, mockRefresh, mockUpdateTag } =
       await resolveMocks();
 
@@ -876,7 +876,7 @@ describe("sales server actions", () => {
   });
 
   it("does not audit or revalidate when cancellation stock restore is lost", async () => {
-    const { cancelSaleAction } = await import("@/app/(app)/vendas/actions");
+    const { cancelSaleAction } = await import("@/features/sales/actions");
     const { mockDb, mockRecordAuditEvent, mockRefresh, mockUpdateTag } =
       await resolveMocks();
 
@@ -914,7 +914,7 @@ describe("sales server actions", () => {
   });
 
   it("does not audit or revalidate when the final sale cancellation update is lost", async () => {
-    const { cancelSaleAction } = await import("@/app/(app)/vendas/actions");
+    const { cancelSaleAction } = await import("@/features/sales/actions");
     const { mockDb, mockRecordAuditEvent, mockRefresh, mockUpdateTag } =
       await resolveMocks();
 
@@ -952,12 +952,40 @@ describe("sales server actions", () => {
 
   it("delegates idempotency lookup to the sales domain", () => {
     const source = readFileSync(
-      join(import.meta.dirname, "actions.ts"),
+      join(process.cwd(), "src", "features", "sales", "actions.ts"),
       "utf8"
     );
 
     expect(source).toContain("findExistingSaleByIdempotencyKey");
     expect(source).toContain('from "@/features/sales/server"');
     expect(source).not.toContain("const findExistingSaleByIdempotencyKey");
+  });
+
+  it("keeps tenant-scoped product locking in the sales domain", () => {
+    const source = readFileSync(
+      join(process.cwd(), "src", "features", "sales", "actions.ts"),
+      "utf8"
+    );
+
+    expect(source).toContain('from "@/features/sales/server"');
+    expect(source).not.toContain("const lockProductsForUpdate");
+    expect(source).not.toContain("lockProductsForUpdate(");
+    expect(source).not.toContain("for update");
+  });
+
+  it("keeps direct sale persistence in the sales domain", () => {
+    const source = readFileSync(
+      join(process.cwd(), "src", "features", "sales", "actions.ts"),
+      "utf8"
+    );
+
+    expect(source).toContain("createSale");
+    expect(source).toContain("cancelSale");
+    expect(source).toContain('from "@/features/sales/server"');
+    expect(source).not.toContain('from "@/db"');
+    expect(source).not.toContain('from "@/db/schema"');
+    expect(source).not.toContain("tx.insert(sales)");
+    expect(source).not.toContain("tx.insert(saleItems)");
+    expect(source).not.toContain("tx.update(products)");
   });
 });

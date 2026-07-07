@@ -7,24 +7,35 @@ Status de execucao em 2026-07-06:
 - PR 2: arquivar/desarquivar produto agora detecta zero linhas alteradas para bloquear sucesso falso com ID de outro tenant.
 - PR 2: arquivar/desarquivar produto agora delega a escrita tenant-scoped para camada de dominio.
 - PR 2: remocao de imagem de produto agora falha para produto inexistente/outro tenant em vez de retornar sucesso.
+- PR 2: lock tenant-scoped de produto usado por update/estoque agora fica na camada de dominio de produtos.
+- PR 2: criacao de produto com estoque inicial agora persiste via camada de dominio de produtos.
+- PR 2: update de produto e historico de preco agora persistem via camada de dominio de produtos.
+- PR 2: entrada e baixa manual de estoque agora persistem via camada de dominio de produtos; action de produtos nao importa mais `db`/schema.
 - PR 2: update/delete de categoria agora confirmam linha afetada e evitam auditoria/revalidacao em categoria inexistente/outro tenant.
 - PR 2: update/archive/unarchive de metas agora confirmam linha afetada e evitam auditoria/refresh em meta inexistente/outro tenant.
 - PR 2: cancelamento de venda agora confirma o update final da venda e evita auditoria/revalidacao quando a venda nao e atualizada.
 - PR 2: baixa de estoque na venda e estorno no cancelamento agora confirmam update do produto e evitam auditoria/revalidacao quando o estoque nao e atualizado.
 - PR 2: cancelamento de venda de outro tenant agora tem prova explicita de falha antes de estorno, auditoria e revalidacao.
+- PR 2: lock tenant-scoped de produtos usado por criacao/cancelamento de venda agora fica na camada de dominio de vendas.
+- PR 2: criacao/cancelamento de venda agora persistem via camada de dominio de vendas; action de vendas nao importa mais `db`/schema.
 - PR 2: upload staged de imagem agora e escopado por organizacao e usuario antes de virar imagem publica do produto.
 - PR 2: rota de presign de imagem agora aplica rate limit e rejeita payload invalido antes de resolver contexto, gerar URL ou auditar.
 - PR 2: auditoria de login sem organizacao ativa nao cai mais em `org_dg_imports`; login com organizacao ativa segue auditado no tenant correto.
 - PR 2: rota autenticada de leitura de imagem agora tem prova tenant A/B para usuario sem membership; retorna 404 antes de storage/auditoria.
 - PR 2: rota autenticada de leitura de imagem deixou de importar `db` diretamente; checagem tenant/produto/org ativa agora fica em camada de dominio com guardrail estrutural.
+- PR 2: guardrail global agora impede imports diretos de `db`/schema em arquivos runtime de `src/app`.
 - PR 2: `getAppContext` agora tem prova local de que organizacao inativa nao gera contexto nem atualiza a organizacao ativa da sessao.
 - PR 2/R2: remocao de imagem agora confirma `imageVersion` atual antes de apagar o objeto R2.
 - PR 2/R2: replace de imagem agora desfaz a nova versao quando perde a corrida de update condicional.
 - PR 2/R2: reconcile de imagens agora preserva uploads recentes antes de limpar orfaos.
 - PR 2/R2: reconcile de imagens deixou de importar `db` diretamente no route handler; chaves esperadas dos produtos agora sao resolvidas em camada de dominio com guardrail estrutural.
+- PR 2/R2: replace/remocao de imagem agora leem estado tenant-scoped do produto via dominio de imagens, nao helper local na action.
+- PR 2/R2: replace/remocao de imagem agora aplicam metadata condicional por `organizationId` e versao via dominio de imagens.
 - PR 7: iniciado parcialmente. `SEC-001` e `SEC-002` foram enderecados nesta fatia.
 - PR 7: `/api/health` agora verifica banco e retorna 503 em falha sem expor detalhes sensiveis.
+- PR 7: `/api/health` agora delega a checagem de banco para `src/lib/health.ts`; handlers em `src/app` nao importam mais `db` diretamente fora de asserts de teste.
 - PR 7: Sentry agora tem tracing/replay configuravel e replay em erro no client.
+- PR 7: inicio de login Google agora redireciona para erro sanitizado quando Better Auth falha antes de gerar URL OAuth.
 - PR 7: runbook de deploy Vercel atualizado com envs, guardrails, cron, health checks e smoke checklist.
 - PR 7: `CRON_SECRET` agora e obrigatorio em Vercel Production para proteger endpoints internos acionados por cron, sem quebrar build local.
 - PR 7: guardrail de `CRON_SECRET` agora tem prova de que nao bloqueia Vercel Preview sem cron real.
@@ -35,10 +46,13 @@ Status de execucao em 2026-07-06:
 - PR 7: headers de seguranca globais agora cobrem HSTS, nosniff, frame policy, referrer policy e permissions policy.
 - PR 7: bootstrap interno continua bloqueado em producao e agora tambem tem rate limit em development/test.
 - PR 7: bootstrap interno com bearer invalido agora tem prova explicita de que nao toca adapter de usuario nem cria sessao.
+- PR 7: bootstrap interno com payload invalido agora retorna 400 sanitizado antes de tocar o adapter de usuario.
 - PR 7: `.env.example` e deploy docs agora refletem Vercel env, bootstrap E2E, sampling/replay Sentry e headers globais.
 - PR 7: headers globais agora tem teste direto contra `next.config.ts`, alem do helper isolado.
 - PR 5/CI: workflow agora roda `knip` no job `verify` antes do build; E2E segue isolado por `E2E_DATABASE_URL`.
 - PR 5/CI: guardrail de Playwright agora tem teste unitario garantindo falha em CI sem `E2E_DATABASE_URL`.
+- PR 5/QA: apos as fatias de hardening, `bun run test` passou localmente com 63 arquivos e 231 testes.
+- PR 5/QA: `bun run knip` e `bun run build` passaram apos remover exports mortos das extracoes e ajustar o tipo do env E2E.
 - PR 3: iniciado. Entrada de estoque agora reativa produto arquivado ao limpar `archivedAt`.
 - PR 3: banco agora rejeita venda de cartao com `payment_fee_payer = not_applicable`.
 - PR 3: banco agora limita a uma meta ativa por organizacao com indice unico parcial.
@@ -50,6 +64,13 @@ Status de execucao em 2026-07-06:
 - PR 8: cleanup seguro iniciado; export morto `getDb` removido de `src/db/index.ts`.
 - PR 8: filtros de status de produtos/vendas agora vivem em contracts de dominio, reduzindo imports de queries do App Router pelos componentes.
 - PR 8: queries de produtos/vendas foram movidas do App Router para `features`, preservando os wrappers de pagina/paginacao.
+- PR 8: actions de paginacao de produtos/vendas agora vivem em `features`, com wrappers finos em `app` e guardrail contra import de paginacao da route tree pelos componentes.
+- PR 8: actions de metas agora vivem em `features/goals/actions`, removendo o arquivo morto em `app` e adicionando guardrail contra import direto pelos componentes de settings.
+- PR 8: actions de configuracoes/catalogo agora vivem em `features/catalog/actions`, removendo o arquivo morto em `app` e adicionando guardrail contra import direto pelo painel de settings.
+- PR 8: actions de vendas agora vivem em `features/sales/actions`, removendo o arquivo morto em `app` e adicionando guardrail contra import direto pelos componentes de vendas.
+- PR 8: actions de produtos agora vivem em `features/products/actions`, removendo o arquivo morto em `app` e adicionando guardrail contra import direto pelos componentes de produtos.
+- PR 8: action de onboarding agora vive em `features/onboarding/actions`, removendo o arquivo morto em `app` e mantendo o formulario client fora da route tree de actions.
+- PR 8: action de logout agora vive em `features/auth/actions`, removendo o ultimo `actions.ts` da shell autenticada em `app` e mantendo guardrail no layout.
 - PR 6: falha em "carregar mais" de produtos/vendas agora mostra toast de erro e libera o loading.
 - PR 6: modal de taxas de cartao agora tem cancelar/aplicar em rascunho local antes do save explicito.
 - PR 6: filtros de busca/status em produtos e vendas ganharam nomes acessiveis explicitos.
@@ -90,10 +111,10 @@ Arquitetura:
 - Proxy Next 16 em `proxy.ts`, como barreira otimista.
 
 Verificações:
-- `bun run check` => passou, 245 arquivos.
-- `bun run test` => passou, 56 arquivos, 200 testes.
+- `bun run check` => passou, 261 arquivos.
+- `bun run test` => passou, 63 arquivos, 231 testes.
 - `bun run build` => passou.
-- `bun run knip` => passou; aviso esperado sobre `E2E_DATABASE_URL`.
+- `bun run knip` => passou.
 - `bun run test:e2e` => não executado; `E2E_DATABASE_URL=missing`.
 
 **3. Achados Priorizados**

@@ -4,7 +4,6 @@ import { Search02Icon } from "@hugeicons/core-free-icons";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
-import { loadMoreSalesAction } from "@/app/(app)/vendas/pagination";
 import { DashboardDateRangeFilter } from "@/components/dashboard/dashboard-date-range-filter";
 import { CreateSaleDialog } from "@/components/sales/create-sale-dialog";
 import { PaymentMethodChart } from "@/components/sales/payment-method-chart";
@@ -50,6 +49,7 @@ import {
   type SalesDateRange,
   salesDatePresetOptions,
 } from "@/features/sales/date-range";
+import { loadMoreSalesAction } from "@/features/sales/pagination";
 import {
   formatSaleListPaymentMethodLabel,
   getOperationalSaleStatusLabel,

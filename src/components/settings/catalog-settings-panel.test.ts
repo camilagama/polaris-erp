@@ -20,7 +20,7 @@ const settingsMocks = vi.hoisted(() => ({
   updateCategoryAction: vi.fn(),
 }));
 
-vi.mock("@/app/(app)/configuracoes/actions", () => ({
+vi.mock("@/features/catalog/actions", () => ({
   createCategoryAction: settingsMocks.createCategoryAction,
   deleteCategoryAction: settingsMocks.deleteCategoryAction,
   saveCatalogSettingsAction: settingsMocks.saveCatalogSettingsAction,

@@ -303,7 +303,7 @@ describe("product server actions", () => {
 
   it("requires authentication before mutating stock", async () => {
     const { addProductStockAction } = await import(
-      "@/app/(app)/produtos/actions"
+      "@/features/products/actions"
     );
     const { mockDb, mockRequireAppContext } = await resolveMocks();
 
@@ -323,9 +323,7 @@ describe("product server actions", () => {
   });
 
   it("validates ISO date format at action boundary", async () => {
-    const { createProductAction } = await import(
-      "@/app/(app)/produtos/actions"
-    );
+    const { createProductAction } = await import("@/features/products/actions");
     const { mockDb, mockGetProductCategoryById } = await resolveMocks();
 
     await expect(
@@ -345,7 +343,7 @@ describe("product server actions", () => {
 
   it("serializes concurrent stock write-offs and blocks negative stock", async () => {
     const { writeOffProductStockAction } = await import(
-      "@/app/(app)/produtos/actions"
+      "@/features/products/actions"
     );
     const { mockDb, mockRefresh, mockUpdateTag } = await resolveMocks();
 
@@ -394,7 +392,7 @@ describe("product server actions", () => {
 
   it("reactivates an archived product when stock is added", async () => {
     const { addProductStockAction } = await import(
-      "@/app/(app)/produtos/actions"
+      "@/features/products/actions"
     );
     const { mockDb } = await resolveMocks();
 
@@ -417,9 +415,7 @@ describe("product server actions", () => {
   });
 
   it("creates a product with processed image metadata when a staged image is provided", async () => {
-    const { createProductAction } = await import(
-      "@/app/(app)/produtos/actions"
-    );
+    const { createProductAction } = await import("@/features/products/actions");
     const {
       mockDb,
       mockRefresh,
@@ -473,9 +469,7 @@ describe("product server actions", () => {
   });
 
   it("updates product price and records a price history row when the value changes", async () => {
-    const { updateProductAction } = await import(
-      "@/app/(app)/produtos/actions"
-    );
+    const { updateProductAction } = await import("@/features/products/actions");
     const { mockDb, mockRefresh, mockUpdateTag } = await resolveMocks();
 
     const harness = createProductUpdateHarness({
@@ -515,9 +509,7 @@ describe("product server actions", () => {
   });
 
   it("does not record price history when the product price remains the same", async () => {
-    const { updateProductAction } = await import(
-      "@/app/(app)/produtos/actions"
-    );
+    const { updateProductAction } = await import("@/features/products/actions");
     const { mockDb } = await resolveMocks();
 
     const harness = createProductUpdateHarness({
@@ -544,9 +536,7 @@ describe("product server actions", () => {
   });
 
   it("rejects negative product price updates at the action boundary", async () => {
-    const { updateProductAction } = await import(
-      "@/app/(app)/produtos/actions"
-    );
+    const { updateProductAction } = await import("@/features/products/actions");
     const { mockDb } = await resolveMocks();
 
     await expect(
@@ -563,7 +553,7 @@ describe("product server actions", () => {
 
   it("removes the current product image and clears image metadata", async () => {
     const { removeProductImageAction } = await import(
-      "@/app/(app)/produtos/actions"
+      "@/features/products/actions"
     );
     const { mockDb, mockDeleteProductImageVersion } = await resolveMocks();
     const updatePayloads: Record<string, unknown>[] = [];
@@ -610,7 +600,7 @@ describe("product server actions", () => {
 
   it("does not delete the stored image when removal loses the version race", async () => {
     const { removeProductImageAction } = await import(
-      "@/app/(app)/produtos/actions"
+      "@/features/products/actions"
     );
     const {
       mockDb,
@@ -653,7 +643,7 @@ describe("product server actions", () => {
 
   it("rolls back the new image when replace loses the version race", async () => {
     const { replaceProductImageAction } = await import(
-      "@/app/(app)/produtos/actions"
+      "@/features/products/actions"
     );
     const {
       mockDb,
@@ -713,7 +703,7 @@ describe("product server actions", () => {
 
   it("does not treat another tenant product as image removal success", async () => {
     const { removeProductImageAction } = await import(
-      "@/app/(app)/produtos/actions"
+      "@/features/products/actions"
     );
     const {
       mockDb,
@@ -743,7 +733,7 @@ describe("product server actions", () => {
 
   it("archives a product by stamping archivedAt", async () => {
     const { archiveProductAction } = await import(
-      "@/app/(app)/produtos/actions"
+      "@/features/products/actions"
     );
     const { mockDb } = await resolveMocks();
     const updatePayloads: Record<string, unknown>[] = [];
@@ -766,7 +756,7 @@ describe("product server actions", () => {
 
   it("does not audit or revalidate when archive targets another tenant", async () => {
     const { archiveProductAction } = await import(
-      "@/app/(app)/produtos/actions"
+      "@/features/products/actions"
     );
     const { mockDb, mockRecordAuditEvent, mockRefresh, mockUpdateTag } =
       await resolveMocks();
@@ -790,7 +780,7 @@ describe("product server actions", () => {
 
   it("unarchives a product by clearing archivedAt", async () => {
     const { unarchiveProductAction } = await import(
-      "@/app/(app)/produtos/actions"
+      "@/features/products/actions"
     );
     const { mockDb } = await resolveMocks();
     const updatePayloads: Record<string, unknown>[] = [];
@@ -815,7 +805,7 @@ describe("product server actions", () => {
 
   it("does not audit or revalidate when unarchive targets another tenant", async () => {
     const { unarchiveProductAction } = await import(
-      "@/app/(app)/produtos/actions"
+      "@/features/products/actions"
     );
     const { mockDb, mockRecordAuditEvent, mockRefresh, mockUpdateTag } =
       await resolveMocks();
@@ -839,10 +829,80 @@ describe("product server actions", () => {
 
   it("delegates product archive state writes to the product domain", () => {
     const source = readFileSync(
-      join(import.meta.dirname, "actions.ts"),
+      join(process.cwd(), "src", "features", "products", "actions.ts"),
       "utf8"
     );
 
     expect(source).toContain("setProductArchivedState");
+  });
+
+  it("delegates product image state reads to the image domain", () => {
+    const source = readFileSync(
+      join(process.cwd(), "src", "features", "products", "actions.ts"),
+      "utf8"
+    );
+
+    expect(source).toContain("getProductImageState");
+    expect(source).toContain('from "@/features/products/image-access"');
+    expect(source).not.toContain("const getProductImageState");
+  });
+
+  it("delegates tenant-scoped product locking to the product domain", () => {
+    const source = readFileSync(
+      join(process.cwd(), "src", "features", "products", "actions.ts"),
+      "utf8"
+    );
+
+    expect(source).toContain('from "@/features/products/server"');
+    expect(source).not.toContain("const lockProductForUpdate");
+    expect(source).not.toContain("lockProductForUpdate(");
+    expect(source).not.toContain("for update");
+  });
+
+  it("delegates product image metadata writes to the image domain", () => {
+    const source = readFileSync(
+      join(process.cwd(), "src", "features", "products", "actions.ts"),
+      "utf8"
+    );
+
+    expect(source).toContain("replaceProductImageMetadata");
+    expect(source).toContain("clearProductImageMetadata");
+    expect(source).toContain('from "@/features/products/image-access"');
+  });
+
+  it("delegates initial product persistence to the product domain", () => {
+    const source = readFileSync(
+      join(process.cwd(), "src", "features", "products", "actions.ts"),
+      "utf8"
+    );
+
+    expect(source).toContain("createProductWithInitialStock");
+    expect(source).toContain('from "@/features/products/server"');
+  });
+
+  it("delegates product updates and price history to the product domain", () => {
+    const source = readFileSync(
+      join(process.cwd(), "src", "features", "products", "actions.ts"),
+      "utf8"
+    );
+
+    expect(source).toContain("updateProductWithPriceHistory");
+    expect(source).toContain('from "@/features/products/server"');
+    expect(source).not.toContain("productPriceChanges");
+  });
+
+  it("delegates stock persistence to the product domain", () => {
+    const source = readFileSync(
+      join(process.cwd(), "src", "features", "products", "actions.ts"),
+      "utf8"
+    );
+
+    expect(source).toContain("addProductStock");
+    expect(source).toContain("writeOffProductStock");
+    expect(source).toContain('from "@/features/products/server"');
+    expect(source).not.toContain('from "@/db"');
+    expect(source).not.toContain('from "@/db/schema"');
+    expect(source).not.toContain("productStockEntries");
+    expect(source).not.toContain("productStockWriteOffs");
   });
 });

@@ -52,9 +52,7 @@ describe("configuration server actions", () => {
     const { mockRequireAppContext } = await resolveMocks();
     mockRequireAppContext.mockRejectedValue(new Error("Sessao invalida."));
 
-    const { createCategoryAction } = await import(
-      "@/app/(app)/configuracoes/actions"
-    );
+    const { createCategoryAction } = await import("@/features/catalog/actions");
 
     await expect(
       createCategoryAction({
@@ -79,9 +77,7 @@ describe("configuration server actions", () => {
     });
     mockCreateCategory.mockResolvedValue(undefined);
 
-    const { createCategoryAction } = await import(
-      "@/app/(app)/configuracoes/actions"
-    );
+    const { createCategoryAction } = await import("@/features/catalog/actions");
 
     await createCategoryAction({
       description: "Moda",
@@ -116,9 +112,7 @@ describe("configuration server actions", () => {
       new Error("Categoria nao encontrada.")
     );
 
-    const { updateCategoryAction } = await import(
-      "@/app/(app)/configuracoes/actions"
-    );
+    const { updateCategoryAction } = await import("@/features/catalog/actions");
 
     await expect(
       updateCategoryAction("category-from-other-tenant", {
@@ -150,9 +144,7 @@ describe("configuration server actions", () => {
       new Error("Categoria nao encontrada.")
     );
 
-    const { deleteCategoryAction } = await import(
-      "@/app/(app)/configuracoes/actions"
-    );
+    const { deleteCategoryAction } = await import("@/features/catalog/actions");
 
     await expect(
       deleteCategoryAction("category-from-other-tenant")
@@ -179,7 +171,7 @@ describe("configuration server actions", () => {
     mockSaveCatalogSettings.mockResolvedValue(undefined);
 
     const { saveCatalogSettingsAction } = await import(
-      "@/app/(app)/configuracoes/actions"
+      "@/features/catalog/actions"
     );
 
     await saveCatalogSettingsAction({

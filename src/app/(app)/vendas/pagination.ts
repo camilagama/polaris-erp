@@ -1,19 +1,9 @@
 "use server";
 
-import {
-  getSalesQuery,
-  type PaginatedSalesList,
-} from "@/features/sales/queries";
-import { requireAppContext } from "@/lib/app-session";
+import { loadMoreSalesAction as loadMoreSales } from "@/features/sales/pagination";
 
 export async function loadMoreSalesAction(
-  input: Omit<Parameters<typeof getSalesQuery>[0], "organizationId">
-): Promise<PaginatedSalesList> {
-  const context = await requireAppContext("catalog:read");
-  const result = await getSalesQuery({
-    ...input,
-    organizationId: context.organizationId,
-  });
-
-  return result;
+  input: Parameters<typeof loadMoreSales>[0]
+): Promise<Awaited<ReturnType<typeof loadMoreSales>>> {
+  return await loadMoreSales(input);
 }

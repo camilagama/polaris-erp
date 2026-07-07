@@ -13,7 +13,7 @@ const salesMocks = vi.hoisted(() => ({
   toastError: vi.fn(),
 }));
 
-vi.mock("@/app/(app)/vendas/pagination", () => ({
+vi.mock("@/features/sales/pagination", () => ({
   loadMoreSalesAction: salesMocks.loadMoreSalesAction,
 }));
 

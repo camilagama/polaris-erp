@@ -1,9 +1,9 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@/db", () => ({
-  db: {
-    execute: vi.fn(),
-  },
+vi.mock("@/lib/health", () => ({
+  checkDatabaseHealth: vi.fn(),
 }));
 
 describe("GET /api/health", () => {
@@ -12,10 +12,10 @@ describe("GET /api/health", () => {
   });
 
   it("returns database status without exposing secrets", async () => {
-    const dbModule = await import("@/db");
+    const healthModule = await import("@/lib/health");
     const { GET } = await import("@/app/api/health/route");
 
-    vi.mocked(dbModule.db.execute).mockResolvedValueOnce({ rows: [{ ok: 1 }] });
+    vi.mocked(healthModule.checkDatabaseHealth).mockResolvedValueOnce(true);
 
     const response = await GET();
     const payload = await response.json();
@@ -34,12 +34,10 @@ describe("GET /api/health", () => {
   });
 
   it("returns 503 when the database check fails", async () => {
-    const dbModule = await import("@/db");
+    const healthModule = await import("@/lib/health");
     const { GET } = await import("@/app/api/health/route");
 
-    vi.mocked(dbModule.db.execute).mockRejectedValueOnce(
-      new Error("connection refused")
-    );
+    vi.mocked(healthModule.checkDatabaseHealth).mockResolvedValueOnce(false);
 
     const response = await GET();
     const payload = await response.json();
@@ -54,5 +52,13 @@ describe("GET /api/health", () => {
       ok: false,
     });
     expect(JSON.stringify(payload)).not.toContain("connection refused");
+  });
+
+  it("delegates database health checks outside the route handler", () => {
+    const source = readFileSync(join(import.meta.dirname, "route.ts"), "utf8");
+
+    expect(source).toContain("checkDatabaseHealth");
+    expect(source).not.toContain('from "@/db"');
+    expect(source).not.toContain("db.execute");
   });
 });

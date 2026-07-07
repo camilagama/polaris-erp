@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { completeOnboardingAction } from "@/app/(auth)/onboarding/actions";
+import { completeOnboardingAction } from "@/features/onboarding/actions";
 
 const onboardingMocks = vi.hoisted(() => ({
   createInitialOrganizationForUser: vi.fn(),

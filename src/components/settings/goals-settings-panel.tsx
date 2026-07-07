@@ -9,10 +9,6 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useState, useTransition } from "react";
-import {
-  archiveGoalAction,
-  unarchiveGoalAction,
-} from "@/app/(app)/metas/actions";
 import { GoalFormDialog } from "@/components/settings/goal-form-dialog";
 import {
   AlertDialog,
@@ -48,6 +44,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  archiveGoalAction,
+  unarchiveGoalAction,
+} from "@/features/goals/actions";
 import {
   type DashboardGoalCard,
   type DashboardGoalHistoryItem,

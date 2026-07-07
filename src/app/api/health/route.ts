@@ -1,12 +1,10 @@
-import { sql } from "drizzle-orm";
-import { db } from "@/db";
+import { checkDatabaseHealth } from "@/lib/health";
 
 export async function GET() {
   const timestamp = new Date().toISOString();
+  const databaseIsHealthy = await checkDatabaseHealth();
 
-  try {
-    await db.execute(sql`select 1`);
-
+  if (databaseIsHealthy) {
     return Response.json({
       checks: {
         database: {
@@ -16,18 +14,18 @@ export async function GET() {
       ok: true,
       timestamp,
     });
-  } catch {
-    return Response.json(
-      {
-        checks: {
-          database: {
-            ok: false,
-          },
-        },
-        ok: false,
-        timestamp,
-      },
-      { status: 503 }
-    );
   }
+
+  return Response.json(
+    {
+      checks: {
+        database: {
+          ok: false,
+        },
+      },
+      ok: false,
+      timestamp,
+    },
+    { status: 503 }
+  );
 }

@@ -158,7 +158,14 @@ export async function POST(request: Request) {
     return Response.json({ error: "Nao autorizado." }, { status: 401 });
   }
 
-  const { email, name } = bootstrapSessionSchema.parse(await request.json());
+  const payload = await request.json().catch(() => null);
+  const parsedPayload = bootstrapSessionSchema.safeParse(payload);
+
+  if (!parsedPayload.success) {
+    return Response.json({ error: "Payload invalido." }, { status: 400 });
+  }
+
+  const { email, name } = parsedPayload.data;
   const normalizedEmail = email.toLowerCase();
   const ctx = await auth.$context;
   const existingUser =

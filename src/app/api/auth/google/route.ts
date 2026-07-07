@@ -111,13 +111,15 @@ export const GET = async (request: NextRequest) => {
       method: "POST",
     }
   );
-  const authResponse = await auth.handler(authRequest);
-  const body = (await authResponse.json().catch(() => null)) as {
-    message?: string;
-    url?: string;
-  } | null;
+  const authResponse = await auth.handler(authRequest).catch(() => null);
+  const body = authResponse
+    ? ((await authResponse.json().catch(() => null)) as {
+        message?: string;
+        url?: string;
+      } | null)
+    : null;
 
-  if (!(authResponse.ok && body?.url)) {
+  if (!(authResponse?.ok && body?.url)) {
     const errorUrl = new URL("/sign-in", request.url);
     errorUrl.searchParams.set(
       "error",

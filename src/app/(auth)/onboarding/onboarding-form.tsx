@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import {
   completeOnboardingAction,
   initialOnboardingActionState,
-} from "./actions";
+} from "@/features/onboarding/actions";
 
 interface OnboardingFormProps {
   defaultOrganizationName: string;

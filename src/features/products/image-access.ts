@@ -1,9 +1,105 @@
 import "server-only";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { member, organization, products } from "@/db/schema";
 import { getExpectedProductImageKeys } from "@/features/products/image-storage";
+
+export const getProductImageState = async (
+  organizationId: string,
+  productId: string
+): Promise<{
+  id: string;
+  imageVersion: number | null;
+} | null> => {
+  const [product] = await db
+    .select({
+      id: products.id,
+      imageVersion: products.imageVersion,
+    })
+    .from(products)
+    .where(
+      and(
+        eq(products.id, productId),
+        eq(products.organizationId, organizationId)
+      )
+    )
+    .limit(1);
+
+  return product ?? null;
+};
+
+export const replaceProductImageMetadata = async ({
+  blurDataURL,
+  height,
+  newVersion,
+  oldVersion,
+  organizationId,
+  productId,
+  width,
+}: {
+  blurDataURL: string;
+  height: number;
+  newVersion: number;
+  oldVersion: number | null;
+  organizationId: string;
+  productId: string;
+  width: number;
+}): Promise<boolean> => {
+  const updatedProducts = await db
+    .update(products)
+    .set({
+      imageBlurDataUrl: blurDataURL,
+      imageHeight: height,
+      imageUploadedAt: new Date(),
+      imageVersion: newVersion,
+      imageWidth: width,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(products.id, productId),
+        eq(products.organizationId, organizationId),
+        oldVersion === null
+          ? isNull(products.imageVersion)
+          : eq(products.imageVersion, oldVersion)
+      )
+    )
+    .returning({ id: products.id });
+
+  return updatedProducts.length > 0;
+};
+
+export const clearProductImageMetadata = async ({
+  currentVersion,
+  organizationId,
+  productId,
+}: {
+  currentVersion: number;
+  organizationId: string;
+  productId: string;
+}): Promise<boolean> => {
+  const updatedProducts = await db
+    .update(products)
+    .set({
+      imageBlurDataUrl: null,
+      imageHeight: null,
+      imageUploadedAt: null,
+      imageVersion: null,
+      imageWidth: null,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(products.id, productId),
+        eq(products.organizationId, organizationId),
+        eq(products.imageVersion, currentVersion)
+      )
+    )
+    .returning({ id: products.id });
+
+  return updatedProducts.length > 0;
+};
 
 export const canReadProductImage = async ({
   organizationId,

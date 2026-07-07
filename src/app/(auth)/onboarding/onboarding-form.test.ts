@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -17,7 +19,7 @@ vi.mock("react", async (importOriginal) => {
   };
 });
 
-vi.mock("@/app/(auth)/onboarding/actions", () => ({
+vi.mock("@/features/onboarding/actions", () => ({
   completeOnboardingAction: vi.fn(),
   initialOnboardingActionState: { error: null },
 }));
@@ -50,5 +52,22 @@ describe("OnboardingForm", () => {
     expect(markup).toContain("Informe um nome valido para a organizacao.");
     expect(markup).toContain("Criando...");
     expect(markup).toMatch(DISABLED_BUTTON_ATTRIBUTE_PATTERN);
+  });
+
+  it("keeps onboarding server actions outside the route tree", () => {
+    const source = readFileSync(
+      join(
+        process.cwd(),
+        "src",
+        "app",
+        "(auth)",
+        "onboarding",
+        "onboarding-form.tsx"
+      ),
+      "utf8"
+    );
+
+    expect(source).toContain('from "@/features/onboarding/actions"');
+    expect(source).not.toContain('from "./actions"');
   });
 });

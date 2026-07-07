@@ -16,7 +16,7 @@ const productMocks = vi.hoisted(() => ({
   toastError: vi.fn(),
 }));
 
-vi.mock("@/app/(app)/produtos/actions", () => ({
+vi.mock("@/features/products/actions", () => ({
   archiveProductAction: vi.fn(),
   removeProductImageAction: vi.fn(),
   replaceProductImageAction: vi.fn(),
@@ -24,7 +24,7 @@ vi.mock("@/app/(app)/produtos/actions", () => ({
   updateProductAction: vi.fn(),
 }));
 
-vi.mock("@/app/(app)/produtos/pagination", () => ({
+vi.mock("@/features/products/pagination", () => ({
   loadMoreProductsAction: productMocks.loadMoreProductsAction,
 }));
 

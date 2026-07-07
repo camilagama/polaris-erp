@@ -148,4 +148,21 @@ describe("GET /api/auth/google", () => {
     expect(response.headers.get("retry-after")).toBe("60");
     expect(authMocks.handler).not.toHaveBeenCalled();
   });
+
+  it("redirects to sign-in with a sanitized error when Better Auth throws", async () => {
+    authMocks.handler.mockRejectedValueOnce(
+      new Error("google client secret leaked")
+    );
+
+    const response = await GET(
+      createRequest(
+        "https://app.example.com/api/auth/google?callbackUrl=%2Fprodutos"
+      )
+    );
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe(
+      "https://app.example.com/sign-in?error=google_oauth_unavailable"
+    );
+  });
 });

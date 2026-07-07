@@ -1,11 +1,11 @@
 import type { ReactNode } from "react";
-import { signOutAction } from "@/app/(app)/actions";
 import { AppSidebar } from "@/components/app-sidebar";
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { signOutAction } from "@/features/auth/actions";
 import { requirePageAppContext } from "@/lib/app-session";
 import { requireSession } from "@/lib/session";
 

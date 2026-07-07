@@ -8,12 +8,6 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useEffect, useState, useTransition } from "react";
-import {
-  createCategoryAction,
-  deleteCategoryAction,
-  saveCatalogSettingsAction,
-  updateCategoryAction,
-} from "@/app/(app)/configuracoes/actions";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -54,6 +48,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  createCategoryAction,
+  deleteCategoryAction,
+  saveCatalogSettingsAction,
+  updateCategoryAction,
+} from "@/features/catalog/actions";
 import {
   canDeleteCategory,
   canRenameCategory,

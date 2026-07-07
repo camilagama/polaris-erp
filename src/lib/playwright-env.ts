@@ -1,10 +1,10 @@
-interface E2eDatabaseEnv {
+interface E2eDatabaseEnv extends Record<string, string | undefined> {
   ALLOW_E2E_SHARED_DATABASE?: string;
   CI?: string;
   E2E_DATABASE_URL?: string;
 }
 
-export const E2E_DATABASE_URL_REQUIRED_MESSAGE =
+const E2E_DATABASE_URL_REQUIRED_MESSAGE =
   "CI exige E2E_DATABASE_URL apontando para uma branch Neon dedicada (nao use o banco de producao). Veja docs/database-environments.md.";
 
 export const validateE2eDatabaseEnv = (env: E2eDatabaseEnv): void => {

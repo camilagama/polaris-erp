@@ -6,18 +6,28 @@
 - 2026-07-06: PR 2 adicionou prova tenant A/B em product actions: arquivar/desarquivar produto agora falha quando nenhum produto do tenant atual e alterado, sem auditar nem revalidar.
 - 2026-07-07: PR 2 avancou em camada tenant-scoped: arquivar/desarquivar produto agora delega a mutation para dominio (`setProductArchivedState`) e a action tem guardrail estrutural.
 - 2026-07-06: PR 2 ampliou prova tenant A/B em imagens de produto: remover imagem agora diferencia produto inexistente/outro tenant de produto existente sem imagem.
+- 2026-07-07: PR 2 avancou em camada tenant-scoped de produtos: lock de produto por `organizationId` saiu da action e agora fica no dominio de produtos.
+- 2026-07-07: PR 2 avancou em camada tenant-scoped de produtos: criacao de produto com estoque inicial saiu da action e agora persiste via dominio.
+- 2026-07-07: PR 2 avancou em camada tenant-scoped de produtos: update de produto e historico de preco sairam da action e agora persistem via dominio.
+- 2026-07-07: PR 2 avancou em camada tenant-scoped de produtos: entrada e baixa manual de estoque sairam da action e agora persistem via dominio; action de produtos ficou sem import direto de `db`/schema.
 - 2026-07-06: PR 2 avancou em configuracoes/catalogo: update/delete de categoria agora confirmam linha afetada com `returning()` e actions nao auditam/revalidam quando o dominio rejeita categoria inexistente/outro tenant.
 - 2026-07-06: PR 2 avancou em metas: update/archive/unarchive agora confirmam linha afetada com `returning()` e actions nao auditam/refresham quando o dominio rejeita meta inexistente/outro tenant.
 - 2026-07-06: PR 2 avancou em vendas: cancelamento agora confirma o update final da venda com `returning()` e nao audita/revalida quando a venda nao e atualizada.
 - 2026-07-06: PR 2 avancou em estoque de vendas: baixa na criacao e estorno no cancelamento agora confirmam update do produto com `returning()` e bloqueiam auditoria/revalidacao quando o estoque nao e atualizado.
+- 2026-07-07: PR 2 avancou em camada tenant-scoped de vendas: lock de produtos por `organizationId` saiu da action e agora fica no dominio de vendas.
+- 2026-07-07: PR 2 avancou em camada tenant-scoped de vendas: criacao/cancelamento de venda sairam da action e agora persistem via dominio; action de vendas ficou sem import direto de `db`/schema.
 - 2026-07-06: PR 2 avancou em upload de imagens: chaves staged agora incluem organizacao e usuario (`staging/{org}/{user}/...`) e o consumo valida o mesmo escopo.
 - 2026-07-06: PR 2/R2 avancou em remocao de imagem: remocao agora confirma update condicional por `imageVersion` antes de apagar o objeto R2, evitando sucesso falso em corrida com replace.
 - 2026-07-06: PR 2/R2 avancou em corrida de replace: troca de imagem agora checa `returning()` do update condicional, remove a nova versao se perder a corrida e nao apaga a versao antiga.
 - 2026-07-06: PR 2/R2 avancou em reconcile: objetos de imagem recem-enviados agora sao preservados por janela minima antes de limpeza de orfaos.
 - 2026-07-07: PR 2/R2 avancou em camada tenant-scoped: reconcile de imagens agora delega consulta de chaves esperadas para dominio e tem guardrail contra import direto de `db` no handler.
+- 2026-07-07: PR 2/R2 avancou em camada tenant-scoped: replace/remocao de imagem agora delegam leitura de estado do produto para dominio de imagens.
+- 2026-07-07: PR 2/R2 avancou em camada tenant-scoped: replace/remocao de imagem agora delegam writes condicionais de metadata para dominio de imagens.
 - 2026-07-06: PR 7 iniciado parcialmente. Concluidos nesta fatia: `SEC-001` (bootstrap bloqueado em qualquer `NODE_ENV=production`) e `SEC-002` (secrets internos fracos rejeitados em producao).
 - 2026-07-06: PR 7 avancou em health checks: `/api/health` agora verifica banco com resposta sanitizada e retorna 503 quando a checagem falha.
+- 2026-07-07: PR 7 avancou em arquitetura de handlers: `/api/health` delega o ping do banco para `src/lib/health.ts`, removendo o ultimo import direto de `db` em runtime dentro de `src/app`.
 - 2026-07-06: PR 7 avancou em observabilidade: Sentry agora usa sampling configuravel para tracing/replay, ativa replay em erro no client e remove log ruidoso de startup.
+- 2026-07-07: PR 7 reforcou login Google: falha/throw do Better Auth no inicio do OAuth agora vira redirect sanitizado para `/sign-in?error=google_oauth_unavailable`.
 - 2026-07-06: PR 7 avancou em docs de deploy: `docs/deploy-vercel.md` agora cobre envs obrigatorias, sampling Sentry, health checks, cron, build com env de Production e smoke checklist.
 - 2026-07-06: PR 7 avancou em guardrails de producao: `CRON_SECRET` agora e obrigatorio em `VERCEL_ENV=production`, sem quebrar build local, alem de rejeitar secrets internos fracos.
 - 2026-07-07: PR 7 reforcou guardrail de env: Vercel Preview continua aceito sem `CRON_SECRET`, enquanto Vercel Production exige o segredo.
@@ -29,9 +39,12 @@
 - 2026-07-06: PR 7 avancou em bootstrap interno: mesmo em development/test, `/api/auth/dev/bootstrap-session` agora tem rate limit com `Retry-After` antes de validar bearer.
 - 2026-07-07: PR 7 avancou em templates/runbook: `.env.example` agora lista `VERCEL_ENV`, `ALLOW_PLAYWRIGHT_BOOTSTRAP` e envs de sampling/replay do Sentry; deploy docs mencionam headers globais.
 - 2026-07-07: PR 7 reforcou prova de headers: `next.config.ts` agora exporta `baseNextConfig` e `src/lib/next-config-security.test.ts` valida que o baseline global esta ligado no config.
+- 2026-07-07: PR 7 reforcou bootstrap interno: payload invalido agora retorna 400 sanitizado antes de tocar adapter de usuario ou criar sessao.
 - 2026-07-07: Resumo executivo alinhado ao estado atual: achados DB/R2/metas/estoque agora distinguem corrigido localmente de pendente externo (Neon/Vercel/R2/E2E).
 - 2026-07-07: PR 5/CI avancou: job `verify` agora tambem roda `bun run knip` antes do build; docs de CI foram alinhados para check/test/knip/build + E2E isolado.
 - 2026-07-07: PR 5/CI reforcou guardrail de Playwright: validacao de `E2E_DATABASE_URL` em CI foi extraida e coberta por teste unitario.
+- 2026-07-07: PR 5/QA estabilizou a suite local apos hardening: `bun run test` passou com 63 arquivos e 231 testes.
+- 2026-07-07: PR 5/QA fechou verificacoes ampliadas locais: `bun run knip` e `bun run build` passaram apos limpar exports mortos das extracoes e ajustar tipo do env E2E.
 - 2026-07-07: Resumo executivo alinhado em riscos financeiros: estoque arquivado, idempotency, taxa de cartao e R2 agora constam como mitigados localmente, com validacao externa pendente.
 - 2026-07-07: PR 3 reforcou prova de idempotency: teste agora valida que a migration preserva o indice unico parcial apenas para `idempotency_key IS NOT NULL`.
 - 2026-07-07: PR 3 avancou em camada tenant-scoped: lookup de venda por idempotency key saiu da action e agora fica no dominio de vendas.
@@ -41,6 +54,7 @@
 - 2026-07-07: PR 2 corrigiu auditoria pre-tenant: login sem organizacao ativa nao grava mais evento em `org_dg_imports`; login com organizacao ativa continua auditado no tenant correto.
 - 2026-07-07: PR 2 reforcou rota autenticada de leitura de imagem: usuario sem membership na organizacao da URL recebe 404 antes de storage ou auditoria.
 - 2026-07-07: PR 2 avancou em camada tenant-scoped: rota autenticada de leitura de imagem agora delega checagem de produto/org/membership para dominio e tem guardrail contra import direto de `db` no handler.
+- 2026-07-07: PR 2 consolidou guardrail de arquitetura: arquivos runtime em `src/app` agora tem teste global contra import direto de `db`/schema.
 - 2026-07-07: PR 2 reforcou contexto de app: organizacao inativa retorna contexto nulo e nao reescreve a organizacao ativa da sessao.
 - 2026-07-07: PR 4/Perf avancou em indices de listagem: produtos ativos/arquivados e vendas agora tem indices cobrindo paginacao seek por organizacao.
 - 2026-07-07: PR 6 teve documentacao reconciliada com o codigo: modal de taxas ja usa rascunho local com cancelar/aplicar; pendencia restante e E2E/smoke.
@@ -52,6 +66,13 @@
 - 2026-07-06: PR 8 iniciado em cleanup seguro: export morto `getDb` de `src/db/index.ts` removido, deixando o helper privado ao proxy `db`.
 - 2026-07-06: PR 8 reduziu acoplamento de tipos: `ProductStatusFilter` e `SaleStatusFilter` sairam de `app/**/queries` para contracts de dominio, removendo imports de `queries` pelos componentes.
 - 2026-07-06: PR 8 moveu queries de listagem/detalhe de produtos e vendas para `src/features/**/queries.ts`, deixando o App Router apenas como composicao/paginacao.
+- 2026-07-07: PR 8 reduziu acoplamento de paginacao: actions de carregar mais produtos/vendas sairam de `src/app/**/pagination` para `features`, mantendo wrappers finos e guardrail estrutural para componentes.
+- 2026-07-07: PR 8 reduziu acoplamento de settings: actions de metas sairam de `src/app/(app)/metas/actions` para `features/goals/actions`, removendo o arquivo morto em `app` e mantendo guardrail estrutural nos componentes.
+- 2026-07-07: PR 8 reduziu acoplamento de catalogo: actions de configuracoes/categorias sairam de `src/app/(app)/configuracoes/actions` para `features/catalog/actions`, removendo arquivo morto e mantendo guardrail estrutural no painel de settings.
+- 2026-07-07: PR 8 reduziu acoplamento de vendas: actions de criar/cancelar venda sairam de `src/app/(app)/vendas/actions` para `features/sales/actions`, removendo arquivo morto e mantendo guardrail estrutural nos componentes.
+- 2026-07-07: PR 8 reduziu acoplamento de produtos: actions de produto/estoque/imagem sairam de `src/app/(app)/produtos/actions` para `features/products/actions`, removendo arquivo morto e mantendo guardrail estrutural nos componentes.
+- 2026-07-07: PR 8 reduziu acoplamento de onboarding: action de criacao inicial de organizacao saiu de `src/app/(auth)/onboarding/actions` para `features/onboarding/actions`, removendo arquivo morto e mantendo guardrail no formulario client.
+- 2026-07-07: PR 8 reduziu acoplamento da shell autenticada: action de logout saiu de `src/app/(app)/actions` para `features/auth/actions`, removendo o ultimo `actions.ts` da area autenticada em `app` e mantendo guardrail no layout.
 - 2026-07-06: PR 6 iniciado em UX critica: botoes "carregar mais" de produtos e vendas agora exibem toast de erro e liberam o estado de loading quando a paginacao falha.
 - 2026-07-06: PR 6 avancou em taxas de cartao: modal de parcelas agora edita rascunho local, permite cancelar sem persistir no estado principal e exige "Aplicar taxas" antes do "Salvar cartao".
 - 2026-07-06: PR 6 avancou em acessibilidade: buscas de produtos/vendas e filtro de status de vendas agora tem nomes acessiveis explicitos.

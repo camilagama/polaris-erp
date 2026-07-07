@@ -12,15 +12,6 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
-import {
-  addProductStockAction,
-  archiveProductAction,
-  removeProductImageAction,
-  replaceProductImageAction,
-  unarchiveProductAction,
-  updateProductAction,
-  writeOffProductStockAction,
-} from "@/app/(app)/produtos/actions";
 import { ProductDatePicker } from "@/components/products/product-date-picker";
 import { ProductEditFields } from "@/components/products/product-edit-fields";
 import { uploadProductImageToStaging } from "@/components/products/product-image-upload";
@@ -51,6 +42,15 @@ import {
 } from "@/components/ui/select";
 import { toast } from "@/components/ui/sonner";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  addProductStockAction,
+  archiveProductAction,
+  removeProductImageAction,
+  replaceProductImageAction,
+  unarchiveProductAction,
+  updateProductAction,
+  writeOffProductStockAction,
+} from "@/features/products/actions";
 import type { ProductListItem } from "@/features/products/contracts";
 import { formatDateInputValue } from "@/lib/domain/date";
 

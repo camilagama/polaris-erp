@@ -163,6 +163,28 @@ describe("POST /api/auth/dev/bootstrap-session", () => {
     expect(authContext.internalAdapter.createSession).not.toHaveBeenCalled();
   });
 
+  it("returns 400 for invalid payload without touching the auth adapter", async () => {
+    const response = await POST(
+      new Request("http://localhost/api/auth/dev/bootstrap-session", {
+        body: JSON.stringify({
+          email: "invalid-email",
+        }),
+        headers: {
+          Authorization: "Bearer bootstrap-secret",
+        },
+        method: "POST",
+      })
+    );
+
+    await expect(response.json()).resolves.toEqual({
+      error: "Payload invalido.",
+    });
+    expect(response.status).toBe(400);
+    expect(authContext.internalAdapter.findUserByEmail).not.toHaveBeenCalled();
+    expect(authContext.internalAdapter.createUser).not.toHaveBeenCalled();
+    expect(authContext.internalAdapter.createSession).not.toHaveBeenCalled();
+  });
+
   it("returns 503 when the bootstrap secret is not configured", async () => {
     serverEnvMock.INTERNAL_BOOTSTRAP_SECRET = undefined;
 

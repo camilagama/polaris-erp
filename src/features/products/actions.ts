@@ -1,15 +1,12 @@
 "use server";
 
-import { and, eq, isNull, sql } from "drizzle-orm";
 import { refresh, updateTag } from "next/cache";
-import { db } from "@/db";
-import {
-  productPriceChanges,
-  productStockEntries,
-  productStockWriteOffs,
-  products,
-} from "@/db/schema";
 import { getProductCategoryById } from "@/features/catalog/server";
+import {
+  clearProductImageMetadata,
+  getProductImageState,
+  replaceProductImageMetadata,
+} from "@/features/products/image-access";
 import {
   type StagedProductImageInput,
   stagedProductImageSchema,
@@ -22,11 +19,13 @@ import {
   stockWriteOffSchema,
   updateProductSchema,
 } from "@/features/products/schema";
-import { setProductArchivedState } from "@/features/products/server";
 import {
-  applyStockAddition,
-  applyStockWriteOff,
-} from "@/features/products/stock";
+  addProductStock,
+  createProductWithInitialStock,
+  setProductArchivedState,
+  updateProductWithPriceHistory,
+  writeOffProductStock,
+} from "@/features/products/server";
 import { requireAppContext } from "@/lib/app-session";
 import { recordAuditEvent } from "@/lib/audit-log";
 import { buildOrganizationCacheTags } from "@/lib/cache-tags";
@@ -47,51 +46,6 @@ const revalidateCatalogAndAnalytics = (organizationId: string) => {
   updateTag(tags.catalog);
   updateTag(tags.analytics);
   refresh();
-};
-
-const emptyProductImagePayload = {
-  imageBlurDataUrl: null,
-  imageHeight: null,
-  imageUploadedAt: null,
-  imageVersion: null,
-  imageWidth: null,
-} as const;
-
-interface LockedProductRow extends Record<string, unknown> {
-  costPrice: string;
-  id: string;
-  price: string;
-  stock: number;
-}
-
-const lockProductForUpdate = async (
-  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
-  organizationId: string,
-  id: string
-) => {
-  const result = await tx.execute<LockedProductRow>(sql`
-    select id, price, cost_price as "costPrice", stock
-    from products
-    where id = ${id} and organization_id = ${organizationId}
-    for update
-  `);
-
-  return result.rows.at(0) ?? null;
-};
-
-const getProductImageState = async (organizationId: string, id: string) => {
-  const [product] = await db
-    .select({
-      id: products.id,
-      imageVersion: products.imageVersion,
-    })
-    .from(products)
-    .where(
-      and(eq(products.id, id), eq(products.organizationId, organizationId))
-    )
-    .limit(1);
-
-  return product ?? null;
 };
 
 const firstZodErrorMessage = (error: { issues: { message: string }[] }) =>
@@ -134,37 +88,24 @@ export async function createProductAction(input: unknown): Promise<string> {
       });
     }
 
-    await db.transaction(async (tx) => {
-      await tx.insert(products).values({
-        categoryId: result.data.categoryId,
-        costPrice: toCurrencyString(result.data.costPrice),
-        description: result.data.description || null,
-        id: productId,
-        name: result.data.name,
-        organizationId: context.organizationId,
-        price: toCurrencyString(result.data.price),
-        purchasedOn: result.data.purchasedOn,
-        stock: result.data.stock,
-        ...(storedImage
-          ? {
-              imageBlurDataUrl: storedImage.blurDataURL,
-              imageHeight: storedImage.height,
-              imageUploadedAt: new Date(),
-              imageVersion: storedImage.version,
-              imageWidth: storedImage.width,
-            }
-          : emptyProductImagePayload),
-      });
-
-      if (result.data.stock > 0) {
-        await tx.insert(productStockEntries).values({
-          organizationId: context.organizationId,
-          productId,
-          quantity: result.data.stock,
-          stockedOn: result.data.purchasedOn,
-          unitCost: toCurrencyString(result.data.costPrice),
-        });
-      }
+    await createProductWithInitialStock({
+      categoryId: result.data.categoryId,
+      costPrice: toCurrencyString(result.data.costPrice),
+      description: result.data.description || null,
+      image: storedImage
+        ? {
+            blurDataURL: storedImage.blurDataURL,
+            height: storedImage.height,
+            version: storedImage.version,
+            width: storedImage.width,
+          }
+        : null,
+      name: result.data.name,
+      organizationId: context.organizationId,
+      price: toCurrencyString(result.data.price),
+      productId,
+      purchasedOn: result.data.purchasedOn,
+      stock: result.data.stock,
     });
   } catch (error) {
     if (storedImage) {
@@ -205,42 +146,14 @@ export async function updateProductAction(id: string, input: unknown) {
     throw new Error("Selecione uma categoria valida.");
   }
 
-  await db.transaction(async (tx) => {
-    const product = await lockProductForUpdate(tx, context.organizationId, id);
-
-    if (!product) {
-      throw new Error("Produto nao encontrado.");
-    }
-
-    const nextPrice = toCurrencyString(result.data.price);
-
-    await tx
-      .update(products)
-      .set({
-        categoryId: result.data.categoryId,
-        description: result.data.description || null,
-        name: result.data.name,
-        price: nextPrice,
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(products.id, id),
-          eq(products.organizationId, context.organizationId)
-        )
-      );
-
-    const priceChanged = product.price !== nextPrice;
-
-    if (priceChanged) {
-      await tx.insert(productPriceChanges).values({
-        changedByUserId: context.userId,
-        nextPrice,
-        organizationId: context.organizationId,
-        previousPrice: product.price,
-        productId: id,
-      });
-    }
+  await updateProductWithPriceHistory({
+    actorUserId: context.userId,
+    categoryId: result.data.categoryId,
+    description: result.data.description || null,
+    name: result.data.name,
+    organizationId: context.organizationId,
+    price: toCurrencyString(result.data.price),
+    productId: id,
   });
 
   revalidateCatalogViews(context.organizationId);
@@ -285,28 +198,17 @@ export async function replaceProductImageAction(
     return { success: true } as const;
   }
 
-  const updatedProducts = await db
-    .update(products)
-    .set({
-      imageBlurDataUrl: storedImage.blurDataURL,
-      imageHeight: storedImage.height,
-      imageUploadedAt: new Date(),
-      imageVersion: storedImage.version,
-      imageWidth: storedImage.width,
-      updatedAt: new Date(),
-    })
-    .where(
-      and(
-        eq(products.id, id),
-        eq(products.organizationId, context.organizationId),
-        oldVersion === null
-          ? isNull(products.imageVersion)
-          : eq(products.imageVersion, oldVersion)
-      )
-    )
-    .returning({ id: products.id });
+  const imageMetadataReplaced = await replaceProductImageMetadata({
+    blurDataURL: storedImage.blurDataURL,
+    height: storedImage.height,
+    newVersion: storedImage.version,
+    oldVersion,
+    organizationId: context.organizationId,
+    productId: id,
+    width: storedImage.width,
+  });
 
-  if (updatedProducts.length === 0) {
+  if (!imageMetadataReplaced) {
     await deleteProductImageVersion({
       organizationId: context.organizationId,
       productId: id,
@@ -347,22 +249,13 @@ export async function removeProductImageAction(id: string) {
     return { success: true } as const;
   }
 
-  const updatedProducts = await db
-    .update(products)
-    .set({
-      ...emptyProductImagePayload,
-      updatedAt: new Date(),
-    })
-    .where(
-      and(
-        eq(products.id, id),
-        eq(products.organizationId, context.organizationId),
-        eq(products.imageVersion, product.imageVersion)
-      )
-    )
-    .returning({ id: products.id });
+  const imageMetadataCleared = await clearProductImageMetadata({
+    currentVersion: product.imageVersion,
+    organizationId: context.organizationId,
+    productId: id,
+  });
 
-  if (updatedProducts.length === 0) {
+  if (!imageMetadataCleared) {
     throw new Error(
       "Imagem do produto foi atualizada por outra operacao. Recarregue e tente novamente."
     );
@@ -392,46 +285,12 @@ export async function addProductStockAction(productId: string, input: unknown) {
     throw new Error(firstZodErrorMessage(result.error));
   }
 
-  await db.transaction(async (tx) => {
-    const product = await lockProductForUpdate(
-      tx,
-      context.organizationId,
-      productId
-    );
-
-    if (!product) {
-      throw new Error("Produto nao encontrado.");
-    }
-
-    const { nextCostPrice, nextStock } = applyStockAddition({
-      currentCostPrice: Number(product.costPrice),
-      currentStock: product.stock,
-      incomingQuantity: result.data.quantity,
-      incomingUnitCost: result.data.unitCost,
-    });
-
-    await tx.insert(productStockEntries).values({
-      organizationId: context.organizationId,
-      productId,
-      quantity: result.data.quantity,
-      stockedOn: result.data.stockedOn,
-      unitCost: toCurrencyString(result.data.unitCost),
-    });
-
-    await tx
-      .update(products)
-      .set({
-        archivedAt: null,
-        costPrice: toCurrencyString(nextCostPrice),
-        stock: nextStock,
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(products.id, productId),
-          eq(products.organizationId, context.organizationId)
-        )
-      );
+  await addProductStock({
+    organizationId: context.organizationId,
+    productId,
+    quantity: result.data.quantity,
+    stockedOn: result.data.stockedOn,
+    unitCost: result.data.unitCost,
   });
 
   revalidateSharedAnalytics(context.organizationId);
@@ -455,41 +314,13 @@ export async function writeOffProductStockAction(
     throw new Error(firstZodErrorMessage(result.error));
   }
 
-  await db.transaction(async (tx) => {
-    const product = await lockProductForUpdate(
-      tx,
-      context.organizationId,
-      productId
-    );
-
-    if (!product) {
-      throw new Error("Produto nao encontrado.");
-    }
-
-    const { nextStock } = applyStockWriteOff({
-      currentStock: product.stock,
-      quantity: result.data.quantity,
-    });
-
-    await tx.insert(productStockWriteOffs).values({
-      happenedOn: result.data.happenedOn,
-      notes: result.data.notes || null,
-      organizationId: context.organizationId,
-      productId,
-      quantity: result.data.quantity,
-      reason: result.data.reason,
-      unitCostSnapshot: product.costPrice,
-    });
-
-    await tx
-      .update(products)
-      .set({ stock: nextStock, updatedAt: new Date() })
-      .where(
-        and(
-          eq(products.id, productId),
-          eq(products.organizationId, context.organizationId)
-        )
-      );
+  await writeOffProductStock({
+    happenedOn: result.data.happenedOn,
+    notes: result.data.notes || null,
+    organizationId: context.organizationId,
+    productId,
+    quantity: result.data.quantity,
+    reason: result.data.reason,
   });
 
   revalidateSharedAnalytics(context.organizationId);

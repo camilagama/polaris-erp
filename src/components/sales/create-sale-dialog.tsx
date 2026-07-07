@@ -4,7 +4,6 @@ import { Add01Icon, Delete02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { createSaleAction } from "@/app/(app)/vendas/actions";
 import { ProductDatePicker } from "@/components/products/product-date-picker";
 import { ProductCombobox } from "@/components/sales/product-combobox";
 import { Button } from "@/components/ui/button";
@@ -39,6 +38,7 @@ import {
   findCardInstallmentRule,
   getCardInstallmentRuleLabel,
 } from "@/features/catalog/payment-rules";
+import { createSaleAction } from "@/features/sales/actions";
 import {
   calculateSaleFinancials,
   calculateSaleReceivedAmount,

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { cancelSaleAction } from "@/app/(app)/vendas/actions";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,6 +13,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/sonner";
+import { cancelSaleAction } from "@/features/sales/actions";
 import type { SaleDetail } from "@/features/sales/contracts";
 
 export function SaleDetailActions({

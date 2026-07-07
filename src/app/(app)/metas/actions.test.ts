@@ -49,7 +49,7 @@ describe("metas server actions", () => {
     const { mockRequireAppContext } = await resolveMocks();
     mockRequireAppContext.mockRejectedValue(new Error("Sessao invalida."));
 
-    const { createGoalAction } = await import("@/app/(app)/metas/actions");
+    const { createGoalAction } = await import("@/features/goals/actions");
 
     await expect(
       createGoalAction({
@@ -73,7 +73,7 @@ describe("metas server actions", () => {
     });
     mockCreateGoal.mockResolvedValue(undefined);
 
-    const { createGoalAction } = await import("@/app/(app)/metas/actions");
+    const { createGoalAction } = await import("@/features/goals/actions");
 
     await createGoalAction({
       displayMode: "absolute",
@@ -115,7 +115,7 @@ describe("metas server actions", () => {
     mockArchiveGoal.mockResolvedValue(undefined);
 
     const { archiveGoalAction, updateGoalAction } = await import(
-      "@/app/(app)/metas/actions"
+      "@/features/goals/actions"
     );
 
     await updateGoalAction({
@@ -158,7 +158,7 @@ describe("metas server actions", () => {
       new Error("Meta nao encontrada ou nao esta ativa.")
     );
 
-    const { updateGoalAction } = await import("@/app/(app)/metas/actions");
+    const { updateGoalAction } = await import("@/features/goals/actions");
 
     await expect(
       updateGoalAction({
@@ -191,7 +191,7 @@ describe("metas server actions", () => {
     });
     mockArchiveGoal.mockRejectedValue(new Error("Meta nao encontrada."));
 
-    const { archiveGoalAction } = await import("@/app/(app)/metas/actions");
+    const { archiveGoalAction } = await import("@/features/goals/actions");
 
     await expect(
       archiveGoalAction({
@@ -213,7 +213,7 @@ describe("metas server actions", () => {
     });
     mockUnarchiveGoal.mockResolvedValue(undefined);
 
-    const { unarchiveGoalAction } = await import("@/app/(app)/metas/actions");
+    const { unarchiveGoalAction } = await import("@/features/goals/actions");
 
     await unarchiveGoalAction({
       id: "550e8400-e29b-41d4-a716-446655440000",
@@ -241,7 +241,7 @@ describe("metas server actions", () => {
     });
     mockUnarchiveGoal.mockRejectedValue(new Error("Meta nao encontrada."));
 
-    const { unarchiveGoalAction } = await import("@/app/(app)/metas/actions");
+    const { unarchiveGoalAction } = await import("@/features/goals/actions");
 
     await expect(
       unarchiveGoalAction({

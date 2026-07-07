@@ -1,10 +1,12 @@
 import "server-only";
 
-import { and, asc, eq, gte, lte } from "drizzle-orm";
+import { and, asc, eq, gte, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   categories,
+  productPriceChanges,
   productStockEntries,
+  productStockWriteOffs,
   products,
   saleItems,
   sales,
@@ -17,7 +19,26 @@ import type {
   ProductAnalytics,
   ProductSalesHistoryMetrics,
 } from "@/features/products/contracts";
+import {
+  applyStockAddition,
+  applyStockWriteOff,
+} from "@/features/products/stock";
+import { toCurrencyString } from "@/lib/domain/currency";
 import { formatDateInputValue } from "@/lib/domain/date";
+
+interface LockedProductRow extends Record<string, unknown> {
+  costPrice: string;
+  id: string;
+  price: string;
+  stock: number;
+}
+
+export interface ProductInitialImageMetadata {
+  blurDataURL: string;
+  height: number;
+  version: number;
+  width: number;
+}
 
 export const getProductAnalytics = async ({
   organizationId,
@@ -137,6 +158,237 @@ export const getProductSalesHistoryMetrics = async (
       quantity: Number(row.quantity),
       status: row.status as "cancelled" | "completed",
     })),
+  });
+};
+
+const lockProductForUpdate = async (
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  organizationId: string,
+  productId: string
+): Promise<LockedProductRow | null> => {
+  const result = await tx.execute<LockedProductRow>(sql`
+    select id, price, cost_price as "costPrice", stock
+    from products
+    where id = ${productId} and organization_id = ${organizationId}
+    for update
+  `);
+
+  return result.rows.at(0) ?? null;
+};
+
+export const createProductWithInitialStock = async ({
+  categoryId,
+  costPrice,
+  description,
+  image,
+  name,
+  organizationId,
+  price,
+  productId,
+  purchasedOn,
+  stock,
+}: {
+  categoryId: string;
+  costPrice: string;
+  description: string | null;
+  image: ProductInitialImageMetadata | null;
+  name: string;
+  organizationId: string;
+  price: string;
+  productId: string;
+  purchasedOn: string;
+  stock: number;
+}): Promise<void> => {
+  await db.transaction(async (tx) => {
+    await tx.insert(products).values({
+      categoryId,
+      costPrice,
+      description,
+      id: productId,
+      name,
+      organizationId,
+      price,
+      purchasedOn,
+      stock,
+      ...(image
+        ? {
+            imageBlurDataUrl: image.blurDataURL,
+            imageHeight: image.height,
+            imageUploadedAt: new Date(),
+            imageVersion: image.version,
+            imageWidth: image.width,
+          }
+        : {
+            imageBlurDataUrl: null,
+            imageHeight: null,
+            imageUploadedAt: null,
+            imageVersion: null,
+            imageWidth: null,
+          }),
+    });
+
+    if (stock > 0) {
+      await tx.insert(productStockEntries).values({
+        organizationId,
+        productId,
+        quantity: stock,
+        stockedOn: purchasedOn,
+        unitCost: costPrice,
+      });
+    }
+  });
+};
+
+export const updateProductWithPriceHistory = async ({
+  actorUserId,
+  categoryId,
+  description,
+  name,
+  organizationId,
+  price,
+  productId,
+}: {
+  actorUserId: string;
+  categoryId: string;
+  description: string | null;
+  name: string;
+  organizationId: string;
+  price: string;
+  productId: string;
+}): Promise<void> => {
+  await db.transaction(async (tx) => {
+    const product = await lockProductForUpdate(tx, organizationId, productId);
+
+    if (!product) {
+      throw new Error("Produto nao encontrado.");
+    }
+
+    await tx
+      .update(products)
+      .set({
+        categoryId,
+        description,
+        name,
+        price,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(products.id, productId),
+          eq(products.organizationId, organizationId)
+        )
+      );
+
+    if (product.price !== price) {
+      await tx.insert(productPriceChanges).values({
+        changedByUserId: actorUserId,
+        nextPrice: price,
+        organizationId,
+        previousPrice: product.price,
+        productId,
+      });
+    }
+  });
+};
+
+export const addProductStock = async ({
+  organizationId,
+  productId,
+  quantity,
+  stockedOn,
+  unitCost,
+}: {
+  organizationId: string;
+  productId: string;
+  quantity: number;
+  stockedOn: string;
+  unitCost: number;
+}): Promise<void> => {
+  await db.transaction(async (tx) => {
+    const product = await lockProductForUpdate(tx, organizationId, productId);
+
+    if (!product) {
+      throw new Error("Produto nao encontrado.");
+    }
+
+    const { nextCostPrice, nextStock } = applyStockAddition({
+      currentCostPrice: Number(product.costPrice),
+      currentStock: product.stock,
+      incomingQuantity: quantity,
+      incomingUnitCost: unitCost,
+    });
+
+    await tx.insert(productStockEntries).values({
+      organizationId,
+      productId,
+      quantity,
+      stockedOn,
+      unitCost: toCurrencyString(unitCost),
+    });
+
+    await tx
+      .update(products)
+      .set({
+        archivedAt: null,
+        costPrice: toCurrencyString(nextCostPrice),
+        stock: nextStock,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(products.id, productId),
+          eq(products.organizationId, organizationId)
+        )
+      );
+  });
+};
+
+export const writeOffProductStock = async ({
+  happenedOn,
+  notes,
+  organizationId,
+  productId,
+  quantity,
+  reason,
+}: {
+  happenedOn: string;
+  notes: string | null;
+  organizationId: string;
+  productId: string;
+  quantity: number;
+  reason: "adjustment" | "operational";
+}): Promise<void> => {
+  await db.transaction(async (tx) => {
+    const product = await lockProductForUpdate(tx, organizationId, productId);
+
+    if (!product) {
+      throw new Error("Produto nao encontrado.");
+    }
+
+    const { nextStock } = applyStockWriteOff({
+      currentStock: product.stock,
+      quantity,
+    });
+
+    await tx.insert(productStockWriteOffs).values({
+      happenedOn,
+      notes,
+      organizationId,
+      productId,
+      quantity,
+      reason,
+      unitCostSnapshot: product.costPrice,
+    });
+
+    await tx
+      .update(products)
+      .set({ stock: nextStock, updatedAt: new Date() })
+      .where(
+        and(
+          eq(products.id, productId),
+          eq(products.organizationId, organizationId)
+        )
+      );
   });
 };
 

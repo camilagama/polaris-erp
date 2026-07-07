@@ -10,14 +10,6 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
-import {
-  archiveProductAction,
-  removeProductImageAction,
-  replaceProductImageAction,
-  unarchiveProductAction,
-  updateProductAction,
-} from "@/app/(app)/produtos/actions";
-import { loadMoreProductsAction } from "@/app/(app)/produtos/pagination";
 import { ProductEditFields } from "@/components/products/product-edit-fields";
 import { ProductImageFrame } from "@/components/products/product-image-frame";
 import { uploadProductImageToStaging } from "@/components/products/product-image-upload";
@@ -58,11 +50,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  archiveProductAction,
+  removeProductImageAction,
+  replaceProductImageAction,
+  unarchiveProductAction,
+  updateProductAction,
+} from "@/features/products/actions";
 import type {
   ProductAnalytics,
   ProductListItem,
   ProductStatusFilter,
 } from "@/features/products/contracts";
+import { loadMoreProductsAction } from "@/features/products/pagination";
 import { canRolePerform, type OrganizationRole } from "@/lib/app-context";
 import { formatCurrency } from "@/lib/formatters";
 import { InventoryCategoriesChart } from "../dashboard/inventory-categories-chart";
