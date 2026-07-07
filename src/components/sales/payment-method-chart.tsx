@@ -1,5 +1,6 @@
 "use client";
 
+import { ShoppingBag02Icon } from "@hugeicons/core-free-icons";
 import { Cell, Pie, PieChart } from "recharts";
 import {
   type ChartConfig,
@@ -9,6 +10,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
+import { Empty } from "@/components/ui/empty";
 import type { SalesPaymentMethodSummary } from "@/features/sales/contracts";
 import { formatCurrency } from "@/lib/formatters";
 
@@ -29,9 +31,12 @@ export function PaymentMethodChart({
 }) {
   if (data.length === 0) {
     return (
-      <div className="flex h-56 items-center justify-center rounded-2xl border border-border/70 border-dashed bg-muted/10 px-4 text-center text-muted-foreground text-sm">
-        Sem pagamentos concluidos no periodo.
-      </div>
+      <Empty
+        className="h-56 border-dashed shadow-none"
+        description="Aguardando registros para exibir os metodos de pagamento."
+        icon={ShoppingBag02Icon}
+        title="Sem pagamentos concluidos"
+      />
     );
   }
 

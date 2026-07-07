@@ -15,6 +15,7 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import { formatCurrency } from "@/lib/formatters";
+import { cn } from "@/lib/utils";
 
 const chartConfig = {
   profit: {
@@ -30,13 +31,13 @@ export function RevenueProfitChart({
   revenue: number;
   profit: number;
 }) {
-  const percentage = revenue > 0 ? (Math.max(0, profit) / revenue) * 100 : 0;
+  const percentage = revenue > 0 ? (profit / revenue) * 100 : 0;
 
   const chartData = [
     {
       name: "metrics",
-      profit: Math.max(0, profit),
-      fill: "var(--color-profit)",
+      profit: Math.abs(profit),
+      fill: profit >= 0 ? "var(--color-profit)" : "hsl(var(--destructive))",
     },
   ];
 
@@ -91,10 +92,16 @@ export function RevenueProfitChart({
                         y={viewBox.cy}
                       >
                         <tspan
-                          className="fill-foreground font-mono font-semibold text-[14px] tabular-nums"
+                          className={cn(
+                            "font-mono font-semibold text-[14px] tabular-nums",
+                            profit >= 0
+                              ? "fill-emerald-600 dark:fill-emerald-500"
+                              : "fill-destructive"
+                          )}
                           x={viewBox.cx}
                           y={viewBox.cy}
                         >
+                          {percentage > 0 ? "+" : ""}
                           {percentage.toFixed(0)}%
                         </tspan>
                       </text>
@@ -107,12 +114,17 @@ export function RevenueProfitChart({
               content={
                 <ChartTooltipContent
                   className="min-w-32 -translate-x-full"
-                  formatter={(value) => (
+                  formatter={(_value) => (
                     <>
-                      <div className="size-2.5 shrink-0 rounded-[2px] bg-chart-6" />
+                      <div
+                        className={cn(
+                          "size-2.5 shrink-0 rounded-[2px]",
+                          profit >= 0 ? "bg-chart-6" : "bg-destructive"
+                        )}
+                      />
                       <div className="flex flex-1 items-center justify-between gap-4 leading-none">
                         <span className="font-medium font-mono tabular-nums">
-                          {formatCurrency(Number(value))}
+                          {formatCurrency(Number(profit))}
                         </span>
                       </div>
                     </>
@@ -126,7 +138,12 @@ export function RevenueProfitChart({
         </ChartContainer>
 
         <div className="flex items-center gap-1.5 whitespace-nowrap text-[10px] text-muted-foreground">
-          <div className="size-1.5 shrink-0 rounded-full bg-chart-6" />
+          <div
+            className={cn(
+              "size-1.5 shrink-0 rounded-full",
+              profit >= 0 ? "bg-chart-6" : "bg-destructive"
+            )}
+          />
           <span>Lucro no período</span>
         </div>
       </div>

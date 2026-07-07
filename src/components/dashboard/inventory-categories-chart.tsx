@@ -1,5 +1,6 @@
 "use client";
 
+import { PackageOpenIcon } from "@hugeicons/core-free-icons";
 import { Bar, BarChart, Cell, XAxis, YAxis } from "recharts";
 import {
   type ChartConfig,
@@ -7,6 +8,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
+import { Empty } from "@/components/ui/empty";
 import type { DashboardInventoryCategory } from "@/features/dashboard/contracts";
 import { formatCurrency } from "@/lib/formatters";
 
@@ -26,9 +28,12 @@ export function InventoryCategoriesChart({
 }) {
   if (data.length === 0) {
     return (
-      <div className="flex h-48 items-center justify-center rounded-2xl border border-border/70 border-dashed bg-muted/10 px-4 text-center text-muted-foreground text-sm">
-        Sem estoque para distribuir por categoria.
-      </div>
+      <Empty
+        className="h-48 border-dashed shadow-none"
+        description="O valor do estoque aparecera aqui quando houver produtos."
+        icon={PackageOpenIcon}
+        title="Sem estoque"
+      />
     );
   }
 

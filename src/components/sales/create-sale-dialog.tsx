@@ -16,6 +16,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
   InputGroup,
@@ -553,26 +554,18 @@ export function CreateSaleDialog({
                   Informacoes gerais
                 </h3>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="flex flex-col gap-1.5">
-                    <Label
-                      className="text-muted-foreground text-xs"
-                      htmlFor="sale-date"
-                    >
-                      Data da venda
-                    </Label>
+                  <Field>
+                    <FieldLabel htmlFor="sale-date">Data da venda</FieldLabel>
                     <ProductDatePicker
                       id="sale-date"
                       onChange={setOccurredOn}
                       value={occurredOn}
                     />
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <Label
-                      className="text-muted-foreground text-xs"
-                      htmlFor="sale-payment-method"
-                    >
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="sale-payment-method">
                       Metodo de pagamento
-                    </Label>
+                    </FieldLabel>
                     <Select
                       onValueChange={(value) => {
                         if (value === "pix") {
@@ -615,18 +608,15 @@ export function CreateSaleDialog({
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
+                  </Field>
 
                   {paymentMethod === "card" ? (
                     <div className="flex flex-col gap-4 sm:col-span-2">
                       <div className="grid gap-4 sm:grid-cols-2">
-                        <div className="flex flex-col gap-1.5">
-                          <Label
-                            className="text-muted-foreground text-xs"
-                            htmlFor="sale-payment-fee-payer"
-                          >
+                        <Field>
+                          <FieldLabel htmlFor="sale-payment-fee-payer">
                             Quem paga a taxa
-                          </Label>
+                          </FieldLabel>
                           <Select
                             onValueChange={(value: "customer" | "seller") =>
                               setPaymentFeePayer(value)
@@ -645,7 +635,7 @@ export function CreateSaleDialog({
                               <SelectItem value="customer">Cliente</SelectItem>
                             </SelectContent>
                           </Select>
-                        </div>
+                        </Field>
                         <div className="flex items-end">
                           <div className="flex h-7 w-full items-center rounded-lg border border-border/60 bg-muted/15 px-3 text-muted-foreground text-xs">
                             Taxa configurada para{" "}
@@ -665,20 +655,17 @@ export function CreateSaleDialog({
                     </div>
                   ) : null}
 
-                  <div className="flex flex-col gap-1.5 sm:col-span-2">
-                    <Label
-                      className="text-muted-foreground text-xs"
-                      htmlFor="sale-customer"
-                    >
+                  <Field className="sm:col-span-2">
+                    <FieldLabel htmlFor="sale-customer">
                       Nome do cliente (opcional)
-                    </Label>
+                    </FieldLabel>
                     <Input
                       id="sale-customer"
                       onChange={(event) => setCustomerName(event.target.value)}
                       placeholder="Ex: Joao Silva"
                       value={customerName}
                     />
-                  </div>
+                  </Field>
                 </div>
               </div>
 
@@ -736,13 +723,10 @@ export function CreateSaleDialog({
 
               <div className="h-px w-full bg-border/40" />
 
-              <div className="flex flex-col gap-1.5">
-                <Label
-                  className="text-muted-foreground text-xs"
-                  htmlFor="sale-notes"
-                >
+              <Field>
+                <FieldLabel htmlFor="sale-notes">
                   Observacoes internas (opcional)
-                </Label>
+                </FieldLabel>
                 <Textarea
                   className="min-h-24 resize-none text-sm"
                   id="sale-notes"
@@ -750,7 +734,7 @@ export function CreateSaleDialog({
                   placeholder="Instrucoes adicionais, informacoes de entrega..."
                   value={notes}
                 />
-              </div>
+              </Field>
             </div>
 
             <div className="pb-4 lg:pb-0">

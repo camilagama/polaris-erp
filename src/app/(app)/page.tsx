@@ -1,4 +1,4 @@
-import { Image01Icon } from "@hugeicons/core-free-icons";
+import { Image01Icon, ShoppingBag02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { Metadata } from "next";
 import Image from "next/image";
@@ -21,6 +21,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Empty } from "@/components/ui/empty";
 import {
   dashboardDatePresetOptions,
   resolveDashboardDateRange,
@@ -297,9 +298,12 @@ export default async function DashboardPage(props: PageProps<"/">) {
             </CardHeader>
             <CardContent className="flex flex-col">
               {metrics.topProducts.length === 0 ? (
-                <div className="flex h-48 items-center justify-center rounded-2xl border border-border/70 border-dashed bg-muted/10 px-4 text-center text-muted-foreground text-sm">
-                  Sem vendas no periodo para montar o ranking.
-                </div>
+                <Empty
+                  className="h-48 border-dashed shadow-none"
+                  description="Nao ha vendas suficientes neste periodo."
+                  icon={ShoppingBag02Icon}
+                  title="Sem vendas no periodo"
+                />
               ) : (
                 <div className="rounded-xl border border-border/60">
                   <div className="divide-y divide-border/50">

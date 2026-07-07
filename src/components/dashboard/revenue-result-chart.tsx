@@ -1,5 +1,6 @@
 "use client";
 
+import { ShoppingBag02Icon } from "@hugeicons/core-free-icons";
 import {
   Area,
   AreaChart,
@@ -16,6 +17,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
+import { Empty } from "@/components/ui/empty";
 import type { DashboardPeriodComparisonPoint } from "@/features/dashboard/contracts";
 import { formatCompactCurrency, formatCurrency } from "@/lib/formatters";
 
@@ -45,9 +47,12 @@ export function RevenueResultChart({
 
   if (!hasData) {
     return (
-      <div className="flex h-48 items-center justify-center rounded-2xl border border-border/70 border-dashed bg-muted/10 px-4 text-center text-muted-foreground text-sm">
-        Sem dados no periodo para comparar vendas e custos.
-      </div>
+      <Empty
+        className="h-48 border-dashed shadow-none"
+        description="Nao ha registros para exibir a comparacao."
+        icon={ShoppingBag02Icon}
+        title="Sem dados de receita"
+      />
     );
   }
 

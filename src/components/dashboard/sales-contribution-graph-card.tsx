@@ -1,5 +1,6 @@
 "use client";
 
+import { Calendar02Icon } from "@hugeicons/core-free-icons";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { startTransition, useEffect, useMemo, useRef, useState } from "react";
@@ -10,6 +11,7 @@ import {
   ContributionGraphCalendar,
 } from "@/components/kibo-ui/contribution-graph";
 import { Card, CardContent } from "@/components/ui/card";
+import { Empty } from "@/components/ui/empty";
 import {
   Tooltip,
   TooltipContent,
@@ -168,9 +170,12 @@ export function SalesContributionGraphCard({
     return (
       <Card className={cn("flex flex-col", className)}>
         <CardContent className="flex flex-1 items-center justify-center pt-0">
-          <div className="flex h-48 w-full items-center justify-center rounded-2xl border border-border/70 border-dashed bg-muted/10 px-4 text-center text-muted-foreground text-sm">
-            Sem dados suficientes para montar o mapa no periodo.
-          </div>
+          <Empty
+            className="h-48 border-dashed shadow-none"
+            description="Nao ha vendas suficientes para exibir a contribuicao."
+            icon={Calendar02Icon}
+            title="Sem dados suficientes"
+          />
         </CardContent>
       </Card>
     );

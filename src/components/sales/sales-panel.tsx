@@ -206,6 +206,9 @@ function MobileAnalyticsSection({
               <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
                 Mix de pagamentos
               </CardTitle>
+              <CardDescription className="text-xs">
+                Registrados no periodo.
+              </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-1 items-center pt-0">
               <PaymentMethodChart data={analytics.paymentMethods} />

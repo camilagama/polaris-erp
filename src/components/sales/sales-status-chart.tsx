@@ -1,5 +1,6 @@
 "use client";
 
+import { ShoppingBag02Icon } from "@hugeicons/core-free-icons";
 import { Cell, Pie, PieChart } from "recharts";
 import {
   type ChartConfig,
@@ -9,6 +10,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
+import { Empty } from "@/components/ui/empty";
 import type { SalesStatusSummary } from "@/features/sales/contracts";
 
 const STATUS_COLORS = {
@@ -26,9 +28,12 @@ export function SalesStatusChart({ data }: { data: SalesStatusSummary[] }) {
 
   if (!hasData) {
     return (
-      <div className="flex h-56 items-center justify-center rounded-2xl border border-border/70 border-dashed bg-muted/10 px-4 text-center text-muted-foreground text-sm">
-        Sem vendas no periodo para exibir status.
-      </div>
+      <Empty
+        className="h-56 border-dashed shadow-none"
+        description="Aguardando registros de vendas para exibir o status."
+        icon={ShoppingBag02Icon}
+        title="Sem vendas no periodo"
+      />
     );
   }
 

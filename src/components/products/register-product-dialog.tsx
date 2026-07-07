@@ -17,6 +17,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
   InputGroup,
@@ -25,7 +31,6 @@ import {
   InputGroupText,
   InputGroupTextarea,
 } from "@/components/ui/input-group";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -164,7 +169,7 @@ export function RegisterProductDialog({
             form.handleSubmit();
           }}
         >
-          <div className="flex flex-col gap-6 py-6">
+          <FieldGroup className="py-6">
             <ProductImageInput
               description="Opcional. Aceita JPG, PNG ou WebP com ate 10 MB."
               id="register-product-image"
@@ -183,9 +188,14 @@ export function RegisterProductDialog({
               }}
             >
               {(field) => (
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor={field.name}>Nome do Produto</Label>
+                <Field
+                  data-invalid={field.state.meta.errors.length > 0 || undefined}
+                >
+                  <FieldLabel htmlFor={field.name}>Nome do Produto</FieldLabel>
                   <Input
+                    aria-invalid={
+                      field.state.meta.errors.length > 0 ? "true" : undefined
+                    }
                     id={field.name}
                     name={field.name}
                     onBlur={field.handleBlur}
@@ -193,12 +203,12 @@ export function RegisterProductDialog({
                     placeholder="Ex: iPhone 16 Pro Max"
                     value={field.state.value}
                   />
-                  {field.state.meta.errors.length > 0 ? (
-                    <em className="text-[11px] text-destructive">
-                      {field.state.meta.errors.join(", ")}
-                    </em>
-                  ) : null}
-                </div>
+                  <FieldError
+                    errors={(field.state.meta.errors as string[]).map((m) => ({
+                      message: m?.toString(),
+                    }))}
+                  />
+                </Field>
               )}
             </form.Field>
 
@@ -216,13 +226,25 @@ export function RegisterProductDialog({
                 }}
               >
                 {(field) => (
-                  <div className="flex flex-col gap-1.5">
-                    <Label htmlFor={field.name}>Categoria</Label>
+                  <Field
+                    data-invalid={
+                      field.state.meta.errors.length > 0 || undefined
+                    }
+                  >
+                    <FieldLabel htmlFor={field.name}>Categoria</FieldLabel>
                     <Select
                       onValueChange={field.handleChange}
                       value={field.state.value}
                     >
-                      <SelectTrigger className="w-full" id={field.name}>
+                      <SelectTrigger
+                        aria-invalid={
+                          field.state.meta.errors.length > 0
+                            ? "true"
+                            : undefined
+                        }
+                        className="w-full"
+                        id={field.name}
+                      >
                         <SelectValue placeholder="Selecione uma categoria" />
                       </SelectTrigger>
                       <SelectContent>
@@ -233,12 +255,12 @@ export function RegisterProductDialog({
                         ))}
                       </SelectContent>
                     </Select>
-                    {field.state.meta.errors.length > 0 ? (
-                      <em className="text-[11px] text-destructive">
-                        {field.state.meta.errors.join(", ")}
-                      </em>
-                    ) : null}
-                  </div>
+                    <FieldError
+                      errors={(field.state.meta.errors as string[]).map(
+                        (m) => ({ message: m?.toString() })
+                      )}
+                    />
+                  </Field>
                 )}
               </form.Field>
 
@@ -255,29 +277,41 @@ export function RegisterProductDialog({
                 }}
               >
                 {(field) => (
-                  <div className="flex flex-col gap-1.5">
-                    <Label htmlFor={field.name}>Data da compra</Label>
+                  <Field
+                    data-invalid={
+                      field.state.meta.errors.length > 0 || undefined
+                    }
+                  >
+                    <FieldLabel htmlFor={field.name}>Data da compra</FieldLabel>
                     <ProductDatePicker
+                      aria-invalid={
+                        field.state.meta.errors.length > 0 ? "true" : undefined
+                      }
                       id={field.name}
                       onChange={field.handleChange}
                       value={field.state.value}
                     />
-                    {field.state.meta.errors.length > 0 ? (
-                      <em className="text-[11px] text-destructive">
-                        {field.state.meta.errors.join(", ")}
-                      </em>
-                    ) : null}
-                  </div>
+                    <FieldError
+                      errors={(field.state.meta.errors as string[]).map(
+                        (m) => ({ message: m?.toString() })
+                      )}
+                    />
+                  </Field>
                 )}
               </form.Field>
             </div>
 
             <form.Field name="description">
               {(field) => (
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor={field.name}>Descricao</Label>
+                <Field
+                  data-invalid={field.state.meta.errors.length > 0 || undefined}
+                >
+                  <FieldLabel htmlFor={field.name}>Descricao</FieldLabel>
                   <InputGroup className="h-auto">
                     <InputGroupTextarea
+                      aria-invalid={
+                        field.state.meta.errors.length > 0 ? "true" : undefined
+                      }
                       id={field.name}
                       name={field.name}
                       onBlur={field.handleBlur}
@@ -288,7 +322,14 @@ export function RegisterProductDialog({
                       value={field.state.value}
                     />
                   </InputGroup>
-                </div>
+                  <FieldError
+                    errors={(
+                      field.state.meta.errors as unknown as string[]
+                    ).map((m) => ({
+                      message: m?.toString(),
+                    }))}
+                  />
+                </Field>
               )}
             </form.Field>
 
@@ -305,10 +346,21 @@ export function RegisterProductDialog({
                 }}
               >
                 {(field) => (
-                  <div className="flex flex-col gap-1.5">
-                    <Label htmlFor={field.name}>Estoque Inicial</Label>
+                  <Field
+                    data-invalid={
+                      field.state.meta.errors.length > 0 || undefined
+                    }
+                  >
+                    <FieldLabel htmlFor={field.name}>
+                      Estoque Inicial
+                    </FieldLabel>
                     <InputGroup>
                       <InputGroupInput
+                        aria-invalid={
+                          field.state.meta.errors.length > 0
+                            ? "true"
+                            : undefined
+                        }
                         id={field.name}
                         name={field.name}
                         onBlur={field.handleBlur}
@@ -323,12 +375,12 @@ export function RegisterProductDialog({
                         <InputGroupText>unidades</InputGroupText>
                       </InputGroupAddon>
                     </InputGroup>
-                    {field.state.meta.errors.length > 0 ? (
-                      <em className="text-[11px] text-destructive">
-                        {field.state.meta.errors.join(", ")}
-                      </em>
-                    ) : null}
-                  </div>
+                    <FieldError
+                      errors={(field.state.meta.errors as string[]).map(
+                        (m) => ({ message: m?.toString() })
+                      )}
+                    />
+                  </Field>
                 )}
               </form.Field>
 
@@ -352,13 +404,24 @@ export function RegisterProductDialog({
                   };
 
                   return (
-                    <div className="flex flex-col gap-1.5">
-                      <Label htmlFor={field.name}>Custo Unitario</Label>
+                    <Field
+                      data-invalid={
+                        field.state.meta.errors.length > 0 || undefined
+                      }
+                    >
+                      <FieldLabel htmlFor={field.name}>
+                        Custo Unitario
+                      </FieldLabel>
                       <InputGroup>
                         <InputGroupAddon>
                           <InputGroupText>R$</InputGroupText>
                         </InputGroupAddon>
                         <InputGroupInput
+                          aria-invalid={
+                            field.state.meta.errors.length > 0
+                              ? "true"
+                              : undefined
+                          }
                           id={field.name}
                           inputMode="numeric"
                           name={field.name}
@@ -369,12 +432,12 @@ export function RegisterProductDialog({
                           value={formatCurrencyInput(field.state.value)}
                         />
                       </InputGroup>
-                      {field.state.meta.errors.length > 0 ? (
-                        <em className="text-[11px] text-destructive">
-                          {field.state.meta.errors.join(", ")}
-                        </em>
-                      ) : null}
-                    </div>
+                      <FieldError
+                        errors={(field.state.meta.errors as string[]).map(
+                          (m) => ({ message: m?.toString() })
+                        )}
+                      />
+                    </Field>
                   );
                 }}
               </form.Field>
@@ -465,13 +528,22 @@ export function RegisterProductDialog({
                 };
 
                 return (
-                  <div className="flex flex-col gap-1.5">
-                    <Label htmlFor={field.name}>Preco de Venda</Label>
+                  <Field
+                    data-invalid={
+                      field.state.meta.errors.length > 0 || undefined
+                    }
+                  >
+                    <FieldLabel htmlFor={field.name}>Preco de Venda</FieldLabel>
                     <InputGroup>
                       <InputGroupAddon>
                         <InputGroupText>R$</InputGroupText>
                       </InputGroupAddon>
                       <InputGroupInput
+                        aria-invalid={
+                          field.state.meta.errors.length > 0
+                            ? "true"
+                            : undefined
+                        }
                         id={field.name}
                         inputMode="numeric"
                         name={field.name}
@@ -506,16 +578,16 @@ export function RegisterProductDialog({
                         </InputGroupText>
                       </InputGroupAddon>
                     </InputGroup>
-                    {field.state.meta.errors.length > 0 ? (
-                      <em className="text-[11px] text-destructive">
-                        {field.state.meta.errors.join(", ")}
-                      </em>
-                    ) : null}
-                  </div>
+                    <FieldError
+                      errors={(field.state.meta.errors as string[]).map(
+                        (m) => ({ message: m?.toString() })
+                      )}
+                    />
+                  </Field>
                 );
               }}
             </form.Field>
-          </div>
+          </FieldGroup>
           <DialogFooter>
             <form.Subscribe
               selector={(state) => [state.canSubmit, state.isSubmitting]}
