@@ -38,6 +38,7 @@ vi.mock("next/cache", () => ({
 vi.mock("@/db", () => ({
   db: {
     delete: vi.fn(),
+    execute: vi.fn(),
     insert: vi.fn(),
     select: vi.fn(),
     transaction: vi.fn(),
@@ -59,6 +60,7 @@ interface InventoryHarness {
 }
 
 interface ProductUpdateHarness {
+  executeLog: string[];
   priceChangeLog: Record<string, unknown>[];
   productUpdateLog: Record<string, unknown>[];
   transaction: <T>(callback: (tx: unknown) => Promise<T>) => Promise<T>;
@@ -82,6 +84,8 @@ const resolveMocks = async () => {
     mockDeleteProductImageVersion:
       imageStorageModule.deleteProductImageVersion as MockFn,
     mockDb: dbModule.db as unknown as {
+      execute: MockFn;
+      insert: MockFn;
       select: MockFn;
       transaction: MockFn;
       update: MockFn;
@@ -191,22 +195,27 @@ const createProductUpdateHarness = (initialState: {
   price: number;
 }): ProductUpdateHarness => {
   const state = { ...initialState };
+  const executeLog: string[] = [];
   const productUpdateLog: Record<string, unknown>[] = [];
   const priceChangeLog: Record<string, unknown>[] = [];
 
   const transaction = async <T>(callback: (tx: unknown) => Promise<T>) => {
     const tx = {
-      execute: async () => ({
-        rows: [
-          {
-            archivedAt: null,
-            costPrice: "10.00",
-            id: "product-1",
-            price: state.price.toFixed(2),
-            stock: 4,
-          },
-        ],
-      }),
+      execute: () => {
+        executeLog.push("execute");
+
+        return Promise.resolve({
+          rows: [
+            {
+              archivedAt: null,
+              costPrice: "10.00",
+              id: "product-1",
+              price: state.price.toFixed(2),
+              stock: 4,
+            },
+          ],
+        });
+      },
       insert: (_table: unknown) => ({
         values: (payload: Record<string, unknown>) => {
           if (!("previousPrice" in payload && "nextPrice" in payload)) {
@@ -258,6 +267,7 @@ const createProductUpdateHarness = (initialState: {
   };
 
   return {
+    executeLog,
     priceChangeLog,
     productUpdateLog,
     transaction,
@@ -270,6 +280,7 @@ describe("product server actions", () => {
 
     const {
       mockDeleteProductImageVersion,
+      mockDb,
       mockGetProductCategoryById,
       mockRequireAppContext,
       mockSession,
@@ -293,6 +304,7 @@ describe("product server actions", () => {
     });
 
     mockDeleteProductImageVersion.mockResolvedValue(undefined);
+    mockDb.transaction.mockImplementation(async (callback) => callback(mockDb));
     mockStoreProductImageFromStage.mockResolvedValue({
       blurDataURL: "data:image/webp;base64,abc",
       height: 900,
@@ -427,6 +439,7 @@ describe("product server actions", () => {
     mockDb.transaction.mockImplementation(
       async (callback: (tx: unknown) => Promise<void>) => {
         await callback({
+          execute: () => Promise.resolve({ rows: [] }),
           insert: (table: unknown) => ({
             values: (payload: Record<string, unknown>) => {
               insertLog.push({ payload, table });
@@ -506,6 +519,29 @@ describe("product server actions", () => {
       buildOrganizationCacheTags("org_dg_imports").catalog
     );
     expect(mockRefresh).toHaveBeenCalled();
+  });
+
+  it("sets tenant database context before updating a product", async () => {
+    const { updateProductAction } = await import("@/features/products/actions");
+    const { mockDb } = await resolveMocks();
+
+    const harness = createProductUpdateHarness({
+      categoryId: "category-1",
+      description: "Descricao antiga",
+      name: "Produto teste",
+      price: 20,
+    });
+
+    mockDb.transaction.mockImplementation(harness.transaction as never);
+
+    await updateProductAction("product-1", {
+      categoryId: "category-2",
+      description: "Descricao nova",
+      name: "Produto atualizado",
+      price: "35",
+    });
+
+    expect(harness.executeLog).toHaveLength(2);
   });
 
   it("does not record price history when the product price remains the same", async () => {

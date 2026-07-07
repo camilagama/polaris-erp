@@ -44,11 +44,41 @@
 - 2026-07-07: PR 5/CI avancou: job `verify` agora tambem roda `bun run knip` antes do build; docs de CI foram alinhados para check/test/knip/build + E2E isolado.
 - 2026-07-07: PR 5/CI reforcou guardrail de Playwright: validacao de `E2E_DATABASE_URL` em CI foi extraida e coberta por teste unitario.
 - 2026-07-07: PR 5/CI teve o guardrail Playwright verificado por comando real: `CI=true bun run test:e2e` sem `E2E_DATABASE_URL` falha no load do config antes de subir servidor ou tocar banco.
-- 2026-07-07: PR 5/QA estabilizou a suite local apos hardening, refactors seguros, RLS inicial e UX destrutiva: `bun run test` passou com 69 arquivos e 250 testes.
+- 2026-07-07: PR 5/QA estabilizou a suite local apos hardening, refactors seguros, RLS inicial e UX destrutiva: `bun run test` passou com 69 arquivos e 251 testes.
 - 2026-07-07: PR 2/RLS teve decisao arquitetural fechada: RLS e obrigatorio antes de producao; `docs/rls-tenant-isolation.md` define escopo, `FORCE RLS`, tenant por transacao e sequencia segura.
 - 2026-07-07: PR 2/RLS ganhou plano executavel em `docs/superpowers/plans/2026-07-07-rls-tenant-isolation.md`, ordenando helper tenant-scoped, migration RLS, validacao Neon temporaria e docs.
 - 2026-07-07: PR 2/RLS iniciou implementacao: `src/db/tenant-context.ts` define `withTenantContext`/`setTenantContext` com `set_config(..., true)` e teste TDD prova tenant transacional.
 - 2026-07-07: PR 2/RLS aplicou o primeiro uso do helper tenant-scoped em `src/features/catalog/server.ts`; settings, categorias e lookup de categoria agora executam dentro de contexto tenant transacional.
+- 2026-07-07: PR 2/RLS avancou em analytics: `src/features/dashboard/server.ts` agora executa bounds, metricas, contribution graph e stats globais dentro de contexto tenant transacional.
+- 2026-07-07: PR 2/RLS teve a primeira fatia verificada localmente: helper tenant, catalogo e dashboard passaram em `bun run check`, `bun run test` (69 arquivos, 252 testes), `bun run knip` e `bun run build`.
+- 2026-07-07: PR 2/RLS avancou em metas: leituras, transicoes automaticas, create/update/archive/unarchive agora executam acessos a `goals` dentro de contexto tenant transacional; gates locais passaram com 253 testes.
+- 2026-07-07: PR 2/RLS avancou em produtos: analytics, historico de vendas, create/update/estoque/baixa/archive agora passam por `withTenantContext`; teste TDD validou `set_config` antes do lock e gates locais passaram com 254 testes.
+- 2026-07-07: PR 2/RLS avancou em vendas: bounds, analytics, idempotency lookup, create/cancel agora passam por `withTenantContext`; teste TDD validou tenant context antes do lock de produtos e gates locais passaram com 255 testes.
+- 2026-07-07: PR 2/RLS fechou a migracao de runtime em `src/features`: products/sales queries e image access agora usam contexto RLS; reconcile de imagens ganhou contexto interno `product_image_reconcile`; scan de imports nao encontrou `from "@/db"` em features runtime; gates locais passaram com 259 testes.
+- 2026-07-07: PR 2/RLS inspecionou Neon main antes da migration RLS no projeto `autumn-feather-14038163` (`polaris-erp`): database `neondb`, role `neondb_owner`, PostgreSQL 18.4, branch compute `br-empty-frog-acrcn1aj`, sem policies RLS em `public.pg_policies` naquele momento.
+- 2026-07-07: PR 2/RLS avancou para migration: `20260707205000_rls_tenant_isolation.sql` habilita/forca RLS nas tabelas tenant-scoped, cria policies por `app.organization_id`, permite membership lookup por `app.user_id` e restringe reconcile global a `app.internal_job = product_image_reconcile`; suite local passou com 265 testes.
+- 2026-07-07: PR 2/RLS adaptou `app-session` e `audit-log` para os contextos RLS pre-tenant/tenant antes da aplicacao em Neon main. Aplicacao efetiva no main deve ser coordenada com deploy desta versao para evitar quebrar runtime antigo sem `set_config`.
+- 2026-07-07: PR 2/RLS aplicou a migration RLS no Neon main do projeto `autumn-feather-14038163`; resultado verificado: 14 policies, 13/13 tabelas tenant-scoped com RLS+FORCE.
+- 2026-07-07: PR 2/RLS confirmou que `neondb_owner` tem `BYPASSRLS=true` e nao pode ser alterado pela propria conexao (`permission denied to alter role`); foi criada a role runtime `polaris_app` sem `BYPASSRLS`.
+- 2026-07-07: PR 2/RLS atualizou o `DATABASE_URL` local para `polaris_app` e validou no Neon main: sem contexto `organization/products/sales = 0`; com contexto transacional `organization = 1` e `member = 1`.
+- 2026-07-07: PR 2/RLS validou escrita runtime com rollback no Neon main: insert tenant-scoped sem contexto falha por RLS, enquanto fluxo onboarding-like com user/org/member/categoria/settings/audit funciona com `app.user_id` e `app.organization_id`.
+- 2026-07-07: PR 7/deploy alinhou o runbook Vercel para RLS obrigatorio: `DATABASE_URL` deve usar role runtime sem `BYPASSRLS`, e `DATABASE_URL_DIRECT` fica reservado para migrations/admin.
+- 2026-07-07: PR 2/RLS teve gates completos reexecutados com `DATABASE_URL` local usando `polaris_app`: `bun run check`, `bun run test` (74 arquivos, 265 testes), `bun run knip` e `bun run build` passaram.
+- 2026-07-07: PR 2/RLS ganhou smoke reexecutavel `bun run db:smoke:rls`; o comando valida role sem `BYPASSRLS`, 14 policies, 13/13 tabelas com RLS+FORCE, bloqueio sem contexto e escrita onboarding-like com rollback.
+- 2026-07-07: PR 2/RLS validou o smoke reexecutavel e gates finais da fatia: `bun run test` passou com 74 arquivos/265 testes; depois dos ajustes do script, `bun run check`, `bun run db:smoke:rls`, `bun run knip` e `bun run build` passaram.
+- 2026-07-07: PR 2/RLS adicionou job manual `rls-smoke` ao GitHub Actions; ele roda `bun run db:smoke:rls` somente por `workflow_dispatch` e usa secret dedicado `RLS_DATABASE_URL`.
+- 2026-07-07: PR 2/RLS cobriu o job manual de smoke com teste estrutural em `src/lib/ci-workflow.test.ts`; gates apos a mudanca passaram: `bun run check`, `bun run test` (75 arquivos, 266 testes), `bun run db:smoke:rls`, `bun run knip` e `bun run build`.
+- 2026-07-07: PR 2/RLS reforcou guardrail estrutural de features: runtime em `src/features` nao pode importar o root `@/db` diretamente, preservando acesso por `@/db/tenant-context` e schema; helper de boundary agora diferencia root exato de subpaths.
+- 2026-07-07: PR 2/RLS revalidou gates apos o guardrail de import root: `bun run check`, `bun run test` (75 arquivos, 268 testes), `bun run db:smoke:rls`, `bun run knip` e `bun run build` passaram.
+- 2026-07-07: PR 2/RLS alinhou `docs/database-environments.md` ao modelo pos-RLS, separando `DATABASE_URL`, `DATABASE_URL_DIRECT`, `E2E_DATABASE_URL` e `RLS_DATABASE_URL` por finalidade, branch e role esperada.
+- 2026-07-07: PR 2/RLS verificou a fatia de docs de ambientes com `bun run check` e `bun run db:smoke:rls`, ambos verdes.
+- 2026-07-07: PR 2/RLS alinhou `.env.example` com os secrets operacionais `E2E_DATABASE_URL` e `RLS_DATABASE_URL`, deixando explicito que E2E usa branch dedicada e smoke RLS usa role sem `BYPASSRLS`.
+- 2026-07-07: PR 2/RLS atualizou o README para o estado pos-RLS: script `db:smoke:rls`, runtime sem `BYPASSRLS`, bootstrap sempre bloqueado em production, staging R2 por org/user e CI com `knip`/E2E/rls-smoke.
+- 2026-07-07: PR 2/RLS reescreveu `docs/saas-organization-migration-runbook.md` para o fluxo atual com RLS obrigatorio, `DATABASE_URL_DIRECT` para migrations, runtime sem `BYPASSRLS`, smoke RLS, rollback/PITR e resposta a incidente tenant.
+- 2026-07-07: PR 2/RLS reconciliou o `Resumo executivo.md`: `TENANT-001` agora reflete RLS aplicada/validada no Neon main, maturidade subiu para 74/100 e CI/CD menciona `rls-smoke`/`RLS_DATABASE_URL`.
+- 2026-07-07: PR 2/RLS reforcou guardrail RLS de features: qualquer runtime em `src/features` que importa `@/db/schema` precisa tambem importar `@/db/tenant-context`; helper estrutural agora detecta arquivos com padrao obrigatorio sem companion.
+- 2026-07-07: PR 2/RLS revalidou gates apos o guardrail schema+tenant-context: `bun run check`, `bun run test` (75 arquivos, 270 testes) e `bun run db:smoke:rls` passaram.
+- 2026-07-07: PR 2/RLS fechou a revalidacao local completa contra `polaris_app`: `bun run check` (276 arquivos), `bun run test` (75 arquivos, 270 testes), `bun run db:smoke:rls`, `bun run knip` e `bun run build` passaram; tentativa pelo MCP Neon ainda retornou 401 `token_invalidated`.
 - 2026-07-07: PR 5/QA fechou verificacoes ampliadas locais: `bun run knip` e `bun run build` passaram apos limpar exports mortos das extracoes e ajustar tipo do env E2E.
 - 2026-07-07: Resumo executivo alinhado em riscos financeiros: estoque arquivado, idempotency, taxa de cartao e R2 agora constam como mitigados localmente, com validacao externa pendente.
 - 2026-07-07: PR 3 reforcou prova de idempotency: teste agora valida que a migration preserva o indice unico parcial apenas para `idempotency_key IS NOT NULL`.
@@ -90,7 +120,7 @@
 - 2026-07-07: PR 8 reduziu duplicacao dos guardrails estruturais com helper compartilhado para listagem/leitura de arquivos em testes de boundary.
 - 2026-07-07: PR 8 reforcou os guardrails de import: regras de boundary agora cobrem imports estaticos, side-effect imports e imports dinamicos (`import("...")`) para evitar bypass simples.
 - 2026-07-07: PR 8 consolidou a regex de imports internos em helper testado diretamente, cobrindo formas estaticas, dinamicas e side-effect sem duplicacao por boundary.
-- 2026-07-07: PR 6/QA reconciliou as evidencias atuais apos confirmacao destrutiva de categoria e consolidacao de guardrail: suite local passou com 69 arquivos e 250 testes.
+- 2026-07-07: PR 6/QA reconciliou as evidencias atuais apos confirmacao destrutiva de categoria e consolidacao de guardrail: suite local passou com 69 arquivos e 251 testes.
 - 2026-07-06: PR 6 iniciado em UX critica: botoes "carregar mais" de produtos e vendas agora exibem toast de erro e liberam o estado de loading quando a paginacao falha.
 - 2026-07-06: PR 6 avancou em taxas de cartao: modal de parcelas agora edita rascunho local, permite cancelar sem persistir no estado principal e exige "Aplicar taxas" antes do "Salvar cartao".
 - 2026-07-06: PR 6 avancou em acessibilidade: buscas de produtos/vendas e filtro de status de vendas agora tem nomes acessiveis explicitos.
@@ -98,7 +128,7 @@
 - 2026-07-07: PR 6 reforcou acoes destrutivas: exclusao de categoria customizada agora abre confirmacao explicita antes de chamar a action de remocao.
 - 2026-07-06: PR 5 iniciado em CI/E2E: GitHub Actions agora tem job `e2e` com Playwright, dependente de `E2E_DATABASE_URL` em secret para impedir uso acidental de banco compartilhado.
 - 2026-07-06: PR 9 iniciado em produto pos-MVP: `docs/roadmap.md` criado com ordem para convites, billing, exportacao, admin/suporte, LGPD e relatorios sem misturar com hardening.
-- Pendencias antes de declarar PR 2 completo: implementar RLS obrigatorio antes de producao, ampliar provas tenant A vs tenant B para outros actions/route handlers, e dry-run das migrations em branch Neon isolada.
+- Pendencias antes de declarar PR 2 completo: atualizar `DATABASE_URL` do deploy para a role runtime `polaris_app`, ampliar provas tenant A vs tenant B para outros actions/route handlers, rodar job manual `rls-smoke`/`bun run db:smoke:rls` no ambiente promovido e E2E com banco isolado.
 - PR 3 implementado localmente. Antes de tratar como pronto para deploy real, ainda falta dry-run/aplicacao das migrations em banco isolado.
 - PR 7 implementado localmente. Antes de tratar como pronto para deploy real, ainda falta validar `vercel env run -e production -- bun run build` com envs reais, smoke checks no preview/producao, limites reais do Upstash e quais headers de IP sao confiaveis na borda.
 

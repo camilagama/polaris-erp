@@ -15,6 +15,16 @@ export const createInternalImportPattern = (moduleNames: string[]): RegExp => {
   );
 };
 
+export const createExactInternalImportPattern = (
+  moduleNames: string[]
+): RegExp => {
+  const modulePattern = moduleNames.map(escapeRegExp).join("|");
+
+  return new RegExp(
+    `${IMPORT_DECLARATION_PREFIX_PATTERN}["']@/(?:${modulePattern})["']`
+  );
+};
+
 export const findSourceFiles = (directory: string): string[] => {
   const files: string[] = [];
 
@@ -42,3 +52,17 @@ export const findFilesMatching = (files: string[], pattern: RegExp): string[] =>
   files
     .filter((file) => pattern.test(readFileSync(file, "utf8")))
     .map((file) => relative(process.cwd(), file));
+
+export const findFilesMissingCompanionPattern = (
+  files: string[],
+  requiredPattern: RegExp,
+  companionPattern: RegExp,
+  sourceByFile?: Record<string, string>
+): string[] =>
+  files
+    .filter((file) => {
+      const source = sourceByFile?.[file] ?? readFileSync(file, "utf8");
+
+      return requiredPattern.test(source) && !companionPattern.test(source);
+    })
+    .map((file) => relative(process.cwd(), file).replaceAll("\\", "/"));

@@ -25,6 +25,7 @@ vi.mock("next/cache", () => ({
 
 vi.mock("@/db", () => ({
   db: {
+    execute: vi.fn(),
     query: {
       sales: {
         findFirst: vi.fn(),
@@ -55,6 +56,7 @@ interface ProductState {
 }
 
 interface SalesHarness {
+  executeLog: string[];
   productById: Map<string, ProductState>;
   saleItemsLog: Record<string, unknown>[];
   salesLog: Record<string, unknown>[];
@@ -85,6 +87,7 @@ const resolveMocks = async () => {
           findFirst: MockFn;
         };
       };
+      execute: MockFn;
       transaction: MockFn;
     },
     mockRecordAuditEvent: auditLogModule.recordAuditEvent as MockFn,
@@ -104,6 +107,7 @@ const createSalesHarness = (
   );
   const salesLog: Record<string, unknown>[] = [];
   const saleItemsLog: Record<string, unknown>[] = [];
+  const executeLog: string[] = [];
   let queue = Promise.resolve();
 
   const transaction = async <T>(callback: (tx: unknown) => Promise<T>) => {
@@ -116,7 +120,14 @@ const createSalesHarness = (
     await previous;
 
     const tx = {
+      query: {
+        sales: {
+          findFirst: () => Promise.resolve(null),
+        },
+      },
       execute: () => {
+        executeLog.push("execute");
+
         const rows = [...productById.values()]
           .sort((left, right) => left.id.localeCompare(right.id))
           .map((product) => ({
@@ -194,6 +205,7 @@ const createSalesHarness = (
   };
 
   return {
+    executeLog,
     productById,
     saleItemsLog,
     salesLog,
@@ -228,6 +240,10 @@ const createCancelSaleHarness = (params: {
         executeCallCount += 1;
 
         if (executeCallCount === 1) {
+          return Promise.resolve({ rows: [] });
+        }
+
+        if (executeCallCount === 2) {
           return Promise.resolve({
             rows:
               params.saleFound === false
@@ -338,7 +354,7 @@ describe("sales server actions", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
 
-    const { mockCatalogSettings, mockRequireAppContext, mockSession } =
+    const { mockCatalogSettings, mockDb, mockRequireAppContext, mockSession } =
       await resolveMocks();
 
     mockRequireAppContext.mockResolvedValue({
@@ -361,6 +377,7 @@ describe("sales server actions", () => {
       idealMarkupPercent: 0,
       minimumMarkupPercent: 0,
     });
+    mockDb.transaction.mockImplementation(async (callback) => callback(mockDb));
   });
 
   it("requires authentication before creating a sale", async () => {
@@ -440,7 +457,7 @@ describe("sales server actions", () => {
       })
     ).resolves.toBe("sale-existing");
 
-    expect(mockDb.transaction).not.toHaveBeenCalled();
+    expect(mockDb.transaction).toHaveBeenCalledOnce();
     expect(mockUpdateTag).not.toHaveBeenCalled();
   });
 
@@ -452,15 +469,18 @@ describe("sales server actions", () => {
     mockDb.query.sales.findFirst
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce({ id: "sale-existing" });
-    mockDb.transaction.mockRejectedValueOnce(
-      Object.assign(
-        new Error("duplicate key value violates unique constraint"),
-        {
-          code: "23505",
-          constraint: "sales_organization_idempotency_key_unique_idx",
-        }
+    mockDb.transaction
+      .mockImplementationOnce(async (callback) => callback(mockDb))
+      .mockRejectedValueOnce(
+        Object.assign(
+          new Error("duplicate key value violates unique constraint"),
+          {
+            code: "23505",
+            constraint: "sales_organization_idempotency_key_unique_idx",
+          }
+        )
       )
-    );
+      .mockImplementationOnce(async (callback) => callback(mockDb));
 
     await expect(
       createSaleAction({
@@ -482,6 +502,40 @@ describe("sales server actions", () => {
     expect(mockUpdateTag).not.toHaveBeenCalled();
     expect(mockRefresh).not.toHaveBeenCalled();
     expect(mockRecordAuditEvent).not.toHaveBeenCalled();
+  });
+
+  it("sets tenant database context before creating a sale", async () => {
+    const { createSaleAction } = await import("@/features/sales/actions");
+    const { mockDb } = await resolveMocks();
+
+    const harness = createSalesHarness([
+      {
+        archivedAt: null,
+        costPrice: 50,
+        id: "product-1",
+        name: "Produto 1",
+        price: 90,
+        stock: 5,
+      },
+    ]);
+
+    mockDb.transaction.mockImplementation(harness.transaction as never);
+
+    await createSaleAction({
+      items: [
+        {
+          expectedUnitPrice: 90,
+          productId: "product-1",
+          quantity: 1,
+        },
+      ],
+      occurredOn: "2026-03-31",
+      paymentFeePayer: "not_applicable",
+      paymentInstallments: 0,
+      paymentMethod: "pix",
+    });
+
+    expect(harness.executeLog).toHaveLength(2);
   });
 
   it("serializes concurrent sales and blocks negative stock", async () => {

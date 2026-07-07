@@ -13,7 +13,6 @@ import {
   type SQL,
 } from "drizzle-orm";
 import { z } from "zod";
-import { db } from "@/db";
 import {
   categories,
   productPriceChanges,
@@ -24,6 +23,7 @@ import {
   sales,
   users,
 } from "@/db/schema";
+import { withTenantContext } from "@/db/tenant-context";
 import type {
   ProductListItem,
   ProductPriceChangeItem,
@@ -201,36 +201,38 @@ export async function getProductsQuery({
     }
   }
 
-  const rows = await db
-    .select({
-      archivedAt: products.archivedAt,
-      categoryId: products.categoryId,
-      categoryName: categories.name,
-      costPrice: products.costPrice,
-      createdAt: products.createdAt,
-      description: products.description,
-      id: products.id,
-      imageBlurDataUrl: products.imageBlurDataUrl,
-      imageHeight: products.imageHeight,
-      imageVersion: products.imageVersion,
-      imageWidth: products.imageWidth,
-      name: products.name,
-      organizationId: products.organizationId,
-      price: products.price,
-      purchasedOn: products.purchasedOn,
-      stock: products.stock,
-    })
-    .from(products)
-    .innerJoin(
-      categories,
-      and(
-        eq(products.categoryId, categories.id),
-        eq(categories.organizationId, organizationId)
+  const rows = await withTenantContext(organizationId, (tx) =>
+    tx
+      .select({
+        archivedAt: products.archivedAt,
+        categoryId: products.categoryId,
+        categoryName: categories.name,
+        costPrice: products.costPrice,
+        createdAt: products.createdAt,
+        description: products.description,
+        id: products.id,
+        imageBlurDataUrl: products.imageBlurDataUrl,
+        imageHeight: products.imageHeight,
+        imageVersion: products.imageVersion,
+        imageWidth: products.imageWidth,
+        name: products.name,
+        organizationId: products.organizationId,
+        price: products.price,
+        purchasedOn: products.purchasedOn,
+        stock: products.stock,
+      })
+      .from(products)
+      .innerJoin(
+        categories,
+        and(
+          eq(products.categoryId, categories.id),
+          eq(categories.organizationId, organizationId)
+        )
       )
-    )
-    .where(and(...filters))
-    .orderBy(asc(products.name), asc(products.createdAt), asc(products.id))
-    .limit(limit);
+      .where(and(...filters))
+      .orderBy(asc(products.name), asc(products.createdAt), asc(products.id))
+      .limit(limit)
+  );
 
   const hasMore = rows.length > pageSize;
   const items = hasMore ? rows.slice(0, pageSize) : rows;
@@ -246,37 +248,39 @@ export async function getProductByIdQuery(
   organizationId: string,
   id: string
 ): Promise<ProductListItem | undefined> {
-  const row = await db
-    .select({
-      archivedAt: products.archivedAt,
-      categoryId: products.categoryId,
-      categoryName: categories.name,
-      costPrice: products.costPrice,
-      createdAt: products.createdAt,
-      description: products.description,
-      id: products.id,
-      imageBlurDataUrl: products.imageBlurDataUrl,
-      imageHeight: products.imageHeight,
-      imageVersion: products.imageVersion,
-      imageWidth: products.imageWidth,
-      name: products.name,
-      organizationId: products.organizationId,
-      price: products.price,
-      purchasedOn: products.purchasedOn,
-      stock: products.stock,
-    })
-    .from(products)
-    .innerJoin(
-      categories,
-      and(
-        eq(products.categoryId, categories.id),
-        eq(categories.organizationId, organizationId)
+  const row = await withTenantContext(organizationId, (tx) =>
+    tx
+      .select({
+        archivedAt: products.archivedAt,
+        categoryId: products.categoryId,
+        categoryName: categories.name,
+        costPrice: products.costPrice,
+        createdAt: products.createdAt,
+        description: products.description,
+        id: products.id,
+        imageBlurDataUrl: products.imageBlurDataUrl,
+        imageHeight: products.imageHeight,
+        imageVersion: products.imageVersion,
+        imageWidth: products.imageWidth,
+        name: products.name,
+        organizationId: products.organizationId,
+        price: products.price,
+        purchasedOn: products.purchasedOn,
+        stock: products.stock,
+      })
+      .from(products)
+      .innerJoin(
+        categories,
+        and(
+          eq(products.categoryId, categories.id),
+          eq(categories.organizationId, organizationId)
+        )
       )
-    )
-    .where(
-      and(eq(products.id, id), eq(products.organizationId, organizationId))
-    )
-    .then((rows) => rows[0]);
+      .where(
+        and(eq(products.id, id), eq(products.organizationId, organizationId))
+      )
+      .then((rows) => rows[0])
+  );
 
   if (!row) {
     return;
@@ -289,27 +293,29 @@ export async function getProductStockEntriesByProductIdQuery(
   organizationId: string,
   productId: string
 ): Promise<ProductStockEntryItem[]> {
-  const entries = await db
-    .select({
-      createdAt: productStockEntries.createdAt,
-      id: productStockEntries.id,
-      productId: productStockEntries.productId,
-      quantity: productStockEntries.quantity,
-      stockedOn: productStockEntries.stockedOn,
-      unitCost: productStockEntries.unitCost,
-    })
-    .from(productStockEntries)
-    .where(
-      and(
-        eq(productStockEntries.organizationId, organizationId),
-        eq(productStockEntries.productId, productId)
+  const entries = await withTenantContext(organizationId, (tx) =>
+    tx
+      .select({
+        createdAt: productStockEntries.createdAt,
+        id: productStockEntries.id,
+        productId: productStockEntries.productId,
+        quantity: productStockEntries.quantity,
+        stockedOn: productStockEntries.stockedOn,
+        unitCost: productStockEntries.unitCost,
+      })
+      .from(productStockEntries)
+      .where(
+        and(
+          eq(productStockEntries.organizationId, organizationId),
+          eq(productStockEntries.productId, productId)
+        )
       )
-    )
-    .orderBy(
-      desc(productStockEntries.stockedOn),
-      desc(productStockEntries.createdAt)
-    )
-    .limit(200);
+      .orderBy(
+        desc(productStockEntries.stockedOn),
+        desc(productStockEntries.createdAt)
+      )
+      .limit(200)
+  );
 
   return entries.map((entry) => ({
     ...entry,
@@ -321,29 +327,31 @@ export async function getProductStockWriteOffsByProductIdQuery(
   organizationId: string,
   productId: string
 ): Promise<ProductStockWriteOffItem[]> {
-  const writeOffs = await db
-    .select({
-      createdAt: productStockWriteOffs.createdAt,
-      happenedOn: productStockWriteOffs.happenedOn,
-      id: productStockWriteOffs.id,
-      notes: productStockWriteOffs.notes,
-      productId: productStockWriteOffs.productId,
-      quantity: productStockWriteOffs.quantity,
-      reason: productStockWriteOffs.reason,
-      unitCostSnapshot: productStockWriteOffs.unitCostSnapshot,
-    })
-    .from(productStockWriteOffs)
-    .where(
-      and(
-        eq(productStockWriteOffs.organizationId, organizationId),
-        eq(productStockWriteOffs.productId, productId)
+  const writeOffs = await withTenantContext(organizationId, (tx) =>
+    tx
+      .select({
+        createdAt: productStockWriteOffs.createdAt,
+        happenedOn: productStockWriteOffs.happenedOn,
+        id: productStockWriteOffs.id,
+        notes: productStockWriteOffs.notes,
+        productId: productStockWriteOffs.productId,
+        quantity: productStockWriteOffs.quantity,
+        reason: productStockWriteOffs.reason,
+        unitCostSnapshot: productStockWriteOffs.unitCostSnapshot,
+      })
+      .from(productStockWriteOffs)
+      .where(
+        and(
+          eq(productStockWriteOffs.organizationId, organizationId),
+          eq(productStockWriteOffs.productId, productId)
+        )
       )
-    )
-    .orderBy(
-      desc(productStockWriteOffs.happenedOn),
-      desc(productStockWriteOffs.createdAt)
-    )
-    .limit(200);
+      .orderBy(
+        desc(productStockWriteOffs.happenedOn),
+        desc(productStockWriteOffs.createdAt)
+      )
+      .limit(200)
+  );
 
   return writeOffs.map((writeOff) => ({
     ...writeOff,
@@ -356,35 +364,37 @@ export async function getProductSalesByProductIdQuery(
   organizationId: string,
   productId: string
 ): Promise<ProductSaleHistoryItem[]> {
-  const rows = await db
-    .select({
-      cancelledAt: sales.cancelledAt,
-      createdAt: saleItems.createdAt,
-      id: saleItems.id,
-      lineTotal: saleItems.lineTotal,
-      occurredOn: sales.occurredOn,
-      quantity: saleItems.quantity,
-      saleId: sales.id,
-      status: sales.status,
-      unitCostSnapshot: saleItems.unitCostSnapshot,
-    })
-    .from(saleItems)
-    .innerJoin(
-      sales,
-      and(
-        eq(saleItems.saleId, sales.id),
-        eq(sales.organizationId, organizationId)
+  const rows = await withTenantContext(organizationId, (tx) =>
+    tx
+      .select({
+        cancelledAt: sales.cancelledAt,
+        createdAt: saleItems.createdAt,
+        id: saleItems.id,
+        lineTotal: saleItems.lineTotal,
+        occurredOn: sales.occurredOn,
+        quantity: saleItems.quantity,
+        saleId: sales.id,
+        status: sales.status,
+        unitCostSnapshot: saleItems.unitCostSnapshot,
+      })
+      .from(saleItems)
+      .innerJoin(
+        sales,
+        and(
+          eq(saleItems.saleId, sales.id),
+          eq(sales.organizationId, organizationId)
+        )
       )
-    )
-    .where(
-      and(
-        eq(saleItems.organizationId, organizationId),
-        eq(sales.organizationId, organizationId),
-        eq(saleItems.productId, productId)
+      .where(
+        and(
+          eq(saleItems.organizationId, organizationId),
+          eq(sales.organizationId, organizationId),
+          eq(saleItems.productId, productId)
+        )
       )
-    )
-    .orderBy(desc(sales.occurredOn), desc(saleItems.createdAt))
-    .limit(200);
+      .orderBy(desc(sales.occurredOn), desc(saleItems.createdAt))
+      .limit(200)
+  );
 
   return rows.map((row) => ({
     ...row,
@@ -398,24 +408,26 @@ export async function getProductPriceChangesByProductIdQuery(
   organizationId: string,
   productId: string
 ): Promise<ProductPriceChangeItem[]> {
-  const rows = await db
-    .select({
-      changedByUserName: users.name,
-      createdAt: productPriceChanges.createdAt,
-      id: productPriceChanges.id,
-      nextPrice: productPriceChanges.nextPrice,
-      previousPrice: productPriceChanges.previousPrice,
-    })
-    .from(productPriceChanges)
-    .leftJoin(users, eq(productPriceChanges.changedByUserId, users.id))
-    .where(
-      and(
-        eq(productPriceChanges.organizationId, organizationId),
-        eq(productPriceChanges.productId, productId)
+  const rows = await withTenantContext(organizationId, (tx) =>
+    tx
+      .select({
+        changedByUserName: users.name,
+        createdAt: productPriceChanges.createdAt,
+        id: productPriceChanges.id,
+        nextPrice: productPriceChanges.nextPrice,
+        previousPrice: productPriceChanges.previousPrice,
+      })
+      .from(productPriceChanges)
+      .leftJoin(users, eq(productPriceChanges.changedByUserId, users.id))
+      .where(
+        and(
+          eq(productPriceChanges.organizationId, organizationId),
+          eq(productPriceChanges.productId, productId)
+        )
       )
-    )
-    .orderBy(desc(productPriceChanges.createdAt))
-    .limit(10);
+      .orderBy(desc(productPriceChanges.createdAt))
+      .limit(10)
+  );
 
   return rows;
 }

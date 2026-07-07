@@ -31,7 +31,9 @@ vi.mock("react", async () => {
 
 vi.mock("@/db", () => ({
   db: {
+    execute: vi.fn(),
     select: vi.fn(),
+    transaction: vi.fn(),
   },
 }));
 
@@ -67,14 +69,59 @@ const resolveMocks = async () => {
     mockCacheLife: cache.cacheLife as MockFn,
     mockCacheTag: cache.cacheTag as MockFn,
     mockDb: dbModule.db as unknown as {
+      execute: MockFn;
       select: MockFn;
+      transaction: MockFn;
     },
   };
 };
 
 describe("dashboard server caching", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+
+    const { mockDb } = await resolveMocks();
+
+    mockDb.transaction.mockImplementation(async (callback) => callback(mockDb));
+  });
+
+  it("runs dashboard metrics inside tenant database context", async () => {
+    const { getDashboardMetrics } = await import("@/features/dashboard/server");
+    const { mockDb } = await resolveMocks();
+
+    mockDb.select
+      .mockReturnValueOnce({
+        from: () => ({
+          where: async () => [],
+        }),
+      })
+      .mockReturnValueOnce({
+        from: () => ({
+          innerJoin: () => ({
+            innerJoin: () => ({
+              where: async () => [],
+            }),
+          }),
+        }),
+      })
+      .mockReturnValueOnce({
+        from: () => ({
+          innerJoin: () => ({
+            where: () => ({
+              groupBy: () => ({
+                orderBy: async () => [],
+              }),
+            }),
+          }),
+        }),
+      });
+
+    await getDashboardMetrics("org_dg_imports", {
+      from: "2026-04-01",
+      to: "2026-04-30",
+    });
+
+    expect(mockDb.transaction).toHaveBeenCalledTimes(1);
   });
 
   it("tags and caches dashboard date bounds with the shared analytics profile", async () => {

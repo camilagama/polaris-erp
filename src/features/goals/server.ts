@@ -1,8 +1,8 @@
 import "server-only";
 
 import { and, asc, count, desc, eq, inArray } from "drizzle-orm";
-import { db } from "@/db";
 import { goals } from "@/db/schema";
+import { type TenantTransaction, withTenantContext } from "@/db/tenant-context";
 import { getDashboardMetrics } from "@/features/dashboard/server";
 import {
   type DashboardGoalCard,
@@ -55,8 +55,11 @@ const toResolvedDecimalString = (
   return roundCurrency(actual).toFixed(2);
 };
 
-const countActiveGoals = async (organizationId: string): Promise<number> => {
-  const rows = await db
+const countActiveGoals = async (
+  tx: TenantTransaction,
+  organizationId: string
+): Promise<number> => {
+  const rows = await tx
     .select({ value: count() })
     .from(goals)
     .where(
@@ -70,12 +73,17 @@ const resolveActiveGoalTransitions = async (
   organizationId: string
 ): Promise<void> => {
   const today = formatDateInputValue();
-  const activeRows = await db
-    .select()
-    .from(goals)
-    .where(
-      and(eq(goals.organizationId, organizationId), eq(goals.status, "active"))
-    );
+  const activeRows = await withTenantContext(organizationId, (tx) =>
+    tx
+      .select()
+      .from(goals)
+      .where(
+        and(
+          eq(goals.organizationId, organizationId),
+          eq(goals.status, "active")
+        )
+      )
+  );
 
   for (const row of activeRows) {
     const metrics = await getDashboardMetrics(organizationId, {
@@ -98,17 +106,19 @@ const resolveActiveGoalTransitions = async (
       continue;
     }
 
-    await db
-      .update(goals)
-      .set({
-        resolvedAt: new Date(),
-        resolvedValue: toResolvedDecimalString(metric, actual),
-        status: nextStatus,
-        updatedAt: new Date(),
-      })
-      .where(
-        and(eq(goals.id, row.id), eq(goals.organizationId, organizationId))
-      );
+    await withTenantContext(organizationId, (tx) =>
+      tx
+        .update(goals)
+        .set({
+          resolvedAt: new Date(),
+          resolvedValue: toResolvedDecimalString(metric, actual),
+          status: nextStatus,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(eq(goals.id, row.id), eq(goals.organizationId, organizationId))
+        )
+    );
   }
 };
 
@@ -153,13 +163,18 @@ export const getGoalsDashboardData = async (
 ): Promise<GoalsDashboardPayload> => {
   await resolveActiveGoalTransitions(organizationId);
 
-  const activeRows = await db
-    .select()
-    .from(goals)
-    .where(
-      and(eq(goals.organizationId, organizationId), eq(goals.status, "active"))
-    )
-    .orderBy(asc(goals.periodEnd));
+  const activeRows = await withTenantContext(organizationId, (tx) =>
+    tx
+      .select()
+      .from(goals)
+      .where(
+        and(
+          eq(goals.organizationId, organizationId),
+          eq(goals.status, "active")
+        )
+      )
+      .orderBy(asc(goals.periodEnd))
+  );
 
   const active = await buildActiveDashboardCards(organizationId, activeRows);
 
@@ -171,27 +186,34 @@ export const getGoalsSettingsData = async (
 ): Promise<GoalsSettingsPayload> => {
   await resolveActiveGoalTransitions(organizationId);
 
-  const activeRows = await db
-    .select()
-    .from(goals)
-    .where(
-      and(eq(goals.organizationId, organizationId), eq(goals.status, "active"))
-    )
-    .orderBy(asc(goals.periodEnd));
+  const activeRows = await withTenantContext(organizationId, (tx) =>
+    tx
+      .select()
+      .from(goals)
+      .where(
+        and(
+          eq(goals.organizationId, organizationId),
+          eq(goals.status, "active")
+        )
+      )
+      .orderBy(asc(goals.periodEnd))
+  );
 
   const active = await buildActiveDashboardCards(organizationId, activeRows);
 
-  const historyRows = await db
-    .select()
-    .from(goals)
-    .where(
-      and(
-        eq(goals.organizationId, organizationId),
-        inArray(goals.status, ["completed", "expired", "archived"])
+  const historyRows = await withTenantContext(organizationId, (tx) =>
+    tx
+      .select()
+      .from(goals)
+      .where(
+        and(
+          eq(goals.organizationId, organizationId),
+          inArray(goals.status, ["completed", "expired", "archived"])
+        )
       )
-    )
-    .orderBy(desc(goals.updatedAt))
-    .limit(SETTINGS_HISTORY_LIMIT);
+      .orderBy(desc(goals.updatedAt))
+      .limit(SETTINGS_HISTORY_LIMIT)
+  );
 
   const history: DashboardGoalHistoryItem[] = historyRows.map((row) => {
     const resolvedAtIso = row.resolvedAt?.toISOString() ?? null;
@@ -237,22 +259,24 @@ export const createGoal = async (
     );
   }
 
-  const activeCount = await countActiveGoals(organizationId);
+  await withTenantContext(organizationId, async (tx) => {
+    const activeCount = await countActiveGoals(tx, organizationId);
 
-  if (activeCount >= MAX_ACTIVE_GOALS) {
-    throw new Error(createGoalCapacityErrorMessage());
-  }
+    if (activeCount >= MAX_ACTIVE_GOALS) {
+      throw new Error(createGoalCapacityErrorMessage());
+    }
 
-  await db.insert(goals).values({
-    createdByUserId,
-    displayMode: input.displayMode,
-    metric: input.metric,
-    name: input.name.trim(),
-    organizationId,
-    periodEnd: input.periodEnd,
-    periodStart: input.periodStart,
-    status: "active",
-    targetValue: toTargetDecimalString(input.metric, input.targetValue),
+    await tx.insert(goals).values({
+      createdByUserId,
+      displayMode: input.displayMode,
+      metric: input.metric,
+      name: input.name.trim(),
+      organizationId,
+      periodEnd: input.periodEnd,
+      periodStart: input.periodStart,
+      status: "active",
+      targetValue: toTargetDecimalString(input.metric, input.targetValue),
+    });
   });
 };
 
@@ -274,46 +298,53 @@ export const updateGoal = async (
     );
   }
 
-  const existing = await db.query.goals.findFirst({
-    where: and(
-      eq(goals.id, input.id),
-      eq(goals.organizationId, organizationId),
-      eq(goals.status, "active")
-    ),
+  await withTenantContext(organizationId, async (tx) => {
+    const existing = await tx.query.goals.findFirst({
+      where: and(
+        eq(goals.id, input.id),
+        eq(goals.organizationId, organizationId),
+        eq(goals.status, "active")
+      ),
+    });
+
+    if (!existing) {
+      throw new Error("Meta nao encontrada ou nao esta ativa.");
+    }
+
+    const updatedRows = await tx
+      .update(goals)
+      .set({
+        displayMode: input.displayMode,
+        metric: input.metric,
+        name: input.name.trim(),
+        periodEnd: input.periodEnd,
+        periodStart: input.periodStart,
+        targetValue: toTargetDecimalString(input.metric, input.targetValue),
+        updatedAt: new Date(),
+      })
+      .where(
+        and(eq(goals.id, input.id), eq(goals.organizationId, organizationId))
+      )
+      .returning({ id: goals.id });
+
+    if (updatedRows.length === 0) {
+      throw new Error("Meta nao encontrada ou nao esta ativa.");
+    }
   });
-
-  if (!existing) {
-    throw new Error("Meta nao encontrada ou nao esta ativa.");
-  }
-
-  const updatedRows = await db
-    .update(goals)
-    .set({
-      displayMode: input.displayMode,
-      metric: input.metric,
-      name: input.name.trim(),
-      periodEnd: input.periodEnd,
-      periodStart: input.periodStart,
-      targetValue: toTargetDecimalString(input.metric, input.targetValue),
-      updatedAt: new Date(),
-    })
-    .where(
-      and(eq(goals.id, input.id), eq(goals.organizationId, organizationId))
-    )
-    .returning({ id: goals.id });
-
-  if (updatedRows.length === 0) {
-    throw new Error("Meta nao encontrada ou nao esta ativa.");
-  }
 };
 
 export const archiveGoal = async (
   organizationId: string,
   goalId: string
 ): Promise<void> => {
-  const row = await db.query.goals.findFirst({
-    where: and(eq(goals.id, goalId), eq(goals.organizationId, organizationId)),
-  });
+  const row = await withTenantContext(organizationId, (tx) =>
+    tx.query.goals.findFirst({
+      where: and(
+        eq(goals.id, goalId),
+        eq(goals.organizationId, organizationId)
+      ),
+    })
+  );
 
   if (!row) {
     throw new Error("Meta nao encontrada.");
@@ -330,16 +361,20 @@ export const archiveGoal = async (
   });
   const actual = getGoalActualValue(metric, metrics);
 
-  const archivedRows = await db
-    .update(goals)
-    .set({
-      resolvedAt: new Date(),
-      resolvedValue: toResolvedDecimalString(metric, actual),
-      status: "archived",
-      updatedAt: new Date(),
-    })
-    .where(and(eq(goals.id, goalId), eq(goals.organizationId, organizationId)))
-    .returning({ id: goals.id });
+  const archivedRows = await withTenantContext(organizationId, (tx) =>
+    tx
+      .update(goals)
+      .set({
+        resolvedAt: new Date(),
+        resolvedValue: toResolvedDecimalString(metric, actual),
+        status: "archived",
+        updatedAt: new Date(),
+      })
+      .where(
+        and(eq(goals.id, goalId), eq(goals.organizationId, organizationId))
+      )
+      .returning({ id: goals.id })
+  );
 
   if (archivedRows.length === 0) {
     throw new Error("Meta nao encontrada.");
@@ -350,9 +385,14 @@ export const unarchiveGoal = async (
   organizationId: string,
   goalId: string
 ): Promise<void> => {
-  const row = await db.query.goals.findFirst({
-    where: and(eq(goals.id, goalId), eq(goals.organizationId, organizationId)),
-  });
+  const row = await withTenantContext(organizationId, (tx) =>
+    tx.query.goals.findFirst({
+      where: and(
+        eq(goals.id, goalId),
+        eq(goals.organizationId, organizationId)
+      ),
+    })
+  );
 
   if (!row) {
     throw new Error("Meta nao encontrada.");
@@ -376,24 +416,28 @@ export const unarchiveGoal = async (
     );
   }
 
-  const activeCount = await countActiveGoals(organizationId);
+  await withTenantContext(organizationId, async (tx) => {
+    const activeCount = await countActiveGoals(tx, organizationId);
 
-  if (activeCount >= MAX_ACTIVE_GOALS) {
-    throw new Error(unarchiveCapacityErrorMessage());
-  }
+    if (activeCount >= MAX_ACTIVE_GOALS) {
+      throw new Error(unarchiveCapacityErrorMessage());
+    }
 
-  const unarchivedRows = await db
-    .update(goals)
-    .set({
-      resolvedAt: null,
-      resolvedValue: null,
-      status: "active",
-      updatedAt: new Date(),
-    })
-    .where(and(eq(goals.id, goalId), eq(goals.organizationId, organizationId)))
-    .returning({ id: goals.id });
+    const unarchivedRows = await tx
+      .update(goals)
+      .set({
+        resolvedAt: null,
+        resolvedValue: null,
+        status: "active",
+        updatedAt: new Date(),
+      })
+      .where(
+        and(eq(goals.id, goalId), eq(goals.organizationId, organizationId))
+      )
+      .returning({ id: goals.id });
 
-  if (unarchivedRows.length === 0) {
-    throw new Error("Meta nao encontrada.");
-  }
+    if (unarchivedRows.length === 0) {
+      throw new Error("Meta nao encontrada.");
+    }
+  });
 };

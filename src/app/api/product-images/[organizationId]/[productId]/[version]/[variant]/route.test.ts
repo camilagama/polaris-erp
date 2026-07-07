@@ -22,6 +22,7 @@ vi.mock("@/lib/audit-log", () => ({
 
 vi.mock("@/db", () => ({
   db: {
+    execute: vi.fn(),
     query: {
       member: {
         findFirst: vi.fn(),
@@ -33,6 +34,7 @@ vi.mock("@/db", () => ({
         findFirst: vi.fn(),
       },
     },
+    transaction: vi.fn(),
   },
 }));
 
@@ -44,31 +46,42 @@ const resolveMocks = async () => {
   return {
     mockFindMember: (
       dbModule.db as unknown as {
+        execute: MockFn;
         query: {
           member: { findFirst: MockFn };
           organization: { findFirst: MockFn };
           products: { findFirst: MockFn };
         };
+        transaction: MockFn;
       }
     ).query.member.findFirst,
     mockFindOrganization: (
       dbModule.db as unknown as {
+        execute: MockFn;
         query: {
           member: { findFirst: MockFn };
           organization: { findFirst: MockFn };
           products: { findFirst: MockFn };
         };
+        transaction: MockFn;
       }
     ).query.organization.findFirst,
     mockFindProduct: (
       dbModule.db as unknown as {
+        execute: MockFn;
         query: {
           member: { findFirst: MockFn };
           organization: { findFirst: MockFn };
           products: { findFirst: MockFn };
         };
+        transaction: MockFn;
       }
     ).query.products.findFirst,
+    mockTransaction: (
+      dbModule.db as unknown as {
+        transaction: MockFn;
+      }
+    ).transaction,
   };
 };
 
@@ -76,8 +89,16 @@ describe("GET /api/product-images/[organizationId]/[productId]/[version]/[varian
   beforeEach(async () => {
     vi.clearAllMocks();
 
-    const { mockFindMember, mockFindOrganization, mockFindProduct } =
-      await resolveMocks();
+    const {
+      mockFindMember,
+      mockFindOrganization,
+      mockFindProduct,
+      mockTransaction,
+    } = await resolveMocks();
+    const dbModule = await import("@/db");
+    const mockDb = dbModule.db as unknown as { transaction: MockFn };
+
+    mockTransaction.mockImplementation(async (callback) => callback(mockDb));
     mockFindProduct.mockResolvedValue({ id: "p1" });
     mockFindMember.mockResolvedValue({ id: "member-1" });
     mockFindOrganization.mockResolvedValue({ id: "org_dg_imports" });

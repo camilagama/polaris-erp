@@ -1,7 +1,6 @@
 import "server-only";
 
 import { and, asc, eq, gte, lte, sql } from "drizzle-orm";
-import { db } from "@/db";
 import {
   categories,
   productPriceChanges,
@@ -11,6 +10,7 @@ import {
   saleItems,
   sales,
 } from "@/db/schema";
+import { type TenantTransaction, withTenantContext } from "@/db/tenant-context";
 import {
   buildProductAnalytics,
   buildProductSalesHistoryMetrics,
@@ -50,56 +50,59 @@ export const getProductAnalytics = async ({
   const recentFromDate = new Date(`${today}T00:00:00`);
   recentFromDate.setDate(recentFromDate.getDate() - 29);
   const recentFrom = formatDateInputValue(recentFromDate);
-  const [inventoryRows, allPurchaseRows, recentSalesRows] = await Promise.all([
-    db
-      .select({
-        archivedAt: products.archivedAt,
-        categoryName: categories.name,
-        costPrice: products.costPrice,
-        stock: products.stock,
-      })
-      .from(products)
-      .innerJoin(
-        categories,
-        and(
-          eq(products.categoryId, categories.id),
-          eq(categories.organizationId, organizationId)
-        )
-      )
-      .where(eq(products.organizationId, organizationId))
-      .orderBy(asc(products.name)),
-    db
-      .select({
-        occurredOn: productStockEntries.stockedOn,
-        quantity: productStockEntries.quantity,
-        unitCost: productStockEntries.unitCost,
-      })
-      .from(productStockEntries)
-      .where(eq(productStockEntries.organizationId, organizationId)),
-    db
-      .select({
-        lineTotal: saleItems.lineTotal,
-        occurredOn: sales.occurredOn,
-        quantity: saleItems.quantity,
-        status: sales.status,
-      })
-      .from(saleItems)
-      .innerJoin(
-        sales,
-        and(
-          eq(saleItems.saleId, sales.id),
-          eq(sales.organizationId, organizationId)
-        )
-      )
-      .where(
-        and(
-          eq(saleItems.organizationId, organizationId),
-          eq(sales.organizationId, organizationId),
-          gte(sales.occurredOn, recentFrom),
-          lte(sales.occurredOn, today)
-        )
-      ),
-  ]);
+  const [inventoryRows, allPurchaseRows, recentSalesRows] =
+    await withTenantContext(organizationId, (tx) =>
+      Promise.all([
+        tx
+          .select({
+            archivedAt: products.archivedAt,
+            categoryName: categories.name,
+            costPrice: products.costPrice,
+            stock: products.stock,
+          })
+          .from(products)
+          .innerJoin(
+            categories,
+            and(
+              eq(products.categoryId, categories.id),
+              eq(categories.organizationId, organizationId)
+            )
+          )
+          .where(eq(products.organizationId, organizationId))
+          .orderBy(asc(products.name)),
+        tx
+          .select({
+            occurredOn: productStockEntries.stockedOn,
+            quantity: productStockEntries.quantity,
+            unitCost: productStockEntries.unitCost,
+          })
+          .from(productStockEntries)
+          .where(eq(productStockEntries.organizationId, organizationId)),
+        tx
+          .select({
+            lineTotal: saleItems.lineTotal,
+            occurredOn: sales.occurredOn,
+            quantity: saleItems.quantity,
+            status: sales.status,
+          })
+          .from(saleItems)
+          .innerJoin(
+            sales,
+            and(
+              eq(saleItems.saleId, sales.id),
+              eq(sales.organizationId, organizationId)
+            )
+          )
+          .where(
+            and(
+              eq(saleItems.organizationId, organizationId),
+              eq(sales.organizationId, organizationId),
+              gte(sales.occurredOn, recentFrom),
+              lte(sales.occurredOn, today)
+            )
+          ),
+      ])
+    );
 
   return buildProductAnalytics({
     inventory: inventoryRows.map((row) => ({
@@ -127,29 +130,31 @@ export const getProductSalesHistoryMetrics = async (
   organizationId: string,
   productId: string
 ): Promise<ProductSalesHistoryMetrics> => {
-  const salesRows = await db
-    .select({
-      lineTotal: saleItems.lineTotal,
-      occurredOn: sales.occurredOn,
-      quantity: saleItems.quantity,
-      status: sales.status,
-    })
-    .from(saleItems)
-    .innerJoin(
-      sales,
-      and(
-        eq(saleItems.saleId, sales.id),
-        eq(sales.organizationId, organizationId)
+  const salesRows = await withTenantContext(organizationId, (tx) =>
+    tx
+      .select({
+        lineTotal: saleItems.lineTotal,
+        occurredOn: sales.occurredOn,
+        quantity: saleItems.quantity,
+        status: sales.status,
+      })
+      .from(saleItems)
+      .innerJoin(
+        sales,
+        and(
+          eq(saleItems.saleId, sales.id),
+          eq(sales.organizationId, organizationId)
+        )
       )
-    )
-    .where(
-      and(
-        eq(saleItems.organizationId, organizationId),
-        eq(sales.organizationId, organizationId),
-        eq(saleItems.productId, productId)
+      .where(
+        and(
+          eq(saleItems.organizationId, organizationId),
+          eq(sales.organizationId, organizationId),
+          eq(saleItems.productId, productId)
+        )
       )
-    )
-    .orderBy(asc(sales.occurredOn), asc(saleItems.createdAt));
+      .orderBy(asc(sales.occurredOn), asc(saleItems.createdAt))
+  );
 
   return buildProductSalesHistoryMetrics({
     sales: salesRows.map((row) => ({
@@ -162,7 +167,7 @@ export const getProductSalesHistoryMetrics = async (
 };
 
 const lockProductForUpdate = async (
-  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  tx: TenantTransaction,
   organizationId: string,
   productId: string
 ): Promise<LockedProductRow | null> => {
@@ -199,7 +204,7 @@ export const createProductWithInitialStock = async ({
   purchasedOn: string;
   stock: number;
 }): Promise<void> => {
-  await db.transaction(async (tx) => {
+  await withTenantContext(organizationId, async (tx) => {
     await tx.insert(products).values({
       categoryId,
       costPrice,
@@ -256,7 +261,7 @@ export const updateProductWithPriceHistory = async ({
   price: string;
   productId: string;
 }): Promise<void> => {
-  await db.transaction(async (tx) => {
+  await withTenantContext(organizationId, async (tx) => {
     const product = await lockProductForUpdate(tx, organizationId, productId);
 
     if (!product) {
@@ -304,7 +309,7 @@ export const addProductStock = async ({
   stockedOn: string;
   unitCost: number;
 }): Promise<void> => {
-  await db.transaction(async (tx) => {
+  await withTenantContext(organizationId, async (tx) => {
     const product = await lockProductForUpdate(tx, organizationId, productId);
 
     if (!product) {
@@ -358,7 +363,7 @@ export const writeOffProductStock = async ({
   quantity: number;
   reason: "adjustment" | "operational";
 }): Promise<void> => {
-  await db.transaction(async (tx) => {
+  await withTenantContext(organizationId, async (tx) => {
     const product = await lockProductForUpdate(tx, organizationId, productId);
 
     if (!product) {
@@ -401,19 +406,21 @@ export const setProductArchivedState = async ({
   organizationId: string;
   productId: string;
 }): Promise<boolean> => {
-  const updatedProducts = await db
-    .update(products)
-    .set({
-      archivedAt: archived ? new Date() : null,
-      updatedAt: new Date(),
-    })
-    .where(
-      and(
-        eq(products.id, productId),
-        eq(products.organizationId, organizationId)
+  const updatedProducts = await withTenantContext(organizationId, (tx) =>
+    tx
+      .update(products)
+      .set({
+        archivedAt: archived ? new Date() : null,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(products.id, productId),
+          eq(products.organizationId, organizationId)
+        )
       )
-    )
-    .returning({ id: products.id });
+      .returning({ id: products.id })
+  );
 
   return updatedProducts.length > 0;
 };

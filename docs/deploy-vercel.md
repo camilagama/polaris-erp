@@ -16,8 +16,8 @@ Configure em Production e replique/adapte para Preview:
 
 | Variavel | Uso |
 | --- | --- |
-| `DATABASE_URL` | Runtime com connection string pooler da branch Neon. |
-| `DATABASE_URL_DIRECT` | Migracoes locais/CI quando necessario. Nao precisa ficar exposta ao runtime se o processo de migracao usar outro secret. |
+| `DATABASE_URL` | Runtime com connection string pooler da branch Neon usando role nao proprietaria e sem `BYPASSRLS` (ex.: `polaris_app`). |
+| `DATABASE_URL_DIRECT` | Migracoes locais/CI com role proprietaria/admin (ex.: `neondb_owner`). Nao use essa URL como runtime da aplicacao. |
 | `BETTER_AUTH_SECRET` | Segredo forte do Better Auth; em producao precisa ter pelo menos 32 caracteres. |
 | `BETTER_AUTH_URL` | URL canonica do app, sem barra final. |
 | `BETTER_AUTH_API_KEY` | Chave do Better Auth Infrastructure para Dashboard e Sentinel. |
@@ -49,6 +49,8 @@ Em producao, sem Upstash configurado o rate limit falha fechado para endpoints s
 Valores invalidos de sampling do Sentry sao ignorados pelo app e caem nos padroes seguros.
 
 O baseline de headers globais e aplicado por `next.config.ts`: HSTS, `nosniff`, frame policy, referrer policy e permissions policy. CSP completa deve ser validada separadamente para nao quebrar Next/Sentry.
+
+RLS e obrigatorio em producao. Nao configure o runtime com `neondb_owner`: esse role pode ter `BYPASSRLS` no Neon e anula a barreira de tenant mesmo com policies corretas. Mantenha `neondb_owner` apenas em `DATABASE_URL_DIRECT` para migrations.
 
 ## Guardrails de producao
 
@@ -83,9 +85,11 @@ Nao misture `localhost` no navegador com `BETTER_AUTH_URL` apontando para tunnel
 
 As migracoes nao rodam automaticamente no deploy por padrao.
 
-1. Aponte `DATABASE_URL` ou `DATABASE_URL_DIRECT` para a branch correta.
+1. Aponte `DATABASE_URL_DIRECT` para a branch correta com role de migration.
 2. Rode `bun run db:migrate`.
-3. Confira o runbook em `docs/saas-organization-migration-runbook.md`.
+3. Configure `DATABASE_URL` do runtime com role nao proprietaria sem `BYPASSRLS`.
+4. Rode `bun run db:smoke:rls` no ambiente apontado para a branch promovida.
+5. Confira o runbook em `docs/saas-organization-migration-runbook.md`.
 
 Antes de promover producao:
 
@@ -136,6 +140,7 @@ vercel link
 vercel env pull .env.local
 bun run check
 bun run test
+bun run db:smoke:rls
 bun run build
 vercel env run -e production -- bun run build
 vercel deploy
@@ -151,17 +156,18 @@ Promova para producao somente depois de validar o preview contra banco/servicos 
 Depois do deploy:
 
 1. `GET /api/health` retorna `200` e `checks.database.ok=true`.
-2. `/sign-in` com Google redireciona para `accounts.google.com`.
-3. Usuario novo criado pelo Google vai para onboarding.
-4. Onboarding cria organizacao, owner, categoria `Outros` e settings.
-5. Dashboard carrega vazio para tenant novo.
-6. Produto, estoque, venda e cancelamento funcionam.
-7. Upload de imagem funciona e bytes saem por rota autenticada.
-8. Reconcile de imagens retorna contagens, nao chaves completas; uploads recentes nao devem ser removidos imediatamente.
-9. `/api/internal/health/r2` retorna diagnostico sem segredos.
-10. Better Auth Dashboard conecta e Sentinel nao bloqueia login legitimo.
-11. Sentry recebe erro de teste controlado em preview, tracing aparece com sampling configurado e replay so aparece conforme as taxas.
-12. Logs de producao sem erros recorrentes apos 5 minutos.
+2. `bun run db:smoke:rls` passa contra o `DATABASE_URL` do ambiente promovido.
+3. `/sign-in` com Google redireciona para `accounts.google.com`.
+4. Usuario novo criado pelo Google vai para onboarding.
+5. Onboarding cria organizacao, owner, categoria `Outros` e settings.
+6. Dashboard carrega vazio para tenant novo.
+7. Produto, estoque, venda e cancelamento funcionam.
+8. Upload de imagem funciona e bytes saem por rota autenticada.
+9. Reconcile de imagens retorna contagens, nao chaves completas; uploads recentes nao devem ser removidos imediatamente.
+10. `/api/internal/health/r2` retorna diagnostico sem segredos.
+11. Better Auth Dashboard conecta e Sentinel nao bloqueia login legitimo.
+12. Sentry recebe erro de teste controlado em preview, tracing aparece com sampling configurado e replay so aparece conforme as taxas.
+13. Logs de producao sem erros recorrentes apos 5 minutos.
 
 ## CI
 
@@ -172,5 +178,8 @@ O workflow `.github/workflows/ci.yml` roda:
 - `bun run knip`
 - `bun run build`
 - `bun run test:e2e` no job `e2e`, dependente de `E2E_DATABASE_URL`
+- `bun run db:smoke:rls` no job manual `rls-smoke`, dependente de `RLS_DATABASE_URL`
 
 Antes de promover producao, confira se o secret `E2E_DATABASE_URL` aponta para uma branch Neon isolada.
+
+O job `rls-smoke` so roda por `workflow_dispatch`. Use `RLS_DATABASE_URL` apontando para o ambiente que sera promovido e confirme que ele usa uma role runtime sem `BYPASSRLS`; nao reutilize `DATABASE_URL_DIRECT` nem a role de migration.

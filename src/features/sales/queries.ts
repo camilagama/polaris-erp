@@ -14,8 +14,8 @@ import {
   sql,
 } from "drizzle-orm";
 import { z } from "zod";
-import { db } from "@/db";
 import { products, saleItems, sales } from "@/db/schema";
+import { withTenantContext } from "@/db/tenant-context";
 import type {
   SaleDetail,
   SaleListItem,
@@ -120,35 +120,37 @@ export async function getSalesQuery({
     }
   }
 
-  const rows = await db
-    .select({
-      additionalAmount: sales.additionalAmount,
-      cancelledAt: sales.cancelledAt,
-      chargedAmount: sales.chargedAmount,
-      createdAt: sales.createdAt,
-      customerName: sales.customerName,
-      discountAmount: sales.discountAmount,
-      feeAmount: sales.feeAmount,
-      freightAmount: sales.freightAmount,
-      id: sales.id,
-      itemCount: sql<number>`(
-        select count(*)
-        from "sale_items"
-        where "sale_items"."sale_id" = "sales"."id"
-          and "sale_items"."organization_id" = ${organizationId}
-      )`,
-      occurredOn: sales.occurredOn,
-      paymentFeePayer: sales.paymentFeePayer,
-      paymentFeePercent: sales.paymentFeePercent,
-      paymentInstallments: sales.paymentInstallments,
-      paymentMethod: sales.paymentMethod,
-      status: sales.status,
-      totalAmount: sales.totalAmount,
-    })
-    .from(sales)
-    .where(filters.length > 0 ? and(...filters) : undefined)
-    .orderBy(desc(sales.occurredOn), desc(sales.createdAt), desc(sales.id))
-    .limit(limit);
+  const rows = await withTenantContext(organizationId, (tx) =>
+    tx
+      .select({
+        additionalAmount: sales.additionalAmount,
+        cancelledAt: sales.cancelledAt,
+        chargedAmount: sales.chargedAmount,
+        createdAt: sales.createdAt,
+        customerName: sales.customerName,
+        discountAmount: sales.discountAmount,
+        feeAmount: sales.feeAmount,
+        freightAmount: sales.freightAmount,
+        id: sales.id,
+        itemCount: sql<number>`(
+          select count(*)
+          from "sale_items"
+          where "sale_items"."sale_id" = "sales"."id"
+            and "sale_items"."organization_id" = ${organizationId}
+        )`,
+        occurredOn: sales.occurredOn,
+        paymentFeePayer: sales.paymentFeePayer,
+        paymentFeePercent: sales.paymentFeePercent,
+        paymentInstallments: sales.paymentInstallments,
+        paymentMethod: sales.paymentMethod,
+        status: sales.status,
+        totalAmount: sales.totalAmount,
+      })
+      .from(sales)
+      .where(filters.length > 0 ? and(...filters) : undefined)
+      .orderBy(desc(sales.occurredOn), desc(sales.createdAt), desc(sales.id))
+      .limit(limit)
+  );
 
   const hasMore = rows.length > pageSize;
   const items = hasMore ? rows.slice(0, pageSize) : rows;
@@ -169,55 +171,61 @@ export async function getSalesQuery({
 export function getSaleProductsQuery(
   organizationId: string
 ): Promise<SaleProductOption[]> {
-  return db
-    .select({
-      id: products.id,
-      name: products.name,
-      price: products.price,
-      stock: products.stock,
-    })
-    .from(products)
-    .where(
-      and(
-        eq(products.organizationId, organizationId),
-        isNull(products.archivedAt),
-        gt(products.stock, 0)
+  return withTenantContext(organizationId, (tx) =>
+    tx
+      .select({
+        id: products.id,
+        name: products.name,
+        price: products.price,
+        stock: products.stock,
+      })
+      .from(products)
+      .where(
+        and(
+          eq(products.organizationId, organizationId),
+          isNull(products.archivedAt),
+          gt(products.stock, 0)
+        )
       )
-    )
-    .orderBy(asc(products.name), asc(products.createdAt), asc(products.id));
+      .orderBy(asc(products.name), asc(products.createdAt), asc(products.id))
+  );
 }
 
 export async function getSaleByIdQuery(
   organizationId: string,
   id: string
 ): Promise<SaleDetail | undefined> {
-  const sale = await db.query.sales.findFirst({
-    where: and(eq(sales.id, id), eq(sales.organizationId, organizationId)),
-  });
+  const sale = await withTenantContext(organizationId, (tx) =>
+    tx.query.sales.findFirst({
+      where: and(eq(sales.id, id), eq(sales.organizationId, organizationId)),
+    })
+  );
 
   if (!sale) {
     return;
   }
 
-  const items = await db
-    .select({
-      createdAt: saleItems.createdAt,
-      id: saleItems.id,
-      lineTotal: saleItems.lineTotal,
-      productId: saleItems.productId,
-      productNameSnapshot: saleItems.productNameSnapshot,
-      quantity: saleItems.quantity,
-      unitCostSnapshot: saleItems.unitCostSnapshot,
-      unitPriceSnapshot: saleItems.unitPriceSnapshot,
-    })
-    .from(saleItems)
-    .where(
-      and(
-        eq(saleItems.organizationId, organizationId),
-        eq(saleItems.saleId, id)
+  const items = await withTenantContext(organizationId, (tx) =>
+    tx
+      .select({
+        createdAt: saleItems.createdAt,
+        id: saleItems.id,
+        lineTotal: saleItems.lineTotal,
+        productId: saleItems.productId,
+        productNameSnapshot: saleItems.productNameSnapshot,
+        quantity: saleItems.quantity,
+        unitCostSnapshot: saleItems.unitCostSnapshot,
+        unitPriceSnapshot: saleItems.unitPriceSnapshot,
+      })
+      .from(saleItems)
+      .where(
+        and(
+          eq(saleItems.organizationId, organizationId),
+          eq(saleItems.saleId, id)
+        )
       )
-    )
-    .orderBy(asc(saleItems.createdAt));
+      .orderBy(asc(saleItems.createdAt))
+  );
 
   return {
     ...sale,

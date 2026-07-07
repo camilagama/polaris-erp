@@ -52,11 +52,40 @@ Status de execucao em 2026-07-06:
 - PR 5/CI: workflow agora roda `knip` no job `verify` antes do build; E2E segue isolado por `E2E_DATABASE_URL`.
 - PR 5/CI: guardrail de Playwright agora tem teste unitario garantindo falha em CI sem `E2E_DATABASE_URL`.
 - PR 5/CI: `CI=true bun run test:e2e` sem `E2E_DATABASE_URL` foi executado e falhou no load do config antes de subir servidor, confirmando o bloqueio contra banco compartilhado.
-- PR 5/QA: apos as fatias de hardening, refactors seguros, RLS inicial e UX destrutiva, `bun run test` passou localmente com 69 arquivos e 250 testes.
+- PR 5/QA: apos as fatias de hardening, refactors seguros, RLS inicial e UX destrutiva, `bun run test` passou localmente com 69 arquivos e 251 testes.
 - PR 2/RLS: decisao arquitetural fechada; RLS e obrigatorio antes de producao, com escopo e sequencia segura definidos em `docs/rls-tenant-isolation.md`.
 - PR 2/RLS: plano executavel criado em `docs/superpowers/plans/2026-07-07-rls-tenant-isolation.md` para implementar helper tenant-scoped, migration RLS e validacao Neon temporaria.
 - PR 2/RLS: implementacao iniciada com helper transacional `withTenantContext`/`setTenantContext`, testado por TDD para usar `set_config(..., true)`.
 - PR 2/RLS: `src/features/catalog/server.ts` agora executa acessos tenant-scoped por `withTenantContext`, iniciando a migracao gradual do app para policies RLS.
+- PR 2/RLS: `src/features/dashboard/server.ts` agora executa consultas analiticas tenant-scoped por `withTenantContext`.
+- PR 2/RLS: primeira fatia verificada com helper tenant, catalogo e dashboard; `bun run check`, `bun run test`, `bun run knip` e `bun run build` passaram.
+- PR 2/RLS: `src/features/goals/server.ts` agora executa leituras, transicoes automaticas e writes de metas por `withTenantContext`.
+- PR 2/RLS: `src/features/products/server.ts` agora executa analytics, historico de vendas, create/update/estoque/baixa/archive por `withTenantContext`; teste TDD validou tenant context antes do lock de produto.
+- PR 2/RLS: `src/features/sales/server.ts` agora executa bounds, analytics, idempotency lookup, create/cancel por `withTenantContext`; teste TDD validou tenant context antes do lock de produtos.
+- PR 2/RLS: products/sales queries e image access agora usam contexto RLS; reconcile de imagens usa contexto interno `product_image_reconcile`; scan confirmou ausencia de import direto de `@/db` em runtime de `src/features`.
+- PR 2/RLS: Neon main do projeto `autumn-feather-14038163` (`polaris-erp`) foi inspecionado via plugin antes da migration RLS: `neondb`, role `neondb_owner`, PostgreSQL 18.4, compute/branch `br-empty-frog-acrcn1aj`, sem policies RLS em `public.pg_policies` naquele momento.
+- PR 2/RLS: migration `20260707205000_rls_tenant_isolation.sql` criada com `ENABLE/FORCE ROW LEVEL SECURITY`, policies por `app.organization_id`, membership lookup por `app.user_id` e contexto interno de reconcile.
+- PR 2/RLS: `app-session` e `audit-log` agora usam contextos RLS antes da migration ser aplicada; aplicacao em Neon main precisa ser coordenada com deploy desta versao para nao quebrar runtime antigo.
+- PR 2/RLS: migration RLS aplicada no Neon main do projeto `autumn-feather-14038163`; verificacao direta retornou 14 policies e 13/13 tabelas tenant-scoped com RLS+FORCE.
+- PR 2/RLS: `neondb_owner` permanece com `BYPASSRLS=true` e nao aceitou `ALTER ROLE ... NOBYPASSRLS`; criada role runtime `polaris_app` sem `BYPASSRLS`.
+- PR 2/RLS: `DATABASE_URL` local foi atualizado para `polaris_app`; smoke no Neon main confirmou zero linhas sem contexto e acesso ao tenant com `app.organization_id`/`app.user_id` transacionais.
+- PR 2/RLS: smoke de escrita em rollback confirmou que insert tenant-scoped sem contexto falha por RLS e que fluxo onboarding-like escreve user/org/member/categoria/settings/audit com contexto transacional.
+- PR 7/deploy: runbook Vercel agora exige `DATABASE_URL` com role runtime sem `BYPASSRLS` e reserva `DATABASE_URL_DIRECT` para migrations/admin.
+- PR 2/RLS: gates completos foram reexecutados com `DATABASE_URL` local usando `polaris_app`: `bun run check`, `bun run test` (74 arquivos, 265 testes), `bun run knip` e `bun run build` passaram.
+- PR 2/RLS: criado smoke reexecutavel `bun run db:smoke:rls`, validando role sem `BYPASSRLS`, policies, `FORCE RLS`, bloqueio sem contexto e escrita onboarding-like com rollback.
+- PR 2/RLS: apos o script de smoke, `bun run test` passou com 74 arquivos/265 testes; `bun run check`, `bun run db:smoke:rls`, `bun run knip` e `bun run build` tambem passaram.
+- PR 2/RLS: GitHub Actions ganhou job manual `rls-smoke` para rodar `bun run db:smoke:rls` com secret dedicado `RLS_DATABASE_URL`, sem executar em push/PR.
+- PR 2/RLS: job manual de smoke ficou coberto por teste estrutural; gates apos a mudanca passaram com 75 arquivos/266 testes, alem de `check`, `db:smoke:rls`, `knip` e `build`.
+- PR 2/RLS: guardrail estrutural agora impede runtime em `src/features` de importar o root `@/db` diretamente, sem bloquear subpaths controlados como `@/db/tenant-context` e `@/db/schema`.
+- PR 2/RLS: apos o guardrail de import root, `bun run check`, `bun run test` (75 arquivos, 268 testes), `bun run db:smoke:rls`, `bun run knip` e `bun run build` passaram.
+- PR 2/RLS: `docs/database-environments.md` agora separa URLs/roles de runtime, migrations, E2E e smoke RLS, incluindo `RLS_DATABASE_URL` e a exigencia de role sem `BYPASSRLS`.
+- PR 2/RLS: fatia de docs de ambientes verificada com `bun run check` e `bun run db:smoke:rls`, ambos verdes.
+- PR 2/RLS: `.env.example` agora lista `E2E_DATABASE_URL` e `RLS_DATABASE_URL`, separando E2E isolado de smoke RLS do ambiente promovido.
+- PR 2/RLS: README alinhado ao estado pos-RLS, incluindo `db:smoke:rls`, runtime sem `BYPASSRLS`, bootstrap bloqueado em production, staging R2 por org/user e CI atualizado.
+- PR 2/RLS: runbook SaaS/migration foi reescrito para RLS obrigatorio, role runtime sem `BYPASSRLS`, migration via `DATABASE_URL_DIRECT`, smoke RLS, rollback/PITR e resposta a incidente tenant.
+- PR 2/RLS: guardrail estrutural agora exige que runtime em `src/features` com import de `@/db/schema` tambem importe `@/db/tenant-context`, reduzindo risco de novo acesso sem contexto RLS.
+- PR 2/RLS: apos o guardrail schema+tenant-context, `bun run check`, `bun run test` (75 arquivos, 270 testes) e `bun run db:smoke:rls` passaram.
+- PR 2/RLS: gates finais locais reexecutados contra `polaris_app`: `bun run check` (276 arquivos), `bun run test` (75 arquivos, 270 testes), `bun run db:smoke:rls`, `bun run knip` e `bun run build` passaram; MCP Neon ainda retornou 401 `token_invalidated`.
 - PR 5/QA: `bun run knip` e `bun run build` passaram apos remover exports mortos das extracoes e ajustar o tipo do env E2E.
 - PR 3: iniciado. Entrada de estoque agora reativa produto arquivado ao limpar `archivedAt`.
 - PR 3: banco agora rejeita venda de cartao com `payment_fee_payer = not_applicable`.
@@ -99,7 +128,7 @@ Status de execucao em 2026-07-06:
 
 Veredito: **quase pronto para piloto controlado, não recomendado para produção self-serve aberta ainda**.
 
-Maturidade estimada: **72/100**. Confiança: **média-alta**. Limites: não rodei Playwright porque `E2E_DATABASE_URL` está ausente; não rodei migrações contra banco real; 4 subagents bateram limite de uso e foram cobertos manualmente.
+Maturidade estimada: **74/100**. Confiança: **média-alta**. Limites: não rodei Playwright porque `E2E_DATABASE_URL` está ausente; a migration RLS foi aplicada no Neon main e validada por smoke, mas as demais migrations/constraints financeiras ainda precisam de dry-run/aplicação controlada em branch Neon isolada; 4 subagents bateram limite de uso e foram cobertos manualmente.
 
 Forças reais:
 - Multi-tenancy aplicado na maioria das queries e mutations via `organizationId`.
@@ -111,7 +140,7 @@ Forças reais:
 Top bloqueadores antes de clientes reais:
 1. Migrations de `sessions.id`, constraints financeiras e FKs tenant-scoped ainda nao foram validadas em branch Neon isolada.
 2. Bootstrap interno bloqueado localmente em prod-like; ainda exige smoke em Vercel Production.
-3. RLS ja foi decidido como obrigatorio antes de producao, mas ainda nao foi implementado.
+3. RLS foi implementado e aplicado no Neon main, mas o deploy ainda precisa usar `DATABASE_URL` com a role runtime `polaris_app` e passar por smoke/E2E.
 4. Fluxos criticos ainda nao foram rodados em E2E com banco isolado.
 5. Playwright não verificado com banco isolado neste ambiente.
 
@@ -128,10 +157,12 @@ Arquitetura:
 - Proxy Next 16 em `proxy.ts`, como barreira otimista.
 
 Verificações:
-- `bun run check` => passou, 267 arquivos.
-- `bun run test` => passou, 69 arquivos, 250 testes.
+- `bun run check` => passou, 276 arquivos.
+- `bun run test` => passou, 75 arquivos, 270 testes.
 - `bun run build` => passou.
 - `bun run knip` => passou.
+- `bun run db:smoke:rls` => passou contra `polaris_app`: `rls-runtime-smoke-ok`, 14 policies, 13/13 tabelas com RLS+FORCE.
+- Neon MCP/plugin => tentativa de busca do projeto `autumn-feather-14038163` ainda falhou com 401 `token_invalidated`; validacao atual do banco foi feita pelo smoke direto via `DATABASE_URL`.
 - `CI=true bun run test:e2e` sem `E2E_DATABASE_URL` => falhou intencionalmente no load do config; E2E completo ainda não executado por falta de banco isolado.
 
 **3. Achados Priorizados**
@@ -152,11 +183,11 @@ Correção: negar sempre em `NODE_ENV=production`, ou restringir a CI/banco isol
 Teste: preview/prod-like deve retornar 403 e não criar sessão.
 
 `TENANT-001` P1, Multi-tenancy  
-Evidência: ausência de RLS; isolamento está em app code. Schema tenant em [schema.ts](</c:/Users/Junior/Documents/0 - Dev/Hub Imports/src/db/schema.ts:303>).  
-Status: Não encontrado RLS; decisao de produto/arquitetura agora exige RLS antes de producao, com desenho inicial em `docs/rls-tenant-isolation.md`.  
-Impacto: uma query futura sem filtro `organizationId` pode vazar dados.  
-Correção: implementar wrapper tenant-scoped por transacao, policies RLS e validacao em branch Neon temporaria.  
-Teste: tenant A não lê/escreve tenant B mesmo com query sem filtro de app.
+Evidência: [rls-tenant-isolation.md](</c:/Users/Junior/Documents/0 - Dev/Hub Imports/docs/rls-tenant-isolation.md:1>) registra 14 policies, 13/13 tabelas tenant-scoped com RLS+FORCE e role runtime `polaris_app` sem `BYPASSRLS`; [smoke-rls-runtime.cjs](</c:/Users/Junior/Documents/0 - Dev/Hub Imports/scripts/smoke-rls-runtime.cjs:1>) valida bloqueio sem contexto e escrita com rollback.  
+Status: Implementado no Neon main e validado localmente; pendente configurar `DATABASE_URL`/`RLS_DATABASE_URL` no deploy e rodar job manual `rls-smoke` + E2E isolado.  
+Impacto residual: se deploy usar `neondb_owner` ou outra role com `BYPASSRLS`, a barreira RLS pode ser anulada apesar das policies.  
+Correção: manter runtime com role sem `BYPASSRLS`, rodar `bun run db:smoke:rls` no ambiente promovido e manter guardrails contra import direto do root `@/db` em runtime.  
+Teste: `bun run db:smoke:rls`, job manual `rls-smoke`, E2E multi-tenant com `E2E_DATABASE_URL`.
 
 `RACE-001` P1, Onboarding/SaaS  
 Evidência: `createInitialOrganizationForUser` faz select depois insert sem unique global por usuário em [app-session.ts](</c:/Users/Junior/Documents/0 - Dev/Hub Imports/src/lib/app-session.ts:196>) e [schema.ts](</c:/Users/Junior/Documents/0 - Dev/Hub Imports/src/db/schema.ts:124>).  
@@ -224,7 +255,7 @@ Correção: configurar branch Neon E2E e rodar `bun run test:e2e`.
 - Auth/Google/Better Auth: Parcial. Produção exige Google, secret forte e smoke real; bootstrap prod-like corrigido localmente. P1.
 - Sessões/cookies: Parcial. `sessions.id` tem unique local; falta aplicar/validar migration em Neon isolado. P1.
 - Organizações: Parcial. Onboarding tem advisory lock local e contexto bloqueia organizacao inativa; falta stress/smoke em banco real. P1.
-- Multi-tenancy: Parcial. Filtros bons no app; RLS agora e obrigatorio antes de producao e ainda falta implementar. P1.
+- Multi-tenancy: Parcial. App e migration RLS foram aplicados no Neon main; `polaris_app` bloqueia acesso sem contexto, passou smoke de escrita com rollback e tem job manual `rls-smoke`. Ainda falta atualizar env de deploy e rodar smoke/E2E pos-migration. P1.
 - RBAC: Parcial. Roles existem, multiusuário/convites desativados. P2.
 - Server actions/APIs: Parcial. Boa checagem de contexto; hardening bootstrap/internal avancou, mas smoke real ainda falta. P1/P2.
 - IDOR: OK nos fluxos revisados. Produtos, imagens, categorias e metas agora tem provas contra sucesso falso em recurso inexistente/outro tenant.
@@ -236,9 +267,9 @@ Correção: configurar branch Neon E2E e rodar `bun run test:e2e`.
 - Metas: Parcial. Regra de 1 ativa tem constraint local; falta aplicar/validar migration em Neon isolado. P2.
 - Logs/Sentry: Parcial. Errors, tracing e replay em erro configurados; alertas ainda precisam ser definidos na plataforma. P3.
 - Backups/rollback: Parcial. Docs existem; execução não verificada. P2.
-- Tests unit/integration: OK razoável. 250 testes passando no ultimo run registrado.
+- Tests unit/integration: OK razoável. 270 testes passando no ultimo run registrado.
 - E2E: Parcial/não verificado localmente. P2.
-- CI/CD: Parcial. CI roda check/test/knip/build e job E2E isolado, mas ainda depende do secret `E2E_DATABASE_URL` real. P2.
+- CI/CD: Parcial. CI roda check/test/knip/build, job E2E isolado e job manual `rls-smoke`; ainda depende dos secrets reais `E2E_DATABASE_URL` e `RLS_DATABASE_URL`. P2.
 - LGPD/privacidade/suporte/admin/billing: Ausente/parcial. P2/P3.
 
 **5. Domínio Revenda**
@@ -260,13 +291,13 @@ Ausente/pós-MVP: billing, planos, suporte/admin, importação CSV, recebimentos
 - Estorno inconsistente: risco se produto removido fisicamente via DB.
 - Taxa errada: modal e constraint DB foram corrigidos localmente; falta migration/smoke real.
 - Lucro/margem errado: risco residual se dados legados ou migrations financeiras nao forem validados.
-- Vazamento entre orgs: sem IDOR confirmado, mas RLS obrigatorio ainda nao implementado.
+- Vazamento entre orgs: sem IDOR confirmado; RLS bloqueia acesso sem contexto no role runtime e passou `db:smoke:rls`, mas ainda falta configurar env de deploy e rodar job manual/smoke funcional/E2E.
 - Imagem perdida/órfã: corridas principais foram corrigidas localmente; falta validar R2 real.
 - Auditoria pre-tenant: corrigida localmente; login sem organizacao ativa nao gera auditoria falsa em tenant padrao.
 
 **7. Roadmap Recomendado**
 Antes de produção:
-1. Validar migrations de `sessions.id`, constraints financeiras e FKs tenant-scoped em branch Neon isolada.
+1. Validar migrations restantes de `sessions.id`, constraints financeiras e FKs tenant-scoped em branch Neon isolada; RLS ja foi aplicada e validada no Neon main.
 2. Rodar smoke em Vercel Production para confirmar bootstrap 403 em prod-like e envs fortes.
 3. Validar limites reais do Upstash e headers confiáveis na borda.
 4. Rodar Playwright com Neon branch isolada.
@@ -284,7 +315,7 @@ Pós-MVP:
 - Billing/planos.
 - Exportação.
 - Admin/support tooling.
-- Implementar RLS obrigatorio com tenant por transacao e validacao em branch Neon temporaria.
+- Acionar job manual `rls-smoke` em deploy real com `RLS_DATABASE_URL` apontando para role runtime sem `BYPASSRLS`.
 - Observabilidade com alertas.
 
 **8. Plano de Correção**
@@ -297,7 +328,7 @@ Aceite: migrations aplicam sem dados legados conflitantes; build Production pass
 Fase 1, tenant/dados:
 - Manter advisory lock de onboarding e testar concorrencia contra banco real.
 - Aplicar unique partial para `goals active` em branch Neon isolada.
-- Implementar RLS obrigatorio conforme `docs/rls-tenant-isolation.md`.
+- Concluir operacionalizacao de RLS no deploy: `DATABASE_URL`/`RLS_DATABASE_URL` com role sem `BYPASSRLS`, job manual `rls-smoke`, smoke funcional e E2E isolado.
 Aceite: testes concorrentes e migrations provam uma org/meta em banco real.
 
 Fase 2, estoque/venda/R2:

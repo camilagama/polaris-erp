@@ -58,7 +58,7 @@ const selectAppContextMembershipOnce = (
     role: string;
   } | null
 ) => {
-  dbMock.select.mockReturnValueOnce({
+  txMock.select.mockReturnValueOnce({
     from: vi.fn().mockReturnValue({
       innerJoin: vi.fn().mockReturnValue({
         where: vi.fn().mockReturnValue({
@@ -114,10 +114,30 @@ describe("createInitialOrganizationForUser", () => {
     });
 
     expect(organizationId).toBe("org-existing");
-    expect(txMock.execute).toHaveBeenCalledTimes(1);
     expect(txMock.execute.mock.invocationCallOrder[0]).toBeLessThan(
       txMock.select.mock.invocationCallOrder[0]
     );
+    expect(txMock.execute.mock.invocationCallOrder[1]).toBeLessThan(
+      txMock.select.mock.invocationCallOrder[0]
+    );
+  });
+
+  it("sets user context before reading existing onboarding membership", async () => {
+    selectMembershipOnce("org-existing");
+
+    await createInitialOrganizationForUser({
+      name: "Polaris Brasil",
+      userId: "user-1",
+    });
+
+    const userContextCallIndex = txMock.execute.mock.calls.findIndex((call) =>
+      JSON.stringify(call[0]).includes("app.user_id")
+    );
+
+    expect(userContextCallIndex).toBeGreaterThanOrEqual(0);
+    expect(
+      txMock.execute.mock.invocationCallOrder[userContextCallIndex]
+    ).toBeLessThan(txMock.select.mock.invocationCallOrder[0]);
   });
 });
 
@@ -138,6 +158,7 @@ describe("getAppContext", () => {
     const context = await getAppContext();
 
     expect(context).toBeNull();
+    expect(dbMock.transaction).toHaveBeenCalledOnce();
     expect(dbMock.update).not.toHaveBeenCalled();
   });
 
@@ -159,6 +180,7 @@ describe("getAppContext", () => {
       role: "owner",
       userId: "user-1",
     });
+    expect(dbMock.transaction).toHaveBeenCalledOnce();
     expect(set).toHaveBeenCalledWith(
       expect.objectContaining({
         activeOrganizationId: "org-active",

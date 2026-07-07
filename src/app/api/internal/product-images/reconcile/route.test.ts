@@ -12,7 +12,9 @@ vi.mock("@/lib/env", () => ({
 
 vi.mock("@/db", () => ({
   db: {
+    execute: vi.fn(),
     select: vi.fn(),
+    transaction: vi.fn(),
   },
 }));
 
@@ -33,8 +35,15 @@ vi.mock("@/lib/rate-limit", () => ({
 }));
 
 describe("/api/internal/product-images/reconcile", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+
+    const dbModule = await import("@/db");
+    const mockDb = dbModule.db as unknown as {
+      transaction: ReturnType<typeof vi.fn>;
+    };
+
+    mockDb.transaction.mockImplementation(async (callback) => callback(mockDb));
   });
 
   it("returns 401 when the bearer token is invalid (POST)", async () => {

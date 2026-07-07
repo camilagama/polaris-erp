@@ -2,8 +2,8 @@ import "server-only";
 
 import { and, asc, eq, gte, lte, sql } from "drizzle-orm";
 import { cacheLife, cacheTag } from "next/cache";
-import { db } from "@/db";
 import { productStockEntries, products, saleItems, sales } from "@/db/schema";
+import { type TenantTransaction, withTenantContext } from "@/db/tenant-context";
 import type { CardInstallmentRule } from "@/features/catalog/payment-rules";
 import { findCardInstallmentRule } from "@/features/catalog/payment-rules";
 import { buildSalesAnalytics } from "@/features/sales/analytics";
@@ -59,20 +59,26 @@ export const getSalesDateBounds = async (
   cacheTag(buildOrganizationCacheTags(organizationId).analytics);
   cacheLife("minutes");
 
-  const [salesRows, stockEntriesRows] = await Promise.all([
-    db
-      .select({
-        minOccurredOn: sql<string | null>`min(${sales.occurredOn})`,
-      })
-      .from(sales)
-      .where(eq(sales.organizationId, organizationId)),
-    db
-      .select({
-        minStockedOn: sql<string | null>`min(${productStockEntries.stockedOn})`,
-      })
-      .from(productStockEntries)
-      .where(eq(productStockEntries.organizationId, organizationId)),
-  ]);
+  const [salesRows, stockEntriesRows] = await withTenantContext(
+    organizationId,
+    (tx) =>
+      Promise.all([
+        tx
+          .select({
+            minOccurredOn: sql<string | null>`min(${sales.occurredOn})`,
+          })
+          .from(sales)
+          .where(eq(sales.organizationId, organizationId)),
+        tx
+          .select({
+            minStockedOn: sql<
+              string | null
+            >`min(${productStockEntries.stockedOn})`,
+          })
+          .from(productStockEntries)
+          .where(eq(productStockEntries.organizationId, organizationId)),
+      ])
+  );
   const salesRow = salesRows[0];
   const stockEntriesRow = stockEntriesRows[0];
   const today = formatDateInputValue();
@@ -98,50 +104,54 @@ export const getSalesAnalytics = async ({
   organizationId: string;
   to: string;
 }): Promise<SalesAnalytics> => {
-  const [salesRows, saleItemRows] = await Promise.all([
-    db
-      .select({
-        feeAmount: sales.feeAmount,
-        freightAmount: sales.freightAmount,
-        occurredOn: sales.occurredOn,
-        paymentMethod: sales.paymentMethod,
-        status: sales.status,
-        totalAmount: sales.totalAmount,
-      })
-      .from(sales)
-      .where(
-        and(
-          eq(sales.organizationId, organizationId),
-          gte(sales.occurredOn, from),
-          lte(sales.occurredOn, to)
-        )
-      )
-      .orderBy(asc(sales.occurredOn)),
-    db
-      .select({
-        occurredOn: sales.occurredOn,
-        quantity: saleItems.quantity,
-        status: sales.status,
-        unitCostSnapshot: saleItems.unitCostSnapshot,
-      })
-      .from(saleItems)
-      .innerJoin(
-        sales,
-        and(
-          eq(saleItems.saleId, sales.id),
-          eq(sales.organizationId, organizationId)
-        )
-      )
-      .where(
-        and(
-          eq(saleItems.organizationId, organizationId),
-          eq(sales.organizationId, organizationId),
-          gte(sales.occurredOn, from),
-          lte(sales.occurredOn, to)
-        )
-      )
-      .orderBy(asc(sales.occurredOn), asc(saleItems.createdAt)),
-  ]);
+  const [salesRows, saleItemRows] = await withTenantContext(
+    organizationId,
+    (tx) =>
+      Promise.all([
+        tx
+          .select({
+            feeAmount: sales.feeAmount,
+            freightAmount: sales.freightAmount,
+            occurredOn: sales.occurredOn,
+            paymentMethod: sales.paymentMethod,
+            status: sales.status,
+            totalAmount: sales.totalAmount,
+          })
+          .from(sales)
+          .where(
+            and(
+              eq(sales.organizationId, organizationId),
+              gte(sales.occurredOn, from),
+              lte(sales.occurredOn, to)
+            )
+          )
+          .orderBy(asc(sales.occurredOn)),
+        tx
+          .select({
+            occurredOn: sales.occurredOn,
+            quantity: saleItems.quantity,
+            status: sales.status,
+            unitCostSnapshot: saleItems.unitCostSnapshot,
+          })
+          .from(saleItems)
+          .innerJoin(
+            sales,
+            and(
+              eq(saleItems.saleId, sales.id),
+              eq(sales.organizationId, organizationId)
+            )
+          )
+          .where(
+            and(
+              eq(saleItems.organizationId, organizationId),
+              eq(sales.organizationId, organizationId),
+              gte(sales.occurredOn, from),
+              lte(sales.occurredOn, to)
+            )
+          )
+          .orderBy(asc(sales.occurredOn), asc(saleItems.createdAt)),
+      ])
+  );
 
   return buildSalesAnalytics({
     range: { from, to },
@@ -170,21 +180,23 @@ export const findExistingSaleByIdempotencyKey = async (
     return null;
   }
 
-  const existingSale = await db.query.sales.findFirst({
-    columns: {
-      id: true,
-    },
-    where: and(
-      eq(sales.organizationId, organizationId),
-      eq(sales.idempotencyKey, idempotencyKey)
-    ),
-  });
+  const existingSale = await withTenantContext(organizationId, (tx) =>
+    tx.query.sales.findFirst({
+      columns: {
+        id: true,
+      },
+      where: and(
+        eq(sales.organizationId, organizationId),
+        eq(sales.idempotencyKey, idempotencyKey)
+      ),
+    })
+  );
 
   return existingSale?.id ?? null;
 };
 
 const lockProductsForUpdate = async (
-  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  tx: TenantTransaction,
   organizationId: string,
   productIds: string[]
 ): Promise<LockedProductRow[]> => {
@@ -223,7 +235,7 @@ export const createSale = async ({
   input: CreateSaleInput;
   organizationId: string;
 }): Promise<string> =>
-  db.transaction(async (tx) => {
+  withTenantContext(organizationId, async (tx) => {
     const productIds = input.items
       .map((item) => item.productId)
       .sort((left, right) => left.localeCompare(right));
@@ -376,7 +388,7 @@ export const cancelSale = async ({
   organizationId: string;
   saleId: string;
 }): Promise<void> => {
-  await db.transaction(async (tx) => {
+  await withTenantContext(organizationId, async (tx) => {
     const saleResult = await tx.execute<LockedSaleRow>(sql`
       select
         id,

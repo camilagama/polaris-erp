@@ -10,6 +10,7 @@ import {
   sessions,
   systemSettings,
 } from "@/db/schema";
+import { setTenantContext, setUserContext } from "@/db/tenant-context";
 import {
   type AppPermission,
   canRolePerform,
@@ -61,25 +62,31 @@ const resolveMembership = async ({
   userId: string;
 }) => {
   const db = await getDb();
-  const baseWhere = activeOrganizationId
-    ? and(
-        eq(member.userId, userId),
-        eq(member.organizationId, activeOrganizationId)
-      )
-    : eq(member.userId, userId);
+  const membership = await db.transaction(async (tx) => {
+    await setUserContext(tx, userId);
 
-  const [membership] = await db
-    .select({
-      organizationId: member.organizationId,
-      organizationName: organization.name,
-      organizationStatus: organization.status,
-      role: member.role,
-    })
-    .from(member)
-    .innerJoin(organization, eq(member.organizationId, organization.id))
-    .where(baseWhere)
-    .orderBy(asc(member.createdAt))
-    .limit(1);
+    const baseWhere = activeOrganizationId
+      ? and(
+          eq(member.userId, userId),
+          eq(member.organizationId, activeOrganizationId)
+        )
+      : eq(member.userId, userId);
+
+    const [row] = await tx
+      .select({
+        organizationId: member.organizationId,
+        organizationName: organization.name,
+        organizationStatus: organization.status,
+        role: member.role,
+      })
+      .from(member)
+      .innerJoin(organization, eq(member.organizationId, organization.id))
+      .where(baseWhere)
+      .orderBy(asc(member.createdAt))
+      .limit(1);
+
+    return row;
+  });
 
   return membership;
 };
@@ -197,6 +204,7 @@ export const createInitialOrganizationForUser = async ({
     await tx.execute(
       sql`SELECT pg_advisory_xact_lock(${ONBOARDING_LOCK_NAMESPACE}, hashtext(${userId}))`
     );
+    await setUserContext(tx, userId);
 
     const [existingMembership] = await tx
       .select({
@@ -212,6 +220,8 @@ export const createInitialOrganizationForUser = async ({
     }
 
     const organizationId = crypto.randomUUID();
+    await setTenantContext(tx, organizationId);
+
     const slugBase = resolveDefaultOrganizationSlug(name);
     const slug = `${slugBase}-${organizationId.slice(0, 8)}`;
 

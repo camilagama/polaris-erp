@@ -114,18 +114,33 @@ vi.mock("@/features/products/image-urls", () => ({
   buildProductImageUrl: vi.fn(() => "/image"),
 }));
 
+import { DashboardContent } from "@/app/(app)/_components/dashboard-content";
 import DashboardPage from "@/app/(app)/page";
 
 describe("DashboardPage", () => {
   it("marks lower dashboard sections for deferred rendering and layout containment", async () => {
+    const markup = renderToStaticMarkup(
+      await DashboardContent({
+        organizationId: "org_dg_imports",
+        selectedRange: {
+          from: "2026-03-01",
+          to: "2026-03-31",
+        },
+      })
+    );
+
+    expect(markup).toContain("content-visibility:auto");
+    expect(markup).toContain("contain-intrinsic-size:960px 640px");
+    expect(markup).toContain("contain:layout");
+  });
+
+  it("renders the dashboard shell with a deferred content boundary", async () => {
     const markup = renderToStaticMarkup(
       await DashboardPage({
         searchParams: Promise.resolve({}),
       } as PageProps<"/">)
     );
 
-    expect(markup).toContain("content-visibility:auto");
-    expect(markup).toContain("contain-intrinsic-size:960px 640px");
-    expect(markup).toContain("contain:layout");
+    expect(markup).toContain("DashboardDateRangeFilter");
   });
 });

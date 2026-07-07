@@ -10,7 +10,9 @@ vi.mock("next/cache", () => ({
 
 vi.mock("@/db", () => ({
   db: {
+    execute: vi.fn(),
     select: vi.fn(),
+    transaction: vi.fn(),
   },
 }));
 
@@ -24,14 +26,20 @@ const resolveMocks = async () => {
     mockCacheLife: cache.cacheLife as MockFn,
     mockCacheTag: cache.cacheTag as MockFn,
     mockDb: dbModule.db as unknown as {
+      execute: MockFn;
       select: MockFn;
+      transaction: MockFn;
     },
   };
 };
 
 describe("sales server caching", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+
+    const { mockDb } = await resolveMocks();
+
+    mockDb.transaction.mockImplementation(async (callback) => callback(mockDb));
   });
 
   it("tags and caches sales date bounds with the shared analytics profile", async () => {

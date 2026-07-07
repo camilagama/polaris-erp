@@ -13,7 +13,10 @@ vi.mock("@/db", () => ({
         findFirst: vi.fn(),
       },
     },
+    execute: vi.fn(),
+    insert: vi.fn(),
     select: vi.fn(),
+    transaction: vi.fn(),
     update: vi.fn(),
   },
 }));
@@ -47,7 +50,10 @@ const resolveMocks = async () => {
           findFirst: MockFn;
         };
       };
+      execute: MockFn;
+      insert: MockFn;
       select: MockFn;
+      transaction: MockFn;
       update: MockFn;
     },
     mockGetDashboardMetrics: dashboardServer.getDashboardMetrics as MockFn,
@@ -72,6 +78,7 @@ describe("goals server writes", () => {
 
     const { mockDb, mockGetDashboardMetrics } = await resolveMocks();
 
+    mockDb.transaction.mockImplementation(async (callback) => callback(mockDb));
     mockDb.select.mockReturnValue({
       from: () => ({
         where: async () => [{ value: 0 }],
@@ -82,6 +89,32 @@ describe("goals server writes", () => {
       totalSalesCount: 0,
       totalSold: 50,
     });
+  });
+
+  it("runs active goal update inside tenant database context", async () => {
+    const { updateGoal } = await import("@/features/goals/server");
+    const { mockDb } = await resolveMocks();
+
+    mockDb.query.goals.findFirst.mockResolvedValue(activeGoalRow);
+    mockDb.update.mockReturnValue({
+      set: () => ({
+        where: () => ({
+          returning: () => Promise.resolve([{ id: activeGoalRow.id }]),
+        }),
+      }),
+    });
+
+    await updateGoal("org_dg_imports", {
+      displayMode: "absolute",
+      id: activeGoalRow.id,
+      metric: "profit",
+      name: "Meta atualizada",
+      periodEnd: "2099-12-31",
+      periodStart: "2099-01-01",
+      targetValue: 200,
+    });
+
+    expect(mockDb.transaction).toHaveBeenCalledOnce();
   });
 
   it("does not treat a lost active goal update race as success", async () => {

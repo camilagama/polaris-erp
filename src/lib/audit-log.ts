@@ -1,6 +1,7 @@
 import "server-only";
 
 import { auditEvents } from "@/db/schema";
+import { withTenantContext } from "@/db/tenant-context";
 import type { AppContext } from "@/lib/app-session";
 
 interface RecordAuditEventInput {
@@ -29,16 +30,16 @@ export const recordActorAuditEvent = async ({
   type,
 }: RecordActorAuditEventInput) => {
   try {
-    const { db } = await import("@/db");
-
-    await db.insert(auditEvents).values({
-      actorUserId,
-      metadata,
-      organizationId,
-      subjectId,
-      subjectType,
-      type,
-    });
+    await withTenantContext(organizationId, (tx) =>
+      tx.insert(auditEvents).values({
+        actorUserId,
+        metadata,
+        organizationId,
+        subjectId,
+        subjectType,
+        type,
+      })
+    );
   } catch {
     // Audit logging must never make the domain operation fail.
   }

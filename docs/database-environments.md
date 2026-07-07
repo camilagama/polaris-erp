@@ -1,21 +1,30 @@
-# Ambientes de banco (Neon) e E2E
+# Ambientes de banco Neon, E2E e RLS
 
 ## Objetivo
 
-Evitar que Playwright, desenvolvimento local ou preview escrevam na mesma branch PostgreSQL usada pela operacao real. Dados de teste (`e2e+...@dgimports.local`, categorias `Categoria E2E`, etc.) devem existir apenas em branches dedicadas.
+Separar URLs e roles por finalidade para evitar dois erros de producao:
+
+- Playwright, desenvolvimento local ou preview escreverem na mesma branch PostgreSQL usada pela operacao real.
+- Runtime da aplicacao usar role proprietaria com `BYPASSRLS`, anulando a barreira de tenant.
+
+Dados de teste (`e2e+...@dgimports.local`, categorias `Categoria E2E`, etc.) devem existir apenas em branches dedicadas.
 
 ## Modelo recomendado
 
-| Ambiente        | Neon branch        | `DATABASE_URL`                          |
-|----------------|--------------------|-----------------------------------------|
-| Producao       | `production` (protegida) | Secret na Vercel / producao      |
-| Preview / dev  | `preview` ou `dev` | `.env.local` ou variavel de preview |
-| E2E / CI       | `e2e` ou branch descartavel | `E2E_DATABASE_URL` (obrigatorio em CI) |
+| Finalidade | Neon branch | Secret/env | Role esperada |
+| --- | --- | --- | --- |
+| Runtime producao | `production` protegida | `DATABASE_URL` | Role nao proprietaria sem `BYPASSRLS` (ex.: `polaris_app`) |
+| Migrations | branch alvo da migration | `DATABASE_URL_DIRECT` | Role proprietaria/admin (ex.: `neondb_owner`) |
+| Preview/dev | `preview` ou `dev` | `.env.local` ou env de preview | Role runtime sem `BYPASSRLS` quando RLS estiver habilitado |
+| E2E / CI | `e2e` ou branch descartavel | `E2E_DATABASE_URL` | Role runtime da branch E2E, nunca producao |
+| Smoke RLS manual | ambiente que sera promovido | `RLS_DATABASE_URL` | Mesma classe de role do runtime: sem `BYPASSRLS` |
 
 1. No console Neon, crie uma branch separada para E2E (ex.: `e2e`) a partir de um snapshot aceitavel ou vazio.
-2. Rode migracoes nessa branch: `bun run db:migrate` com `DATABASE_URL` apontando para ela.
-3. Em CI, defina o secret `E2E_DATABASE_URL` com a connection string dessa branch.
-4. Proteja a branch de producao no Neon contra reset acidental.
+2. Rode migracoes nessa branch com `DATABASE_URL_DIRECT` apontando para a role de migration.
+3. Defina o runtime da branch com uma role sem `BYPASSRLS`.
+4. Em CI, defina o secret `E2E_DATABASE_URL` com a connection string dessa branch.
+5. Para validar a branch que sera promovida, defina `RLS_DATABASE_URL` com a connection string runtime do ambiente alvo.
+6. Proteja a branch de producao no Neon contra reset acidental.
 
 ## GitHub Actions
 
@@ -25,19 +34,45 @@ Como o Playwright roda com `CI=true` no GitHub Actions, a ausencia do secret
 `E2E_DATABASE_URL` falha a suite antes de subir o servidor. Isso e intencional:
 nao use banco de producao, preview compartilhado ou `.env.local` para E2E em CI.
 
+O workflow tambem possui o job manual `rls-smoke`. Ele so roda por `workflow_dispatch` e executa `bun run db:smoke:rls` com:
+
+```yaml
+DATABASE_URL: ${{ secrets.RLS_DATABASE_URL }}
+```
+
+Use esse secret para apontar para o ambiente que sera promovido. Nao reutilize `DATABASE_URL_DIRECT`: o smoke deve falhar se a URL usar uma role com `BYPASSRLS`.
+
 ## Playwright
 
 O servidor de teste injeta `DATABASE_URL` a partir de `E2E_DATABASE_URL` quando definido (veja [playwright.config.ts](../playwright.config.ts)). Em `CI=true`, a suite falha se `E2E_DATABASE_URL` nao estiver definido.
 
 Variaveis uteis:
 
-- `E2E_DATABASE_URL` — connection string do banco **somente** para E2E (obrigatorio em CI).
-- `E2E_CRON_SECRET` / `E2E_INTERNAL_BOOTSTRAP_SECRET` — segredos locais ao servidor E2E (opcional; padroes seguros se omitidos).
-- `ALLOW_E2E_SHARED_DATABASE=true` — **nao** use em CI; apenas para desenvolvedor que aceita conscientemente usar o mesmo `DATABASE_URL` do `.env.local` nos E2E (arriscado).
+- `E2E_DATABASE_URL`: connection string do banco somente para E2E (obrigatorio em CI).
+- `RLS_DATABASE_URL`: connection string runtime do ambiente promovido, usada somente no job manual `rls-smoke`.
+- `E2E_CRON_SECRET` / `E2E_INTERNAL_BOOTSTRAP_SECRET`: segredos locais ao servidor E2E (opcional; padroes seguros se omitidos).
+- `ALLOW_E2E_SHARED_DATABASE=true`: nao use em CI; apenas para desenvolvedor que aceita conscientemente usar o mesmo `DATABASE_URL` do `.env.local` nos E2E.
+
+## Smoke RLS
+
+Rode antes de promover um ambiente com RLS:
+
+```bash
+bun run db:smoke:rls
+```
+
+O comando usa `DATABASE_URL`, nao `DATABASE_URL_DIRECT`, e faz rollback das escritas de smoke. Ele valida:
+
+- role atual sem `BYPASSRLS`;
+- policies RLS existentes;
+- 13/13 tabelas tenant-scoped com `ENABLE ROW LEVEL SECURITY` e `FORCE ROW LEVEL SECURITY`;
+- `organization`, `products` e `sales` invisiveis sem contexto tenant;
+- insert tenant-scoped sem contexto negado por RLS;
+- fluxo onboarding-like visivel dentro de transacao com `app.user_id` e `app.organization_id`.
 
 ## Auditoria de dados de teste (somente leitura)
 
-Execute no SQL Editor do Neon **na branch que deseja inspecionar**:
+Execute no SQL Editor do Neon na branch que deseja inspecionar:
 
 ```sql
 -- Usuarios bootstrap/E2E
@@ -54,11 +89,11 @@ from public.products;
 
 ## Limpeza destrutiva (revisar antes de executar)
 
-**Aviso:** apaga linhas de teste com base em padroes conhecidos. Revise em staging, faca backup ou PITR no Neon antes de rodar em qualquer branch compartilhada.
+Aviso: apaga linhas de teste com base em padroes conhecidos. Revise em staging, faca backup ou PITR no Neon antes de rodar em qualquer branch compartilhada.
 
 Ordem sugerida (FKs): `sale_items` -> `sales` -> filhos de produto -> `products` -> `categories` (exceto sistema) -> `users` de teste.
 
-Exemplo de rascunho — **nao** execute em producao sem adaptar e aprovar:
+Exemplo de rascunho; nao execute em producao sem adaptar e aprovar:
 
 ```sql
 begin;

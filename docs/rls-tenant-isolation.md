@@ -14,11 +14,15 @@ Essa decisao substitui o pendente anterior de "RLS ou repository tenant-scoped":
 ## Evidencia atual
 
 - Banco inspecionado em 2026-07-07: `neondb`.
-- Role de conexao atual: `neondb_owner`.
+- Projeto Neon inspecionado via plugin em 2026-07-07: `autumn-feather-14038163` (`polaris-erp`).
+- Branch/compute main observado: `br-empty-frog-acrcn1aj` / `ep-quiet-mode-acv41t95`.
+- Role proprietaria/migration: `neondb_owner`.
+- Role runtime criada em 2026-07-07: `polaris_app`, sem `BYPASSRLS`.
 - PostgreSQL: `18.4`.
-- Policies existentes em `public.pg_policies`: nenhuma.
+- Policies existentes em `public.pg_policies`: 14 apos a migration RLS.
+- Tabelas tenant-scoped com `ENABLE ROW LEVEL SECURITY` e `FORCE ROW LEVEL SECURITY`: 13/13.
 - App usa `pg.Pool` via `drizzle-orm/node-postgres` em `src/db/index.ts`.
-- `DATABASE_URL` local usa endpoint pooler; `DATABASE_URL_DIRECT` existe para migrations.
+- `DATABASE_URL` local foi atualizado para o role runtime `polaris_app`; `DATABASE_URL_DIRECT` permanece para migrations com `neondb_owner`.
 
 ## Docs consultadas
 
@@ -42,6 +46,14 @@ current_setting('app.organization_id', true)
 ```
 
 Se o valor nao existir, a policy deve negar acesso por padrao.
+
+Jobs internos sem tenant unico precisam de contexto proprio e explicito. O reconcile de imagens usa:
+
+```sql
+select set_config('app.internal_job', 'product_image_reconcile', true);
+```
+
+Policies podem permitir apenas as leituras necessarias para esse job quando `current_setting('app.internal_job', true) = 'product_image_reconcile'`. Esse caminho nao deve ser usado para fluxos de usuario.
 
 ## Escopo inicial de RLS
 
@@ -72,14 +84,15 @@ Motivo: login, callback OAuth, criacao de sessao e onboarding pre-tenant precisa
 
 ## FORCE RLS
 
-Como a aplicacao conecta hoje como `neondb_owner`, habilitar RLS sem `FORCE ROW LEVEL SECURITY` pode nao proteger queries feitas pelo dono da tabela.
+Como a aplicacao conectava como `neondb_owner`, habilitar RLS sem separar o runtime ainda deixava uma falha: `neondb_owner` tem `BYPASSRLS=true` no Neon e nao pode ser alterado pela propria conexao da aplicacao.
 
-O corte de producao deve fazer uma destas duas coisas:
+O corte aplicado no Neon main usa duas camadas:
 
-1. Criar uma role runtime nao proprietaria para a aplicacao e manter `neondb_owner` apenas para migrations.
-2. Aplicar `FORCE ROW LEVEL SECURITY` nas tabelas tenant-scoped.
+1. Role runtime nao proprietaria `polaris_app`, sem `BYPASSRLS`, para `DATABASE_URL`.
+2. `neondb_owner` preservado para `DATABASE_URL_DIRECT` e migrations.
+3. `FORCE ROW LEVEL SECURITY` nas tabelas tenant-scoped.
 
-Para MVP, a opcao recomendada e `FORCE ROW LEVEL SECURITY` mais wrapper transacional. A criacao de role runtime fica como hardening posterior, porque exige troca coordenada de secrets em Vercel/Neon.
+Tentativa direta de `ALTER ROLE neondb_owner NOBYPASSRLS` falhou com `permission denied to alter role`; por isso a separacao de role runtime deixou de ser hardening posterior e virou requisito de producao.
 
 ## Sequencia segura
 
@@ -88,13 +101,15 @@ Para MVP, a opcao recomendada e `FORCE ROW LEVEL SECURITY` mais wrapper transaci
 3. Migrar reads/writes tenant-scoped para usarem o helper ou receberem `tx` ja tenant-scoped.
 4. Criar migration com `ENABLE ROW LEVEL SECURITY`, policies e `FORCE ROW LEVEL SECURITY`.
 5. Testar a migration em branch Neon temporaria.
-6. Rodar smoke contra branch isolada:
+6. Aplicar no Neon main somente junto do runtime RLS-aware.
+7. Criar/trocar `DATABASE_URL` para uma role runtime sem `BYPASSRLS`.
+8. Rodar smoke contra branch isolada/main:
    - login/onboarding sem tenant ainda funciona;
    - tenant A nao le tenant B;
    - inserts/updates sem `app.organization_id` falham;
    - inserts/updates com tenant errado falham;
    - fluxos produto, estoque, venda, cancelamento e imagem funcionam com tenant correto.
-7. Aplicar em producao somente depois de E2E com `E2E_DATABASE_URL` isolado.
+9. Rodar E2E com `E2E_DATABASE_URL` isolado antes de declarar producao aberta.
 
 ## Criterio de aceite
 
@@ -114,4 +129,42 @@ Para MVP, a opcao recomendada e `FORCE ROW LEVEL SECURITY` mais wrapper transaci
 
 ## Status
 
-Decisao tomada. Implementacao ainda pendente.
+Decisao tomada. Implementacao em andamento.
+
+Concluido:
+
+- Helper transacional `withTenantContext`/`setTenantContext` em `src/db/tenant-context.ts`.
+- Teste TDD do helper validando `set_config('app.organization_id', ..., true)`.
+- Catalogo em `src/features/catalog/server.ts` executando leituras e escritas tenant-scoped dentro do contexto transacional.
+- Dashboard em `src/features/dashboard/server.ts` executando consultas analiticas tenant-scoped dentro do contexto transacional.
+- Metas em `src/features/goals/server.ts` executando leituras, transicoes automaticas e writes dentro do contexto transacional.
+- Produtos em `src/features/products/server.ts` executando analytics, historico de vendas, create/update/estoque/baixa/archive dentro do contexto transacional.
+- Vendas em `src/features/sales/server.ts` executando bounds, analytics, idempotency lookup, create/cancel dentro do contexto transacional.
+- Products/sales queries e image access executando dentro de contexto transacional.
+- Reconcile de imagens executando query global via contexto interno `product_image_reconcile`.
+- Scan de runtime em `src/features` sem import direto de `@/db`.
+- `src/lib/app-session.ts` usando `app.user_id` para resolver membership pre-tenant e `app.organization_id` no onboarding antes de inserir dados tenant-scoped.
+- `src/lib/audit-log.ts` gravando eventos dentro de contexto tenant.
+- Migration `src/db/migrations/20260707205000_rls_tenant_isolation.sql` criada com `ENABLE ROW LEVEL SECURITY`, `FORCE ROW LEVEL SECURITY` e policies para as tabelas tenant-scoped.
+- Teste estatico `src/db/rls-tenant-isolation.test.ts` cobre tabelas, `FORCE RLS`, `app.organization_id` e contexto interno de reconcile.
+- Verificacao local apos trocar `DATABASE_URL` para `polaris_app`: `bun run check`, `bun run test` (74 arquivos, 265 testes), `bun run knip` e `bun run build`.
+- Migration RLS aplicada no Neon main do projeto `autumn-feather-14038163`.
+- Role runtime `polaris_app` criada no banco `neondb` sem `BYPASSRLS` e com DML no schema `public`.
+- `.env.local` teve `DATABASE_URL` atualizado para o role runtime; `DATABASE_URL_DIRECT` continua para migrations.
+- Smoke direto no Neon main:
+  - `polaris_app.current_user_bypassrls = false`;
+  - sem contexto: `organization = 0`, `products = 0`, `sales = 0`;
+  - com `app.organization_id`/`app.user_id` em transacao: `organization = 1`, `member = 1`.
+- Smoke de escrita em rollback com `polaris_app`:
+  - insert em `organization` sem contexto foi negado por policy RLS;
+  - fluxo onboarding-like com `users`, `organization`, `member`, `categories`, `system_settings` e `audit_events` funcionou com contexto transacional.
+- Smoke reexecutavel `bun run db:smoke:rls` criado em `scripts/smoke-rls-runtime.cjs`; resultado local contra Neon main: `rls-runtime-smoke-ok`, `policies = 14`, `forcedTables = 13/13`, `currentUser = polaris_app`.
+- Revalidacao final local contra `polaris_app`: `bun run check` (276 arquivos), `bun run test` (75 arquivos, 270 testes), `bun run db:smoke:rls`, `bun run knip` e `bun run build` passaram.
+- MCP Neon/plugin ainda nao esta operacional nesta sessao: tentativa de buscar `autumn-feather-14038163` retornou 401 `token_invalidated`. A evidencia de banco desta fatia vem do smoke direto via `DATABASE_URL`.
+
+Ainda pendente antes de producao:
+
+- Atualizar o `DATABASE_URL` do ambiente de deploy para usar `polaris_app`; manter `DATABASE_URL_DIRECT`/migrations com `neondb_owner`.
+- Coordenar deploy desta versao RLS-aware e rodar `bun run db:smoke:rls` contra o ambiente promovido. Aplicar/usar RLS antes do runtime com `set_config` quebra reads/writes tenant-scoped.
+- Rodar smoke pos-migration para login, onboarding, dashboard, produtos, vendas, imagens e reconcile.
+- Rodar E2E com `E2E_DATABASE_URL` isolado.
