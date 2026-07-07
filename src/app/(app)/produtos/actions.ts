@@ -22,6 +22,7 @@ import {
   stockWriteOffSchema,
   updateProductSchema,
 } from "@/features/products/schema";
+import { setProductArchivedState } from "@/features/products/server";
 import {
   applyStockAddition,
   applyStockWriteOff,
@@ -504,18 +505,13 @@ export async function writeOffProductStockAction(
 export async function archiveProductAction(id: string) {
   const context = await requireAppContext("products:write");
 
-  const archivedProducts = await db
-    .update(products)
-    .set({ archivedAt: new Date(), updatedAt: new Date() })
-    .where(
-      and(
-        eq(products.id, id),
-        eq(products.organizationId, context.organizationId)
-      )
-    )
-    .returning({ id: products.id });
+  const archived = await setProductArchivedState({
+    archived: true,
+    organizationId: context.organizationId,
+    productId: id,
+  });
 
-  if (archivedProducts.length === 0) {
+  if (!archived) {
     throw new Error("Produto nao encontrado.");
   }
 
@@ -531,18 +527,13 @@ export async function archiveProductAction(id: string) {
 export async function unarchiveProductAction(id: string) {
   const context = await requireAppContext("products:write");
 
-  const unarchivedProducts = await db
-    .update(products)
-    .set({ archivedAt: null, updatedAt: new Date() })
-    .where(
-      and(
-        eq(products.id, id),
-        eq(products.organizationId, context.organizationId)
-      )
-    )
-    .returning({ id: products.id });
+  const unarchived = await setProductArchivedState({
+    archived: false,
+    organizationId: context.organizationId,
+    productId: id,
+  });
 
-  if (unarchivedProducts.length === 0) {
+  if (!unarchived) {
     throw new Error("Produto nao encontrado.");
   }
 

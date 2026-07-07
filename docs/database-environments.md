@@ -20,7 +20,7 @@ Evitar que Playwright, desenvolvimento local ou preview escrevam na mesma branch
 ## GitHub Actions
 
 O workflow `.github/workflows/ci.yml` possui um job `e2e` separado do `verify`.
-Ele executa `bun run test:e2e` depois de `check`, Vitest e build passarem.
+Ele executa `bun run test:e2e` depois de `check`, Vitest, `knip` e build passarem.
 Como o Playwright roda com `CI=true` no GitHub Actions, a ausencia do secret
 `E2E_DATABASE_URL` falha a suite antes de subir o servidor. Isso e intencional:
 nao use banco de producao, preview compartilhado ou `.env.local` para E2E em CI.

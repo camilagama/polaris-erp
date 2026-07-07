@@ -35,9 +35,13 @@ describe("POST /api/product-images/presign", () => {
 
   it("returns 429 with Retry-After when the upload rate limit is exceeded", async () => {
     const { requireAppContext } = await import("@/lib/app-session");
+    const auditLog = await import("@/lib/audit-log");
     const { auth } = await import("@/lib/auth");
     const { checkRateLimit } = await import("@/lib/rate-limit");
     const { POST } = await import("@/app/api/product-images/presign/route");
+    const imageStorageModule = await import(
+      "@/features/products/image-storage"
+    );
 
     vi.mocked(auth.api.getSession).mockResolvedValue({
       user: {
@@ -77,6 +81,11 @@ describe("POST /api/product-images/presign", () => {
     });
     expect(response.status).toBe(429);
     expect(response.headers.get("retry-after")).toBe("45");
+    expect(requireAppContext).not.toHaveBeenCalled();
+    expect(
+      imageStorageModule.createPresignedProductImageUpload
+    ).not.toHaveBeenCalled();
+    expect(auditLog.recordAuditEvent).not.toHaveBeenCalled();
   });
 
   it("returns 401 when the request has no authenticated session", async () => {
@@ -99,6 +108,7 @@ describe("POST /api/product-images/presign", () => {
   });
 
   it("returns 400 when the payload is invalid", async () => {
+    const { requireAppContext } = await import("@/lib/app-session");
     const { auth } = await import("@/lib/auth");
     const { checkRateLimit } = await import("@/lib/rate-limit");
     const { POST } = await import("@/app/api/product-images/presign/route");
@@ -125,6 +135,7 @@ describe("POST /api/product-images/presign", () => {
     );
 
     expect(response.status).toBe(400);
+    expect(requireAppContext).not.toHaveBeenCalled();
   });
 
   it("returns the signed upload contract for valid requests", async () => {

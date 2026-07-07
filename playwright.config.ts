@@ -1,4 +1,5 @@
 import { defineConfig } from "@playwright/test";
+import { validateE2eDatabaseEnv } from "./src/lib/playwright-env";
 import {
   E2E_DEFAULT_CRON_SECRET,
   E2E_DEFAULT_INTERNAL_BOOTSTRAP_SECRET,
@@ -8,11 +9,7 @@ const isCi = process.env.CI === "true";
 const e2eDatabaseUrl = process.env.E2E_DATABASE_URL;
 const allowSharedDb = process.env.ALLOW_E2E_SHARED_DATABASE === "true";
 
-if (isCi && !e2eDatabaseUrl) {
-  throw new Error(
-    "CI exige E2E_DATABASE_URL apontando para uma branch Neon dedicada (nao use o banco de producao). Veja docs/database-environments.md."
-  );
-}
+validateE2eDatabaseEnv(process.env);
 
 if (!(e2eDatabaseUrl || allowSharedDb || isCi)) {
   // eslint-disable-next-line no-console -- aviso operacional para dev local

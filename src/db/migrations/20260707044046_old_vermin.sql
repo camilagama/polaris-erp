@@ -1,0 +1,3 @@
+CREATE INDEX "products_active_list_idx" ON "products" USING btree ("organization_id","name","created_at","id") WHERE archived_at IS NULL;--> statement-breakpoint
+CREATE INDEX "products_archived_list_idx" ON "products" USING btree ("organization_id","name","created_at","id") WHERE archived_at IS NOT NULL;--> statement-breakpoint
+CREATE INDEX "sales_organization_occurred_on_created_at_id_idx" ON "sales" USING btree ("organization_id","occurred_on","created_at","id");

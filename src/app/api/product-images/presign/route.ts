@@ -23,8 +23,6 @@ export async function POST(request: Request) {
     );
   }
 
-  const context = await requireAppContext("products:write");
-
   const ipRateLimit = await checkRateLimit({
     key: getRateLimitKeyFromRequest(request, "product-image-presign"),
     limit: 60,
@@ -66,6 +64,8 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   }
+
+  const context = await requireAppContext("products:write");
 
   try {
     const objectKey = createStagingObjectKey(

@@ -4,6 +4,7 @@
 - 2026-07-06: PR 2 avancou em atores tenant-scoped. `audit_events.actor_user_id`, `product_price_changes.changed_by_user_id` e `goals.created_by_user_id` agora ganham FKs compostas contra `member(organization_id,user_id)` com pre-check de dados legados.
 - 2026-07-06: PR 2 fechou mais uma borda futura de tenant: `invitation.inviter_id` tambem ganha FK composta contra `member(organization_id,user_id)` com pre-check.
 - 2026-07-06: PR 2 adicionou prova tenant A/B em product actions: arquivar/desarquivar produto agora falha quando nenhum produto do tenant atual e alterado, sem auditar nem revalidar.
+- 2026-07-07: PR 2 avancou em camada tenant-scoped: arquivar/desarquivar produto agora delega a mutation para dominio (`setProductArchivedState`) e a action tem guardrail estrutural.
 - 2026-07-06: PR 2 ampliou prova tenant A/B em imagens de produto: remover imagem agora diferencia produto inexistente/outro tenant de produto existente sem imagem.
 - 2026-07-06: PR 2 avancou em configuracoes/catalogo: update/delete de categoria agora confirmam linha afetada com `returning()` e actions nao auditam/revalidam quando o dominio rejeita categoria inexistente/outro tenant.
 - 2026-07-06: PR 2 avancou em metas: update/archive/unarchive agora confirmam linha afetada com `returning()` e actions nao auditam/refresham quando o dominio rejeita meta inexistente/outro tenant.
@@ -13,17 +14,36 @@
 - 2026-07-06: PR 2/R2 avancou em remocao de imagem: remocao agora confirma update condicional por `imageVersion` antes de apagar o objeto R2, evitando sucesso falso em corrida com replace.
 - 2026-07-06: PR 2/R2 avancou em corrida de replace: troca de imagem agora checa `returning()` do update condicional, remove a nova versao se perder a corrida e nao apaga a versao antiga.
 - 2026-07-06: PR 2/R2 avancou em reconcile: objetos de imagem recem-enviados agora sao preservados por janela minima antes de limpeza de orfaos.
+- 2026-07-07: PR 2/R2 avancou em camada tenant-scoped: reconcile de imagens agora delega consulta de chaves esperadas para dominio e tem guardrail contra import direto de `db` no handler.
 - 2026-07-06: PR 7 iniciado parcialmente. Concluidos nesta fatia: `SEC-001` (bootstrap bloqueado em qualquer `NODE_ENV=production`) e `SEC-002` (secrets internos fracos rejeitados em producao).
 - 2026-07-06: PR 7 avancou em health checks: `/api/health` agora verifica banco com resposta sanitizada e retorna 503 quando a checagem falha.
 - 2026-07-06: PR 7 avancou em observabilidade: Sentry agora usa sampling configuravel para tracing/replay, ativa replay em erro no client e remove log ruidoso de startup.
 - 2026-07-06: PR 7 avancou em docs de deploy: `docs/deploy-vercel.md` agora cobre envs obrigatorias, sampling Sentry, health checks, cron, build com env de Production e smoke checklist.
 - 2026-07-06: PR 7 avancou em guardrails de producao: `CRON_SECRET` agora e obrigatorio em `VERCEL_ENV=production`, sem quebrar build local, alem de rejeitar secrets internos fracos.
+- 2026-07-07: PR 7 reforcou guardrail de env: Vercel Preview continua aceito sem `CRON_SECRET`, enquanto Vercel Production exige o segredo.
 - 2026-07-06: PR 7 avancou em resiliencia de rate limit: falha transitoria do Upstash agora cai para limiter local em vez de derrubar login/upload, com teste direto em `src/lib/rate-limit.test.ts`.
 - 2026-07-06: PR 7 avancou em chaves de rate limit: headers de IP invalidos agora sao ignorados antes de montar o bucket, reduzindo spoof trivial por valor arbitrario.
 - 2026-07-06: PR 7 avancou em respostas de rate limit: login Google, presign de imagens e reconcile interno agora retornam `Retry-After` nos 429.
 - 2026-07-06: PR 7 avancou em endpoints internos: health do R2 agora tambem tem rate limit com `Retry-After` antes de consultar o bucket.
 - 2026-07-06: PR 7 avancou em headers de seguranca: `next.config.ts` agora aplica HSTS, nosniff, frame policy, referrer policy e permissions policy globais.
 - 2026-07-06: PR 7 avancou em bootstrap interno: mesmo em development/test, `/api/auth/dev/bootstrap-session` agora tem rate limit com `Retry-After` antes de validar bearer.
+- 2026-07-07: PR 7 avancou em templates/runbook: `.env.example` agora lista `VERCEL_ENV`, `ALLOW_PLAYWRIGHT_BOOTSTRAP` e envs de sampling/replay do Sentry; deploy docs mencionam headers globais.
+- 2026-07-07: PR 7 reforcou prova de headers: `next.config.ts` agora exporta `baseNextConfig` e `src/lib/next-config-security.test.ts` valida que o baseline global esta ligado no config.
+- 2026-07-07: Resumo executivo alinhado ao estado atual: achados DB/R2/metas/estoque agora distinguem corrigido localmente de pendente externo (Neon/Vercel/R2/E2E).
+- 2026-07-07: PR 5/CI avancou: job `verify` agora tambem roda `bun run knip` antes do build; docs de CI foram alinhados para check/test/knip/build + E2E isolado.
+- 2026-07-07: PR 5/CI reforcou guardrail de Playwright: validacao de `E2E_DATABASE_URL` em CI foi extraida e coberta por teste unitario.
+- 2026-07-07: Resumo executivo alinhado em riscos financeiros: estoque arquivado, idempotency, taxa de cartao e R2 agora constam como mitigados localmente, com validacao externa pendente.
+- 2026-07-07: PR 3 reforcou prova de idempotency: teste agora valida que a migration preserva o indice unico parcial apenas para `idempotency_key IS NOT NULL`.
+- 2026-07-07: PR 3 avancou em camada tenant-scoped: lookup de venda por idempotency key saiu da action e agora fica no dominio de vendas.
+- 2026-07-07: PR 2 ampliou prova tenant A/B em vendas: cancelamento de venda de outro tenant falha antes de estornar estoque, auditar ou revalidar.
+- 2026-07-07: PR 2 reforcou rota de presign de imagem: rate limit e payload invalido agora retornam antes de resolver contexto, gerar presign ou auditar.
+- 2026-07-07: PR 7 reforcou bootstrap interno: bearer invalido agora tem prova explicita de que nao toca adapter de usuario nem cria sessao.
+- 2026-07-07: PR 2 corrigiu auditoria pre-tenant: login sem organizacao ativa nao grava mais evento em `org_dg_imports`; login com organizacao ativa continua auditado no tenant correto.
+- 2026-07-07: PR 2 reforcou rota autenticada de leitura de imagem: usuario sem membership na organizacao da URL recebe 404 antes de storage ou auditoria.
+- 2026-07-07: PR 2 avancou em camada tenant-scoped: rota autenticada de leitura de imagem agora delega checagem de produto/org/membership para dominio e tem guardrail contra import direto de `db` no handler.
+- 2026-07-07: PR 2 reforcou contexto de app: organizacao inativa retorna contexto nulo e nao reescreve a organizacao ativa da sessao.
+- 2026-07-07: PR 4/Perf avancou em indices de listagem: produtos ativos/arquivados e vendas agora tem indices cobrindo paginacao seek por organizacao.
+- 2026-07-07: PR 6 teve documentacao reconciliada com o codigo: modal de taxas ja usa rascunho local com cancelar/aplicar; pendencia restante e E2E/smoke.
 - 2026-07-06: PR 3 iniciado. `STOCK-001` corrigido: entrada de estoque em produto arquivado agora limpa `archivedAt` e reativa o produto.
 - 2026-07-06: PR 3 avancou em `DB-002`: banco agora rejeita venda de cartao com `payment_fee_payer = not_applicable`, com migration e precheck de dados legados.
 - 2026-07-06: PR 3 avancou em `GOAL-001`: banco agora limita a uma meta ativa por organizacao com indice unico parcial e precheck de dados legados.
@@ -35,6 +55,7 @@
 - 2026-07-06: PR 6 iniciado em UX critica: botoes "carregar mais" de produtos e vendas agora exibem toast de erro e liberam o estado de loading quando a paginacao falha.
 - 2026-07-06: PR 6 avancou em taxas de cartao: modal de parcelas agora edita rascunho local, permite cancelar sem persistir no estado principal e exige "Aplicar taxas" antes do "Salvar cartao".
 - 2026-07-06: PR 6 avancou em acessibilidade: buscas de produtos/vendas e filtro de status de vendas agora tem nomes acessiveis explicitos.
+- 2026-07-07: PR 6 avancou em onboarding: validacao invalida agora retorna erro recuperavel, o formulario anuncia a falha com `aria-live` e desabilita controles durante pending.
 - 2026-07-06: PR 5 iniciado em CI/E2E: GitHub Actions agora tem job `e2e` com Playwright, dependente de `E2E_DATABASE_URL` em secret para impedir uso acidental de banco compartilhado.
 - 2026-07-06: PR 9 iniciado em produto pos-MVP: `docs/roadmap.md` criado com ordem para convites, billing, exportacao, admin/suporte, LGPD e relatorios sem misturar com hardening.
 - Pendencias antes de declarar PR 2 completo: ampliar provas tenant A vs tenant B para outros actions/route handlers, decisao/implementacao de RLS ou repository tenant-scoped, e dry-run das migrations em branch Neon isolada.
@@ -115,7 +136,7 @@ Achados endereçados:
 - `STOCK-001`: entrada de estoque não reativa produto arquivado.
 - `DB-002`: DB permite `card + not_applicable`.
 - `GOAL-001`: uma meta ativa só por regra de aplicação.
-- risco de venda duplicada sem idempotency key, se decidir incluir.
+- risco de venda duplicada por retry/duplo submit sem idempotency key.
 
 Arquivos prováveis:
 - `src/app/(app)/produtos/actions.ts`
@@ -137,6 +158,15 @@ Testes exigidos:
 Critério de aceite:
 - estoque, venda e meta têm invariantes no banco ou em lock/transação.
 - testes de domínio passam.
+
+Status local:
+- estoque em produto arquivado reativa o produto.
+- taxa de cartão inválida é bloqueada também por constraint.
+- meta ativa por organização tem índice parcial único.
+- venda com mesma idempotency key retorna a venda vencedora em retry concorrente.
+
+Pendente externo:
+- dry-run/aplicação das migrations em banco Neon isolado.
 
 Ordem: depois de PR 2.
 
@@ -228,6 +258,14 @@ Critério de aceite:
 - errors/loading/empty states são claros.
 - controles têm nomes acessíveis.
 - ações destrutivas pedem confirmação.
+
+Status local:
+- modal de taxas usa rascunho local com cancelar/aplicar antes do save.
+- paginação de produtos/vendas exibe erro e libera loading.
+- onboarding retorna erro recuperável de validação e mostra pending no formulário.
+
+Pendente externo:
+- E2E/smoke para taxas, onboarding e paginação com banco isolado.
 
 Ordem: depois de PR 5 para ter E2E protegendo regressão.
 

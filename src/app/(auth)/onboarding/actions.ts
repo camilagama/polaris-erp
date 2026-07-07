@@ -12,7 +12,18 @@ const onboardingSchema = z.object({
   organizationName: z.string().trim().min(2, "Informe o nome da organizacao."),
 });
 
-export async function completeOnboardingAction(formData: FormData) {
+export interface OnboardingActionState {
+  error: string | null;
+}
+
+export const initialOnboardingActionState: OnboardingActionState = {
+  error: null,
+};
+
+export async function completeOnboardingAction(
+  _state: OnboardingActionState,
+  formData: FormData
+): Promise<OnboardingActionState> {
   const session = await requireSession();
   const existingContext = await getAppContext();
 
@@ -25,7 +36,9 @@ export async function completeOnboardingAction(formData: FormData) {
   });
 
   if (!parsed.success) {
-    throw new Error("Informe um nome valido para a organizacao.");
+    return {
+      error: "Informe um nome valido para a organizacao.",
+    };
   }
 
   await createInitialOrganizationForUser({

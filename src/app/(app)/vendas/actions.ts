@@ -11,6 +11,7 @@ import {
   calculateSaleFinancials,
 } from "@/features/sales/calculations";
 import { createSaleSchema } from "@/features/sales/schema";
+import { findExistingSaleByIdempotencyKey } from "@/features/sales/server";
 import { requireAppContext } from "@/lib/app-session";
 import { recordAuditEvent } from "@/lib/audit-log";
 import { buildOrganizationCacheTags } from "@/lib/cache-tags";
@@ -55,27 +56,6 @@ const isIdempotencyConflict = (error: unknown): boolean => {
   }
 
   return isIdempotencyConflict(error.cause);
-};
-
-const findExistingSaleByIdempotencyKey = async (
-  organizationId: string,
-  idempotencyKey: string | undefined
-): Promise<string | null> => {
-  if (!idempotencyKey) {
-    return null;
-  }
-
-  const existingSale = await db.query.sales.findFirst({
-    columns: {
-      id: true,
-    },
-    where: and(
-      eq(sales.organizationId, organizationId),
-      eq(sales.idempotencyKey, idempotencyKey)
-    ),
-  });
-
-  return existingSale?.id ?? null;
 };
 
 const lockProductsForUpdate = async (

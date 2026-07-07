@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { buildOrganizationCacheTags } from "@/lib/cache-tags";
 
@@ -833,5 +835,14 @@ describe("product server actions", () => {
     expect(mockUpdateTag).not.toHaveBeenCalled();
     expect(mockRefresh).not.toHaveBeenCalled();
     expect(mockRecordAuditEvent).not.toHaveBeenCalled();
+  });
+
+  it("delegates product archive state writes to the product domain", () => {
+    const source = readFileSync(
+      join(import.meta.dirname, "actions.ts"),
+      "utf8"
+    );
+
+    expect(source).toContain("setProductArchivedState");
   });
 });

@@ -1,6 +1,4 @@
-import { and, eq } from "drizzle-orm";
-import { db } from "@/db";
-import { member, organization, products } from "@/db/schema";
+import { canReadProductImage } from "@/features/products/image-access";
 import { readPublicProductImageVariant } from "@/features/products/image-storage";
 import { recordActorAuditEvent } from "@/lib/audit-log";
 import { auth } from "@/lib/auth";
@@ -33,38 +31,14 @@ export async function GET(
     return new Response("Not Found", { status: 404 });
   }
 
-  const [product, membership, activeOrganization] = await Promise.all([
-    db.query.products.findFirst({
-      columns: {
-        id: true,
-      },
-      where: and(
-        eq(products.id, productId),
-        eq(products.organizationId, organizationId),
-        eq(products.imageVersion, parsedVersion)
-      ),
-    }),
-    db.query.member.findFirst({
-      columns: {
-        id: true,
-      },
-      where: and(
-        eq(member.organizationId, organizationId),
-        eq(member.userId, session.user.id)
-      ),
-    }),
-    db.query.organization.findFirst({
-      columns: {
-        id: true,
-      },
-      where: and(
-        eq(organization.id, organizationId),
-        eq(organization.status, "active")
-      ),
-    }),
-  ]);
+  const canReadImage = await canReadProductImage({
+    organizationId,
+    productId,
+    userId: session.user.id,
+    version: parsedVersion,
+  });
 
-  if (!(product && membership && activeOrganization)) {
+  if (!canReadImage) {
     return new Response("Not Found", { status: 404 });
   }
 

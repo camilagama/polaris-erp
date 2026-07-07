@@ -121,3 +121,24 @@ export const getSalesAnalytics = async ({
     })),
   });
 };
+
+export const findExistingSaleByIdempotencyKey = async (
+  organizationId: string,
+  idempotencyKey: string | undefined
+): Promise<string | null> => {
+  if (!idempotencyKey) {
+    return null;
+  }
+
+  const existingSale = await db.query.sales.findFirst({
+    columns: {
+      id: true,
+    },
+    where: and(
+      eq(sales.organizationId, organizationId),
+      eq(sales.idempotencyKey, idempotencyKey)
+    ),
+  });
+
+  return existingSale?.id ?? null;
+};

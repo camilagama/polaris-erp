@@ -17,7 +17,7 @@ import {
   users,
   verifications,
 } from "@/db/schema";
-import { recordActorAuditEvent } from "@/lib/audit-log";
+import { recordAuthLoginAuditEvent } from "@/lib/auth-audit";
 import { serverEnv } from "@/lib/env";
 
 const googleClientId = serverEnv.GOOGLE_CLIENT_ID;
@@ -117,8 +117,6 @@ const authPlugins = [
   nextCookies(),
 ];
 
-const DEFAULT_ORGANIZATION_ID = "org_dg_imports";
-
 interface AuthHookContext {
   body?: unknown;
   path?: string;
@@ -129,31 +127,6 @@ interface AuthSessionHookPayload {
   id?: string;
   userId?: string;
 }
-
-const recordAuthAuditEvent = async ({
-  actorUserId,
-  metadata,
-  organizationId,
-  subjectId,
-  subjectType,
-  type,
-}: {
-  actorUserId?: string | null;
-  metadata?: Record<string, unknown>;
-  organizationId?: string | null;
-  subjectId?: string | null;
-  subjectType: string;
-  type: string;
-}) => {
-  await recordActorAuditEvent({
-    actorUserId,
-    metadata,
-    organizationId: organizationId ?? DEFAULT_ORGANIZATION_ID,
-    subjectId,
-    subjectType,
-    type,
-  });
-};
 
 export const auth = betterAuth({
   secret: serverEnv.BETTER_AUTH_SECRET,
@@ -181,22 +154,7 @@ export const auth = betterAuth({
           session: AuthSessionHookPayload,
           context: AuthHookContext | null
         ) => {
-          await recordAuthAuditEvent({
-            actorUserId: session.userId,
-            metadata: {
-              path: context?.path ?? null,
-              provider: context?.body
-                ? (context.body as { provider?: unknown }).provider
-                : null,
-            },
-            organizationId:
-              typeof session.activeOrganizationId === "string"
-                ? session.activeOrganizationId
-                : null,
-            subjectId: session.id,
-            subjectType: "session",
-            type: "auth.login",
-          });
+          await recordAuthLoginAuditEvent({ context, session });
         },
       },
     },

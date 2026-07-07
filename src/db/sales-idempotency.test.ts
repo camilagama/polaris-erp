@@ -23,5 +23,6 @@ describe("sales idempotency database invariant", () => {
     expect(migrations).toContain(
       'CREATE UNIQUE INDEX "sales_organization_idempotency_key_unique_idx"'
     );
+    expect(migrations).toContain("WHERE idempotency_key IS NOT NULL");
   });
 });

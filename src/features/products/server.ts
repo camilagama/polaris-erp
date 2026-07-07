@@ -139,3 +139,29 @@ export const getProductSalesHistoryMetrics = async (
     })),
   });
 };
+
+export const setProductArchivedState = async ({
+  archived,
+  organizationId,
+  productId,
+}: {
+  archived: boolean;
+  organizationId: string;
+  productId: string;
+}): Promise<boolean> => {
+  const updatedProducts = await db
+    .update(products)
+    .set({
+      archivedAt: archived ? new Date() : null,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(products.id, productId),
+        eq(products.organizationId, organizationId)
+      )
+    )
+    .returning({ id: products.id });
+
+  return updatedProducts.length > 0;
+};

@@ -158,6 +158,9 @@ describe("POST /api/auth/dev/bootstrap-session", () => {
     );
 
     expect(response.status).toBe(401);
+    expect(authContext.internalAdapter.findUserByEmail).not.toHaveBeenCalled();
+    expect(authContext.internalAdapter.createUser).not.toHaveBeenCalled();
+    expect(authContext.internalAdapter.createSession).not.toHaveBeenCalled();
   });
 
   it("returns 503 when the bootstrap secret is not configured", async () => {

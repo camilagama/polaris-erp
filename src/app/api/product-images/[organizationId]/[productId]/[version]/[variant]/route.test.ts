@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
@@ -264,6 +266,7 @@ describe("GET /api/product-images/[organizationId]/[productId]/[version]/[varian
 
   it("returns 404 for an inactive organization without reading storage", async () => {
     const { auth } = await import("@/lib/auth");
+    const auditLog = await import("@/lib/audit-log");
     const imageStorage = await import("@/features/products/image-storage");
     const { GET } = await import("./route");
     const { mockFindOrganization } = await resolveMocks();
@@ -289,5 +292,44 @@ describe("GET /api/product-images/[organizationId]/[productId]/[version]/[varian
 
     expect(response.status).toBe(404);
     expect(imageStorage.readPublicProductImageVariant).not.toHaveBeenCalled();
+    expect(auditLog.recordActorAuditEvent).not.toHaveBeenCalled();
+  });
+
+  it("returns 404 for an organization the user is not a member of without reading storage", async () => {
+    const { auth } = await import("@/lib/auth");
+    const auditLog = await import("@/lib/audit-log");
+    const imageStorage = await import("@/features/products/image-storage");
+    const { GET } = await import("./route");
+    const { mockFindMember } = await resolveMocks();
+
+    vi.mocked(auth.api.getSession).mockResolvedValue({
+      user: { id: "user-1" },
+    } as never);
+    mockFindMember.mockResolvedValue(null);
+
+    const response = await GET(
+      new Request(
+        "http://localhost/api/product-images/org_from_other_tenant/p1/1/detail"
+      ),
+      {
+        params: Promise.resolve({
+          organizationId: "org_from_other_tenant",
+          productId: "p1",
+          variant: "detail",
+          version: "1",
+        }),
+      }
+    );
+
+    expect(response.status).toBe(404);
+    expect(imageStorage.readPublicProductImageVariant).not.toHaveBeenCalled();
+    expect(auditLog.recordActorAuditEvent).not.toHaveBeenCalled();
+  });
+
+  it("keeps tenant authorization queries outside the route handler", () => {
+    const source = readFileSync(join(import.meta.dirname, "route.ts"), "utf8");
+
+    expect(source).not.toContain('from "@/db"');
+    expect(source).not.toContain('from "@/db/schema"');
   });
 });

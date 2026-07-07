@@ -366,6 +366,12 @@ export const products = pgTable(
       foreignColumns: [categories.organizationId, categories.id],
       name: "products_organization_category_fk",
     }),
+    index("products_active_list_idx")
+      .on(table.organizationId, table.name, table.createdAt, table.id)
+      .where(sql`archived_at IS NULL`),
+    index("products_archived_list_idx")
+      .on(table.organizationId, table.name, table.createdAt, table.id)
+      .where(sql`archived_at IS NOT NULL`),
     index("products_active_name_idx")
       .on(table.name)
       .where(sql`archived_at IS NULL`),
@@ -614,6 +620,12 @@ export const sales = pgTable(
       table.organizationId,
       table.occurredOn,
       table.createdAt
+    ),
+    index("sales_organization_occurred_on_created_at_id_idx").on(
+      table.organizationId,
+      table.occurredOn,
+      table.createdAt,
+      table.id
     ),
     uniqueIndex("sales_organization_id_unique_idx").on(
       table.organizationId,

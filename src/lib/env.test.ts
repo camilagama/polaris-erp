@@ -83,4 +83,19 @@ describe("serverEnv", () => {
       }),
     });
   });
+
+  it("allows Vercel preview builds without cron secret", async () => {
+    stubRequiredEnv({
+      CRON_SECRET: undefined,
+      NODE_ENV: "production",
+      VERCEL_ENV: "preview",
+    });
+
+    await expect(import("@/lib/env")).resolves.toMatchObject({
+      serverEnv: expect.objectContaining({
+        CRON_SECRET: undefined,
+        VERCEL_ENV: "preview",
+      }),
+    });
+  });
 });

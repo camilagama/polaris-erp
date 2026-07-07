@@ -25,6 +25,9 @@ jobs:
       - name: Unit tests
         run: bun run test
 
+      - name: Dependency and export hygiene
+        run: bun run knip
+
       - name: Production build
         run: bun run build
         env:

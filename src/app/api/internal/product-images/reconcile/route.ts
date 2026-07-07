@@ -1,8 +1,6 @@
-import { db } from "@/db";
-import { products } from "@/db/schema";
+import { listReferencedProductImageKeys } from "@/features/products/image-access";
 import {
   deleteManyProductImageKeys,
-  getExpectedProductImageKeys,
   listAllStoredProductImageObjects,
 } from "@/features/products/image-storage";
 import { serverEnv } from "@/lib/env";
@@ -47,28 +45,10 @@ async function reconcile(request: Request): Promise<Response> {
   }
 
   try {
-    const [storedObjects, productRows] = await Promise.all([
+    const [storedObjects, expectedKeys] = await Promise.all([
       listAllStoredProductImageObjects(),
-      db
-        .select({
-          id: products.id,
-          imageVersion: products.imageVersion,
-          organizationId: products.organizationId,
-        })
-        .from(products),
+      listReferencedProductImageKeys(),
     ]);
-
-    const expectedKeys = new Set(
-      productRows.flatMap((product) =>
-        product.imageVersion === null
-          ? []
-          : getExpectedProductImageKeys(
-              product.organizationId,
-              product.id,
-              product.imageVersion
-            )
-      )
-    );
 
     const now = new Date();
     const orphanedObjects = storedObjects.filter(

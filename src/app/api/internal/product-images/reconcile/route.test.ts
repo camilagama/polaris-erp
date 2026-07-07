@@ -1,4 +1,8 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("server-only", () => ({}));
 
 vi.mock("@/lib/env", () => ({
   serverEnv: {
@@ -200,5 +204,12 @@ describe("/api/internal/product-images/reconcile", () => {
     );
     expect(payload.deletedCount).toBe(0);
     expect(payload.skippedRecentCount).toBe(1);
+  });
+
+  it("keeps product image reference queries outside the route handler", () => {
+    const source = readFileSync(join(import.meta.dirname, "route.ts"), "utf8");
+
+    expect(source).not.toContain('from "@/db"');
+    expect(source).not.toContain('from "@/db/schema"');
   });
 });

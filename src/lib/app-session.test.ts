@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createInitialOrganizationForUser } from "@/lib/app-session";
+import {
+  createInitialOrganizationForUser,
+  getAppContext,
+} from "@/lib/app-session";
 
-const { dbMock, txMock } = vi.hoisted(() => {
+const { dbMock, sessionMock, txMock } = vi.hoisted(() => {
   const txMock = {
     execute: vi.fn(),
     insert: vi.fn(),
@@ -9,10 +12,16 @@ const { dbMock, txMock } = vi.hoisted(() => {
   };
 
   const dbMock = {
+    select: vi.fn(),
     transaction: vi.fn(async (callback) => callback(txMock)),
+    update: vi.fn(),
   };
 
-  return { dbMock, txMock };
+  const sessionMock = {
+    getSession: vi.fn(),
+  };
+
+  return { dbMock, sessionMock, txMock };
 });
 
 vi.mock("server-only", () => ({}));
@@ -25,6 +34,10 @@ vi.mock("@/db", () => ({
   db: dbMock,
 }));
 
+vi.mock("@/lib/session", () => ({
+  getSession: sessionMock.getSession,
+}));
+
 const selectMembershipOnce = (organizationId: string) => {
   txMock.select.mockReturnValueOnce({
     from: vi.fn().mockReturnValue({
@@ -34,6 +47,55 @@ const selectMembershipOnce = (organizationId: string) => {
         }),
       }),
     }),
+  });
+};
+
+const selectAppContextMembershipOnce = (
+  membership: {
+    organizationId: string;
+    organizationName: string;
+    organizationStatus: string;
+    role: string;
+  } | null
+) => {
+  dbMock.select.mockReturnValueOnce({
+    from: vi.fn().mockReturnValue({
+      innerJoin: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          orderBy: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue(membership ? [membership] : []),
+          }),
+        }),
+      }),
+    }),
+  });
+};
+
+const mockUpdateSession = () => {
+  const where = vi.fn().mockResolvedValue([]);
+  const set = vi.fn().mockReturnValue({ where });
+  dbMock.update.mockReturnValueOnce({ set });
+
+  return { set, where };
+};
+
+const mockSession = ({
+  activeOrganizationId = null,
+  sessionId = "session-1",
+  userId = "user-1",
+}: {
+  activeOrganizationId?: string | null;
+  sessionId?: string;
+  userId?: string;
+} = {}) => {
+  sessionMock.getSession.mockResolvedValue({
+    session: {
+      activeOrganizationId,
+      id: sessionId,
+    },
+    user: {
+      id: userId,
+    },
   });
 };
 
@@ -55,6 +117,52 @@ describe("createInitialOrganizationForUser", () => {
     expect(txMock.execute).toHaveBeenCalledTimes(1);
     expect(txMock.execute.mock.invocationCallOrder[0]).toBeLessThan(
       txMock.select.mock.invocationCallOrder[0]
+    );
+  });
+});
+
+describe("getAppContext", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns null for inactive organizations without updating the active session organization", async () => {
+    mockSession({ activeOrganizationId: "org-inactive" });
+    selectAppContextMembershipOnce({
+      organizationId: "org-inactive",
+      organizationName: "Polaris Pausado",
+      organizationStatus: "inactive",
+      role: "owner",
+    });
+
+    const context = await getAppContext();
+
+    expect(context).toBeNull();
+    expect(dbMock.update).not.toHaveBeenCalled();
+  });
+
+  it("updates the session active organization when resolving the first active membership", async () => {
+    mockSession();
+    selectAppContextMembershipOnce({
+      organizationId: "org-active",
+      organizationName: "Polaris",
+      organizationStatus: "active",
+      role: "owner",
+    });
+    const { set } = mockUpdateSession();
+
+    const context = await getAppContext();
+
+    expect(context).toEqual({
+      organizationId: "org-active",
+      organizationName: "Polaris",
+      role: "owner",
+      userId: "user-1",
+    });
+    expect(set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        activeOrganizationId: "org-active",
+      })
     );
   });
 });

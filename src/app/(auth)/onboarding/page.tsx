@@ -1,12 +1,9 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { DGImportsLogo } from "@/components/ui/svgs/logo";
 import { getAppContext } from "@/lib/app-session";
 import { getSession } from "@/lib/session";
-import { completeOnboardingAction } from "./actions";
+import { OnboardingForm } from "./onboarding-form";
 
 export const metadata: Metadata = {
   title: "Onboarding | Polaris",
@@ -45,24 +42,7 @@ export default async function OnboardingPage() {
           </p>
         </div>
 
-        <form action={completeOnboardingAction} className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="organizationName">Nome da organizacao</Label>
-            <Input
-              autoComplete="organization"
-              defaultValue={defaultOrganizationName}
-              id="organizationName"
-              minLength={2}
-              name="organizationName"
-              placeholder="Minha loja"
-              required
-            />
-          </div>
-
-          <Button className="h-11 w-full" type="submit">
-            Comecar
-          </Button>
-        </form>
+        <OnboardingForm defaultOrganizationName={defaultOrganizationName} />
       </div>
     </main>
   );

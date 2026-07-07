@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { buildOrganizationCacheTags } from "@/lib/cache-tags";
 
@@ -207,6 +209,7 @@ const createCancelSaleHarness = (params: {
   loseSaleStatusUpdate?: boolean;
   loseStockUpdate?: boolean;
   productsState: ProductState[];
+  saleFound?: boolean;
   saleStatus?: "cancelled" | "completed";
 }): CancelSaleHarness => {
   const productById = new Map(
@@ -226,12 +229,15 @@ const createCancelSaleHarness = (params: {
 
         if (executeCallCount === 1) {
           return Promise.resolve({
-            rows: [
-              {
-                id: "sale-1",
-                status: state.saleStatus,
-              },
-            ],
+            rows:
+              params.saleFound === false
+                ? []
+                : [
+                    {
+                      id: "sale-1",
+                      status: state.saleStatus,
+                    },
+                  ],
           });
         }
 
@@ -831,6 +837,44 @@ describe("sales server actions", () => {
     expect(mockRefresh).toHaveBeenCalled();
   });
 
+  it("does not audit or revalidate when cancellation targets another tenant", async () => {
+    const { cancelSaleAction } = await import("@/app/(app)/vendas/actions");
+    const { mockDb, mockRecordAuditEvent, mockRefresh, mockUpdateTag } =
+      await resolveMocks();
+
+    const harness = createCancelSaleHarness({
+      items: [
+        {
+          productId: "product-1",
+          quantity: 2,
+        },
+      ],
+      saleFound: false,
+      productsState: [
+        {
+          archivedAt: null,
+          costPrice: 50,
+          id: "product-1",
+          name: "Produto 1",
+          price: 90,
+          stock: 3,
+        },
+      ],
+    });
+
+    mockDb.transaction.mockImplementation(harness.transaction as never);
+
+    await expect(cancelSaleAction("sale-from-other-tenant")).rejects.toThrow(
+      "Venda nao encontrada."
+    );
+
+    expect(harness.productById.get("product-1")?.stock).toBe(3);
+    expect(harness.state.saleStatus).toBe("completed");
+    expect(mockUpdateTag).not.toHaveBeenCalled();
+    expect(mockRefresh).not.toHaveBeenCalled();
+    expect(mockRecordAuditEvent).not.toHaveBeenCalled();
+  });
+
   it("does not audit or revalidate when cancellation stock restore is lost", async () => {
     const { cancelSaleAction } = await import("@/app/(app)/vendas/actions");
     const { mockDb, mockRecordAuditEvent, mockRefresh, mockUpdateTag } =
@@ -904,5 +948,16 @@ describe("sales server actions", () => {
     expect(mockUpdateTag).not.toHaveBeenCalled();
     expect(mockRefresh).not.toHaveBeenCalled();
     expect(mockRecordAuditEvent).not.toHaveBeenCalled();
+  });
+
+  it("delegates idempotency lookup to the sales domain", () => {
+    const source = readFileSync(
+      join(import.meta.dirname, "actions.ts"),
+      "utf8"
+    );
+
+    expect(source).toContain("findExistingSaleByIdempotencyKey");
+    expect(source).toContain('from "@/features/sales/server"');
+    expect(source).not.toContain("const findExistingSaleByIdempotencyKey");
   });
 });

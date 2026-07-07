@@ -21,6 +21,7 @@ Configure em Production e replique/adapte para Preview:
 | `BETTER_AUTH_SECRET` | Segredo forte do Better Auth; em producao precisa ter pelo menos 32 caracteres. |
 | `BETTER_AUTH_URL` | URL canonica do app, sem barra final. |
 | `BETTER_AUTH_API_KEY` | Chave do Better Auth Infrastructure para Dashboard e Sentinel. |
+| `VERCEL_ENV` | Definido pela Vercel. Em `production`, ativa guardrails extras como exigencia de `CRON_SECRET`. |
 | `NEXT_PUBLIC_APP_URL` | Mesma origem publica usada pelo navegador. |
 | `GOOGLE_CLIENT_ID` | OAuth Google server-side. |
 | `GOOGLE_CLIENT_SECRET` | OAuth Google server-side. |
@@ -46,6 +47,8 @@ Configure em Production e replique/adapte para Preview:
 Em producao, sem Upstash configurado o rate limit falha fechado para endpoints sensiveis.
 
 Valores invalidos de sampling do Sentry sao ignorados pelo app e caem nos padroes seguros.
+
+O baseline de headers globais e aplicado por `next.config.ts`: HSTS, `nosniff`, frame policy, referrer policy e permissions policy. CSP completa deve ser validada separadamente para nao quebrar Next/Sentry.
 
 ## Guardrails de producao
 
@@ -166,6 +169,8 @@ O workflow `.github/workflows/ci.yml` roda:
 
 - `bun run check`
 - `bun run test`
+- `bun run knip`
 - `bun run build`
+- `bun run test:e2e` no job `e2e`, dependente de `E2E_DATABASE_URL`
 
-Antes de promover producao, rode tambem `bun run knip` e E2E com `E2E_DATABASE_URL` isolado.
+Antes de promover producao, confira se o secret `E2E_DATABASE_URL` aponta para uma branch Neon isolada.

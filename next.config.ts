@@ -72,7 +72,7 @@ const imageRemotePatterns = (() => {
   }
 })();
 
-const nextConfig: NextConfig = {
+export const baseNextConfig: NextConfig = {
   ...(process.env.VERCEL_ENV
     ? { env: { NEXT_PUBLIC_VERCEL_ENV: process.env.VERCEL_ENV } }
     : {}),
@@ -98,7 +98,7 @@ const sentryCanUpload =
   Boolean(process.env.SENTRY_ORG) &&
   Boolean(process.env.SENTRY_PROJECT);
 
-export default withSentryConfig(nextConfig, {
+export default withSentryConfig(baseNextConfig, {
   authToken: process.env.SENTRY_AUTH_TOKEN,
   org: process.env.SENTRY_ORG,
   project: process.env.SENTRY_PROJECT,
