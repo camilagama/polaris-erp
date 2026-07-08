@@ -128,12 +128,17 @@ Status de execucao em 2026-07-08:
 - PR 3/DB: migrations aditivas criticas foram aplicadas no endpoint runtime/main via `DATABASE_URL_DIRECT`; a role runtime `polaris_app` agora valida `sales.idempotency_key`, `sales_organization_idempotency_key_unique_idx` e `sessions_id_unique_idx`.
 - PR 5/E2E: `bun run test:e2e` agora executa preflight `scripts/check-e2e-db-schema.ts` antes do Playwright e falha cedo se o branch E2E voltar a ficar com schema atrasado.
 - PR 5/E2E: branch E2E foi alinhado via Neon MCP; preflight de schema passou e `bun run test:e2e` validou 9/9 fluxos Playwright.
+- PR 4/Perf: criado `bun run db:analyze:listings`, read-only, para validar `EXPLAIN ANALYZE` das listagens de produtos/vendas com contexto RLS e dataset representativo.
+- PR 4/Perf: smoke do script com tenant inexistente passou via `polaris_app`, `runtimeRoleBypassRls=false`, resultado `listing-plan-analysis-ok` e checks `skipped-small-dataset` por falta de volume representativo.
+- PR 4/Perf: `db:analyze:listings` ficou como diagnostico opcional local/ops; nao e gate de `prod:preflight` nem exige secret no GitHub Actions.
+- PR 7/deploy: `bun run deploy:smoke` agora valida health HTTP, `/sign-in` 200, redirect Google OAuth para `accounts.google.com`, bootstrap interno 403 e health R2 quando `CRON_SECRET` existir; GitHub Actions ganhou job manual `deployment-smoke`.
+- PR 7/deploy: `prod:preflight` agora exige `DEPLOYMENT_SMOKE_URL` em Vercel Production e valida que a origem do smoke bate com `NEXT_PUBLIC_APP_URL`, sem alias de `CRON_SECRET` nem tenant de performance obrigatorio.
 - PR 9: roadmap pos-MVP criado em `docs/roadmap.md`, separando convites, billing, exportacao, admin/suporte, LGPD e relatorios do hardening inicial.
 - Ainda nao declarar producao pronta: PR 2/3/5/7 seguem com pendencias relevantes.
 
 Veredito: **quase pronto para piloto controlado, não recomendado para produção self-serve aberta ainda**.
 
-Maturidade estimada: **81/100**. Confiança: **média-alta**. Limites: RLS e migrations aditivas criticas foram aplicadas/validadas no endpoint runtime/main e no branch E2E; ainda falta smoke no deploy promovido, envs Vercel reais, R2/Upstash reais e validacao de migrations financeiras restantes em ambiente promovido.
+Maturidade estimada: **81/100**. Confiança: **média-alta**. Limites: RLS e migrations aditivas criticas foram aplicadas/validadas no endpoint runtime/main e no branch E2E; ainda falta smoke no deploy promovido, envs Vercel reais, R2/Upstash reais, `production-preflight`/`rls-smoke` com secrets reais e medição de planos/listagens com dataset representativo.
 
 Forças reais:
 - Multi-tenancy aplicado na maioria das queries e mutations via `organizationId`.
@@ -162,17 +167,21 @@ Arquitetura:
 - Proxy Next 16 em `proxy.ts`, como barreira otimista.
 
 Verificações:
-- `bun run check` => passou, 282 arquivos.
-- `bun run test` => passou, 76 arquivos, 280 testes; timeout anterior em `src/features/sales/actions.test.ts` nao reproduziu no teste isolado nem no rerun completo.
+- `bun run check` => passou, 285 arquivos.
+- `bun run test` => passou, 78 arquivos, 288 testes; timeout anterior em `src/features/sales/actions.test.ts` nao reproduziu no teste isolado nem no rerun completo.
 - `bun run build` => passou; alerta de SSL `pg-connection-string` fica coberto pelo `prod:preflight`, que exige `sslmode=verify-full` nas URLs de producao.
 - `bun run knip` => passou.
 - Gates finais da fatia `prod:preflight` reexecutados: `bun run test` (76 arquivos, 280 testes), `bun run build`, `bun run knip` e `bun run check` passaram.
 - `bun run db:smoke:rls` => passou contra `polaris_app`: `rls-runtime-smoke-ok`, 14 policies, 13/13 tabelas com RLS+FORCE; warning SSL local permanece por `.env.local`.
-- `bun run test src/lib/production-preflight.test.ts` => passou, 4 testes cobrindo wiring seguro, `sslmode=verify-full`, envs externos obrigatorios e falhas de configuracao de producao.
-- `bun run test src/lib/ci-workflow.test.ts` => passou, cobrindo jobs manuais `rls-smoke` e `production-preflight`.
+- `bun run test src/lib/production-preflight.test.ts` => passou, 7 testes cobrindo wiring seguro, `sslmode=verify-full`, `DEPLOYMENT_SMOKE_URL`, alias de cron para smoke, envs externos obrigatorios e falhas de configuracao de producao.
 - Neon MCP/plugin => voltou a conectar para o projeto `autumn-feather-14038163`; runtime/main tambem foi validado diretamente via `DATABASE_URL`/`DATABASE_URL_DIRECT`.
 - `bun x playwright test tests/e2e/shell.e2e.ts` => passou, 4/4, com `E2E_DATABASE_URL` isolado.
 - `bun run test:e2e` => passou, 9/9 testes, apos preflight `scripts/check-e2e-db-schema.ts`; branch E2E `br-flat-cherry-acbnuhz4` foi alinhado via Neon MCP. Warnings locais: SSL `pg-connection-string` por `.env.local` e Sentinel/Better Auth default identify ingestion.
+- `bun run test src/lib/postgres-plan.test.ts` => passou, cobrindo coleta de indices em `EXPLAIN JSON` para o script `db:analyze:listings`.
+- `bun run test src/lib/deployment-smoke.test.ts src/lib/ci-workflow.test.ts` => passou, cobrindo smoke HTTP, `/sign-in`, redirect Google OAuth, health R2 opcional e jobs manuais `rls-smoke`, `production-preflight` e `deployment-smoke`.
+- `PERFORMANCE_ORGANIZATION_ID=org_nonexistent_plan_smoke bun run db:analyze:listings` => passou; retornou `listing-plan-analysis-ok`, role `polaris_app`, `runtimeRoleBypassRls=false`, indices esperados nos planos e `skipped-small-dataset` para contagens zeradas.
+- `bun run deploy:smoke` sem `DEPLOYMENT_SMOKE_URL` => falha limpa com `DEPLOYMENT_SMOKE_URL ausente.`; execução real depende de URL publica do deploy.
+- `bun run knip` => passou apos adicionar o script de analise de planos.
 - `CI=true bun run test:e2e` sem `E2E_DATABASE_URL` => falha intencionalmente no load do config para impedir banco compartilhado.
 
 **3. Achados Priorizados**
@@ -215,9 +224,9 @@ Teste: replace simultâneo e replace vs reconcile.
 
 `GOAL-001` P2, Metas  
 Evidência: `MAX_ACTIVE_GOALS = 1`; [schema.ts](</c:/Users/Junior/Documents/0 - Dev/Hub Imports/src/db/schema.ts:697>) agora declara `goals_one_active_per_organization_idx`; [goals-active-unique.test.ts](</c:/Users/Junior/Documents/0 - Dev/Hub Imports/src/db/goals-active-unique.test.ts:1>) cobre o índice.  
-Status: Corrigido localmente; pendente dry-run/aplicacao em branch Neon isolada.  
-Impacto residual: duas metas ativas podem existir se migration nao for aplicada ou se houver legado duplicado.  
-Correção: aplicar precheck/migration e manter tratamento de erro de constraint.  
+Status: Corrigido localmente e confirmado no Neon main via MCP/read-only; pendente smoke no deploy promovido.  
+Impacto residual: duas metas ativas podem voltar apenas se outro ambiente estiver com schema atrasado ou houver drift futuro.  
+Correção: manter constraint e tratamento de erro de constraint; validar schema/smoke no ambiente promovido antes de liberar produção.  
 Teste: `Promise.allSettled` de duas criações.
 
 `STOCK-001` P2, Estoque  
@@ -229,9 +238,9 @@ Teste: entrada em arquivado volta para vendas.
 
 `DB-002` P2, Integridade  
 Evidência: [schema.ts](</c:/Users/Junior/Documents/0 - Dev/Hub Imports/src/db/schema.ts:591>) declara `sales_card_fee_payer_required`; [20260706144236_oval_scorpion.sql](</c:/Users/Junior/Documents/0 - Dev/Hub Imports/src/db/migrations/20260706144236_oval_scorpion.sql:1>) tem precheck de legado e constraint; [sales-payment-invariants.test.ts](</c:/Users/Junior/Documents/0 - Dev/Hub Imports/src/db/sales-payment-invariants.test.ts:15>) cobre a invariante.  
-Status: Corrigido localmente; pendente dry-run/aplicacao em branch Neon isolada.  
-Impacto residual: import/manual SQL ainda pode quebrar metricas se a migration nao for aplicada no banco real.  
-Correção: aplicar e validar a constraint DB exigindo `seller|customer` para cartão.  
+Status: Corrigido localmente e confirmado no Neon main via MCP/read-only; pendente smoke no deploy promovido.  
+Impacto residual: import/manual SQL ainda pode quebrar métricas se outro ambiente estiver sem a constraint ou houver drift de schema.  
+Correção: manter a constraint DB exigindo `seller|customer` para cartão e validar schema/smoke no ambiente promovido.  
 Teste: migration rejeita estado inválido.
 
 `SEC-002` P2, Secrets  
@@ -242,11 +251,11 @@ Correção: `CRON_SECRET` obrigatório em `VERCEL_ENV=production`; secrets inter
 Teste: env production rejeita segredo curto; Vercel Production rejeita ausencia de `CRON_SECRET`; build local sem `VERCEL_ENV` continua aceito.
 
 `PERF-001` P2, Listagens  
-Evidência: [schema.ts](</c:/Users/Junior/Documents/0 - Dev/Hub Imports/src/db/schema.ts:360>) declara índices de paginação para produtos ativos/arquivados e vendas; [listing-indexes.test.ts](</c:/Users/Junior/Documents/0 - Dev/Hub Imports/src/db/listing-indexes.test.ts:1>) cobre schema/migration.  
-Status: Corrigido localmente; pendente aplicar migration e medir com dataset real.  
+Evidência: [schema.ts](</c:/Users/Junior/Documents/0 - Dev/Hub Imports/src/db/schema.ts:360>) declara índices de paginação para produtos ativos/arquivados e vendas; [listing-indexes.test.ts](</c:/Users/Junior/Documents/0 - Dev/Hub Imports/src/db/listing-indexes.test.ts:1>) cobre schema/migration; [analyze-listing-plans.ts](</c:/Users/Junior/Documents/0 - Dev/Hub Imports/scripts/analyze-listing-plans.ts:1>) mede `EXPLAIN ANALYZE` das listagens reais.  
+Status: Corrigido localmente e índices confirmados no Neon main via MCP/read-only; pendente rodar `bun run db:analyze:listings` com dataset representativo.  
 Impacto residual: planos podem divergir em volume real sem `EXPLAIN ANALYZE` pós-migration.  
-Correção: aplicar migration de índices e validar planos em branch Neon isolada.  
-Teste: teste de schema/migration local e `EXPLAIN ANALYZE` com dataset multi-tenant.
+Correção: manter índices e validar planos com `PERFORMANCE_ORGANIZATION_ID=... bun run db:analyze:listings` em dataset multi-tenant representativo.  
+Teste: teste de schema/migration local, `src/lib/postgres-plan.test.ts` e `db:analyze:listings` com dataset multi-tenant.
 
 `UX-001` P2, Taxas de cartão e ações destrutivas  
 Evidência: [catalog-settings-panel.tsx](</c:/Users/Junior/Documents/0 - Dev/Hub Imports/src/components/settings/catalog-settings-panel.tsx:136>) abre o modal de taxas com rascunho local, cancela descartando o rascunho e aplica antes do save explícito; a exclusão de categoria customizada passa por confirmação antes da action destrutiva. [catalog-settings-panel.test.ts](</c:/Users/Junior/Documents/0 - Dev/Hub Imports/src/components/settings/catalog-settings-panel.test.ts:109>) cobre cancelar/aplicar taxas e confirmar exclusão de categoria.  
@@ -272,20 +281,20 @@ Correção: manter preflight e recriar/aplicar migrations no branch E2E sempre q
 - R2 upload/serve: Parcial. Boa autorização e corridas principais corrigidas localmente; falta validar R2 real/preview. P1.
 - Rate limit: Parcial. Upstash tem fallback local em falha transitoria, descarta IPs invalidos e retorna `Retry-After`; ainda falta validar limites reais e headers confiaveis no deploy. P3.
 - Security headers: Parcial. Baseline global aplicado; CSP completa ainda exige validacao separada para nao quebrar Next/Sentry. P3.
-- Catálogo/estoque/vendas: Parcial. Núcleo bom; reativação por entrada e idempotency crítica foram validadas localmente/E2E, mas constraints financeiras e smoke real ainda precisam ser confirmados no ambiente promovido. P2.
+- Catálogo/estoque/vendas: Parcial. Núcleo bom; reativação por entrada, idempotency e constraints financeiras foram validadas localmente/E2E e confirmadas no Neon main, mas ainda falta smoke real no deploy promovido. P2.
 - Cancelamento/estorno: OK no fluxo normal. Usa lock e estorna estoque.
-- Metas: Parcial. Regra de 1 ativa tem constraint local; falta aplicar/validar migration em Neon isolado. P2.
+- Metas: Parcial. Regra de 1 ativa tem constraint local e confirmada no Neon main; falta smoke no deploy promovido. P2.
 - Logs/Sentry: Parcial. Errors, tracing e replay em erro configurados; alertas ainda precisam ser definidos na plataforma. P3.
 - Backups/rollback: Parcial. Docs existem; execução não verificada. P2.
 - Tests unit/integration: OK razoável. 280 testes passando no ultimo run registrado.
 - E2E: OK localmente com banco isolado atualizado; pendente CI/preview com secrets reais. P2.
-- CI/CD: Parcial. CI roda check/test/knip/build, job E2E isolado e job manual `rls-smoke`; ainda depende dos secrets reais `E2E_DATABASE_URL` e `RLS_DATABASE_URL`. P2.
+- CI/CD: Parcial. CI roda check/test/knip/build, job E2E isolado e jobs manuais `rls-smoke`, `production-preflight` e `deployment-smoke`; ainda depende dos secrets reais `E2E_DATABASE_URL`, `RLS_DATABASE_URL` e `DEPLOYMENT_SMOKE_URL`. P2.
 - LGPD/privacidade/suporte/admin/billing: Ausente/parcial. P2/P3.
 
 **5. Domínio Revenda**
 Implementado aceitável: produtos, categorias simples, custo médio, estoque atual, entradas, baixas, venda multi-item, taxa cartão vendedor/cliente, cancelamento com estorno, metas básicas, imagens R2.
 
-Implementado localmente, pendente de validação externa: reposição de produto arquivado reativando produto e consistência DB para cartão.
+Implementado localmente, pendente de validação externa: reposição de produto arquivado reativando produto, consistência DB para cartão no deploy promovido e smoke real de vendas/metas/taxas.
 
 Parcial: relatórios, auditoria operacional consultável, exportação, métricas avançadas, conciliação financeira.
 
@@ -299,25 +308,25 @@ Ausente/pós-MVP: billing, planos, suporte/admin, importação CSV, recebimentos
 - Baixa sem venda: fluxo existe por baixa operacional, OK.
 - Cancelamento inconsistente: mitigado por lock e status.
 - Estorno inconsistente: risco se produto removido fisicamente via DB.
-- Taxa errada: modal e constraint DB foram corrigidos localmente; falta migration/smoke real.
-- Lucro/margem errado: risco residual se dados legados ou migrations financeiras nao forem validados.
+- Taxa errada: modal e constraint DB foram corrigidos localmente e confirmados no Neon main; falta smoke real no deploy promovido.
+- Lucro/margem errado: risco residual passa a ser drift de schema/ambiente promovido ou dados legados fora do main validado.
 - Vazamento entre orgs: sem IDOR confirmado; RLS bloqueia acesso sem contexto no role runtime e passou `db:smoke:rls`, mas ainda falta configurar env de deploy e rodar job manual/smoke funcional/E2E.
 - Imagem perdida/órfã: corridas principais foram corrigidas localmente; falta validar R2 real.
 - Auditoria pre-tenant: corrigida localmente; login sem organizacao ativa nao gera auditoria falsa em tenant padrao.
 
 **7. Roadmap Recomendado**
 Antes de produção:
-1. Validar migrations restantes de constraints financeiras, metas, indices de listagem e FKs tenant-scoped em branch Neon/promovido; `sessions.id`, idempotency e RLS ja foram aplicados e validados no runtime/main/E2E.
+1. Acionar `production-preflight`, `rls-smoke`, E2E CI/preview e smoke funcional no deploy promovido; objetos críticos de sessão, idempotency, constraints financeiras, metas, listagem e RLS já foram confirmados no Neon main.
 2. Rodar smoke em Vercel Production para confirmar bootstrap 403 em prod-like e envs fortes.
 3. Validar limites reais do Upstash e headers confiáveis na borda.
 4. Rodar Playwright com Neon branch isolada.
 5. Validar flows críticos no preview: auth, onboarding, produto, estoque, venda, cancelamento, imagem e health checks.
 
 Estabilizar MVP:
-- Validar índices de paginação com `EXPLAIN ANALYZE` em dataset real.
+- Validar índices de paginação com `bun run db:analyze:listings` em dataset real.
 - Validar reativação de arquivado em entrada de estoque no preview.
 - Validar modal de taxas com E2E.
-- Aplicar/validar constraints financeiras em Neon isolado.
+- Rodar smoke funcional de vendas/metas/taxas no deploy promovido com banco runtime.
 - Validar onboarding e paginacao com E2E/smoke.
 
 Pós-MVP:
@@ -330,7 +339,7 @@ Pós-MVP:
 
 **8. Plano de Correção**
 Fase 0, P0/P1:
-- Validar migrations restantes de FKs tenant-scoped, constraints financeiras, metas e indices de listagem em branch Neon/promovido; `sessions.id` e idempotency ja foram aplicados no runtime/main/E2E.
+- Confirmar schema do deploy promovido com `production-preflight`, `rls-smoke` e smoke funcional; objetos críticos já foram confirmados no Neon main.
 - Rodar `vercel env run -e production -- bun run prod:preflight` com envs reais.
 - Acionar job manual `production-preflight` no GitHub Actions com secrets reais antes de promover.
 - Rodar `vercel env run -e production -- bun run build` com envs reais.
@@ -339,14 +348,14 @@ Aceite: migrations aplicam sem dados legados conflitantes; build Production pass
 
 Fase 1, tenant/dados:
 - Manter advisory lock de onboarding e testar concorrencia contra banco real.
-- Aplicar unique partial para `goals active` em branch Neon isolada.
+- Validar fluxo de metas no deploy promovido contra a constraint `goals active` já confirmada no Neon main.
 - Concluir operacionalizacao de RLS no deploy: `DATABASE_URL`/`RLS_DATABASE_URL` com role sem `BYPASSRLS`, job manual `rls-smoke`, smoke funcional e E2E isolado.
 Aceite: testes concorrentes e migrations provam uma org/meta em banco real.
 
 Fase 2, estoque/venda/R2:
 - Validar em preview: entrada em produto arquivado limpa `archivedAt`.
 - Validar em preview/R2 real: replace com row count/rollback e reconcile com idade minima.
-- Aplicar DB check `card` exige pagador em branch Neon isolada.
+- Validar fluxo de cartão no deploy promovido contra a constraint DB já confirmada no Neon main.
 Aceite: testes locais continuam verdes e smoke preview cobre domínio/R2 real.
 
 Fase 3, UX:

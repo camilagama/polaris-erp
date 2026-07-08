@@ -48,6 +48,7 @@ O workflow tambem possui o job manual `production-preflight`, que executa `bun r
 - `PRODUCTION_DATABASE_URL`: mesma classe da `DATABASE_URL` de runtime em producao, com role sem `BYPASSRLS` e `sslmode=verify-full`.
 - `PRODUCTION_DATABASE_URL_DIRECT`: URL de migration/admin, separada do runtime e com `sslmode=verify-full`.
 - `PRODUCTION_BETTER_AUTH_URL` e `PRODUCTION_NEXT_PUBLIC_APP_URL`: origem canonica de producao; as duas devem ter a mesma origem.
+- `DEPLOYMENT_SMOKE_URL`: URL publica que sera validada por `deploy:smoke`; deve ter a mesma origem de `PRODUCTION_NEXT_PUBLIC_APP_URL`.
 - `E2E_DATABASE_URL` e `RLS_DATABASE_URL`: branches/roles isoladas conforme descrito acima, ambas com role runtime sem `BYPASSRLS`.
 - `BETTER_AUTH_SECRET` e `CRON_SECRET`: secrets fortes, com pelo menos 32 caracteres.
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` e `NEXT_PUBLIC_GOOGLE_CLIENT_ID`.
@@ -55,6 +56,15 @@ O workflow tambem possui o job manual `production-preflight`, que executa `bun r
 - `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_STAGING` e `R2_BUCKET_PUBLIC`.
 
 O preflight valida wiring de secrets e separacao de URLs. `E2E_DATABASE_URL` deve ser diferente tanto de `PRODUCTION_DATABASE_URL` quanto de `RLS_DATABASE_URL`, porque E2E escreve dados de teste e o smoke RLS valida o ambiente promovido. O preflight nao substitui `rls-smoke`, E2E isolado nem smoke funcional em Vercel/R2/Upstash.
+
+O workflow tambem possui o job manual `deployment-smoke`, que executa `bun run deploy:smoke` com:
+
+```yaml
+DEPLOYMENT_SMOKE_URL: ${{ secrets.DEPLOYMENT_SMOKE_URL }}
+CRON_SECRET: ${{ secrets.CRON_SECRET }}
+```
+
+Use `DEPLOYMENT_SMOKE_URL` para apontar para a URL publica do deploy promovido. Esse smoke nao acessa o banco diretamente; ele valida o health HTTP, a pagina publica `/sign-in`, o redirect do Google OAuth e confirma que o bootstrap interno esta bloqueado no deploy. Se `CRON_SECRET` existir, tambem valida o health interno do R2.
 
 ## Playwright
 
@@ -84,6 +94,22 @@ O comando usa `DATABASE_URL`, nao `DATABASE_URL_DIRECT`, e faz rollback das escr
 - `organization`, `products` e `sales` invisiveis sem contexto tenant;
 - insert tenant-scoped sem contexto negado por RLS;
 - fluxo onboarding-like visivel dentro de transacao com `app.user_id` e `app.organization_id`.
+
+## Analise de planos de listagem
+
+Rode em uma branch/ambiente com dados representativos antes de considerar performance de listagem validada:
+
+```bash
+PERFORMANCE_ORGANIZATION_ID=org_real bun run db:analyze:listings
+```
+
+O comando usa `DATABASE_URL`, abre uma transacao read-only, configura `app.organization_id` via RLS e executa `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)` para:
+
+- produtos ativos por `products_active_list_idx`;
+- produtos arquivados por `products_archived_list_idx`;
+- vendas por `sales_organization_occurred_on_created_at_id_idx`.
+
+Por padrao, cada check so exige o indice esperado quando a consulta tem pelo menos `PERFORMANCE_MIN_ROWS=500` linhas no tenant. Com dataset menor, o resultado fica `skipped-small-dataset`, porque o planner pode escolher scan pequeno sem representar risco real.
 
 ## Auditoria de dados de teste (somente leitura)
 

@@ -10,6 +10,7 @@ const e2eUrl =
   "postgres://polaris_app:pass@e2e.example.neon.tech/neondb?sslmode=verify-full";
 const productionIntegrationEnv = {
   BETTER_AUTH_URL: "https://app.example.com",
+  DEPLOYMENT_SMOKE_URL: "https://app.example.com",
   GOOGLE_CLIENT_ID: "google-client-id",
   GOOGLE_CLIENT_SECRET: "google-client-secret",
   NEXT_PUBLIC_APP_URL: "https://app.example.com",
@@ -67,6 +68,7 @@ describe("validateProductionPreflight", () => {
         "BETTER_AUTH_SECRET must be at least 32 characters in production preflight.",
         "CRON_SECRET must be at least 32 characters in production preflight.",
         "BETTER_AUTH_URL is required in production preflight.",
+        "DEPLOYMENT_SMOKE_URL is required in production preflight.",
         "NEXT_PUBLIC_APP_URL is required in production preflight.",
         "GOOGLE_CLIENT_ID is required in production preflight.",
         "GOOGLE_CLIENT_SECRET is required in production preflight.",
@@ -98,6 +100,25 @@ describe("validateProductionPreflight", () => {
     expect(result.ok).toBe(false);
     expect(result.errors).toContain(
       "BETTER_AUTH_URL and NEXT_PUBLIC_APP_URL must use the same origin."
+    );
+  });
+
+  it("rejects deployment smoke URL outside the canonical app origin", () => {
+    const result = validateProductionPreflight({
+      BETTER_AUTH_SECRET: strongSecret,
+      CRON_SECRET: strongSecret,
+      DATABASE_URL: runtimeUrl,
+      DATABASE_URL_DIRECT: ownerUrl,
+      E2E_DATABASE_URL: e2eUrl,
+      RLS_DATABASE_URL: runtimeUrl,
+      VERCEL_ENV: "production",
+      ...productionIntegrationEnv,
+      DEPLOYMENT_SMOKE_URL: "https://preview.example.com",
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.errors).toContain(
+      "DEPLOYMENT_SMOKE_URL and NEXT_PUBLIC_APP_URL must use the same origin."
     );
   });
 

@@ -8,6 +8,7 @@ export interface ProductionPreflightEnv {
   CRON_SECRET?: string;
   DATABASE_URL?: string;
   DATABASE_URL_DIRECT?: string;
+  DEPLOYMENT_SMOKE_URL?: string;
   E2E_DATABASE_URL?: string;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
@@ -81,6 +82,7 @@ const getOrigin = (value: string | undefined): string | undefined => {
 
 const REQUIRED_PRODUCTION_INTEGRATION_ENV = [
   "BETTER_AUTH_URL",
+  "DEPLOYMENT_SMOKE_URL",
   "NEXT_PUBLIC_APP_URL",
   "GOOGLE_CLIENT_ID",
   "GOOGLE_CLIENT_SECRET",
@@ -100,6 +102,23 @@ const REQUIRED_VERIFY_FULL_DATABASE_URLS = [
   "E2E_DATABASE_URL",
   "RLS_DATABASE_URL",
 ] as const satisfies ReadonlyArray<keyof ProductionPreflightEnv>;
+
+const appendProductionSecretErrors = (
+  env: ProductionPreflightEnv,
+  errors: string[]
+): void => {
+  if (!hasStrongSecret(env.BETTER_AUTH_SECRET)) {
+    errors.push(
+      "BETTER_AUTH_SECRET must be at least 32 characters in production preflight."
+    );
+  }
+
+  if (!hasStrongSecret(env.CRON_SECRET)) {
+    errors.push(
+      "CRON_SECRET must be at least 32 characters in production preflight."
+    );
+  }
+};
 
 const appendRequiredUrlErrors = (
   env: ProductionPreflightEnv,
@@ -177,17 +196,7 @@ const appendProductionEnvErrors = (
     );
   }
 
-  if (!hasStrongSecret(env.BETTER_AUTH_SECRET)) {
-    errors.push(
-      "BETTER_AUTH_SECRET must be at least 32 characters in production preflight."
-    );
-  }
-
-  if (!hasStrongSecret(env.CRON_SECRET)) {
-    errors.push(
-      "CRON_SECRET must be at least 32 characters in production preflight."
-    );
-  }
+  appendProductionSecretErrors(env, errors);
 
   for (const key of REQUIRED_PRODUCTION_INTEGRATION_ENV) {
     if (!hasValue(env[key])) {
@@ -217,10 +226,21 @@ const appendProductionEnvErrors = (
 
   const betterAuthOrigin = getOrigin(env.BETTER_AUTH_URL);
   const appOrigin = getOrigin(env.NEXT_PUBLIC_APP_URL);
+  const deploymentSmokeOrigin = getOrigin(env.DEPLOYMENT_SMOKE_URL);
 
   if (betterAuthOrigin && appOrigin && betterAuthOrigin !== appOrigin) {
     errors.push(
       "BETTER_AUTH_URL and NEXT_PUBLIC_APP_URL must use the same origin."
+    );
+  }
+
+  if (
+    deploymentSmokeOrigin &&
+    appOrigin &&
+    deploymentSmokeOrigin !== appOrigin
+  ) {
+    errors.push(
+      "DEPLOYMENT_SMOKE_URL and NEXT_PUBLIC_APP_URL must use the same origin."
     );
   }
 };

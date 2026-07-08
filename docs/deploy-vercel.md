@@ -144,6 +144,8 @@ bun run check
 bun run test
 vercel env run -e production -- bun run prod:preflight
 bun run db:smoke:rls
+bun run db:analyze:listings
+DEPLOYMENT_SMOKE_URL=https://SEU_DOMINIO bun run deploy:smoke
 bun run build
 vercel env run -e production -- bun run build
 vercel deploy
@@ -160,17 +162,19 @@ Depois do deploy:
 
 1. `GET /api/health` retorna `200` e `checks.database.ok=true`.
 2. `bun run db:smoke:rls` passa contra o `DATABASE_URL` do ambiente promovido.
-3. `/sign-in` com Google redireciona para `accounts.google.com`.
-4. Usuario novo criado pelo Google vai para onboarding.
-5. Onboarding cria organizacao, owner, categoria `Outros` e settings.
-6. Dashboard carrega vazio para tenant novo.
-7. Produto, estoque, venda e cancelamento funcionam.
-8. Upload de imagem funciona e bytes saem por rota autenticada.
-9. Reconcile de imagens retorna contagens, nao chaves completas; uploads recentes nao devem ser removidos imediatamente.
-10. `/api/internal/health/r2` retorna diagnostico sem segredos.
-11. Better Auth Dashboard conecta e Sentinel nao bloqueia login legitimo.
-12. Sentry recebe erro de teste controlado em preview, tracing aparece com sampling configurado e replay so aparece conforme as taxas.
-13. Logs de producao sem erros recorrentes apos 5 minutos.
+3. `DEPLOYMENT_SMOKE_URL=https://SEU_DOMINIO bun run deploy:smoke` confirma health HTTP, `/sign-in` 200, redirect do Google OAuth para `accounts.google.com` e bootstrap interno bloqueado com 403; com `CRON_SECRET`, tambem valida `/api/internal/health/r2`.
+4. Opcional: `bun run db:analyze:listings` passa para uma organizacao com dataset representativo ou retorna `skipped-small-dataset` explicitamente para bases pequenas.
+5. `/sign-in` com Google redireciona para `accounts.google.com`.
+6. Usuario novo criado pelo Google vai para onboarding.
+7. Onboarding cria organizacao, owner, categoria `Outros` e settings.
+8. Dashboard carrega vazio para tenant novo.
+9. Produto, estoque, venda e cancelamento funcionam.
+10. Upload de imagem funciona e bytes saem por rota autenticada.
+11. Reconcile de imagens retorna contagens, nao chaves completas; uploads recentes nao devem ser removidos imediatamente.
+12. `/api/internal/health/r2` retorna diagnostico sem segredos.
+13. Better Auth Dashboard conecta e Sentinel nao bloqueia login legitimo.
+14. Sentry recebe erro de teste controlado em preview, tracing aparece com sampling configurado e replay so aparece conforme as taxas.
+15. Logs de producao sem erros recorrentes apos 5 minutos.
 
 ## CI
 
@@ -182,10 +186,13 @@ O workflow `.github/workflows/ci.yml` roda:
 - `bun run build`
 - `bun run test:e2e` no job `e2e`, dependente de `E2E_DATABASE_URL`
 - `bun run db:smoke:rls` no job manual `rls-smoke`, dependente de `RLS_DATABASE_URL`
-- `bun run prod:preflight` no job manual `production-preflight`, dependente de `PRODUCTION_DATABASE_URL`, `PRODUCTION_DATABASE_URL_DIRECT`, `PRODUCTION_BETTER_AUTH_URL`, `PRODUCTION_NEXT_PUBLIC_APP_URL`, `E2E_DATABASE_URL`, `RLS_DATABASE_URL`, Google OAuth, R2, Upstash, `BETTER_AUTH_SECRET` e `CRON_SECRET`
+- `bun run deploy:smoke` no job manual `deployment-smoke`, dependente de `DEPLOYMENT_SMOKE_URL` e `CRON_SECRET`
+- `bun run prod:preflight` no job manual `production-preflight`, dependente de `PRODUCTION_DATABASE_URL`, `PRODUCTION_DATABASE_URL_DIRECT`, `PRODUCTION_BETTER_AUTH_URL`, `PRODUCTION_NEXT_PUBLIC_APP_URL`, `DEPLOYMENT_SMOKE_URL`, `E2E_DATABASE_URL`, `RLS_DATABASE_URL`, Google OAuth, R2, Upstash, `BETTER_AUTH_SECRET` e `CRON_SECRET`
 
 Antes de promover producao, confira se o secret `E2E_DATABASE_URL` aponta para uma branch Neon isolada.
 
 O job `rls-smoke` so roda por `workflow_dispatch`. Use `RLS_DATABASE_URL` apontando para o ambiente que sera promovido e confirme que ele usa uma role runtime sem `BYPASSRLS`; nao reutilize `DATABASE_URL_DIRECT` nem a role de migration.
 
-O job `production-preflight` tambem so roda por `workflow_dispatch`. Ele valida wiring de secrets antes de deploy real, incluindo que `E2E_DATABASE_URL` usa role runtime, nao compartilha banco com runtime ou `RLS_DATABASE_URL`, mas nao substitui `rls-smoke`, smoke funcional ou validacao R2/Upstash em preview/producao.
+O job `deployment-smoke` so roda por `workflow_dispatch`. Configure `DEPLOYMENT_SMOKE_URL` com a URL publica do preview/producao que sera promovido; ele valida `/api/health`, `/sign-in`, redirect do Google OAuth para `accounts.google.com` e confirma que `/api/auth/dev/bootstrap-session` esta bloqueado com 403. Se `CRON_SECRET` estiver configurado, tambem valida `/api/internal/health/r2`.
+
+O job `production-preflight` tambem so roda por `workflow_dispatch`. Ele valida wiring de secrets antes de deploy real, incluindo que `E2E_DATABASE_URL` usa role runtime, nao compartilha banco com runtime ou `RLS_DATABASE_URL`, e que `DEPLOYMENT_SMOKE_URL` aponta para a mesma origem de `NEXT_PUBLIC_APP_URL`. Ele nao substitui `rls-smoke`, smoke funcional ou validacao R2/Upstash em preview/producao.

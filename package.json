@@ -16,7 +16,9 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "prod:preflight": "bun scripts/check-production-readiness.ts",
+    "deploy:smoke": "bun scripts/smoke-deployment.ts",
     "db:smoke:rls": "node scripts/smoke-rls-runtime.cjs",
+    "db:analyze:listings": "bun scripts/analyze-listing-plans.ts",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {

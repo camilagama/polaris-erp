@@ -88,6 +88,25 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.RLS_DATABASE_URL }}
 
+  deployment-smoke:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Deployment HTTP smoke
+        run: bun run deploy:smoke
+        env:
+          DEPLOYMENT_SMOKE_URL: ${{ secrets.DEPLOYMENT_SMOKE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+
   production-preflight:
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch'
@@ -106,6 +125,7 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
           DATABASE_URL_DIRECT: ${{ secrets.PRODUCTION_DATABASE_URL_DIRECT }}
+          DEPLOYMENT_SMOKE_URL: ${{ secrets.DEPLOYMENT_SMOKE_URL }}
           BETTER_AUTH_URL: ${{ secrets.PRODUCTION_BETTER_AUTH_URL }}
           NEXT_PUBLIC_APP_URL: ${{ secrets.PRODUCTION_NEXT_PUBLIC_APP_URL }}
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}

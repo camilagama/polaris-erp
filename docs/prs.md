@@ -96,6 +96,11 @@
 - 2026-07-08: PR 3/DB aplicou migrations aditivas criticas no endpoint runtime/main via `DATABASE_URL_DIRECT`; verificacao com `polaris_app` confirmou `sales.idempotency_key`, `sales_organization_idempotency_key_unique_idx` e `sessions_id_unique_idx`.
 - 2026-07-08: PR 5/E2E ganhou preflight `scripts/check-e2e-db-schema.ts`; `bun run test:e2e` agora falha antes do Playwright quando o branch E2E esta atrasado, com mensagem acionavel dos objetos ausentes.
 - 2026-07-08: PR 5/E2E foi desbloqueado no branch E2E via Neon MCP (`br-flat-cherry-acbnuhz4`): aplicados `sales.idempotency_key`, `sales_organization_idempotency_key_unique_idx` e `sessions_id_unique_idx`; `bun run test:e2e` passou com 9/9.
+- 2026-07-08: PR 4/Perf ganhou `bun run db:analyze:listings`, que executa `EXPLAIN ANALYZE` read-only para listagens de produtos/vendas com contexto RLS e falha se dataset representativo nao usar o indice esperado.
+- 2026-07-08: PR 4/Perf validou o script com tenant inexistente: `listing-plan-analysis-ok`, role `polaris_app`, `runtimeRoleBypassRls=false`, indices esperados nos planos e `skipped-small-dataset` por volume zero; `bun run check`, `bun run test` (78 arquivos/288 testes) e `bun run knip` passaram.
+- 2026-07-08: PR 4/Perf manteve `db:analyze:listings` como diagnostico opcional local/ops; ele nao e gate de `prod:preflight` nem exige secret no GitHub Actions.
+- 2026-07-08: PR 7/deploy ganhou `bun run deploy:smoke` para validar `/api/health`, `/sign-in`, redirect Google OAuth, bootstrap 403 e health R2 opcional em URL publica; job manual `deployment-smoke` foi adicionado e coberto por `src/lib/ci-workflow.test.ts`.
+- 2026-07-08: PR 7/deploy simplificou os gates de producao: `prod:preflight` exige `DEPLOYMENT_SMOKE_URL`, mas nao cria alias para `CRON_SECRET` nem exige tenant de performance; `deployment-smoke` usa o `CRON_SECRET` existente quando validar R2.
 - 2026-07-07: PR 2 consolidou guardrail de arquitetura: arquivos runtime em `src/app` agora tem teste global contra import direto de `@/db` e subpaths.
 - 2026-07-07: PR 2 reforcou contexto de app: organizacao inativa retorna contexto nulo e nao reescreve a organizacao ativa da sessao.
 - 2026-07-07: PR 4/Perf avancou em indices de listagem: produtos ativos/arquivados e vendas agora tem indices cobrindo paginacao seek por organizacao.
@@ -136,7 +141,7 @@
 - 2026-07-06: PR 5 iniciado em CI/E2E: GitHub Actions agora tem job `e2e` com Playwright, dependente de `E2E_DATABASE_URL` em secret para impedir uso acidental de banco compartilhado.
 - 2026-07-06: PR 9 iniciado em produto pos-MVP: `docs/roadmap.md` criado com ordem para convites, billing, exportacao, admin/suporte, LGPD e relatorios sem misturar com hardening.
 - Pendencias antes de declarar PR 2 completo: atualizar `DATABASE_URL` do deploy para a role runtime `polaris_app`, ampliar provas tenant A vs tenant B para outros actions/route handlers e rodar job manual `rls-smoke`/`bun run db:smoke:rls` no ambiente promovido.
-- PR 3 implementado no codigo e aplicado no runtime/main e no branch E2E para os objetos criticos de idempotency/sessao; antes de tratar como totalmente pronto para deploy real, ainda falta validar demais migrations financeiras em branch isolado/promovido.
+- PR 3 implementado no codigo; objetos criticos de sessao, idempotency, financeiro, metas e listagem foram confirmados no Neon main via MCP/read-only. Antes de tratar como totalmente pronto para deploy real, ainda falta smoke no deploy promovido e rodar `db:analyze:listings` com dataset representativo.
 - PR 7 implementado localmente. Antes de tratar como pronto para deploy real, ainda falta validar `vercel env run -e production -- bun run build` com envs reais, smoke checks no preview/producao, limites reais do Upstash e quais headers de IP sao confiaveis na borda.
 
 **Ordem Recomendada**
@@ -243,8 +248,8 @@ Status local:
 - venda com mesma idempotency key retorna a venda vencedora em retry concorrente.
 
 Pendente externo:
-- objetos criticos de `sessions.id` e idempotency ja foram aplicados no runtime/main e no branch E2E.
-- ainda falta validar/aplicar as demais migrations financeiras/metas/listagem em branch Neon/promovido e fazer smoke no deploy real.
+- objetos criticos de `sessions.id`, idempotency, financeiro, metas e listagem ja foram confirmados no Neon main via MCP/read-only.
+- ainda falta smoke no deploy real e `bun run db:analyze:listings` com dataset representativo.
 
 Ordem: depois de PR 2.
 
