@@ -18,6 +18,7 @@ Dados de teste (`e2e+...@dgimports.local`, categorias `Categoria E2E`, etc.) dev
 | Preview/dev | `preview` ou `dev` | `.env.local` ou env de preview | Role runtime sem `BYPASSRLS` quando RLS estiver habilitado |
 | E2E / CI | `e2e` ou branch descartavel | `E2E_DATABASE_URL` | Role runtime da branch E2E, nunca producao |
 | Smoke RLS manual | ambiente que sera promovido | `RLS_DATABASE_URL` | Mesma classe de role do runtime: sem `BYPASSRLS` |
+| Preflight producao manual | secrets GitHub/Vercel de producao | `PRODUCTION_DATABASE_URL`, `PRODUCTION_DATABASE_URL_DIRECT` e envs externos | Runtime sem `BYPASSRLS` separado da role de migration |
 
 1. No console Neon, crie uma branch separada para E2E (ex.: `e2e`) a partir de um snapshot aceitavel ou vazio.
 2. Rode migracoes nessa branch com `DATABASE_URL_DIRECT` apontando para a role de migration.
@@ -42,6 +43,19 @@ DATABASE_URL: ${{ secrets.RLS_DATABASE_URL }}
 
 Use esse secret para apontar para o ambiente que sera promovido. Nao reutilize `DATABASE_URL_DIRECT`: o smoke deve falhar se a URL usar uma role com `BYPASSRLS`.
 
+O workflow tambem possui o job manual `production-preflight`, que executa `bun run prod:preflight` antes de deploy real. Configure estes secrets no GitHub Actions:
+
+- `PRODUCTION_DATABASE_URL`: mesma classe da `DATABASE_URL` de runtime em producao, com role sem `BYPASSRLS` e `sslmode=verify-full`.
+- `PRODUCTION_DATABASE_URL_DIRECT`: URL de migration/admin, separada do runtime e com `sslmode=verify-full`.
+- `PRODUCTION_BETTER_AUTH_URL` e `PRODUCTION_NEXT_PUBLIC_APP_URL`: origem canonica de producao; as duas devem ter a mesma origem.
+- `E2E_DATABASE_URL` e `RLS_DATABASE_URL`: branches/roles isoladas conforme descrito acima, ambas com role runtime sem `BYPASSRLS`.
+- `BETTER_AUTH_SECRET` e `CRON_SECRET`: secrets fortes, com pelo menos 32 caracteres.
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` e `NEXT_PUBLIC_GOOGLE_CLIENT_ID`.
+- `UPSTASH_REDIS_REST_URL` e `UPSTASH_REDIS_REST_TOKEN`.
+- `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_STAGING` e `R2_BUCKET_PUBLIC`.
+
+O preflight valida wiring de secrets e separacao de URLs. `E2E_DATABASE_URL` deve ser diferente tanto de `PRODUCTION_DATABASE_URL` quanto de `RLS_DATABASE_URL`, porque E2E escreve dados de teste e o smoke RLS valida o ambiente promovido. O preflight nao substitui `rls-smoke`, E2E isolado nem smoke funcional em Vercel/R2/Upstash.
+
 ## Playwright
 
 O servidor de teste injeta `DATABASE_URL` a partir de `E2E_DATABASE_URL` quando definido (veja [playwright.config.ts](../playwright.config.ts)). Em `CI=true`, a suite falha se `E2E_DATABASE_URL` nao estiver definido.
@@ -50,6 +64,7 @@ Variaveis uteis:
 
 - `E2E_DATABASE_URL`: connection string do banco somente para E2E (obrigatorio em CI).
 - `RLS_DATABASE_URL`: connection string runtime do ambiente promovido, usada somente no job manual `rls-smoke`.
+- `PRODUCTION_DATABASE_URL` / `PRODUCTION_DATABASE_URL_DIRECT`: aliases de GitHub Secrets para o job manual `production-preflight`; nao sao nomes esperados pelo runtime da aplicacao.
 - `E2E_CRON_SECRET` / `E2E_INTERNAL_BOOTSTRAP_SECRET`: segredos locais ao servidor E2E (opcional; padroes seguros se omitidos).
 - `ALLOW_E2E_SHARED_DATABASE=true`: nao use em CI; apenas para desenvolvedor que aceita conscientemente usar o mesmo `DATABASE_URL` do `.env.local` nos E2E.
 

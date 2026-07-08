@@ -26,6 +26,7 @@ bun run fix
 bun run knip
 bun run db:generate
 bun run db:migrate
+bun run prod:preflight
 bun run db:smoke:rls
 ```
 
@@ -92,7 +93,7 @@ Upstash e preferivel aqui porque o app roda em ambiente serverless/multiplas ins
 
 ## CI, healthcheck e observabilidade
 
-- CI em `.github/workflows/ci.yml`: `bun run check`, `bun run test`, `bun run knip`, `bun run build`, E2E isolado e job manual `rls-smoke`.
+- CI em `.github/workflows/ci.yml`: `bun run check`, `bun run test`, `bun run knip`, `bun run build`, E2E isolado e jobs manuais `production-preflight`/`rls-smoke`.
 - Healthcheck: `GET /api/health` retorna status sanitizado com `checks.database.ok`.
 - Diagnostico R2: `GET /api/internal/health/r2` com `Authorization: Bearer $CRON_SECRET`.
 - Sentry baseline: `@sentry/nextjs` com `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN`, e opcionalmente `SENTRY_ORG` / `SENTRY_PROJECT` / `SENTRY_AUTH_TOKEN`.
@@ -101,6 +102,7 @@ Upstash e preferivel aqui porque o app roda em ambiente serverless/multiplas ins
 ## Banco, E2E e producao
 
 - Modelo de branches, roles, `E2E_DATABASE_URL` e `RLS_DATABASE_URL`: `docs/database-environments.md`.
+- Antes de deploy real, rode `bun run prod:preflight` com envs de producao ou acione o job manual `production-preflight`.
 - Migracao SaaS e rollback: `docs/saas-organization-migration-runbook.md`.
 - Limpeza destrutiva de producao: `docs/production-database-cleanup.md` e `docs/production-database-cleanup.sql`.
 
@@ -112,6 +114,7 @@ Baseline esperado:
 - `bun run test`
 - `bun run build`
 - `bun run knip`
+- `bun run prod:preflight` com envs de producao
 - `bun run db:smoke:rls`
 - `bun run test:e2e` com `E2E_DATABASE_URL` isolado
 

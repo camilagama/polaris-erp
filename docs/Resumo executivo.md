@@ -48,6 +48,8 @@ Status de execucao em 2026-07-08:
 - PR 7: bootstrap interno com bearer invalido agora tem prova explicita de que nao toca adapter de usuario nem cria sessao.
 - PR 7: bootstrap interno com payload invalido agora retorna 400 sanitizado antes de tocar o adapter de usuario.
 - PR 7: `.env.example` e deploy docs agora refletem Vercel env, bootstrap E2E, sampling/replay Sentry e headers globais.
+- PR 7: `bun run prod:preflight` agora valida wiring basico de producao antes de deploy: URLs runtime/migration/E2E separadas com `sslmode=verify-full`, `RLS_DATABASE_URL`, bootstrap E2E desligado em Production, secrets fortes, origens canonicas e envs obrigatorios de Google/R2/Upstash.
+- PR 7: GitHub Actions ganhou job manual `production-preflight` para rodar `bun run prod:preflight` com secrets reais antes de deploy.
 - PR 7: headers globais agora tem teste direto contra `next.config.ts`, alem do helper isolado.
 - PR 5/CI: workflow agora roda `knip` no job `verify` antes do build; E2E segue isolado por `E2E_DATABASE_URL`.
 - PR 5/CI: guardrail de Playwright agora tem teste unitario garantindo falha em CI sem `E2E_DATABASE_URL`.
@@ -145,7 +147,7 @@ Top bloqueadores antes de clientes reais:
 2. Bootstrap interno bloqueado localmente em prod-like; ainda exige smoke em Vercel Production.
 3. RLS foi implementado e aplicado no Neon main, mas o deploy ainda precisa usar `DATABASE_URL` com a role runtime `polaris_app` e passar por smoke no ambiente promovido.
 4. Fluxos criticos passaram em E2E isolado local, mas ainda precisam rodar em CI/preview com secrets reais.
-5. Warnings de SSL do `pg`/`pg-connection-string` e Sentinel/Better Auth devem ser tratados antes de hardening final.
+5. SSL de producao ficou coberto por `prod:preflight` exigindo `sslmode=verify-full`; ainda falta resolver o aviso Sentinel/Better Auth antes de hardening final.
 
 **2. Mapa Técnico**
 Stack confirmada: Next.js `16.2.1`, React `19.2.4`, Better Auth `1.6.23`, Drizzle `0.45.2`, PostgreSQL/Neon via `pg`, Tailwind 4, Vitest, Playwright, R2 S3 SDK, Upstash Redis, Sentry.
@@ -160,23 +162,26 @@ Arquitetura:
 - Proxy Next 16 em `proxy.ts`, como barreira otimista.
 
 Verificações:
-- `bun run check` => passou, 279 arquivos.
-- `bun run test` => passou, 75 arquivos, 275 testes.
-- `bun run build` => passou.
+- `bun run check` => passou, 282 arquivos.
+- `bun run test` => passou, 76 arquivos, 280 testes; timeout anterior em `src/features/sales/actions.test.ts` nao reproduziu no teste isolado nem no rerun completo.
+- `bun run build` => passou; alerta de SSL `pg-connection-string` fica coberto pelo `prod:preflight`, que exige `sslmode=verify-full` nas URLs de producao.
 - `bun run knip` => passou.
-- `bun run db:smoke:rls` => passou contra `polaris_app`: `rls-runtime-smoke-ok`, 14 policies, 13/13 tabelas com RLS+FORCE.
+- Gates finais da fatia `prod:preflight` reexecutados: `bun run test` (76 arquivos, 280 testes), `bun run build`, `bun run knip` e `bun run check` passaram.
+- `bun run db:smoke:rls` => passou contra `polaris_app`: `rls-runtime-smoke-ok`, 14 policies, 13/13 tabelas com RLS+FORCE; warning SSL local permanece por `.env.local`.
+- `bun run test src/lib/production-preflight.test.ts` => passou, 4 testes cobrindo wiring seguro, `sslmode=verify-full`, envs externos obrigatorios e falhas de configuracao de producao.
+- `bun run test src/lib/ci-workflow.test.ts` => passou, cobrindo jobs manuais `rls-smoke` e `production-preflight`.
 - Neon MCP/plugin => voltou a conectar para o projeto `autumn-feather-14038163`; runtime/main tambem foi validado diretamente via `DATABASE_URL`/`DATABASE_URL_DIRECT`.
 - `bun x playwright test tests/e2e/shell.e2e.ts` => passou, 4/4, com `E2E_DATABASE_URL` isolado.
-- `bun run test:e2e` => passou, 9/9 testes, apos preflight `scripts/check-e2e-db-schema.ts`; branch E2E `br-flat-cherry-acbnuhz4` foi alinhado via Neon MCP.
+- `bun run test:e2e` => passou, 9/9 testes, apos preflight `scripts/check-e2e-db-schema.ts`; branch E2E `br-flat-cherry-acbnuhz4` foi alinhado via Neon MCP. Warnings locais: SSL `pg-connection-string` por `.env.local` e Sentinel/Better Auth default identify ingestion.
 - `CI=true bun run test:e2e` sem `E2E_DATABASE_URL` => falha intencionalmente no load do config para impedir banco compartilhado.
 
 **3. Achados Priorizados**
 `DB-001` P1, Banco/Auth  
 Evidência: [schema.ts](</c:/Users/Junior/Documents/0 - Dev/Hub Imports/src/db/schema.ts:56>) agora declara `sessions_id_unique_idx`; [session-id-unique.test.ts](</c:/Users/Junior/Documents/0 - Dev/Hub Imports/src/db/session-id-unique.test.ts:1>) cobre o índice.  
-Status: Corrigido localmente; pendente dry-run/aplicacao em branch Neon isolada.  
+Status: Corrigido localmente; indice critico aplicado no runtime/main e no branch E2E via Neon MCP em 2026-07-08; pendente smoke no deploy promovido.
 Descrição: `sessions.id` é usado para atualizar sessão ativa em [app-session.ts](</c:/Users/Junior/Documents/0 - Dev/Hub Imports/src/lib/app-session.ts:94>), então precisa ser único no banco real.  
 Impacto residual: risco volta se migration nao for aplicada ou falhar por dados legados duplicados.  
-Correção: manter precheck e aplicar migration em banco isolado antes de produção.  
+Correção: manter precheck, preservar o indice no banco real e validar o smoke no ambiente promovido antes de produção.
 Teste: migration/teste SQL rejeitando dois `sessions.id`.
 
 `SEC-001` P1, Auth/Operação  
@@ -258,7 +263,7 @@ Correção: manter preflight e recriar/aplicar migrations no branch E2E sempre q
 
 **4. Checklist Produção**
 - Auth/Google/Better Auth: Parcial. Produção exige Google, secret forte e smoke real; bootstrap prod-like corrigido localmente. P1.
-- Sessões/cookies: Parcial. `sessions.id` tem unique local; falta aplicar/validar migration em Neon isolado. P1.
+- Sessões/cookies: Parcial. `sessions.id` tem unique no schema e foi aplicado no runtime/main e no branch E2E; falta smoke no deploy promovido com env real. P1.
 - Organizações: Parcial. Onboarding tem advisory lock local e contexto bloqueia organizacao inativa; falta stress/smoke em banco real. P1.
 - Multi-tenancy: Parcial. App e migration RLS foram aplicados no Neon main; `polaris_app` bloqueia acesso sem contexto, passou smoke de escrita com rollback e tem job manual `rls-smoke`. Ainda falta atualizar env de deploy e rodar smoke/E2E pos-migration. P1.
 - RBAC: Parcial. Roles existem, multiusuário/convites desativados. P2.
@@ -267,12 +272,12 @@ Correção: manter preflight e recriar/aplicar migrations no branch E2E sempre q
 - R2 upload/serve: Parcial. Boa autorização e corridas principais corrigidas localmente; falta validar R2 real/preview. P1.
 - Rate limit: Parcial. Upstash tem fallback local em falha transitoria, descarta IPs invalidos e retorna `Retry-After`; ainda falta validar limites reais e headers confiaveis no deploy. P3.
 - Security headers: Parcial. Baseline global aplicado; CSP completa ainda exige validacao separada para nao quebrar Next/Sentry. P3.
-- Catálogo/estoque/vendas: Parcial. Núcleo bom; reativação por entrada e constraints financeiras corrigidas localmente; falta migration/smoke real. P2.
+- Catálogo/estoque/vendas: Parcial. Núcleo bom; reativação por entrada e idempotency crítica foram validadas localmente/E2E, mas constraints financeiras e smoke real ainda precisam ser confirmados no ambiente promovido. P2.
 - Cancelamento/estorno: OK no fluxo normal. Usa lock e estorna estoque.
 - Metas: Parcial. Regra de 1 ativa tem constraint local; falta aplicar/validar migration em Neon isolado. P2.
 - Logs/Sentry: Parcial. Errors, tracing e replay em erro configurados; alertas ainda precisam ser definidos na plataforma. P3.
 - Backups/rollback: Parcial. Docs existem; execução não verificada. P2.
-- Tests unit/integration: OK razoável. 275 testes passando no ultimo run registrado.
+- Tests unit/integration: OK razoável. 280 testes passando no ultimo run registrado.
 - E2E: OK localmente com banco isolado atualizado; pendente CI/preview com secrets reais. P2.
 - CI/CD: Parcial. CI roda check/test/knip/build, job E2E isolado e job manual `rls-smoke`; ainda depende dos secrets reais `E2E_DATABASE_URL` e `RLS_DATABASE_URL`. P2.
 - LGPD/privacidade/suporte/admin/billing: Ausente/parcial. P2/P3.
@@ -288,8 +293,8 @@ Ausente/pós-MVP: billing, planos, suporte/admin, importação CSV, recebimentos
 
 **6. Riscos Financeiros e Operacionais**
 - Estoque errado: baixo no fluxo normal; entrada em arquivado reativa localmente, mas falta smoke real.
-- Venda duplicada: mitigada localmente por idempotency key e unique parcial; falta validar migration em Neon isolada.
-- Lookup de retry de venda duplicada: mitigado localmente em camada de dominio tenant-scoped; falta validar migration em Neon isolada.
+- Venda duplicada: mitigada por idempotency key e unique parcial; objetos críticos foram aplicados no runtime/main e branch E2E, mas ainda falta smoke no deploy promovido.
+- Lookup de retry de venda duplicada: mitigado em camada de dominio tenant-scoped; ainda falta smoke no deploy promovido.
 - Venda sem baixa: mitigado por transação.
 - Baixa sem venda: fluxo existe por baixa operacional, OK.
 - Cancelamento inconsistente: mitigado por lock e status.
@@ -302,7 +307,7 @@ Ausente/pós-MVP: billing, planos, suporte/admin, importação CSV, recebimentos
 
 **7. Roadmap Recomendado**
 Antes de produção:
-1. Validar migrations restantes de `sessions.id`, constraints financeiras e FKs tenant-scoped em branch Neon isolada; RLS ja foi aplicada e validada no Neon main.
+1. Validar migrations restantes de constraints financeiras, metas, indices de listagem e FKs tenant-scoped em branch Neon/promovido; `sessions.id`, idempotency e RLS ja foram aplicados e validados no runtime/main/E2E.
 2. Rodar smoke em Vercel Production para confirmar bootstrap 403 em prod-like e envs fortes.
 3. Validar limites reais do Upstash e headers confiáveis na borda.
 4. Rodar Playwright com Neon branch isolada.
@@ -325,7 +330,9 @@ Pós-MVP:
 
 **8. Plano de Correção**
 Fase 0, P0/P1:
-- Validar migrations de `sessions.id`, FKs tenant-scoped e constraints financeiras em branch Neon isolada.
+- Validar migrations restantes de FKs tenant-scoped, constraints financeiras, metas e indices de listagem em branch Neon/promovido; `sessions.id` e idempotency ja foram aplicados no runtime/main/E2E.
+- Rodar `vercel env run -e production -- bun run prod:preflight` com envs reais.
+- Acionar job manual `production-preflight` no GitHub Actions com secrets reais antes de promover.
 - Rodar `vercel env run -e production -- bun run build` com envs reais.
 - Executar smoke de `/api/auth/dev/bootstrap-session` em Vercel Production e confirmar 403.
 Aceite: migrations aplicam sem dados legados conflitantes; build Production passa; bootstrap 403 em prod-like real.
@@ -349,7 +356,7 @@ Fase 3, UX:
 Aceite: E2E cobrindo erro e persistência.
 
 Fase 4, QA/ops:
-- Rodar `bun run test:e2e` com `E2E_DATABASE_URL`.
+- Rodar `bun run test:e2e` no CI/preview com `E2E_DATABASE_URL`.
 - Garantir secret `E2E_DATABASE_URL` no GitHub Actions.
 - Manter `knip` verde.
 Aceite: CI inclui check/test/knip/build/E2E isolado e todos os jobs passam com banco E2E dedicado.

@@ -86,6 +86,8 @@
 - 2026-07-07: PR 2 ampliou prova tenant A/B em vendas: cancelamento de venda de outro tenant falha antes de estornar estoque, auditar ou revalidar.
 - 2026-07-07: PR 2 reforcou rota de presign de imagem: rate limit e payload invalido agora retornam antes de resolver contexto, gerar presign ou auditar.
 - 2026-07-07: PR 7 reforcou bootstrap interno: bearer invalido agora tem prova explicita de que nao toca adapter de usuario nem cria sessao.
+- 2026-07-08: PR 7 ganhou `bun run prod:preflight` para validar wiring basico de producao antes do deploy: URLs runtime/migration/E2E separadas com `sslmode=verify-full`, `RLS_DATABASE_URL`, bootstrap E2E desligado em Production, secrets fortes, origens canonicas e envs obrigatorios de Google/R2/Upstash.
+- 2026-07-08: PR 7 adicionou job manual `production-preflight` ao GitHub Actions, coberto por teste estrutural em `src/lib/ci-workflow.test.ts`.
 - 2026-07-07: PR 2 corrigiu auditoria pre-tenant: login sem organizacao ativa nao grava mais evento em `org_dg_imports`; login com organizacao ativa continua auditado no tenant correto.
 - 2026-07-07: PR 2 reforcou rota autenticada de leitura de imagem: usuario sem membership na organizacao da URL recebe 404 antes de storage ou auditoria.
 - 2026-07-07: PR 2 avancou em camada tenant-scoped: rota autenticada de leitura de imagem agora delega checagem de produto/org/membership para dominio e tem guardrail contra import direto de `db` no handler.
@@ -241,7 +243,8 @@ Status local:
 - venda com mesma idempotency key retorna a venda vencedora em retry concorrente.
 
 Pendente externo:
-- dry-run/aplicação das migrations em banco Neon isolado.
+- objetos criticos de `sessions.id` e idempotency ja foram aplicados no runtime/main e no branch E2E.
+- ainda falta validar/aplicar as demais migrations financeiras/metas/listagem em branch Neon/promovido e fazer smoke no deploy real.
 
 Ordem: depois de PR 2.
 
@@ -293,13 +296,18 @@ Arquivos prováveis:
 Risco: médio. Principal risco é poluir banco se `E2E_DATABASE_URL` faltar.
 
 Testes exigidos:
-- `bun run test:e2e` com `E2E_DATABASE_URL`.
+- `bun run test:e2e` com `E2E_DATABASE_URL` no CI/preview.
 - CI deve falhar se tentar rodar E2E sem branch isolada.
 
 Critério de aceite:
 - Playwright roda contra branch Neon E2E.
 - CI documenta e/ou executa E2E crítico.
 - nenhum teste usa banco de produção/preview compartilhado por acidente.
+
+Status local:
+- preflight `scripts/check-e2e-db-schema.ts` valida schema critico antes do Playwright.
+- branch E2E `br-flat-cherry-acbnuhz4` foi alinhado via Neon MCP em 2026-07-08.
+- `bun run test:e2e` passou localmente com 9/9 testes; ainda falta execucao no CI/preview com secrets reais.
 
 Ordem: depois de PR 4.
 
@@ -357,6 +365,10 @@ Achados endereçados:
 
 Arquivos prováveis:
 - `src/lib/env.ts`
+- `src/lib/production-preflight.ts`
+- `scripts/check-production-readiness.ts`
+- `.github/workflows/ci.yml`
+- `src/lib/ci-workflow.test.ts`
 - `src/app/api/auth/dev/bootstrap-session/route.ts`
 - `src/app/api/internal/health/r2/route.ts`
 - `src/app/api/health/route.ts`
@@ -369,14 +381,19 @@ Risco: médio. Mudanças em env podem quebrar deploy se secrets atuais forem fra
 
 Testes exigidos:
 - `src/lib/env.test.ts`
+- `src/lib/production-preflight.test.ts`
+- `src/lib/ci-workflow.test.ts`
 - route tests para bootstrap/health.
 - `bun run build` com env mínimo de CI.
+- `vercel env run -e production -- bun run prod:preflight` com envs reais antes do deploy.
+- job manual `production-preflight` com secrets reais antes do deploy.
 - smoke checklist documentado.
 
 Critério de aceite:
 - production rejeita secrets fracos e Vercel Production rejeita ausencia de `CRON_SECRET`.
 - bootstrap impossível em produção real.
 - health checks úteis sem expor segredo/dados sensíveis.
+- preflight de producao rejeita `DATABASE_URL` owner/admin, E2E com role owner/admin, URLs iguais entre runtime/migration/E2E, E2E compartilhando URL com `RLS_DATABASE_URL`, URLs Postgres sem `sslmode=verify-full`, ausencia de `RLS_DATABASE_URL`, bootstrap E2E ligado em Production, origens canonicas divergentes e envs obrigatorios de Google/R2/Upstash ausentes.
 - deploy docs atualizados.
 
 Ordem: pode vir logo após PR 2 se prioridade for segurança.

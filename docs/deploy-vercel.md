@@ -16,8 +16,8 @@ Configure em Production e replique/adapte para Preview:
 
 | Variavel | Uso |
 | --- | --- |
-| `DATABASE_URL` | Runtime com connection string pooler da branch Neon usando role nao proprietaria e sem `BYPASSRLS` (ex.: `polaris_app`). |
-| `DATABASE_URL_DIRECT` | Migracoes locais/CI com role proprietaria/admin (ex.: `neondb_owner`). Nao use essa URL como runtime da aplicacao. |
+| `DATABASE_URL` | Runtime com connection string pooler da branch Neon usando role nao proprietaria, sem `BYPASSRLS` e com `sslmode=verify-full` (ex.: `polaris_app`). |
+| `DATABASE_URL_DIRECT` | Migracoes locais/CI com role proprietaria/admin e `sslmode=verify-full` (ex.: `neondb_owner`). Nao use essa URL como runtime da aplicacao. |
 | `BETTER_AUTH_SECRET` | Segredo forte do Better Auth; em producao precisa ter pelo menos 32 caracteres. |
 | `BETTER_AUTH_URL` | URL canonica do app, sem barra final. |
 | `BETTER_AUTH_API_KEY` | Chave do Better Auth Infrastructure para Dashboard e Sentinel. |
@@ -50,7 +50,7 @@ Valores invalidos de sampling do Sentry sao ignorados pelo app e caem nos padroe
 
 O baseline de headers globais e aplicado por `next.config.ts`: HSTS, `nosniff`, frame policy, referrer policy e permissions policy. CSP completa deve ser validada separadamente para nao quebrar Next/Sentry.
 
-RLS e obrigatorio em producao. Nao configure o runtime com `neondb_owner`: esse role pode ter `BYPASSRLS` no Neon e anula a barreira de tenant mesmo com policies corretas. Mantenha `neondb_owner` apenas em `DATABASE_URL_DIRECT` para migrations.
+RLS e obrigatorio em producao. Nao configure o runtime com `neondb_owner`: esse role pode ter `BYPASSRLS` no Neon e anula a barreira de tenant mesmo com policies corretas. Mantenha `neondb_owner` apenas em `DATABASE_URL_DIRECT` para migrations. Use `sslmode=verify-full` nas URLs Postgres de producao para preservar a verificacao TLS esperada pelo driver.
 
 ## Guardrails de producao
 
@@ -61,6 +61,7 @@ RLS e obrigatorio em producao. Nao configure o runtime com `neondb_owner`: esse 
 - `/api/health` nao exige segredo e deve retornar apenas status sanitizado. Falha de banco retorna `503` sem mensagem interna.
 - `/api/internal/health/r2` exige `Authorization: Bearer $CRON_SECRET` e nao deve expor chaves secretas.
 - Migrations destrutivas ou com precheck devem ser aplicadas primeiro em branch Neon isolada.
+- `bun run prod:preflight` valida wiring basico de producao antes de deploy: URLs runtime/migration/E2E separadas com `sslmode=verify-full`, smoke RLS configurado, bootstrap E2E desligado em Production, secrets fortes, origens canonicas alinhadas e envs obrigatorios de Google/R2/Upstash.
 
 ## Google OAuth
 
@@ -94,10 +95,11 @@ As migracoes nao rodam automaticamente no deploy por padrao.
 Antes de promover producao:
 
 ```bash
+vercel env run -e production -- bun run prod:preflight
 vercel env run -e production -- bun run build
 ```
 
-Esse comando usa as variaveis de Production da Vercel durante o build local/CI e antecipa falhas de env.
+Esses comandos usam as variaveis de Production da Vercel durante o preflight/build local/CI e antecipam falhas de env.
 
 ## R2
 
@@ -140,6 +142,7 @@ vercel link
 vercel env pull .env.local
 bun run check
 bun run test
+vercel env run -e production -- bun run prod:preflight
 bun run db:smoke:rls
 bun run build
 vercel env run -e production -- bun run build
@@ -179,7 +182,10 @@ O workflow `.github/workflows/ci.yml` roda:
 - `bun run build`
 - `bun run test:e2e` no job `e2e`, dependente de `E2E_DATABASE_URL`
 - `bun run db:smoke:rls` no job manual `rls-smoke`, dependente de `RLS_DATABASE_URL`
+- `bun run prod:preflight` no job manual `production-preflight`, dependente de `PRODUCTION_DATABASE_URL`, `PRODUCTION_DATABASE_URL_DIRECT`, `PRODUCTION_BETTER_AUTH_URL`, `PRODUCTION_NEXT_PUBLIC_APP_URL`, `E2E_DATABASE_URL`, `RLS_DATABASE_URL`, Google OAuth, R2, Upstash, `BETTER_AUTH_SECRET` e `CRON_SECRET`
 
 Antes de promover producao, confira se o secret `E2E_DATABASE_URL` aponta para uma branch Neon isolada.
 
 O job `rls-smoke` so roda por `workflow_dispatch`. Use `RLS_DATABASE_URL` apontando para o ambiente que sera promovido e confirme que ele usa uma role runtime sem `BYPASSRLS`; nao reutilize `DATABASE_URL_DIRECT` nem a role de migration.
+
+O job `production-preflight` tambem so roda por `workflow_dispatch`. Ele valida wiring de secrets antes de deploy real, incluindo que `E2E_DATABASE_URL` usa role runtime, nao compartilha banco com runtime ou `RLS_DATABASE_URL`, mas nao substitui `rls-smoke`, smoke funcional ou validacao R2/Upstash em preview/producao.
