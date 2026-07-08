@@ -18,16 +18,16 @@ export default async function ProdutosPage(props: PageProps<"/produtos">) {
   const searchParams = await props.searchParams;
   const query = typeof searchParams.q === "string" ? searchParams.q.trim() : "";
   const status = searchParams.status === "archived" ? "archived" : "active";
-  const [productsResult, categories, settings, analytics] = await Promise.all([
-    getProductsQuery({
-      organizationId: context.organizationId,
-      query,
-      status,
-    }),
-    listCategoriesWithUsage(context.organizationId),
-    getCatalogSettings(context.organizationId),
-    getProductAnalytics({ organizationId: context.organizationId }),
-  ]);
+  const productsResult = await getProductsQuery({
+    organizationId: context.organizationId,
+    query,
+    status,
+  });
+  const categories = await listCategoriesWithUsage(context.organizationId);
+  const settings = await getCatalogSettings(context.organizationId);
+  const analytics = await getProductAnalytics({
+    organizationId: context.organizationId,
+  });
 
   return (
     <ProductsPanel

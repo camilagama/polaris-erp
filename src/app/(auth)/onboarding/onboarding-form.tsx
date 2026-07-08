@@ -4,10 +4,8 @@ import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  completeOnboardingAction,
-  initialOnboardingActionState,
-} from "@/features/onboarding/actions";
+import { completeOnboardingAction } from "@/features/onboarding/actions";
+import { initialOnboardingActionState } from "@/features/onboarding/state";
 
 interface OnboardingFormProps {
   defaultOrganizationName: string;

@@ -1,5 +1,5 @@
 **1. Resumo Executivo**
-Status de execucao em 2026-07-06:
+Status de execucao em 2026-07-08:
 - PR 1: validado como skip/sem P0 confirmado neste snapshot.
 - PR 2: iniciado. `DB-001`, parte de `RACE-001` e rota de imagem com organizacao ativa foram enderecados nesta fatia.
 - PR 2: atores em audit/price changes/goals agora sao tenant-scoped por FK composta contra membership.
@@ -123,12 +123,15 @@ Status de execucao em 2026-07-06:
 - PR 6: onboarding agora retorna erro recuperavel em validacao, anuncia a falha com `aria-live` e desabilita input/botao enquanto a action esta pendente.
 - PR 6: exclusao de categoria customizada agora exige confirmacao explicita antes de chamar a action destrutiva.
 - PR 5: CI agora inclui job Playwright E2E que exige `E2E_DATABASE_URL` isolado.
+- PR 3/DB: migrations aditivas criticas foram aplicadas no endpoint runtime/main via `DATABASE_URL_DIRECT`; a role runtime `polaris_app` agora valida `sales.idempotency_key`, `sales_organization_idempotency_key_unique_idx` e `sessions_id_unique_idx`.
+- PR 5/E2E: `bun run test:e2e` agora executa preflight `scripts/check-e2e-db-schema.ts` antes do Playwright e falha cedo se o branch E2E voltar a ficar com schema atrasado.
+- PR 5/E2E: branch E2E foi alinhado via Neon MCP; preflight de schema passou e `bun run test:e2e` validou 9/9 fluxos Playwright.
 - PR 9: roadmap pos-MVP criado em `docs/roadmap.md`, separando convites, billing, exportacao, admin/suporte, LGPD e relatorios do hardening inicial.
 - Ainda nao declarar producao pronta: PR 2/3/5/7 seguem com pendencias relevantes.
 
 Veredito: **quase pronto para piloto controlado, não recomendado para produção self-serve aberta ainda**.
 
-Maturidade estimada: **74/100**. Confiança: **média-alta**. Limites: não rodei Playwright porque `E2E_DATABASE_URL` está ausente; a migration RLS foi aplicada no Neon main e validada por smoke, mas as demais migrations/constraints financeiras ainda precisam de dry-run/aplicação controlada em branch Neon isolada; 4 subagents bateram limite de uso e foram cobertos manualmente.
+Maturidade estimada: **81/100**. Confiança: **média-alta**. Limites: RLS e migrations aditivas criticas foram aplicadas/validadas no endpoint runtime/main e no branch E2E; ainda falta smoke no deploy promovido, envs Vercel reais, R2/Upstash reais e validacao de migrations financeiras restantes em ambiente promovido.
 
 Forças reais:
 - Multi-tenancy aplicado na maioria das queries e mutations via `organizationId`.
@@ -138,11 +141,11 @@ Forças reais:
 - `bun run check`, `bun run test` e `bun run build` passaram.
 
 Top bloqueadores antes de clientes reais:
-1. Migrations de `sessions.id`, constraints financeiras e FKs tenant-scoped ainda nao foram validadas em branch Neon isolada.
+1. Deploy promovido precisa usar `DATABASE_URL` com role runtime `polaris_app` e passar `bun run db:smoke:rls`.
 2. Bootstrap interno bloqueado localmente em prod-like; ainda exige smoke em Vercel Production.
-3. RLS foi implementado e aplicado no Neon main, mas o deploy ainda precisa usar `DATABASE_URL` com a role runtime `polaris_app` e passar por smoke/E2E.
-4. Fluxos criticos ainda nao foram rodados em E2E com banco isolado.
-5. Playwright não verificado com banco isolado neste ambiente.
+3. RLS foi implementado e aplicado no Neon main, mas o deploy ainda precisa usar `DATABASE_URL` com a role runtime `polaris_app` e passar por smoke no ambiente promovido.
+4. Fluxos criticos passaram em E2E isolado local, mas ainda precisam rodar em CI/preview com secrets reais.
+5. Warnings de SSL do `pg`/`pg-connection-string` e Sentinel/Better Auth devem ser tratados antes de hardening final.
 
 **2. Mapa Técnico**
 Stack confirmada: Next.js `16.2.1`, React `19.2.4`, Better Auth `1.6.23`, Drizzle `0.45.2`, PostgreSQL/Neon via `pg`, Tailwind 4, Vitest, Playwright, R2 S3 SDK, Upstash Redis, Sentry.
@@ -157,13 +160,15 @@ Arquitetura:
 - Proxy Next 16 em `proxy.ts`, como barreira otimista.
 
 Verificações:
-- `bun run check` => passou, 276 arquivos.
-- `bun run test` => passou, 75 arquivos, 270 testes.
+- `bun run check` => passou, 279 arquivos.
+- `bun run test` => passou, 75 arquivos, 275 testes.
 - `bun run build` => passou.
 - `bun run knip` => passou.
 - `bun run db:smoke:rls` => passou contra `polaris_app`: `rls-runtime-smoke-ok`, 14 policies, 13/13 tabelas com RLS+FORCE.
-- Neon MCP/plugin => tentativa de busca do projeto `autumn-feather-14038163` ainda falhou com 401 `token_invalidated`; validacao atual do banco foi feita pelo smoke direto via `DATABASE_URL`.
-- `CI=true bun run test:e2e` sem `E2E_DATABASE_URL` => falhou intencionalmente no load do config; E2E completo ainda não executado por falta de banco isolado.
+- Neon MCP/plugin => voltou a conectar para o projeto `autumn-feather-14038163`; runtime/main tambem foi validado diretamente via `DATABASE_URL`/`DATABASE_URL_DIRECT`.
+- `bun x playwright test tests/e2e/shell.e2e.ts` => passou, 4/4, com `E2E_DATABASE_URL` isolado.
+- `bun run test:e2e` => passou, 9/9 testes, apos preflight `scripts/check-e2e-db-schema.ts`; branch E2E `br-flat-cherry-acbnuhz4` foi alinhado via Neon MCP.
+- `CI=true bun run test:e2e` sem `E2E_DATABASE_URL` => falha intencionalmente no load do config para impedir banco compartilhado.
 
 **3. Achados Priorizados**
 `DB-001` P1, Banco/Auth  
@@ -246,10 +251,10 @@ Correção: manter rascunho local com `Cancelar`, `Aplicar taxas` e `Salvar cart
 Teste: E2E fechar modal sem aplicar, aplicar e recarregar; excluir categoria customizada somente após confirmar.
 
 `TEST-001` P2, E2E  
-Evidência: `playwright.config.ts` exige `E2E_DATABASE_URL` em CI; env local está ausente.  
-Status: Confirmado por comando.  
-Impacto: fluxos críticos não foram validados nesta auditoria.  
-Correção: configurar branch Neon E2E e rodar `bun run test:e2e`.  
+Evidência: `playwright.config.ts` exige `E2E_DATABASE_URL` em CI e agora carrega `.env.local` via `@next/env`; `tests/e2e/shell.e2e.ts` passou 4/4 com banco isolado.  
+Status: OK para a fatia atual. Preflight de schema passou e Playwright validou shell, produto/estoque/venda/cancelamento/arquivamento, categoria protegida, snapshot de preco e taxas de cartao.  
+Impacto residual: ainda falta rodar no CI/preview com secrets reais e manter branch E2E sincronizado nas proximas migrations.  
+Correção: manter preflight e recriar/aplicar migrations no branch E2E sempre que o schema mudar.  
 
 **4. Checklist Produção**
 - Auth/Google/Better Auth: Parcial. Produção exige Google, secret forte e smoke real; bootstrap prod-like corrigido localmente. P1.
@@ -267,8 +272,8 @@ Correção: configurar branch Neon E2E e rodar `bun run test:e2e`.
 - Metas: Parcial. Regra de 1 ativa tem constraint local; falta aplicar/validar migration em Neon isolado. P2.
 - Logs/Sentry: Parcial. Errors, tracing e replay em erro configurados; alertas ainda precisam ser definidos na plataforma. P3.
 - Backups/rollback: Parcial. Docs existem; execução não verificada. P2.
-- Tests unit/integration: OK razoável. 270 testes passando no ultimo run registrado.
-- E2E: Parcial/não verificado localmente. P2.
+- Tests unit/integration: OK razoável. 275 testes passando no ultimo run registrado.
+- E2E: OK localmente com banco isolado atualizado; pendente CI/preview com secrets reais. P2.
 - CI/CD: Parcial. CI roda check/test/knip/build, job E2E isolado e job manual `rls-smoke`; ainda depende dos secrets reais `E2E_DATABASE_URL` e `RLS_DATABASE_URL`. P2.
 - LGPD/privacidade/suporte/admin/billing: Ausente/parcial. P2/P3.
 

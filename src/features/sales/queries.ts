@@ -195,18 +195,16 @@ export async function getSaleByIdQuery(
   organizationId: string,
   id: string
 ): Promise<SaleDetail | undefined> {
-  const sale = await withTenantContext(organizationId, (tx) =>
-    tx.query.sales.findFirst({
+  const [sale, items] = await withTenantContext(organizationId, async (tx) => {
+    const saleResult = await tx.query.sales.findFirst({
       where: and(eq(sales.id, id), eq(sales.organizationId, organizationId)),
-    })
-  );
+    });
 
-  if (!sale) {
-    return;
-  }
+    if (!saleResult) {
+      return [undefined, []] as const;
+    }
 
-  const items = await withTenantContext(organizationId, (tx) =>
-    tx
+    const itemRows = await tx
       .select({
         createdAt: saleItems.createdAt,
         id: saleItems.id,
@@ -224,8 +222,14 @@ export async function getSaleByIdQuery(
           eq(saleItems.saleId, id)
         )
       )
-      .orderBy(asc(saleItems.createdAt))
-  );
+      .orderBy(asc(saleItems.createdAt));
+
+    return [saleResult, itemRows] as const;
+  });
+
+  if (!sale) {
+    return;
+  }
 
   return {
     ...sale,

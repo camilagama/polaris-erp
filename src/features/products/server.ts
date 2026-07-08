@@ -2,6 +2,7 @@ import "server-only";
 
 import { and, asc, eq, gte, lte, sql } from "drizzle-orm";
 import {
+  auditEvents,
   categories,
   productPriceChanges,
   productStockEntries,
@@ -51,58 +52,58 @@ export const getProductAnalytics = async ({
   recentFromDate.setDate(recentFromDate.getDate() - 29);
   const recentFrom = formatDateInputValue(recentFromDate);
   const [inventoryRows, allPurchaseRows, recentSalesRows] =
-    await withTenantContext(organizationId, (tx) =>
-      Promise.all([
-        tx
-          .select({
-            archivedAt: products.archivedAt,
-            categoryName: categories.name,
-            costPrice: products.costPrice,
-            stock: products.stock,
-          })
-          .from(products)
-          .innerJoin(
-            categories,
-            and(
-              eq(products.categoryId, categories.id),
-              eq(categories.organizationId, organizationId)
-            )
+    await withTenantContext(organizationId, async (tx) => {
+      const inventoryResult = await tx
+        .select({
+          archivedAt: products.archivedAt,
+          categoryName: categories.name,
+          costPrice: products.costPrice,
+          stock: products.stock,
+        })
+        .from(products)
+        .innerJoin(
+          categories,
+          and(
+            eq(products.categoryId, categories.id),
+            eq(categories.organizationId, organizationId)
           )
-          .where(eq(products.organizationId, organizationId))
-          .orderBy(asc(products.name)),
-        tx
-          .select({
-            occurredOn: productStockEntries.stockedOn,
-            quantity: productStockEntries.quantity,
-            unitCost: productStockEntries.unitCost,
-          })
-          .from(productStockEntries)
-          .where(eq(productStockEntries.organizationId, organizationId)),
-        tx
-          .select({
-            lineTotal: saleItems.lineTotal,
-            occurredOn: sales.occurredOn,
-            quantity: saleItems.quantity,
-            status: sales.status,
-          })
-          .from(saleItems)
-          .innerJoin(
-            sales,
-            and(
-              eq(saleItems.saleId, sales.id),
-              eq(sales.organizationId, organizationId)
-            )
+        )
+        .where(eq(products.organizationId, organizationId))
+        .orderBy(asc(products.name));
+      const purchaseResult = await tx
+        .select({
+          occurredOn: productStockEntries.stockedOn,
+          quantity: productStockEntries.quantity,
+          unitCost: productStockEntries.unitCost,
+        })
+        .from(productStockEntries)
+        .where(eq(productStockEntries.organizationId, organizationId));
+      const salesResult = await tx
+        .select({
+          lineTotal: saleItems.lineTotal,
+          occurredOn: sales.occurredOn,
+          quantity: saleItems.quantity,
+          status: sales.status,
+        })
+        .from(saleItems)
+        .innerJoin(
+          sales,
+          and(
+            eq(saleItems.saleId, sales.id),
+            eq(sales.organizationId, organizationId)
           )
-          .where(
-            and(
-              eq(saleItems.organizationId, organizationId),
-              eq(sales.organizationId, organizationId),
-              gte(sales.occurredOn, recentFrom),
-              lte(sales.occurredOn, today)
-            )
-          ),
-      ])
-    );
+        )
+        .where(
+          and(
+            eq(saleItems.organizationId, organizationId),
+            eq(sales.organizationId, organizationId),
+            gte(sales.occurredOn, recentFrom),
+            lte(sales.occurredOn, today)
+          )
+        );
+
+      return [inventoryResult, purchaseResult, salesResult] as const;
+    });
 
   return buildProductAnalytics({
     inventory: inventoryRows.map((row) => ({
@@ -182,6 +183,7 @@ const lockProductForUpdate = async (
 };
 
 export const createProductWithInitialStock = async ({
+  actorUserId,
   categoryId,
   costPrice,
   description,
@@ -193,6 +195,7 @@ export const createProductWithInitialStock = async ({
   purchasedOn,
   stock,
 }: {
+  actorUserId: string;
   categoryId: string;
   costPrice: string;
   description: string | null;
@@ -241,6 +244,14 @@ export const createProductWithInitialStock = async ({
         unitCost: costPrice,
       });
     }
+
+    await tx.insert(auditEvents).values({
+      actorUserId,
+      organizationId,
+      subjectId: productId,
+      subjectType: "product",
+      type: "product.created",
+    });
   });
 };
 
@@ -293,16 +304,26 @@ export const updateProductWithPriceHistory = async ({
         productId,
       });
     }
+
+    await tx.insert(auditEvents).values({
+      actorUserId,
+      organizationId,
+      subjectId: productId,
+      subjectType: "product",
+      type: "product.updated",
+    });
   });
 };
 
 export const addProductStock = async ({
+  actorUserId,
   organizationId,
   productId,
   quantity,
   stockedOn,
   unitCost,
 }: {
+  actorUserId: string;
   organizationId: string;
   productId: string;
   quantity: number;
@@ -345,10 +366,20 @@ export const addProductStock = async ({
           eq(products.organizationId, organizationId)
         )
       );
+
+    await tx.insert(auditEvents).values({
+      actorUserId,
+      metadata: { quantity },
+      organizationId,
+      subjectId: productId,
+      subjectType: "stock",
+      type: "stock.added",
+    });
   });
 };
 
 export const writeOffProductStock = async ({
+  actorUserId,
   happenedOn,
   notes,
   organizationId,
@@ -356,6 +387,7 @@ export const writeOffProductStock = async ({
   quantity,
   reason,
 }: {
+  actorUserId: string;
   happenedOn: string;
   notes: string | null;
   organizationId: string;
@@ -394,32 +426,58 @@ export const writeOffProductStock = async ({
           eq(products.organizationId, organizationId)
         )
       );
+
+    await tx.insert(auditEvents).values({
+      actorUserId,
+      metadata: { quantity, reason },
+      organizationId,
+      subjectId: productId,
+      subjectType: "stock",
+      type: "stock.written_off",
+    });
   });
 };
 
 export const setProductArchivedState = async ({
+  actorUserId,
   archived,
   organizationId,
   productId,
 }: {
+  actorUserId: string;
   archived: boolean;
   organizationId: string;
   productId: string;
 }): Promise<boolean> => {
-  const updatedProducts = await withTenantContext(organizationId, (tx) =>
-    tx
-      .update(products)
-      .set({
-        archivedAt: archived ? new Date() : null,
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(products.id, productId),
-          eq(products.organizationId, organizationId)
+  const updatedProducts = await withTenantContext(
+    organizationId,
+    async (tx) => {
+      const rows = await tx
+        .update(products)
+        .set({
+          archivedAt: archived ? new Date() : null,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(products.id, productId),
+            eq(products.organizationId, organizationId)
+          )
         )
-      )
-      .returning({ id: products.id })
+        .returning({ id: products.id });
+
+      if (rows.length > 0) {
+        await tx.insert(auditEvents).values({
+          actorUserId,
+          organizationId,
+          subjectId: productId,
+          subjectType: "product",
+          type: archived ? "product.archived" : "product.unarchived",
+        });
+      }
+
+      return rows;
+    }
   );
 
   return updatedProducts.length > 0;

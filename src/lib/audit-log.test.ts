@@ -50,4 +50,28 @@ describe("recordActorAuditEvent", () => {
 
     expect(mockDb.transaction).toHaveBeenCalledOnce();
   });
+
+  it("does not block domain actions when audit persistence hangs", async () => {
+    vi.useFakeTimers();
+
+    try {
+      const { recordActorAuditEvent } = await import("@/lib/audit-log");
+      const { mockDb } = await resolveMocks();
+
+      mockDb.transaction.mockReturnValue(new Promise(() => undefined));
+
+      const result = recordActorAuditEvent({
+        actorUserId: "user-1",
+        organizationId: "org_dg_imports",
+        subjectId: "sale-1",
+        subjectType: "sale",
+        type: "sale.cancelled",
+      });
+
+      await vi.advanceTimersByTimeAsync(500);
+      await expect(result).resolves.toBeUndefined();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

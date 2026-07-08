@@ -1,6 +1,6 @@
 "use server";
 
-import { refresh, updateTag } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { getProductCategoryById } from "@/features/catalog/server";
 import {
   clearProductImageMetadata,
@@ -32,20 +32,24 @@ import { buildOrganizationCacheTags } from "@/lib/cache-tags";
 import { toCurrencyString } from "@/lib/domain/currency";
 
 const revalidateCatalogViews = (organizationId: string) => {
+  revalidatePath("/produtos");
   updateTag(buildOrganizationCacheTags(organizationId).catalog);
-  refresh();
 };
 
 const revalidateSharedAnalytics = (organizationId: string) => {
+  revalidatePath("/produtos");
   updateTag(buildOrganizationCacheTags(organizationId).analytics);
-  refresh();
 };
 
 const revalidateCatalogAndAnalytics = (organizationId: string) => {
   const tags = buildOrganizationCacheTags(organizationId);
+  revalidatePath("/produtos");
   updateTag(tags.catalog);
   updateTag(tags.analytics);
-  refresh();
+};
+
+const revalidateProductDetail = (productId: string) => {
+  revalidatePath(`/produtos/${productId}`);
 };
 
 const firstZodErrorMessage = (error: { issues: { message: string }[] }) =>
@@ -89,6 +93,7 @@ export async function createProductAction(input: unknown): Promise<string> {
     }
 
     await createProductWithInitialStock({
+      actorUserId: context.userId,
       categoryId: result.data.categoryId,
       costPrice: toCurrencyString(result.data.costPrice),
       description: result.data.description || null,
@@ -120,12 +125,7 @@ export async function createProductAction(input: unknown): Promise<string> {
   }
 
   revalidateCatalogAndAnalytics(context.organizationId);
-  await recordAuditEvent({
-    context,
-    subjectId: productId,
-    subjectType: "product",
-    type: "product.created",
-  });
+  revalidateProductDetail(productId);
   return productId;
 }
 
@@ -157,14 +157,8 @@ export async function updateProductAction(id: string, input: unknown) {
   });
 
   revalidateCatalogViews(context.organizationId);
-  await recordAuditEvent({
-    context,
-    subjectId: id,
-    subjectType: "product",
-    type: "product.updated",
-  });
+  revalidateProductDetail(id);
 }
-
 export async function replaceProductImageAction(
   id: string,
   image: StagedProductImageInput
@@ -227,13 +221,14 @@ export async function replaceProductImageAction(
     });
   }
 
-  revalidateCatalogViews(context.organizationId);
   await recordAuditEvent({
     context,
     subjectId: id,
     subjectType: "product_image",
     type: "product_image.replaced",
   });
+  revalidateCatalogViews(context.organizationId);
+  revalidateProductDetail(id);
   return { success: true } as const;
 }
 
@@ -267,13 +262,14 @@ export async function removeProductImageAction(id: string) {
     version: product.imageVersion,
   });
 
-  revalidateCatalogViews(context.organizationId);
   await recordAuditEvent({
     context,
     subjectId: id,
     subjectType: "product_image",
     type: "product_image.removed",
   });
+  revalidateCatalogViews(context.organizationId);
+  revalidateProductDetail(id);
   return { success: true } as const;
 }
 
@@ -286,6 +282,7 @@ export async function addProductStockAction(productId: string, input: unknown) {
   }
 
   await addProductStock({
+    actorUserId: context.userId,
     organizationId: context.organizationId,
     productId,
     quantity: result.data.quantity,
@@ -294,13 +291,7 @@ export async function addProductStockAction(productId: string, input: unknown) {
   });
 
   revalidateSharedAnalytics(context.organizationId);
-  await recordAuditEvent({
-    context,
-    metadata: { quantity: result.data.quantity },
-    subjectId: productId,
-    subjectType: "stock",
-    type: "stock.added",
-  });
+  revalidateProductDetail(productId);
 }
 
 export async function writeOffProductStockAction(
@@ -315,6 +306,7 @@ export async function writeOffProductStockAction(
   }
 
   await writeOffProductStock({
+    actorUserId: context.userId,
     happenedOn: result.data.happenedOn,
     notes: result.data.notes || null,
     organizationId: context.organizationId,
@@ -324,19 +316,14 @@ export async function writeOffProductStockAction(
   });
 
   revalidateSharedAnalytics(context.organizationId);
-  await recordAuditEvent({
-    context,
-    metadata: { quantity: result.data.quantity, reason: result.data.reason },
-    subjectId: productId,
-    subjectType: "stock",
-    type: "stock.written_off",
-  });
+  revalidateProductDetail(productId);
 }
 
 export async function archiveProductAction(id: string) {
   const context = await requireAppContext("products:write");
 
   const archived = await setProductArchivedState({
+    actorUserId: context.userId,
     archived: true,
     organizationId: context.organizationId,
     productId: id,
@@ -347,18 +334,14 @@ export async function archiveProductAction(id: string) {
   }
 
   revalidateCatalogViews(context.organizationId);
-  await recordAuditEvent({
-    context,
-    subjectId: id,
-    subjectType: "product",
-    type: "product.archived",
-  });
+  revalidateProductDetail(id);
 }
 
 export async function unarchiveProductAction(id: string) {
   const context = await requireAppContext("products:write");
 
   const unarchived = await setProductArchivedState({
+    actorUserId: context.userId,
     archived: false,
     organizationId: context.organizationId,
     productId: id,
@@ -369,10 +352,5 @@ export async function unarchiveProductAction(id: string) {
   }
 
   revalidateCatalogViews(context.organizationId);
-  await recordAuditEvent({
-    context,
-    subjectId: id,
-    subjectType: "product",
-    type: "product.unarchived",
-  });
+  revalidateProductDetail(id);
 }

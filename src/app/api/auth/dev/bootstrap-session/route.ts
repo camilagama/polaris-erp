@@ -8,12 +8,35 @@ const bootstrapSessionSchema = z.object({
   name: z.string().trim().min(1).optional(),
 });
 
-const isBootstrapEnabled = () => {
+const LOCAL_E2E_HOSTS = new Set(["127.0.0.1", "::1", "localhost"]);
+
+const isLocalProductionE2eBootstrap = (request: Request) => {
+  if (
+    serverEnv.NODE_ENV !== "production" ||
+    serverEnv.VERCEL_ENV === "preview" ||
+    serverEnv.VERCEL_ENV === "production" ||
+    serverEnv.ALLOW_PLAYWRIGHT_BOOTSTRAP !== "true"
+  ) {
+    return false;
+  }
+
+  const requestUrl = new URL(request.url);
+  const databaseUrl = process.env.DATABASE_URL;
+  const e2eDatabaseUrl = process.env.E2E_DATABASE_URL;
+
+  return (
+    LOCAL_E2E_HOSTS.has(requestUrl.hostname) &&
+    Boolean(e2eDatabaseUrl) &&
+    databaseUrl === e2eDatabaseUrl
+  );
+};
+
+const isBootstrapEnabled = (request: Request) => {
   if (serverEnv.NODE_ENV === "development" || serverEnv.NODE_ENV === "test") {
     return true;
   }
 
-  return false;
+  return isLocalProductionE2eBootstrap(request);
 };
 
 const normalizeSameSite = (sameSite: string | boolean | undefined) => {
@@ -116,8 +139,9 @@ export async function POST(request: Request) {
     ? `Bearer ${serverEnv.INTERNAL_BOOTSTRAP_SECRET}`
     : null;
   const authorization = request.headers.get("authorization");
+  const isLocalProductionE2e = isLocalProductionE2eBootstrap(request);
 
-  if (!isBootstrapEnabled()) {
+  if (!isBootstrapEnabled(request)) {
     return Response.json(
       {
         error:
@@ -136,22 +160,24 @@ export async function POST(request: Request) {
     );
   }
 
-  const rateLimit = await checkRateLimit({
-    key: getRateLimitKeyFromRequest(request, "internal-bootstrap-session"),
-    limit: 10,
-    windowMs: 60 * 1000,
-  });
+  if (!isLocalProductionE2e) {
+    const rateLimit = await checkRateLimit({
+      key: getRateLimitKeyFromRequest(request, "internal-bootstrap-session"),
+      limit: 10,
+      windowMs: 60 * 1000,
+    });
 
-  if (!rateLimit.ok) {
-    return Response.json(
-      { error: "Muitas tentativas. Tente novamente em instantes." },
-      {
-        headers: {
-          "Retry-After": rateLimit.retryAfterSeconds.toString(),
-        },
-        status: 429,
-      }
-    );
+    if (!rateLimit.ok) {
+      return Response.json(
+        { error: "Muitas tentativas. Tente novamente em instantes." },
+        {
+          headers: {
+            "Retry-After": rateLimit.retryAfterSeconds.toString(),
+          },
+          status: 429,
+        }
+      );
+    }
   }
 
   if (authorization !== expectedAuthorization) {

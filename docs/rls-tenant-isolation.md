@@ -159,12 +159,13 @@ Concluido:
   - insert em `organization` sem contexto foi negado por policy RLS;
   - fluxo onboarding-like com `users`, `organization`, `member`, `categories`, `system_settings` e `audit_events` funcionou com contexto transacional.
 - Smoke reexecutavel `bun run db:smoke:rls` criado em `scripts/smoke-rls-runtime.cjs`; resultado local contra Neon main: `rls-runtime-smoke-ok`, `policies = 14`, `forcedTables = 13/13`, `currentUser = polaris_app`.
-- Revalidacao final local contra `polaris_app`: `bun run check` (276 arquivos), `bun run test` (75 arquivos, 270 testes), `bun run db:smoke:rls`, `bun run knip` e `bun run build` passaram.
-- MCP Neon/plugin ainda nao esta operacional nesta sessao: tentativa de buscar `autumn-feather-14038163` retornou 401 `token_invalidated`. A evidencia de banco desta fatia vem do smoke direto via `DATABASE_URL`.
+- Revalidacao final local contra `polaris_app`: `bun run check` (279 arquivos), `bun run test` (75 arquivos, 274 testes), `bun run db:smoke:rls`, `bun run knip` e `bun run build` passaram.
+- MCP Neon/plugin voltou a conectar para o projeto `autumn-feather-14038163`; runtime/main tambem foi validado diretamente via `DATABASE_URL`/`DATABASE_URL_DIRECT`.
+- Migrations aditivas criticas foram aplicadas no endpoint runtime/main via `DATABASE_URL_DIRECT`; a role runtime `polaris_app` confirmou `sales.idempotency_key`, `sales_organization_idempotency_key_unique_idx` e `sessions_id_unique_idx`.
 
 Ainda pendente antes de producao:
 
 - Atualizar o `DATABASE_URL` do ambiente de deploy para usar `polaris_app`; manter `DATABASE_URL_DIRECT`/migrations com `neondb_owner`.
 - Coordenar deploy desta versao RLS-aware e rodar `bun run db:smoke:rls` contra o ambiente promovido. Aplicar/usar RLS antes do runtime com `set_config` quebra reads/writes tenant-scoped.
 - Rodar smoke pos-migration para login, onboarding, dashboard, produtos, vendas, imagens e reconcile.
-- Rodar E2E com `E2E_DATABASE_URL` isolado.
+- Manter o banco E2E sincronizado nas proximas migrations. Em 2026-07-08 o branch E2E `br-flat-cherry-acbnuhz4` foi alinhado via Neon MCP e `bun run test:e2e` passou com 9/9 apos preflight de schema.

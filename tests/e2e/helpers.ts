@@ -11,7 +11,6 @@ const e2eBaseUrl = process.env.E2E_BASE_URL ?? "http://127.0.0.1:3001";
 const e2eUserName = process.env.E2E_NAME ?? "Polaris E2E";
 const e2eBootstrapSecret =
   process.env.E2E_INTERNAL_BOOTSTRAP_SECRET ??
-  process.env.INTERNAL_BOOTSTRAP_SECRET ??
   E2E_DEFAULT_INTERNAL_BOOTSTRAP_SECRET;
 
 const parseSetCookieHeader = (cookieHeader: string) => {
@@ -126,9 +125,31 @@ export const login = async (page: Page) => {
   await applyBootstrapCookies(page, response);
   await page.goto("/");
 
+  await page
+    .waitForFunction(
+      () =>
+        document.body.innerText.includes("Criar organizacao") ||
+        document.body.innerText.includes("Dashboard"),
+      undefined,
+      { timeout: 5000 }
+    )
+    .catch(() => undefined);
+
+  const onboardingHeading = page.getByRole("heading", {
+    name: "Criar organizacao",
+  });
+  const needsOnboarding = await onboardingHeading.isVisible();
+
+  if (needsOnboarding) {
+    await page
+      .getByLabel("Nome da organizacao")
+      .fill(createRunLabel("Organizacao E2E"));
+    await page.getByRole("button", { name: "Comecar" }).click();
+  }
+
   await expect(
     page.getByRole("heading", {
-      name: "Visao geral",
+      name: "Dashboard",
     })
   ).toBeVisible();
 };

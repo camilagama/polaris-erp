@@ -1,6 +1,6 @@
 "use server";
 
-import { refresh, updateTag } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { getCatalogSettings } from "@/features/catalog/server";
 import { createSaleSchema } from "@/features/sales/schema";
 import {
@@ -9,15 +9,20 @@ import {
   findExistingSaleByIdempotencyKey,
 } from "@/features/sales/server";
 import { requireAppContext } from "@/lib/app-session";
-import { recordAuditEvent } from "@/lib/audit-log";
 import { buildOrganizationCacheTags } from "@/lib/cache-tags";
 
 const SALES_IDEMPOTENCY_CONSTRAINT =
   "sales_organization_idempotency_key_unique_idx";
 
 const revalidateSalesViews = (organizationId: string) => {
+  revalidatePath("/vendas");
+  revalidatePath("/produtos");
+  revalidatePath("/produtos/[id]", "page");
   updateTag(buildOrganizationCacheTags(organizationId).analytics);
-  refresh();
+};
+
+const revalidateSaleDetail = (saleId: string) => {
+  revalidatePath(`/vendas/${saleId}`);
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -72,6 +77,7 @@ export async function createSaleAction(data: {
 
   try {
     createdSaleId = await createSale({
+      actorUserId: context.userId,
       cardInstallmentRules: catalogSettings.cardInstallmentRules,
       input: parsed,
       organizationId: context.organizationId,
@@ -92,13 +98,7 @@ export async function createSaleAction(data: {
   }
 
   revalidateSalesViews(context.organizationId);
-  await recordAuditEvent({
-    context,
-    metadata: { itemCount: parsed.items.length },
-    subjectId: createdSaleId,
-    subjectType: "sale",
-    type: "sale.created",
-  });
+  revalidateSaleDetail(createdSaleId);
   return createdSaleId;
 }
 
@@ -106,15 +106,11 @@ export async function cancelSaleAction(id: string) {
   const context = await requireAppContext("sales:write");
 
   await cancelSale({
+    actorUserId: context.userId,
     organizationId: context.organizationId,
     saleId: id,
   });
 
   revalidateSalesViews(context.organizationId);
-  await recordAuditEvent({
-    context,
-    subjectId: id,
-    subjectType: "sale",
-    type: "sale.cancelled",
-  });
+  revalidateSaleDetail(id);
 }

@@ -1,9 +1,12 @@
+import { loadEnvConfig } from "@next/env";
 import { defineConfig } from "@playwright/test";
 import { validateE2eDatabaseEnv } from "./src/lib/playwright-env";
 import {
   E2E_DEFAULT_CRON_SECRET,
   E2E_DEFAULT_INTERNAL_BOOTSTRAP_SECRET,
 } from "./tests/e2e/constants";
+
+loadEnvConfig(process.cwd());
 
 const isCi = process.env.CI === "true";
 const e2eDatabaseUrl = process.env.E2E_DATABASE_URL;
@@ -28,6 +31,7 @@ const processEnvWithE2eOverrides: NodeJS.ProcessEnv = {
   ALLOW_PLAYWRIGHT_BOOTSTRAP: "true",
   CRON_SECRET: e2eCronSecret,
   INTERNAL_BOOTSTRAP_SECRET: e2eInternalBootstrapSecret,
+  NODE_ENV: "production",
 };
 
 if (e2eDatabaseUrl) {

@@ -590,6 +590,7 @@ export function CatalogSettingsPanel({
                   <InputGroupText>{rule.installments}x</InputGroupText>
                 </InputGroupAddon>
                 <InputGroupInput
+                  aria-label={`Taxa ${rule.installments}x (%)`}
                   id={`card-fee-${rule.installments}`}
                   min="0"
                   onChange={(event) => {

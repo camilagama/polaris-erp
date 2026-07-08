@@ -134,6 +134,7 @@ export function ProductDetailActions({
         setEditing(false);
         setEditImageFile(null);
         setEditImageMarkedForRemoval(false);
+        router.refresh();
       } catch (error) {
         toast.error(
           error instanceof Error
@@ -154,6 +155,7 @@ export function ProductDetailActions({
         });
         toast.success("Estoque adicionado.");
         setStocking(false);
+        router.refresh();
       } catch (error) {
         toast.error(
           error instanceof Error
@@ -175,6 +177,7 @@ export function ProductDetailActions({
         });
         toast.success("Baixa registrada.");
         setWritingOff(false);
+        router.refresh();
       } catch (error) {
         toast.error(
           error instanceof Error
@@ -191,6 +194,7 @@ export function ProductDetailActions({
         if (product.archivedAt) {
           await unarchiveProductAction(product.id);
           toast.success("Produto desarquivado.");
+          router.refresh();
         } else {
           await archiveProductAction(product.id);
           toast.success("Produto arquivado.");

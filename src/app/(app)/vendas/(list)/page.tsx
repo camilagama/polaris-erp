@@ -24,21 +24,18 @@ export default async function VendasPage(props: PageProps<"/vendas">) {
     bounds,
     searchParams,
   });
-  const [salesResult, saleProducts, analytics, catalogSettings] =
-    await Promise.all([
-      getSalesQuery({
-        organizationId: context.organizationId,
-        query,
-        status,
-      }),
-      getSaleProductsQuery(context.organizationId),
-      getSalesAnalytics({
-        from: selectedRange.from,
-        organizationId: context.organizationId,
-        to: selectedRange.to,
-      }),
-      getCatalogSettings(context.organizationId),
-    ]);
+  const salesResult = await getSalesQuery({
+    organizationId: context.organizationId,
+    query,
+    status,
+  });
+  const saleProducts = await getSaleProductsQuery(context.organizationId);
+  const analytics = await getSalesAnalytics({
+    from: selectedRange.from,
+    organizationId: context.organizationId,
+    to: selectedRange.to,
+  });
+  const catalogSettings = await getCatalogSettings(context.organizationId);
 
   return (
     <SalesPanel

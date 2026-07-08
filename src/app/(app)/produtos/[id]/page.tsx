@@ -31,23 +31,28 @@ export default async function ProdutoDetalhePage(
     notFound();
   }
 
-  const [
-    stockEntries,
-    writeOffs,
-    sales,
-    categories,
-    settings,
-    salesMetrics,
-    priceChanges,
-  ] = await Promise.all([
-    getProductStockEntriesByProductIdQuery(context.organizationId, id),
-    getProductStockWriteOffsByProductIdQuery(context.organizationId, id),
-    getProductSalesByProductIdQuery(context.organizationId, id),
-    listCategoriesWithUsage(context.organizationId),
-    getCatalogSettings(context.organizationId),
-    getProductSalesHistoryMetrics(context.organizationId, id),
-    getProductPriceChangesByProductIdQuery(context.organizationId, id),
-  ]);
+  const stockEntries = await getProductStockEntriesByProductIdQuery(
+    context.organizationId,
+    id
+  );
+  const writeOffs = await getProductStockWriteOffsByProductIdQuery(
+    context.organizationId,
+    id
+  );
+  const sales = await getProductSalesByProductIdQuery(
+    context.organizationId,
+    id
+  );
+  const categories = await listCategoriesWithUsage(context.organizationId);
+  const settings = await getCatalogSettings(context.organizationId);
+  const salesMetrics = await getProductSalesHistoryMetrics(
+    context.organizationId,
+    id
+  );
+  const priceChanges = await getProductPriceChangesByProductIdQuery(
+    context.organizationId,
+    id
+  );
 
   const averageCost = Number(product.costPrice);
   const initialEntryId =

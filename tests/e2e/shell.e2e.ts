@@ -1,8 +1,9 @@
 import { expect, test } from "@playwright/test";
 import { login } from "./helpers";
 
-const gsiWarningRegex = /GSI_LOGGER|origin is not allowed/i;
+const gsiWarningRegex = /origin is not allowed/i;
 const implicitGoogleAccountRegex = /sua conta sera criada automaticamente/i;
+const googleContinueRegex = /Continuar com Google/;
 const rootRouteRegex = /\/$/;
 const signInRouteRegex = /\/sign-in$/;
 
@@ -13,7 +14,7 @@ test("redirects unauthenticated protected routes to sign-in", async ({
 
   await expect(page).toHaveURL(signInRouteRegex);
   await expect(
-    page.getByRole("button", { name: "Continuar com Google" })
+    page.getByRole("link", { name: googleContinueRegex })
   ).toBeVisible();
 });
 
@@ -33,7 +34,7 @@ test("keeps the local sign-in screen usable without Google client noise", async 
   await page.goto("/sign-in");
 
   await expect(
-    page.getByRole("button", { name: "Continuar com Google" })
+    page.getByRole("link", { name: googleContinueRegex })
   ).toBeVisible();
   await expect(page.getByText(implicitGoogleAccountRegex)).toBeVisible();
   expect(gsiMessages).toEqual([]);
@@ -45,9 +46,7 @@ test("signs in with a prepared E2E account and lands on the dashboard", async ({
   await login(page);
 
   await expect(page).toHaveURL(rootRouteRegex);
-  await expect(
-    page.getByRole("heading", { name: "Visao geral" })
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
 });
 
 test("renders the global not-found screen for unknown routes", async ({

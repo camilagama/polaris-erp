@@ -163,6 +163,10 @@ const createSalesHarness = (
             return Promise.resolve([]);
           }
 
+          if (!Array.isArray(payload) && "subjectType" in payload) {
+            return Promise.resolve([]);
+          }
+
           throw new Error("Tabela de insert nao suportada no teste.");
         },
       }),
@@ -338,6 +342,15 @@ const createCancelSaleHarness = (params: {
           },
         }),
       }),
+      insert: (_table: unknown) => ({
+        values: (payload: Record<string, unknown>) => {
+          if ("subjectType" in payload) {
+            return Promise.resolve([]);
+          }
+
+          throw new Error("Tabela de insert nao suportada no teste.");
+        },
+      }),
     };
 
     return await callback(tx);
@@ -354,8 +367,13 @@ describe("sales server actions", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
 
-    const { mockCatalogSettings, mockDb, mockRequireAppContext, mockSession } =
-      await resolveMocks();
+    const {
+      mockCatalogSettings,
+      mockDb,
+      mockRecordAuditEvent,
+      mockRequireAppContext,
+      mockSession,
+    } = await resolveMocks();
 
     mockRequireAppContext.mockResolvedValue({
       organizationId: "org_dg_imports",
@@ -377,6 +395,7 @@ describe("sales server actions", () => {
       idealMarkupPercent: 0,
       minimumMarkupPercent: 0,
     });
+    mockRecordAuditEvent.mockResolvedValue(undefined);
     mockDb.transaction.mockImplementation(async (callback) => callback(mockDb));
   });
 
@@ -626,7 +645,7 @@ describe("sales server actions", () => {
 
   it("stores pix sales without fee and keeps total based on items only", async () => {
     const { createSaleAction } = await import("@/features/sales/actions");
-    const { mockDb, mockRefresh, mockUpdateTag } = await resolveMocks();
+    const { mockDb, mockUpdateTag } = await resolveMocks();
 
     const harness = createSalesHarness([
       {
@@ -677,7 +696,6 @@ describe("sales server actions", () => {
     expect(mockUpdateTag).toHaveBeenCalledWith(
       buildOrganizationCacheTags("org_dg_imports").analytics
     );
-    expect(mockRefresh).toHaveBeenCalled();
   });
 
   it("stores card sales with seller fee as operational cost", async () => {
@@ -857,7 +875,7 @@ describe("sales server actions", () => {
 
   it("cancels a sale and restores stock", async () => {
     const { cancelSaleAction } = await import("@/features/sales/actions");
-    const { mockDb, mockRefresh, mockUpdateTag } = await resolveMocks();
+    const { mockDb, mockUpdateTag } = await resolveMocks();
 
     const harness = createCancelSaleHarness({
       items: [
@@ -888,7 +906,6 @@ describe("sales server actions", () => {
     expect(mockUpdateTag).toHaveBeenCalledWith(
       buildOrganizationCacheTags("org_dg_imports").analytics
     );
-    expect(mockRefresh).toHaveBeenCalled();
   });
 
   it("does not audit or revalidate when cancellation targets another tenant", async () => {

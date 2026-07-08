@@ -2,7 +2,13 @@ import "server-only";
 
 import { and, asc, eq, gte, lte, sql } from "drizzle-orm";
 import { cacheLife, cacheTag } from "next/cache";
-import { productStockEntries, products, saleItems, sales } from "@/db/schema";
+import {
+  auditEvents,
+  productStockEntries,
+  products,
+  saleItems,
+  sales,
+} from "@/db/schema";
 import { type TenantTransaction, withTenantContext } from "@/db/tenant-context";
 import type { CardInstallmentRule } from "@/features/catalog/payment-rules";
 import { findCardInstallmentRule } from "@/features/catalog/payment-rules";
@@ -61,23 +67,24 @@ export const getSalesDateBounds = async (
 
   const [salesRows, stockEntriesRows] = await withTenantContext(
     organizationId,
-    (tx) =>
-      Promise.all([
-        tx
-          .select({
-            minOccurredOn: sql<string | null>`min(${sales.occurredOn})`,
-          })
-          .from(sales)
-          .where(eq(sales.organizationId, organizationId)),
-        tx
-          .select({
-            minStockedOn: sql<
-              string | null
-            >`min(${productStockEntries.stockedOn})`,
-          })
-          .from(productStockEntries)
-          .where(eq(productStockEntries.organizationId, organizationId)),
-      ])
+    async (tx) => {
+      const salesResult = await tx
+        .select({
+          minOccurredOn: sql<string | null>`min(${sales.occurredOn})`,
+        })
+        .from(sales)
+        .where(eq(sales.organizationId, organizationId));
+      const stockEntriesResult = await tx
+        .select({
+          minStockedOn: sql<
+            string | null
+          >`min(${productStockEntries.stockedOn})`,
+        })
+        .from(productStockEntries)
+        .where(eq(productStockEntries.organizationId, organizationId));
+
+      return [salesResult, stockEntriesResult] as const;
+    }
   );
   const salesRow = salesRows[0];
   const stockEntriesRow = stockEntriesRows[0];
@@ -106,51 +113,52 @@ export const getSalesAnalytics = async ({
 }): Promise<SalesAnalytics> => {
   const [salesRows, saleItemRows] = await withTenantContext(
     organizationId,
-    (tx) =>
-      Promise.all([
-        tx
-          .select({
-            feeAmount: sales.feeAmount,
-            freightAmount: sales.freightAmount,
-            occurredOn: sales.occurredOn,
-            paymentMethod: sales.paymentMethod,
-            status: sales.status,
-            totalAmount: sales.totalAmount,
-          })
-          .from(sales)
-          .where(
-            and(
-              eq(sales.organizationId, organizationId),
-              gte(sales.occurredOn, from),
-              lte(sales.occurredOn, to)
-            )
+    async (tx) => {
+      const salesResult = await tx
+        .select({
+          feeAmount: sales.feeAmount,
+          freightAmount: sales.freightAmount,
+          occurredOn: sales.occurredOn,
+          paymentMethod: sales.paymentMethod,
+          status: sales.status,
+          totalAmount: sales.totalAmount,
+        })
+        .from(sales)
+        .where(
+          and(
+            eq(sales.organizationId, organizationId),
+            gte(sales.occurredOn, from),
+            lte(sales.occurredOn, to)
           )
-          .orderBy(asc(sales.occurredOn)),
-        tx
-          .select({
-            occurredOn: sales.occurredOn,
-            quantity: saleItems.quantity,
-            status: sales.status,
-            unitCostSnapshot: saleItems.unitCostSnapshot,
-          })
-          .from(saleItems)
-          .innerJoin(
-            sales,
-            and(
-              eq(saleItems.saleId, sales.id),
-              eq(sales.organizationId, organizationId)
-            )
+        )
+        .orderBy(asc(sales.occurredOn));
+      const saleItemResult = await tx
+        .select({
+          occurredOn: sales.occurredOn,
+          quantity: saleItems.quantity,
+          status: sales.status,
+          unitCostSnapshot: saleItems.unitCostSnapshot,
+        })
+        .from(saleItems)
+        .innerJoin(
+          sales,
+          and(
+            eq(saleItems.saleId, sales.id),
+            eq(sales.organizationId, organizationId)
           )
-          .where(
-            and(
-              eq(saleItems.organizationId, organizationId),
-              eq(sales.organizationId, organizationId),
-              gte(sales.occurredOn, from),
-              lte(sales.occurredOn, to)
-            )
+        )
+        .where(
+          and(
+            eq(saleItems.organizationId, organizationId),
+            eq(sales.organizationId, organizationId),
+            gte(sales.occurredOn, from),
+            lte(sales.occurredOn, to)
           )
-          .orderBy(asc(sales.occurredOn), asc(saleItems.createdAt)),
-      ])
+        )
+        .orderBy(asc(sales.occurredOn), asc(saleItems.createdAt));
+
+      return [salesResult, saleItemResult] as const;
+    }
   );
 
   return buildSalesAnalytics({
@@ -227,10 +235,12 @@ const lockProductsForUpdate = async (
 };
 
 export const createSale = async ({
+  actorUserId,
   cardInstallmentRules,
   input,
   organizationId,
 }: {
+  actorUserId: string;
   cardInstallmentRules: CardInstallmentRule[];
   input: CreateSaleInput;
   organizationId: string;
@@ -378,13 +388,24 @@ export const createSale = async ({
       }
     }
 
+    await tx.insert(auditEvents).values({
+      actorUserId,
+      metadata: { itemCount: snapshot.items.length },
+      organizationId,
+      subjectId: createdSale.id,
+      subjectType: "sale",
+      type: "sale.created",
+    });
+
     return createdSale.id;
   });
 
 export const cancelSale = async ({
+  actorUserId,
   organizationId,
   saleId,
 }: {
+  actorUserId: string;
   organizationId: string;
   saleId: string;
 }): Promise<void> => {
@@ -486,5 +507,13 @@ export const cancelSale = async ({
     if (cancelledRows.length === 0) {
       throw new Error("Venda nao encontrada.");
     }
+
+    await tx.insert(auditEvents).values({
+      actorUserId,
+      organizationId,
+      subjectId: saleId,
+      subjectType: "sale",
+      type: "sale.cancelled",
+    });
   });
 };

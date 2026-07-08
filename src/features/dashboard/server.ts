@@ -36,23 +36,24 @@ export const getDashboardDateBounds = async (
 
   const [salesRows, stockEntriesRows] = await withTenantContext(
     organizationId,
-    (tx) =>
-      Promise.all([
-        tx
-          .select({
-            minOccurredOn: sql<string | null>`min(${sales.occurredOn})`,
-          })
-          .from(sales)
-          .where(eq(sales.organizationId, organizationId)),
-        tx
-          .select({
-            minStockedOn: sql<
-              string | null
-            >`min(${productStockEntries.stockedOn})`,
-          })
-          .from(productStockEntries)
-          .where(eq(productStockEntries.organizationId, organizationId)),
-      ])
+    async (tx) => {
+      const salesResult = await tx
+        .select({
+          minOccurredOn: sql<string | null>`min(${sales.occurredOn})`,
+        })
+        .from(sales)
+        .where(eq(sales.organizationId, organizationId));
+      const stockEntriesResult = await tx
+        .select({
+          minStockedOn: sql<
+            string | null
+          >`min(${productStockEntries.stockedOn})`,
+        })
+        .from(productStockEntries)
+        .where(eq(productStockEntries.organizationId, organizationId));
+
+      return [salesResult, stockEntriesResult] as const;
+    }
   );
   const salesRow = salesRows[0];
   const stockEntriesRow = stockEntriesRows[0];
@@ -78,85 +79,86 @@ const getDashboardMetricsByRange = cache(
   ): Promise<DashboardMetrics> => {
     const [salesRows, saleItemRows, inventoryRows] = await withTenantContext(
       organizationId,
-      (tx) =>
-        Promise.all([
-          tx
-            .select({
-              feeAmount: sales.feeAmount,
-              freightAmount: sales.freightAmount,
-              occurredOn: sales.occurredOn,
-              paymentFeePayer: sales.paymentFeePayer,
-              status: sales.status,
-              totalAmount: sales.totalAmount,
-            })
-            .from(sales)
-            .where(
-              and(
-                eq(sales.organizationId, organizationId),
-                gte(sales.occurredOn, from),
-                lte(sales.occurredOn, to)
-              )
-            ),
-          tx
-            .select({
-              imageBlurDataUrl: products.imageBlurDataUrl,
-              imageHeight: products.imageHeight,
-              imageVersion: products.imageVersion,
-              imageWidth: products.imageWidth,
-              lineTotal: saleItems.lineTotal,
-              occurredOn: sales.occurredOn,
-              productId: saleItems.productId,
-              productName: saleItems.productNameSnapshot,
-              quantity: saleItems.quantity,
-              status: sales.status,
-              unitCostSnapshot: saleItems.unitCostSnapshot,
-            })
-            .from(saleItems)
-            .innerJoin(
-              sales,
-              and(
-                eq(saleItems.saleId, sales.id),
-                eq(sales.organizationId, organizationId)
-              )
+      async (tx) => {
+        const salesResult = await tx
+          .select({
+            feeAmount: sales.feeAmount,
+            freightAmount: sales.freightAmount,
+            occurredOn: sales.occurredOn,
+            paymentFeePayer: sales.paymentFeePayer,
+            status: sales.status,
+            totalAmount: sales.totalAmount,
+          })
+          .from(sales)
+          .where(
+            and(
+              eq(sales.organizationId, organizationId),
+              gte(sales.occurredOn, from),
+              lte(sales.occurredOn, to)
             )
-            .innerJoin(
-              products,
-              and(
-                eq(saleItems.productId, products.id),
-                eq(products.organizationId, organizationId)
-              )
+          );
+        const saleItemResult = await tx
+          .select({
+            imageBlurDataUrl: products.imageBlurDataUrl,
+            imageHeight: products.imageHeight,
+            imageVersion: products.imageVersion,
+            imageWidth: products.imageWidth,
+            lineTotal: saleItems.lineTotal,
+            occurredOn: sales.occurredOn,
+            productId: saleItems.productId,
+            productName: saleItems.productNameSnapshot,
+            quantity: saleItems.quantity,
+            status: sales.status,
+            unitCostSnapshot: saleItems.unitCostSnapshot,
+          })
+          .from(saleItems)
+          .innerJoin(
+            sales,
+            and(
+              eq(saleItems.saleId, sales.id),
+              eq(sales.organizationId, organizationId)
             )
-            .where(
-              and(
-                eq(saleItems.organizationId, organizationId),
-                eq(sales.organizationId, organizationId),
-                eq(products.organizationId, organizationId),
-                gte(sales.occurredOn, from),
-                lte(sales.occurredOn, to)
-              )
-            ),
-          tx
-            .select({
-              categoryName: categories.name,
-              inventoryValue: sql<string>`coalesce(sum(${products.stock} * ${products.costPrice}), '0')`,
-            })
-            .from(products)
-            .innerJoin(
-              categories,
-              and(
-                eq(products.categoryId, categories.id),
-                eq(categories.organizationId, organizationId)
-              )
+          )
+          .innerJoin(
+            products,
+            and(
+              eq(saleItems.productId, products.id),
+              eq(products.organizationId, organizationId)
             )
-            .where(
-              and(
-                eq(products.organizationId, organizationId),
-                gt(products.stock, 0)
-              )
+          )
+          .where(
+            and(
+              eq(saleItems.organizationId, organizationId),
+              eq(sales.organizationId, organizationId),
+              eq(products.organizationId, organizationId),
+              gte(sales.occurredOn, from),
+              lte(sales.occurredOn, to)
             )
-            .groupBy(categories.name)
-            .orderBy(asc(categories.name)),
-        ])
+          );
+        const inventoryResult = await tx
+          .select({
+            categoryName: categories.name,
+            inventoryValue: sql<string>`coalesce(sum(${products.stock} * ${products.costPrice}), '0')`,
+          })
+          .from(products)
+          .innerJoin(
+            categories,
+            and(
+              eq(products.categoryId, categories.id),
+              eq(categories.organizationId, organizationId)
+            )
+          )
+          .where(
+            and(
+              eq(products.organizationId, organizationId),
+              gt(products.stock, 0)
+            )
+          )
+          .groupBy(categories.name)
+          .orderBy(asc(categories.name));
+
+        return [salesResult, saleItemResult, inventoryResult] as const;
+      }
     );
 
     return buildDashboardMetrics({
@@ -239,41 +241,42 @@ export const getDashboardGlobalStats = async (organizationId: string) => {
 
   const [investmentRows, salesRows, saleItemsRows] = await withTenantContext(
     organizationId,
-    (tx) =>
-      Promise.all([
-        tx
-          .select({
-            total: sql<string>`coalesce(sum(${productStockEntries.quantity} * ${productStockEntries.unitCost}), '0')`,
-          })
-          .from(productStockEntries)
-          .where(eq(productStockEntries.organizationId, organizationId)),
-        tx
-          .select({
-            totalAmount: sql<string>`coalesce(sum(${sales.totalAmount}), '0')`,
-            totalFreight: sql<string>`coalesce(sum(${sales.freightAmount}), '0')`,
-            totalFee: sql<string>`coalesce(sum(case when ${sales.paymentFeePayer} = 'seller' then ${sales.feeAmount} else 0 end), '0')`,
-          })
-          .from(sales)
-          .where(
-            and(
-              eq(sales.organizationId, organizationId),
-              eq(sales.status, "completed")
-            )
-          ),
-        tx
-          .select({
-            totalCost: sql<string>`coalesce(sum(${saleItems.quantity} * ${saleItems.unitCostSnapshot}), '0')`,
-          })
-          .from(saleItems)
-          .innerJoin(sales, eq(sales.id, saleItems.saleId))
-          .where(
-            and(
-              eq(saleItems.organizationId, organizationId),
-              eq(sales.organizationId, organizationId),
-              eq(sales.status, "completed")
-            )
-          ),
-      ])
+    async (tx) => {
+      const investmentResult = await tx
+        .select({
+          total: sql<string>`coalesce(sum(${productStockEntries.quantity} * ${productStockEntries.unitCost}), '0')`,
+        })
+        .from(productStockEntries)
+        .where(eq(productStockEntries.organizationId, organizationId));
+      const salesResult = await tx
+        .select({
+          totalAmount: sql<string>`coalesce(sum(${sales.totalAmount}), '0')`,
+          totalFreight: sql<string>`coalesce(sum(${sales.freightAmount}), '0')`,
+          totalFee: sql<string>`coalesce(sum(case when ${sales.paymentFeePayer} = 'seller' then ${sales.feeAmount} else 0 end), '0')`,
+        })
+        .from(sales)
+        .where(
+          and(
+            eq(sales.organizationId, organizationId),
+            eq(sales.status, "completed")
+          )
+        );
+      const saleItemsResult = await tx
+        .select({
+          totalCost: sql<string>`coalesce(sum(${saleItems.quantity} * ${saleItems.unitCostSnapshot}), '0')`,
+        })
+        .from(saleItems)
+        .innerJoin(sales, eq(sales.id, saleItems.saleId))
+        .where(
+          and(
+            eq(saleItems.organizationId, organizationId),
+            eq(sales.organizationId, organizationId),
+            eq(sales.status, "completed")
+          )
+        );
+
+      return [investmentResult, salesResult, saleItemsResult] as const;
+    }
   );
 
   const investment = Number(investmentRows[0]?.total ?? 0);

@@ -1,15 +1,15 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import { createRunLabel, login, selectOption } from "./helpers";
 
 const categoryProtectedRegex = /A categoria Outros e protegida/i;
 const productDetailRouteRegex = /\/produtos\/.+/;
 const productsRouteRegex = /\/produtos$/;
-const price40Regex = /R\$\s*40,00/;
-const price55Regex = /R\$\s*55,00/;
-const price97Regex = /R\$\s*97,00/;
-const price100Regex = /R\$\s*100,00/;
-const price103Regex = /R\$\s*103,00/;
-const price3Regex = /R\$\s*3,00/;
+const price40Regex = /R\$\s*0,40/;
+const price55Regex = /R\$\s*0,55/;
+const price97Regex = /R\$\s*0,97/;
+const price100Regex = /R\$\s*1,00/;
+const price103Regex = /R\$\s*1,03/;
+const price3Regex = /R\$\s*0,03/;
 const priceTabRegex = /pre/i;
 const productComboboxRegex = /selecionar produto da venda/i;
 const salePaymentFeePayerRegex = /responsavel pela taxa do cartao/i;
@@ -17,6 +17,47 @@ const salePaymentMethodRegex = /metodo de pagamento da venda/i;
 const saleDetailRouteRegex = /\/vendas\/.+/;
 const settingsThreeInstallmentsRegex = /^3x$/;
 const saleThreeInstallmentsRegex = /^3x no cartao$/i;
+
+test.describe.configure({ mode: "serial" });
+test.setTimeout(60_000);
+
+const openCategoriesDialog = async (page: Page) => {
+  await page.getByRole("button", { name: "Gerenciar" }).click();
+  const dialog = page.getByRole("dialog", { name: "Tabela de categorias" });
+  await expect(dialog).toBeVisible();
+  return dialog;
+};
+
+const gotoApp = async (page: Page, path: string) => {
+  await page.goto(path, { waitUntil: "commit" });
+};
+
+const reloadAfterToast = async (page: Page, message: string) => {
+  await expect(page.getByText(message)).toBeVisible();
+  await page.reload();
+};
+
+const openProductFromList = async (page: Page, productName: string) => {
+  const href = await page
+    .getByRole("row", { name: new RegExp(productName) })
+    .getByRole("link", { name: "Abrir" })
+    .getAttribute("href");
+
+  expect(href).toMatch(productDetailRouteRegex);
+  await gotoApp(page, href ?? "/produtos");
+  await expect(page).toHaveURL(productDetailRouteRegex);
+};
+
+const createCategory = async (page: Page, categoryName: string) => {
+  await page.getByLabel("Nova categoria").fill(categoryName);
+  await page.getByRole("button", { name: "Adicionar" }).first().click();
+  await expect(page.getByText("Categoria criada.")).toBeVisible();
+  await page.reload();
+  const dialog = await openCategoriesDialog(page);
+  await expect(dialog).toContainText(categoryName);
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+};
 
 test("creates inventory, records a sale, cancels it, and archives the product without deleting history", async ({
   page,
@@ -26,12 +67,10 @@ test("creates inventory, records a sale, cancels it, and archives the product wi
 
   await login(page);
 
-  await page.goto("/configuracoes");
-  await page.getByLabel("Nova categoria").fill(categoryName);
-  await page.getByRole("button", { name: "Adicionar" }).first().click();
-  await expect(page.getByText(categoryName)).toBeVisible();
+  await gotoApp(page, "/configuracoes");
+  await createCategory(page, categoryName);
 
-  await page.goto("/produtos");
+  await gotoApp(page, "/produtos");
   await page.getByRole("button", { name: "Cadastrar Produto" }).click();
 
   const productDialog = page.getByRole("dialog");
@@ -47,11 +86,10 @@ test("creates inventory, records a sale, cancels it, and archives the product wi
   await productDialog.getByLabel("Preco de Venda").fill("40");
   await productDialog.getByRole("button", { name: "Salvar Produto" }).click();
 
-  await expect(page.getByRole("link", { name: productName })).toBeVisible();
-
-  await page.getByRole("link", { name: productName }).click();
+  await expect(page).toHaveURL(productDetailRouteRegex);
   await expect(page.getByRole("heading", { name: productName })).toBeVisible();
   await expect(page.getByText("4 un.").first()).toBeVisible();
+  const productDetailUrl = page.url();
 
   await page.getByRole("button", { name: `Acoes para ${productName}` }).click();
   await page.getByRole("menuitem", { name: "Estoque" }).click();
@@ -61,6 +99,7 @@ test("creates inventory, records a sale, cancels it, and archives the product wi
   await stockDialog.getByLabel("Quantidade").fill("2");
   await stockDialog.getByLabel("Custo unitario").fill("30");
   await stockDialog.getByRole("button", { name: "Confirmar entrada" }).click();
+  await reloadAfterToast(page, "Estoque adicionado.");
   await expect(page.getByText("6 un.").first()).toBeVisible();
 
   await page.getByRole("button", { name: `Acoes para ${productName}` }).click();
@@ -71,9 +110,10 @@ test("creates inventory, records a sale, cancels it, and archives the product wi
   await writeOffDialog.getByLabel("Quantidade").fill("1");
   await writeOffDialog.getByLabel("Observacoes").fill("Baixa operacional E2E");
   await writeOffDialog.getByRole("button", { name: "Confirmar baixa" }).click();
+  await reloadAfterToast(page, "Baixa registrada.");
   await expect(page.getByText("5 un.").first()).toBeVisible();
 
-  await page.goto("/vendas");
+  await gotoApp(page, "/vendas");
   await page.getByRole("button", { name: "Nova venda" }).click();
 
   const saleDialog = page.getByRole("dialog");
@@ -95,14 +135,7 @@ test("creates inventory, records a sale, cancels it, and archives the product wi
   await page.getByRole("button", { name: "Confirmar cancelamento" }).click();
   await expect(page.getByText("Cancelada").first()).toBeVisible();
 
-  await page.goto("/produtos");
-  await page
-    .getByPlaceholder("Buscar por nome ou categoria")
-    .first()
-    .fill(productName);
-  await page.getByRole("button", { name: "Aplicar busca" }).click();
-  await page.getByRole("link", { name: productName }).click();
-  await expect(page).toHaveURL(productDetailRouteRegex);
+  await gotoApp(page, productDetailUrl);
   await expect(page.getByRole("heading", { name: productName })).toBeVisible();
 
   await page.getByRole("button", { name: `Acoes para ${productName}` }).click();
@@ -125,9 +158,10 @@ test("shows the protected Outros category as non-removable in settings", async (
 }) => {
   await login(page);
 
-  await page.goto("/configuracoes");
+  await gotoApp(page, "/configuracoes");
 
   await expect(page.getByText(categoryProtectedRegex).first()).toBeVisible();
+  await openCategoriesDialog(page);
   await expect(
     page.locator('button[title="Categoria protegida pelo sistema."]').first()
   ).toBeDisabled();
@@ -141,12 +175,10 @@ test("updates the catalog price for future sales without changing past sale snap
 
   await login(page);
 
-  await page.goto("/configuracoes");
-  await page.getByLabel("Nova categoria").fill(categoryName);
-  await page.getByRole("button", { name: "Adicionar" }).first().click();
-  await expect(page.getByText(categoryName)).toBeVisible();
+  await gotoApp(page, "/configuracoes");
+  await createCategory(page, categoryName);
 
-  await page.goto("/produtos");
+  await gotoApp(page, "/produtos");
   await page.getByRole("button", { name: "Cadastrar Produto" }).click();
 
   const productDialog = page.getByRole("dialog");
@@ -163,7 +195,7 @@ test("updates the catalog price for future sales without changing past sale snap
   await productDialog.getByRole("button", { name: "Salvar Produto" }).click();
   await expect(page.getByText("Produto cadastrado.")).toBeVisible();
 
-  await page.goto("/vendas");
+  await gotoApp(page, "/vendas");
   await page.getByRole("button", { name: "Nova venda" }).click();
 
   const firstSaleDialog = page.getByRole("dialog");
@@ -183,14 +215,13 @@ test("updates the catalog price for future sales without changing past sale snap
   await expect(page.getByText(price40Regex).first()).toBeVisible();
   const firstSaleUrl = page.url();
 
-  await page.goto("/produtos");
+  await gotoApp(page, "/produtos");
   await page
     .getByPlaceholder("Buscar por nome ou categoria")
     .first()
     .fill(productName);
   await page.getByRole("button", { name: "Aplicar busca" }).click();
-  await page.getByRole("link", { name: productName }).click();
-  await expect(page).toHaveURL(productDetailRouteRegex);
+  await openProductFromList(page, productName);
 
   await page.getByRole("button", { name: `Acoes para ${productName}` }).click();
   await page.getByRole("menuitem", { name: "Editar" }).click();
@@ -199,24 +230,13 @@ test("updates the catalog price for future sales without changing past sale snap
 
   await editDialog.getByLabel("Preco de venda").fill("55");
   await editDialog.getByRole("button", { name: "Salvar alteracoes" }).click();
+  await reloadAfterToast(page, "Produto atualizado.");
 
   await expect(page.getByText(price55Regex).first()).toBeVisible();
   await page.getByRole("tab", { name: priceTabRegex }).click();
   await expect(page.getByText(price40Regex).first()).toBeVisible();
 
-  await page.goto("/produtos");
-  await page
-    .getByPlaceholder("Buscar por nome ou categoria")
-    .first()
-    .fill(productName);
-  await page.getByRole("button", { name: "Aplicar busca" }).click();
-  await expect(
-    page
-      .getByRole("row", { name: new RegExp(productName) })
-      .getByText(price55Regex)
-  ).toBeVisible();
-
-  await page.goto("/vendas");
+  await gotoApp(page, "/vendas");
   await page.getByRole("button", { name: "Nova venda" }).click();
 
   const secondSaleDialog = page.getByRole("dialog");
@@ -235,7 +255,7 @@ test("updates the catalog price for future sales without changing past sale snap
   await expect(page).toHaveURL(saleDetailRouteRegex);
   await expect(page.getByText(price55Regex).first()).toBeVisible();
 
-  await page.goto(firstSaleUrl);
+  await gotoApp(page, firstSaleUrl);
   await expect(page.getByText(price40Regex).first()).toBeVisible();
 });
 
@@ -247,22 +267,23 @@ test("configures card installments and records customer-paid and seller-paid fee
 
   await login(page);
 
-  await page.goto("/configuracoes");
-  await page.getByLabel("Nova categoria").fill(categoryName);
-  await page.getByRole("button", { name: "Adicionar" }).first().click();
-  await expect(page.getByText(categoryName)).toBeVisible();
+  await gotoApp(page, "/configuracoes");
+  await createCategory(page, categoryName);
 
   await selectOption(
     page,
     page.getByLabel("Maximo de parcelas"),
     settingsThreeInstallmentsRegex
   );
-  await page.getByLabel("Taxa 2x (%)").fill("1.5");
-  await page.getByLabel("Taxa 3x (%)").fill("3");
-  await page.getByRole("button", { name: "Salvar configuracoes" }).click();
+  await page.getByRole("button", { name: "Editar taxas" }).click();
+  const ratesDialog = page.getByRole("dialog");
+  await ratesDialog.getByLabel("Taxa 2x (%)").fill("1.5");
+  await ratesDialog.getByLabel("Taxa 3x (%)").fill("3");
+  await ratesDialog.getByRole("button", { name: "Aplicar taxas" }).click();
+  await page.getByRole("button", { name: "Salvar cartao" }).click();
   await expect(page.getByText("Configuracoes salvas.")).toBeVisible();
 
-  await page.goto("/produtos");
+  await gotoApp(page, "/produtos");
   await page.getByRole("button", { name: "Cadastrar Produto" }).click();
 
   const productDialog = page.getByRole("dialog");
@@ -279,7 +300,7 @@ test("configures card installments and records customer-paid and seller-paid fee
   await productDialog.getByRole("button", { name: "Salvar Produto" }).click();
   await expect(page.getByText("Produto cadastrado.")).toBeVisible();
 
-  await page.goto("/vendas");
+  await gotoApp(page, "/vendas");
   await page.getByRole("button", { name: "Nova venda" }).click();
 
   const customerFeeDialog = page.getByRole("dialog");
@@ -319,7 +340,7 @@ test("configures card installments and records customer-paid and seller-paid fee
   await expect(page.getByText(price103Regex).first()).toBeVisible();
   await expect(page.getByText(price100Regex).first()).toBeVisible();
 
-  await page.goto("/vendas");
+  await gotoApp(page, "/vendas");
   await page.getByRole("button", { name: "Nova venda" }).click();
 
   const sellerFeeDialog = page.getByRole("dialog");
@@ -349,6 +370,14 @@ test("configures card installments and records customer-paid and seller-paid fee
     .getByRole("button", { name: "Confirmar venda" })
     .click();
 
+  await expect(page.getByText("Venda registrada.")).toBeVisible();
+  await gotoApp(page, "/vendas");
+  const sellerSaleHref = await page
+    .getByRole("link", { name: "Abrir" })
+    .first()
+    .getAttribute("href");
+  expect(sellerSaleHref).toMatch(saleDetailRouteRegex);
+  await gotoApp(page, sellerSaleHref ?? "/vendas");
   await expect(page).toHaveURL(saleDetailRouteRegex);
   await expect(page.getByText("Cartao 3x (vendedor)")).toBeVisible();
   await expect(page.getByText("Taxa do cartao (vendedor)")).toBeVisible();

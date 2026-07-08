@@ -89,6 +89,11 @@
 - 2026-07-07: PR 2 corrigiu auditoria pre-tenant: login sem organizacao ativa nao grava mais evento em `org_dg_imports`; login com organizacao ativa continua auditado no tenant correto.
 - 2026-07-07: PR 2 reforcou rota autenticada de leitura de imagem: usuario sem membership na organizacao da URL recebe 404 antes de storage ou auditoria.
 - 2026-07-07: PR 2 avancou em camada tenant-scoped: rota autenticada de leitura de imagem agora delega checagem de produto/org/membership para dominio e tem guardrail contra import direto de `db` no handler.
+- 2026-07-07: PR 5/E2E tornou o harness executavel localmente: Playwright agora carrega `.env.local` via `@next/env`, usa secrets E2E validos, bootstrap local/CI funciona apenas em loopback com `DATABASE_URL === E2E_DATABASE_URL`, onboarding E2E cria organizacao e seletores foram alinhados a UI atual. `tests/e2e/shell.e2e.ts` passou 4/4; `bun run test:e2e` ficou parcial 5/9 porque o banco E2E esta sem `sales.idempotency_key` e a role runtime nao consegue aplicar migrations no schema `drizzle`.
+- 2026-07-07: PR 5/E2E teve gates locais finais verdes apos os ajustes: `bun run check` (276 arquivos), `bun run test` (75 arquivos, 273 testes), `bun run db:smoke:rls`, `bun run knip` e `bun run build`.
+- 2026-07-08: PR 3/DB aplicou migrations aditivas criticas no endpoint runtime/main via `DATABASE_URL_DIRECT`; verificacao com `polaris_app` confirmou `sales.idempotency_key`, `sales_organization_idempotency_key_unique_idx` e `sessions_id_unique_idx`.
+- 2026-07-08: PR 5/E2E ganhou preflight `scripts/check-e2e-db-schema.ts`; `bun run test:e2e` agora falha antes do Playwright quando o branch E2E esta atrasado, com mensagem acionavel dos objetos ausentes.
+- 2026-07-08: PR 5/E2E foi desbloqueado no branch E2E via Neon MCP (`br-flat-cherry-acbnuhz4`): aplicados `sales.idempotency_key`, `sales_organization_idempotency_key_unique_idx` e `sessions_id_unique_idx`; `bun run test:e2e` passou com 9/9.
 - 2026-07-07: PR 2 consolidou guardrail de arquitetura: arquivos runtime em `src/app` agora tem teste global contra import direto de `@/db` e subpaths.
 - 2026-07-07: PR 2 reforcou contexto de app: organizacao inativa retorna contexto nulo e nao reescreve a organizacao ativa da sessao.
 - 2026-07-07: PR 4/Perf avancou em indices de listagem: produtos ativos/arquivados e vendas agora tem indices cobrindo paginacao seek por organizacao.
@@ -128,8 +133,8 @@
 - 2026-07-07: PR 6 reforcou acoes destrutivas: exclusao de categoria customizada agora abre confirmacao explicita antes de chamar a action de remocao.
 - 2026-07-06: PR 5 iniciado em CI/E2E: GitHub Actions agora tem job `e2e` com Playwright, dependente de `E2E_DATABASE_URL` em secret para impedir uso acidental de banco compartilhado.
 - 2026-07-06: PR 9 iniciado em produto pos-MVP: `docs/roadmap.md` criado com ordem para convites, billing, exportacao, admin/suporte, LGPD e relatorios sem misturar com hardening.
-- Pendencias antes de declarar PR 2 completo: atualizar `DATABASE_URL` do deploy para a role runtime `polaris_app`, ampliar provas tenant A vs tenant B para outros actions/route handlers, rodar job manual `rls-smoke`/`bun run db:smoke:rls` no ambiente promovido e E2E com banco isolado.
-- PR 3 implementado localmente. Antes de tratar como pronto para deploy real, ainda falta dry-run/aplicacao das migrations em banco isolado.
+- Pendencias antes de declarar PR 2 completo: atualizar `DATABASE_URL` do deploy para a role runtime `polaris_app`, ampliar provas tenant A vs tenant B para outros actions/route handlers e rodar job manual `rls-smoke`/`bun run db:smoke:rls` no ambiente promovido.
+- PR 3 implementado no codigo e aplicado no runtime/main e no branch E2E para os objetos criticos de idempotency/sessao; antes de tratar como totalmente pronto para deploy real, ainda falta validar demais migrations financeiras em branch isolado/promovido.
 - PR 7 implementado localmente. Antes de tratar como pronto para deploy real, ainda falta validar `vercel env run -e production -- bun run build` com envs reais, smoke checks no preview/producao, limites reais do Upstash e quais headers de IP sao confiaveis na borda.
 
 **Ordem Recomendada**

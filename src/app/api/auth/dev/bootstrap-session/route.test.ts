@@ -58,6 +58,7 @@ vi.mock("@/lib/rate-limit", () => ({
 describe("POST /api/auth/dev/bootstrap-session", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.unstubAllEnvs();
     serverEnvMock.ALLOW_PLAYWRIGHT_BOOTSTRAP = undefined;
     serverEnvMock.INTERNAL_BOOTSTRAP_SECRET = "bootstrap-secret";
     serverEnvMock.NODE_ENV = "test";
@@ -98,6 +99,65 @@ describe("POST /api/auth/dev/bootstrap-session", () => {
     );
 
     expect(response.status).toBe(403);
+  });
+
+  it("allows local production E2E bootstrap only with an isolated loopback database", async () => {
+    const isolatedDatabaseUrl = "postgres://e2e:e2e@example.com/e2e";
+
+    serverEnvMock.NODE_ENV = "production";
+    serverEnvMock.ALLOW_PLAYWRIGHT_BOOTSTRAP = "true";
+    serverEnvMock.VERCEL_ENV = "development";
+    vi.stubEnv("DATABASE_URL", isolatedDatabaseUrl);
+    vi.stubEnv("E2E_DATABASE_URL", isolatedDatabaseUrl);
+
+    const response = await POST(
+      new Request("http://127.0.0.1:3001/api/auth/dev/bootstrap-session", {
+        body: JSON.stringify({
+          email: "user@example.com",
+          name: "User",
+        }),
+        headers: {
+          Authorization: "Bearer bootstrap-secret",
+        },
+        method: "POST",
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(authContext.internalAdapter.createSession).toHaveBeenCalledWith(
+      "user-1"
+    );
+  });
+
+  it("does not rate limit local production E2E bootstrap with an isolated database", async () => {
+    const isolatedDatabaseUrl = "postgres://e2e:e2e@example.com/e2e";
+
+    serverEnvMock.NODE_ENV = "production";
+    serverEnvMock.ALLOW_PLAYWRIGHT_BOOTSTRAP = "true";
+    serverEnvMock.VERCEL_ENV = "development";
+    vi.stubEnv("DATABASE_URL", isolatedDatabaseUrl);
+    vi.stubEnv("E2E_DATABASE_URL", isolatedDatabaseUrl);
+    rateLimitMocks.checkRateLimit.mockResolvedValueOnce({
+      ok: false,
+      resetAt: Date.now() + 20_000,
+      retryAfterSeconds: 20,
+    });
+
+    const response = await POST(
+      new Request("http://127.0.0.1:3001/api/auth/dev/bootstrap-session", {
+        body: JSON.stringify({
+          email: "user@example.com",
+          name: "User",
+        }),
+        headers: {
+          Authorization: "Bearer bootstrap-secret",
+        },
+        method: "POST",
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(rateLimitMocks.checkRateLimit).not.toHaveBeenCalled();
   });
 
   it("returns 403 in production previews even when ALLOW_PLAYWRIGHT_BOOTSTRAP is true", async () => {

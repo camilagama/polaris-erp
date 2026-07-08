@@ -7,18 +7,11 @@ import {
   getAppContext,
 } from "@/lib/app-session";
 import { requireSession } from "@/lib/session";
+import type { OnboardingActionState } from "./state";
 
 const onboardingSchema = z.object({
   organizationName: z.string().trim().min(2, "Informe o nome da organizacao."),
 });
-
-export interface OnboardingActionState {
-  error: string | null;
-}
-
-export const initialOnboardingActionState: OnboardingActionState = {
-  error: null,
-};
 
 export async function completeOnboardingAction(
   _state: OnboardingActionState,

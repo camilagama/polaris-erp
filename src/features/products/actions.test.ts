@@ -144,6 +144,10 @@ const createInventoryHarness = (initialState: {
             return Promise.resolve([]);
           }
 
+          if ("subjectType" in payload) {
+            return Promise.resolve([]);
+          }
+
           throw new Error("Tabela de insert nao suportada no teste.");
         },
       }),
@@ -219,6 +223,10 @@ const createProductUpdateHarness = (initialState: {
       insert: (_table: unknown) => ({
         values: (payload: Record<string, unknown>) => {
           if (!("previousPrice" in payload && "nextPrice" in payload)) {
+            if ("subjectType" in payload) {
+              return Promise.resolve([]);
+            }
+
             throw new Error("Tabela de insert nao suportada no teste.");
           }
 
@@ -282,6 +290,7 @@ describe("product server actions", () => {
       mockDeleteProductImageVersion,
       mockDb,
       mockGetProductCategoryById,
+      mockRecordAuditEvent,
       mockRequireAppContext,
       mockSession,
       mockStoreProductImageFromStage,
@@ -304,6 +313,10 @@ describe("product server actions", () => {
     });
 
     mockDeleteProductImageVersion.mockResolvedValue(undefined);
+    mockRecordAuditEvent.mockResolvedValue(undefined);
+    mockDb.insert.mockReturnValue({
+      values: () => Promise.resolve([]),
+    });
     mockDb.transaction.mockImplementation(async (callback) => callback(mockDb));
     mockStoreProductImageFromStage.mockResolvedValue({
       blurDataURL: "data:image/webp;base64,abc",
@@ -357,7 +370,7 @@ describe("product server actions", () => {
     const { writeOffProductStockAction } = await import(
       "@/features/products/actions"
     );
-    const { mockDb, mockRefresh, mockUpdateTag } = await resolveMocks();
+    const { mockDb, mockUpdateTag } = await resolveMocks();
 
     const harness = createInventoryHarness({
       costPrice: 10,
@@ -399,7 +412,6 @@ describe("product server actions", () => {
     expect(mockUpdateTag).toHaveBeenCalledWith(
       buildOrganizationCacheTags("org_dg_imports").analytics
     );
-    expect(mockRefresh).toHaveBeenCalledTimes(1);
   });
 
   it("reactivates an archived product when stock is added", async () => {
@@ -428,12 +440,8 @@ describe("product server actions", () => {
 
   it("creates a product with processed image metadata when a staged image is provided", async () => {
     const { createProductAction } = await import("@/features/products/actions");
-    const {
-      mockDb,
-      mockRefresh,
-      mockStoreProductImageFromStage,
-      mockUpdateTag,
-    } = await resolveMocks();
+    const { mockDb, mockStoreProductImageFromStage, mockUpdateTag } =
+      await resolveMocks();
     const insertLog: Record<string, unknown>[] = [];
 
     mockDb.transaction.mockImplementation(
@@ -478,12 +486,11 @@ describe("product server actions", () => {
     expect(mockUpdateTag).toHaveBeenCalledWith(
       buildOrganizationCacheTags("org_dg_imports").analytics
     );
-    expect(mockRefresh).toHaveBeenCalled();
   });
 
   it("updates product price and records a price history row when the value changes", async () => {
     const { updateProductAction } = await import("@/features/products/actions");
-    const { mockDb, mockRefresh, mockUpdateTag } = await resolveMocks();
+    const { mockDb, mockUpdateTag } = await resolveMocks();
 
     const harness = createProductUpdateHarness({
       categoryId: "category-1",
@@ -518,7 +525,6 @@ describe("product server actions", () => {
     expect(mockUpdateTag).toHaveBeenCalledWith(
       buildOrganizationCacheTags("org_dg_imports").catalog
     );
-    expect(mockRefresh).toHaveBeenCalled();
   });
 
   it("sets tenant database context before updating a product", async () => {

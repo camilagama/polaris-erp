@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
   AlertDialog,
@@ -23,6 +24,7 @@ export function SaleDetailActions({
 }) {
   const [pending, startTransition] = useTransition();
   const [confirmingCancel, setConfirmingCancel] = useState(false);
+  const router = useRouter();
 
   const handleCancelSale = () => {
     startTransition(async () => {
@@ -30,6 +32,7 @@ export function SaleDetailActions({
         await cancelSaleAction(sale.id);
         toast.success("Venda cancelada com estorno de estoque.");
         setConfirmingCancel(false);
+        router.refresh();
       } catch (error) {
         toast.error(
           error instanceof Error
