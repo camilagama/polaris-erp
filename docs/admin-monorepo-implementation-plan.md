@@ -17,51 +17,51 @@ O admin interno desejado nao e "admin da organizacao cliente". Ele deve operar a
 
 ## 3. Estado Atual
 
-Stack confirmada no codigo:
+Stack confirmada no codigo apos a execucao dos PRs:
 
 - Next.js `16.2.1` com App Router e React `19.2.4`.
-- Bun com `bun.lock`; sem `pnpm-workspace.yaml`, `turbo.json`, `apps/` ou `packages/`.
+- Bun workspaces com `bun.lock`, `turbo.json`, `apps/` e `packages/`.
 - Better Auth `1.6.23` com Google OAuth, organization plugin, Better Auth Infra Dashboard/Sentinel e `nextCookies`.
 - PostgreSQL/Neon via Drizzle ORM e `pg.Pool`.
 - Tailwind CSS 4, shadcn/ui estilo `radix-mira`, Hugeicons.
 - Upstash Redis para rate limit distribuido, com fallback local em dev/test.
 - Cloudflare R2 via AWS SDK para staging e variantes finais de imagens.
-- Vitest para `src/**/*.test.ts` e Playwright para `tests/e2e/**/*.e2e.ts`.
+- Vitest nos workspaces e Playwright para `apps/web/tests/e2e` e `apps/admin/tests/e2e`.
 - Sentry baseline em `@sentry/nextjs`.
 
 Estrutura atual:
 
 ```text
-src/
-  app/              # rotas App Router, layouts, route handlers
-  components/       # UI compartilhada e UI de dominio do app cliente
-  db/               # schema Drizzle, migrations, RLS helpers, testes DB
-  features/         # dominio: auth, catalog, dashboard, goals, onboarding, products, sales
-  hooks/            # hooks client
-  lib/              # auth, sessao, env, rate-limit, audit, health, utils, guardrails
-tests/e2e/          # Playwright
+apps/
+  web/              # app externo dos clientes, DB/schema/migrations e testes principais
+  admin/            # admin interno protegido, dashboard, auditoria, billing, eventos e E2E
+packages/
+  config/           # config compartilhada inicial
+  emails/           # templates/adapter Resend e contratos de email
+  billing/          # dominio canonico e adapters Woovi/Asaas
 scripts/            # smoke, preflight, analise de planos, E2E DB schema
 docs/               # runbooks, roadmap, RLS, deploy, R2, planos
 ```
 
 Pontos fortes:
 
-- Boundaries locais ja sao testados: app/components/features/lib/db tem guardrails de import.
+- Boundaries locais ja sao testados no app web e os scripts root delegam para workspaces.
 - RLS foi implementado com `set_config(..., true)`, `FORCE ROW LEVEL SECURITY` e role runtime sem `BYPASSRLS`.
 - Ambiente de banco documentado com `DATABASE_URL`, `DATABASE_URL_DIRECT`, `E2E_DATABASE_URL` e `RLS_DATABASE_URL`.
-- Rotas internas sensiveis usam bearer secret e rate limit.
-- Produto tem vertical slices claros em `src/features`.
-- CI ja roda check, unit, knip, build e E2E; smokes manuais existem para RLS, deploy e preflight.
+- Rotas internas sensiveis usam bearer secret, segredos separados e rate limit quando aplicavel.
+- Produto preserva vertical slices em `apps/web/src/features`.
+- CI cobre check, admin check, unit, knip, build web/admin, E2E web/admin e jobs manuais de RLS/deploy/preflight.
+- Admin interno existe em `apps/admin`, protegido por session/platform guard e Cloudflare Access quando configurado.
+- Platform admin/audit/support notes, outbox/webhook idempotente, email foundation e billing foundation foram implementados de forma aditiva.
 
 Pontos frageis:
 
-- Nao existe admin interno.
-- Nao existe modelo de `platform_admin`.
-- Auditoria atual (`audit_events`) e tenant-scoped e best-effort; nao serve para eventos internos obrigatorios.
-- Better Auth organization update pode continuar exposto via catch-all sem hook de bloqueio/auditoria.
-- `CRON_SECRET` e compartilhado entre health R2 e reconcile destrutivo.
-- `src/components` mistura UI generica com UI do app cliente que importa server actions.
-- `src/lib` mistura utilitarios genericos com infra especifica do app.
+- Deploy real de admin ainda depende de Vercel linkado/autenticado, `ADMIN_APP_URL`, Cloudflare Access e protection de preview.
+- Envs reais de producao ainda faltam para `prod:preflight` e `deploy:smoke`.
+- URLs Postgres locais usam `sslmode=require`; o preflight de producao exige `sslmode=verify-full`.
+- Branch Neon `production` nao esta protegida e o projeto `free_v3` tem `history_retention_seconds=21600`.
+- Migrations foram aplicadas no branch E2E; a aplicacao em producao ainda nao foi validada com `DATABASE_URL_DIRECT`.
+- Resend/Woovi/Asaas ainda precisam de validacao sandbox/producao com credenciais reais e dominios verificados.
 - `AGENTS.md` exige `aidd_docs/memory`, mas `aidd_docs/` nao existe.
 - Runbooks de cleanup destrutivo sao referenciados, mas os arquivos `docs/production-database-cleanup.md` e `.sql` nao existem.
 
@@ -200,33 +200,44 @@ Protecao:
 
 ## 7. Packages
 
-Pacotes iniciais entram junto da migracao para monorepo, mas devem ser minimos. O objetivo do primeiro corte e permitir `apps/web` e `apps/admin` sem criar um pacote generico para tudo.
+Pacotes foram mantidos conservadores. O monorepo existe, mas `db`, `auth`, `ui` e `domain` continuam app-local enquanto nao houver segundo consumidor claro ou contrato estavel. Packages criados ate agora: `@polaris/config`, `@polaris/emails` e `@polaris/billing`.
 
 - `@polaris/db`
   - Contem schema Drizzle, migrations, tipos DB, `withTenantContext`, futuros platform DB helpers.
   - Nao contem componentes, rotas ou server actions.
+  - Status: ainda nao extraido; schema/migrations permanecem em `apps/web/src/db`.
 
 - `@polaris/auth`
   - Contem Better Auth config, client/server helpers, session, app context, platform admin guard.
   - Nao contem UI, nem queries de dominio operacional.
+  - Status: ainda nao extraido; admin reutiliza helpers app-local ate o contrato estabilizar.
 
 - `@polaris/ui`
   - Contem `src/components/ui`, tema, hooks genericos e primitives.
   - Nao contem `products-panel`, `sales-panel`, dialogs que chamam server actions ou UI especifica do tenant app.
+  - Status: ainda nao extraido; evitar package generico antes de necessidade real.
 
 - `@polaris/domain`
   - Contem calculos puros, formatters, currency/date e contratos compartilhados.
   - Nao contem Drizzle, env, R2, Redis ou Better Auth.
+  - Status: ainda nao extraido; dominio operacional segue em `apps/web`.
 
 - `@polaris/config`
   - Contem tsconfig base, conventions de env, Ultracite/Biome compartilhado se necessario.
+  - Status: extraido.
+
+- `@polaris/emails`
+  - Contem templates/contratos de email transacional e adapter Resend.
+  - Status: extraido junto do PR 14, com envio best-effort e logs internos.
+
+- `@polaris/billing`
+  - Contem dominio canonico de billing e adapters Woovi/Asaas.
+  - Status: extraido junto dos PRs 15-17.
 
 Pacotes evitados no inicio:
 
 - `packages/api`: sem API publica suficiente.
-- `packages/events`: entra somente quando o primeiro caso real de outbox/idempotencia for implementado.
-- `packages/emails`: preparar contrato no plano, criar package quando Resend sair do backlog para implementacao.
-- `packages/billing`: preparar schema/contratos no plano, criar package quando Woovi/Asaas entrarem em execucao.
+- `packages/events`: nao extraido; a fundacao de outbox/idempotencia esta app-local.
 - `packages/feature-flags`: so depois de flags reais.
 - `packages/logger`: so se observabilidade crescer alem de Sentry/console estruturado.
 
@@ -690,13 +701,14 @@ Nota posterior de organizacao: `apps/admin` foi criado como workspace Next minim
 * [ ] Deseja corrigir `aidd_docs/memory` criando a pasta ou alterando `AGENTS.md` para `docs/`?
 * [ ] Deseja restaurar os runbooks de cleanup destrutivo agora ou remover referencias ate existirem?
 
-## 17. Proximos Prompts para Codex
+## 17. Proximos Passos Reais
 
-1. "Execute o PR 1 do plano `docs/admin-monorepo-implementation-plan.md`: crie o monorepo baseline com Bun workspaces + Turborepo, sem mudanca funcional."
-2. "Execute o PR 2: mova o app atual para `apps/web`, ajustando scripts, aliases, Drizzle, Vitest, Playwright, Knip, shadcn, CI e Vercel."
-3. "Execute o PR 3: extraia apenas packages minimos realmente compartilhados, com boundary tests."
-4. "Execute o PR 4: faca hardening pre-admin e smoke cross-tenant DB-backed."
-5. "Planeje detalhadamente o PR 5 de schema platform admin/audit usando TDD e migrations aditivas."
-6. "Implemente o PR 6 de `requirePlatformAdmin()` e Cloudflare Access validation, sem UI admin ainda."
-7. "Execute o PR 7: crie `apps/admin` protegido, sem acoes perigosas."
-8. "Planeje o PR 13: fundacao de eventos/outbox/webhook idempotente antes de Resend, Woovi e Asaas."
+1. Linkar/autenticar Vercel para `apps/web` e `apps/admin`, configurar projetos/dominos reais e habilitar preview protection.
+2. Configurar `ADMIN_APP_URL`, Cloudflare Access (`CLOUDFLARE_ACCESS_AUD`, `CLOUDFLARE_ACCESS_TEAM_DOMAIN`) e validar admin por origem real.
+3. Atualizar URLs Postgres de producao para `sslmode=verify-full`, mantendo `DATABASE_URL`/`RLS_DATABASE_URL` com role runtime e `DATABASE_URL_DIRECT` somente para migrations.
+4. Rodar migrations em producao com `DATABASE_URL_DIRECT` depois de revisar backup/PITR/branch protection.
+5. Rodar `vercel env run -e production -- bun run prod:preflight`.
+6. Rodar `DEPLOYMENT_SMOKE_URL=https://DOMINIO_REAL bun run deploy:smoke` no deploy promovido.
+7. Configurar R2, Upstash, Sentry, OAuth callbacks e CSP report-only em ambiente real.
+8. Validar Resend com dominio verificado e webhook `svix-*`; validar Woovi/Asaas em sandbox/producao antes de cobrar clientes.
+9. Decidir respostas das perguntas abertas de dominio, IdP, primeiros platform admins, impersonation, billing e tokenizacao Asaas.
