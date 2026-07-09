@@ -30,7 +30,7 @@ vi.mock("next/navigation", () => ({
   redirect: vi.fn(),
 }));
 
-vi.mock("@/db", () => ({
+vi.mock("@polaris/db", () => ({
   db: dbMock,
 }));
 

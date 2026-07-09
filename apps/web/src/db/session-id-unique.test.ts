@@ -3,15 +3,14 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const projectRoot = process.cwd();
+const workspaceRoot = join(projectRoot, "..", "..");
+const dbPackageRoot = join(workspaceRoot, "packages/db");
 
 describe("sessions.id database invariant", () => {
   it("declares sessions.id as unique in schema and migration", () => {
-    const schema = readFileSync(join(projectRoot, "src/db/schema.ts"), "utf8");
+    const schema = readFileSync(join(dbPackageRoot, "src/schema.ts"), "utf8");
     const migration = readFileSync(
-      join(
-        projectRoot,
-        "src/db/migrations/20260706140932_groovy_tarantula.sql"
-      ),
+      join(dbPackageRoot, "src/migrations/20260706140932_groovy_tarantula.sql"),
       "utf8"
     );
 

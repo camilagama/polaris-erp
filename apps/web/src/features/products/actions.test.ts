@@ -35,7 +35,7 @@ vi.mock("next/cache", () => ({
   updateTag: vi.fn(),
 }));
 
-vi.mock("@/db", () => ({
+vi.mock("@polaris/db", () => ({
   db: {
     delete: vi.fn(),
     execute: vi.fn(),
@@ -72,7 +72,7 @@ const resolveMocks = async () => {
   const sessionModule = await import("@/lib/session");
   const appSessionModule = await import("@/lib/app-session");
   const catalogModule = await import("@/features/catalog/server");
-  const dbModule = await import("@/db");
+  const dbModule = await import("@polaris/db");
   const imageStorageModule = await import("@/features/products/image-storage");
   const imageWorkflowModule = await import(
     "@/features/products/image-workflow"

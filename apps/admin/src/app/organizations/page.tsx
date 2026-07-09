@@ -1,9 +1,9 @@
+import { listPlatformOrganizations } from "@polaris/platform/directory";
 import Link from "next/link";
 import { forbidden } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { requirePlatformAdmin } from "@/lib/platform-admin-auth";
-import { listPlatformOrganizations } from "@/lib/platform-directory";
 
 interface OrganizationsPageProps {
   searchParams: Promise<{ q?: string | string[] }>;

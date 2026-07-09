@@ -1,9 +1,9 @@
+import { listPlatformAuditEvents } from "@polaris/platform/audit-events";
 import Link from "next/link";
 import { forbidden } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { requirePlatformAdmin } from "@/lib/platform-admin-auth";
-import { listPlatformAuditEvents } from "@/lib/platform-audit-events";
 
 interface AuditPageProps {
   searchParams: Promise<{

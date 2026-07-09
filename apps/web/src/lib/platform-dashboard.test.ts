@@ -1,5 +1,5 @@
+import { getPlatformDashboardData } from "@polaris/platform/dashboard";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { getPlatformDashboardData } from "@/lib/platform-dashboard";
 
 const { healthMock } = vi.hoisted(() => ({
   healthMock: vi.fn(),
@@ -7,19 +7,10 @@ const { healthMock } = vi.hoisted(() => ({
 
 vi.mock("server-only", () => ({}));
 
-vi.mock("@/lib/env", () => ({
-  serverEnv: {
-    PRODUCT_IMAGE_RECONCILE_SECRET: "reconcile-secret",
-    R2_ACCESS_KEY_ID: "access-key",
-    R2_ACCOUNT_ID: "account-id",
-    R2_BUCKET_PUBLIC: "public-bucket",
-    R2_BUCKET_STAGING: "staging-bucket",
-    R2_SECRET_ACCESS_KEY: "secret-key",
+vi.mock("@polaris/db", () => ({
+  db: {
+    execute: healthMock,
   },
-}));
-
-vi.mock("@/lib/health", () => ({
-  checkDatabaseHealth: healthMock,
 }));
 
 const createDbMock = () => {
@@ -64,6 +55,12 @@ const createDbMock = () => {
 describe("getPlatformDashboardData", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env.PRODUCT_IMAGE_RECONCILE_SECRET = "reconcile-secret";
+    process.env.R2_ACCESS_KEY_ID = "access-key";
+    process.env.R2_ACCOUNT_ID = "account-id";
+    process.env.R2_BUCKET_PUBLIC = "public-bucket";
+    process.env.R2_BUCKET_STAGING = "staging-bucket";
+    process.env.R2_SECRET_ACCESS_KEY = "secret-key";
     healthMock.mockResolvedValue(true);
   });
 

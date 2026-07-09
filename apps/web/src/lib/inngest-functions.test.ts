@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
-vi.mock("@/db", () => ({ db: {} }));
+vi.mock("@polaris/db", () => ({ db: {} }));
 
 const {
   claimOutboxEventMock,

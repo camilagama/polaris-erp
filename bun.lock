@@ -23,7 +23,6 @@
         "dotenv": "^17.4.2",
         "drizzle-orm": "^0.45.2",
         "inngest": "^4.11.0",
-        "jose": "^6.2.2",
         "next": "16.2.1",
         "next-themes": "^0.4.6",
         "pg": "^8.22.0",
@@ -64,17 +63,35 @@
       "name": "@polaris/admin",
       "version": "0.1.0",
       "dependencies": {
+        "@polaris/auth": "workspace:*",
         "@polaris/db": "workspace:*",
         "@polaris/events": "workspace:*",
+        "@polaris/platform": "workspace:*",
+        "@polaris/platform-auth": "workspace:*",
       },
     },
     "apps/web": {
       "name": "@polaris/web",
       "version": "0.1.0",
       "dependencies": {
+        "@polaris/auth": "workspace:*",
         "@polaris/billing": "workspace:*",
         "@polaris/emails": "workspace:*",
         "@polaris/events": "workspace:*",
+        "@polaris/platform": "workspace:*",
+        "@polaris/platform-auth": "workspace:*",
+      },
+    },
+    "packages/auth": {
+      "name": "@polaris/auth",
+      "version": "0.1.0",
+      "dependencies": {
+        "@better-auth/infra": "^0.3.4",
+        "@polaris/db": "workspace:*",
+        "better-auth": "^1.6.23",
+        "next": "16.2.1",
+        "server-only": "^0.0.1",
+        "zod": "^4.4.3",
       },
     },
     "packages/billing": {
@@ -98,6 +115,27 @@
       "version": "0.1.0",
       "dependencies": {
         "@polaris/db": "workspace:*",
+      },
+    },
+    "packages/platform": {
+      "name": "@polaris/platform",
+      "version": "0.1.0",
+      "dependencies": {
+        "@polaris/billing": "workspace:*",
+        "@polaris/db": "workspace:*",
+      },
+    },
+    "packages/platform-auth": {
+      "name": "@polaris/platform-auth",
+      "version": "0.1.0",
+      "dependencies": {
+        "@polaris/db": "workspace:*",
+        "@upstash/ratelimit": "^2.0.8",
+        "@upstash/redis": "^1.38.0",
+        "drizzle-orm": "^0.45.2",
+        "jose": "^6.2.2",
+        "next": "16.2.1",
+        "server-only": "^0.0.1",
       },
     },
   },
@@ -675,6 +713,8 @@
 
     "@polaris/admin": ["@polaris/admin@workspace:apps/admin"],
 
+    "@polaris/auth": ["@polaris/auth@workspace:packages/auth"],
+
     "@polaris/billing": ["@polaris/billing@workspace:packages/billing"],
 
     "@polaris/config": ["@polaris/config@workspace:packages/config"],
@@ -684,6 +724,10 @@
     "@polaris/emails": ["@polaris/emails@workspace:packages/emails"],
 
     "@polaris/events": ["@polaris/events@workspace:packages/events"],
+
+    "@polaris/platform": ["@polaris/platform@workspace:packages/platform"],
+
+    "@polaris/platform-auth": ["@polaris/platform-auth@workspace:packages/platform-auth"],
 
     "@polaris/web": ["@polaris/web@workspace:apps/web"],
 

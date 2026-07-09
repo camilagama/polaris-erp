@@ -1,5 +1,5 @@
+import { updatePlatformOrganizationStatus } from "@polaris/platform/organization-mutations";
 import { describe, expect, it, vi } from "vitest";
-import { updatePlatformOrganizationStatus } from "@/lib/platform-organization-mutations";
 
 vi.mock("server-only", () => ({}));
 

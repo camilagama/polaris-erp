@@ -25,15 +25,15 @@
     "fix": "turbo run fix --filter=@polaris/web",
     "prepare": "lefthook install",
     "knip": "turbo run knip --filter=@polaris/web",
-    "db:generate": "turbo run db:generate --filter=@polaris/web",
-    "db:migrate": "turbo run db:migrate --filter=@polaris/web",
-    "db:push": "turbo run db:push --filter=@polaris/web",
+    "db:generate": "turbo run db:generate --filter=@polaris/db",
+    "db:migrate": "turbo run db:migrate --filter=@polaris/db",
+    "db:push": "turbo run db:push --filter=@polaris/db",
     "prod:preflight": "turbo run prod:preflight --filter=@polaris/web",
     "deploy:smoke": "turbo run deploy:smoke --filter=@polaris/web",
     "platform-admin:bootstrap": "bun scripts/bootstrap-platform-admin.ts",
     "db:smoke:rls": "turbo run db:smoke:rls --filter=@polaris/web",
     "db:analyze:listings": "turbo run db:analyze:listings --filter=@polaris/web",
-    "db:studio": "turbo run db:studio --filter=@polaris/web"
+    "db:studio": "turbo run db:studio --filter=@polaris/db"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1079.0",
@@ -54,7 +54,6 @@
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
     "inngest": "^4.11.0",
-    "jose": "^6.2.2",
     "next": "16.2.1",
     "next-themes": "^0.4.6",
     "pg": "^8.22.0",

@@ -1,9 +1,9 @@
 "use server";
 
+import { createPlatformSupportNote } from "@polaris/platform/support-notes";
+import { assertAdminRateLimit } from "@polaris/platform-auth/admin-rate-limit";
 import { revalidatePath } from "next/cache";
-import { assertAdminRateLimit } from "@/lib/admin-rate-limit";
 import { requirePlatformAdmin } from "@/lib/platform-admin-auth";
-import { createPlatformSupportNote } from "@/lib/platform-support-notes";
 
 const getOptionalFormValue = (
   formData: FormData,

@@ -1,5 +1,5 @@
+import { getPlatformBillingOverview } from "@polaris/platform/billing";
 import { describe, expect, it, vi } from "vitest";
-import { getPlatformBillingOverview } from "@/lib/platform-billing";
 
 vi.mock("server-only", () => ({}));
 

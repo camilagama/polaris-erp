@@ -1,8 +1,8 @@
+import { serverEnv } from "@polaris/auth/env";
 import { db } from "@polaris/db";
+import { bootstrapPlatformAdmin } from "@polaris/platform/admin";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
-import { serverEnv } from "@/lib/env";
-import { bootstrapPlatformAdmin } from "@/lib/platform-admin";
 
 const LOCAL_E2E_HOSTS = new Set(["127.0.0.1", "::1", "localhost"]);
 

@@ -3,7 +3,9 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const projectRoot = process.cwd();
-const migrationsDir = join(projectRoot, "src/db/migrations");
+const workspaceRoot = join(projectRoot, "..", "..");
+const dbPackageRoot = join(workspaceRoot, "packages/db");
+const migrationsDir = join(dbPackageRoot, "src/migrations");
 
 const readSqlMigrations = () =>
   readdirSync(migrationsDir)
@@ -13,7 +15,7 @@ const readSqlMigrations = () =>
 
 describe("sales idempotency database invariant", () => {
   it("requires idempotency keys to be unique per organization when present", () => {
-    const schema = readFileSync(join(projectRoot, "src/db/schema.ts"), "utf8");
+    const schema = readFileSync(join(dbPackageRoot, "src/schema.ts"), "utf8");
     const migrations = readSqlMigrations();
 
     expect(schema).toContain('idempotencyKey: text("idempotency_key")');

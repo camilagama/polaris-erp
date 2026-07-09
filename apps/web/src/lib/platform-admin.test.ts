@@ -5,7 +5,7 @@ vi.mock("server-only", () => ({}));
 import {
   bootstrapPlatformAdmin,
   recordPlatformAuditEvent,
-} from "@/lib/platform-admin";
+} from "@polaris/platform/admin";
 
 const createInsertMock = () => {
   const values = vi.fn();

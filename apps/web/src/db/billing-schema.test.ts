@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const schemaSource = readFileSync(
-  join(process.cwd(), "src/db/schema.ts"),
+  join(process.cwd(), "../../packages/db/src/schema.ts"),
   "utf8"
 );
 

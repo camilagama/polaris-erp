@@ -4,7 +4,7 @@ import {
   platformAdminGrants,
   platformAdmins,
   platformAuditEvents,
-} from "@/db/schema";
+} from "@polaris/db/schema";
 
 type PlatformAdminRole = "owner" | "operator" | "support";
 

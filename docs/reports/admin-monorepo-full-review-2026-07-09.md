@@ -3,6 +3,8 @@
 Data: 2026-07-09  
 Escopo: `docs/admin-monorepo-implementation-plan.md`, monorepo atual, `apps/admin`, `apps/web`, packages compartilhados, CI, Neon/Postgres, gates de producao, outbox/Inngest, Sentry, Upstash, R2 e operacao de release.
 
+Atualizacao posterior no mesmo dia: o achado de acoplamento critico `apps/admin -> apps/web/src` foi enderecado com a extracao de `@polaris/auth` e remocao do fallback `../web/src/*` do admin. Use `docs/reports/admin-monorepo-review-after-auth-extraction-2026-07-09.md` como estado mais recente.
+
 ## Veredito
 
 No-go para producao ampla.
@@ -16,7 +18,7 @@ O codigo local esta bem melhor do que um prototipo: ha platform admin, audit, su
 - `package.json`: workspaces `apps/*` e `packages/*`; scripts root delegam para Turbo.
 - `turbo.json`: tasks, env pass-through e outputs configurados; sem boundary nativo do Turbo.
 - `apps/admin/tsconfig.json`: alias `"@/*": ["../web/src/*"]`.
-- `apps/admin/src`: imports diretos de DB foram migrados para `@polaris/db`; imports de outbox/eventos foram migrados para `@polaris/events`; paginas/actions ainda importam `@/lib/platform-*`, `@/lib/admin-rate-limit` etc., resolvidos para `apps/web/src`.
+- `apps/admin/src`: imports diretos de DB foram migrados para `@polaris/db`; imports de outbox/eventos foram migrados para `@polaris/events`; queries/mutacoes/audit/support/dashboard foram migrados para `@polaris/platform`; Cloudflare Access, platform grants e admin rate limit foram migrados para `@polaris/platform-auth`. Restam imports cross-app de auth/env/session.
 - `apps/admin/playwright.config.ts`: reutiliza helper E2E de `apps/web`.
 - `apps/web/src/lib/admin-boundary.test.ts`: guardrail permite somente a lista atual de imports temporarios.
 - `apps/web/src/lib/production-preflight.ts`: valida DB roles, URLs, Access, R2, Upstash, Inngest e, apos esta revisao, Sentry DSNs.
@@ -30,7 +32,7 @@ Evidencia:
 
 - `apps/admin/tsconfig.json` aponta `@/*` para `../web/src/*`.
 - O boundary test contem dezenas de imports permitidos de `apps/admin` para helpers internos do web.
-- `@polaris/db` existe como fundacao compartilhada para schema/client/tenant-context e ja removeu os imports `@/db` do admin; `@polaris/events` existe para outbox/event-foundation e ja removeu os imports `@/lib/event-foundation` do admin; `@polaris/auth` e `@polaris/platform` ainda nao existem.
+- `@polaris/db` existe como fundacao compartilhada para schema/client/tenant-context e ja removeu os imports `@/db` do admin; `@polaris/events` existe para outbox/event-foundation; `@polaris/platform` existe para queries/mutacoes/audit/support/dashboard; `@polaris/platform-auth` existe para Access/grants/rate limit; `@polaris/auth` ainda nao existe.
 
 Impacto:
 
@@ -41,8 +43,8 @@ Impacto:
 Acao recomendada:
 
 1. Completar `@polaris/db`, movendo tambem migrations/Drizzle ownership e migrando o web para consumir o package diretamente.
-2. Criar `@polaris/auth` ou `@polaris/platform-auth` com Better Auth, session, Cloudflare Access e `requirePlatformAdmin`.
-3. Criar `@polaris/platform` para queries/mutations/audit/support.
+2. Criar `@polaris/auth` com Better Auth config, session e env contract compartilhado.
+3. Remover o wrapper temporario de sessao em `apps/admin/src/lib/platform-admin-auth.ts`.
 4. Mover helpers E2E compartilhados para `@polaris/testing`.
 5. Alterar alias admin para `"@/*": ["./src/*"]`.
 6. Trocar o boundary test de allowlist temporaria para proibicao total de `apps/admin -> apps/web/src`.
@@ -175,20 +177,27 @@ Foi encontrado comentario de `any` temporario em `apps/web/src/components/produc
 - `packages/events/src/index.ts`: fundacao de outbox/eventos compartilhada; falhas retryable voltam para `pending`.
 - `apps/web/src/lib/inngest-functions.ts`: ausencia de dispatcher e terminal.
 - `apps/web/src/lib/inngest-functions.test.ts`: cobre retryable vs terminal.
+- `packages/platform/*`: queries/mutacoes/audit/support/dashboard extraidos para package compartilhado.
+- `apps/admin/src/app/*`: paginas/actions migradas para `@polaris/platform/*`.
+- `apps/web/src/lib/platform-*.test.ts`: testes migrados para os subpath exports do package.
+- `apps/web/src/lib/admin-boundary.test.ts`: allowlist reduzida para auth/env/rate-limit/platform-admin-auth.
+- `packages/platform-auth/*`: Cloudflare Access, platform admin grant guard e rate limit admin extraidos.
+- `apps/admin/src/lib/platform-admin-auth.ts`: wrapper local que injeta `getSession` no guard compartilhado.
+- `apps/web/src/lib/cloudflare-access.ts`, `admin-rate-limit.ts` e `platform-admin-auth.ts`: removidos apos migrar testes para `@polaris/platform-auth`.
 
 ## Resposta Aos Pontos Levantados
 
 - `apps/admin` deveria ter sido criado? Sim, e foi criado. O problema nao e ausencia do app, e sim que ele ainda depende de internals de `apps/web`.
-- `@polaris/db` e `@polaris/auth` fazem falta agora? Sim. `@polaris/db` foi iniciado e ja atende imports diretos de DB do admin; `@polaris/auth` e os helpers platform ainda sao o proximo passo arquitetural.
+- `@polaris/db` e `@polaris/auth` fazem falta agora? `@polaris/db` foi iniciado e ja atende imports diretos de DB do admin; `@polaris/platform` e `@polaris/platform-auth` tambem foram extraidos. `@polaris/auth` ainda e o proximo passo arquitetural para remover auth/env/session do alias.
 - Trocar runner outbox por Inngest faz sentido? Sim. A base Inngest ja existe e e melhor que runner caseiro para retries/observabilidade. O bug de retry automatico encontrado nesta revisao foi corrigido localmente.
 - Rate limit admin ainda esta pendente? Para as mutacoes existentes, nao. `assertAdminRateLimit` ja protege status de organizacao, retry de outbox e support notes. Falta validar Upstash real/borda.
 - Pode ir para producao? Nao. Falta provar gates externos e remover acoplamento critico antes de tratar o admin como superficie independente.
 
 ## Ordem Recomendada Dos Proximos Passos
 
-1. Completar a extracao de `@polaris/db`.
-2. Extrair `@polaris/auth`/`@polaris/platform-auth`.
-3. Extrair `@polaris/platform` e migrar testes.
+1. Completar a extracao de `@polaris/db` movendo migrations/ownership Drizzle.
+2. Extrair `@polaris/auth`.
+3. Migrar auth/env/session do admin para `@polaris/auth`.
 4. Remover alias `apps/admin -> apps/web/src`.
 5. Reforcar boundary para proibicao total de cross-app import.
 6. Configurar Vercel web/admin e dominios reais.
@@ -202,4 +211,4 @@ Foi encontrado comentario de `any` temporario em `apps/web/src/components/produc
 
 ## Decisao Final
 
-O estado atual e adequado para continuar evoluindo em desenvolvimento e preview protegido. Nao e adequado para producao ampla enquanto o admin depender de `apps/web/src` e os gates externos permanecerem sem evidencia.
+O estado atual e adequado para continuar evoluindo em desenvolvimento e preview protegido. Nao e adequado para producao ampla enquanto o admin ainda depender de `apps/web/src` para auth/env/session e os gates externos permanecerem sem evidencia.

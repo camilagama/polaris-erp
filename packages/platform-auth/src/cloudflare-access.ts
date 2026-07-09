@@ -2,7 +2,6 @@ import "server-only";
 
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import { headers } from "next/headers";
-import { serverEnv } from "@/lib/env";
 
 const ACCESS_JWT_HEADER = "cf-access-jwt-assertion";
 
@@ -33,8 +32,9 @@ const jwksByTeamDomain = new Map<
 >();
 
 const shouldEnforceAccess = (): boolean =>
-  serverEnv.NODE_ENV === "production" &&
-  (serverEnv.VERCEL_ENV === "preview" || serverEnv.VERCEL_ENV === "production");
+  process.env.NODE_ENV === "production" &&
+  (process.env.VERCEL_ENV === "preview" ||
+    process.env.VERCEL_ENV === "production");
 
 const normalizeTeamDomain = (teamDomain: string): string => {
   const withProtocol = teamDomain.startsWith("http")
@@ -45,9 +45,9 @@ const normalizeTeamDomain = (teamDomain: string): string => {
 };
 
 const getCloudflareAccessConfig = (): CloudflareAccessConfig => ({
-  audience: serverEnv.CLOUDFLARE_ACCESS_AUD,
+  audience: process.env.CLOUDFLARE_ACCESS_AUD,
   enforce: shouldEnforceAccess(),
-  teamDomain: serverEnv.CLOUDFLARE_ACCESS_TEAM_DOMAIN,
+  teamDomain: process.env.CLOUDFLARE_ACCESS_TEAM_DOMAIN,
 });
 
 const getJwks = (teamDomain: string) => {

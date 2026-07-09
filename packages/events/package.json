@@ -4,9 +4,14 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@polaris/db": "workspace:*"
+    "@polaris/db": "workspace:*",
+    "drizzle-orm": "^0.45.2",
+    "server-only": "^0.0.1"
   },
   "exports": {
     ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit --project tsconfig.json"
   }
 }

@@ -50,7 +50,7 @@ Em `development` e `test` existe bootstrap interno de sessao em `/api/auth/dev/b
 
 ## Tenancy
 
-O schema principal fica em `src/db/schema.ts` e as migracoes em `src/db/migrations/`.
+O schema principal fica em `packages/db/src/schema.ts` e as migracoes em `packages/db/src/migrations/`. O app web mantem wrappers curtos em `apps/web/src/db/*` para compatibilidade de imports internos.
 
 Tabelas SaaS:
 

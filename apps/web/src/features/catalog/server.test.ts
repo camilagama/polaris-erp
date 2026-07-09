@@ -8,7 +8,7 @@ vi.mock("next/cache", () => ({
   cacheTag: vi.fn(),
 }));
 
-vi.mock("@/db", () => ({
+vi.mock("@polaris/db", () => ({
   db: {
     delete: vi.fn(),
     query: {
@@ -31,7 +31,7 @@ type MockFn = ReturnType<typeof vi.fn>;
 
 const resolveMocks = async () => {
   const cache = await import("next/cache");
-  const dbModule = await import("@/db");
+  const dbModule = await import("@polaris/db");
 
   return {
     mockCacheLife: cache.cacheLife as MockFn,

@@ -1,5 +1,5 @@
+import { listPlatformAuditEvents } from "@polaris/platform/audit-events";
 import { describe, expect, it, vi } from "vitest";
-import { listPlatformAuditEvents } from "@/lib/platform-audit-events";
 
 vi.mock("server-only", () => ({}));
 

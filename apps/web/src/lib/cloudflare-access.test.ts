@@ -1,8 +1,8 @@
-import { describe, expect, it, vi } from "vitest";
 import {
   type VerifyCloudflareAccessJwt,
   verifyCloudflareAccessHeaders,
-} from "@/lib/cloudflare-access";
+} from "@polaris/platform-auth/cloudflare-access";
+import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 

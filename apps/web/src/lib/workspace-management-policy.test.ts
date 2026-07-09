@@ -1,10 +1,10 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
 import {
   rejectWorkspaceOrganizationUpdate,
   rejectWorkspaceUserManagement,
-} from "@/lib/workspace-management-policy";
+} from "@polaris/auth/workspace-management-policy";
+import { describe, expect, it } from "vitest";
 
 describe("workspace management policy", () => {
   it("blocks organization updates until platform admin audit exists", () => {
@@ -30,7 +30,10 @@ describe("workspace management policy", () => {
   });
 
   it("wires the organization update blocker into Better Auth organization hooks", () => {
-    const source = readFileSync(join(import.meta.dirname, "auth.ts"), "utf8");
+    const source = readFileSync(
+      join(import.meta.dirname, "../../../../packages/auth/src/auth.ts"),
+      "utf8"
+    );
 
     expect(source).toContain(
       "beforeUpdateOrganization: rejectWorkspaceOrganizationUpdate"

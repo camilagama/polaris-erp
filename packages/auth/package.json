@@ -1,0 +1,24 @@
+{
+  "name": "@polaris/auth",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@better-auth/infra": "^0.3.4",
+    "@polaris/db": "workspace:*",
+    "better-auth": "^1.6.23",
+    "dotenv": "^17.4.2",
+    "next": "16.2.1",
+    "server-only": "^0.0.1",
+    "zod": "^4.4.3"
+  },
+  "exports": {
+    ".": "./src/auth.ts",
+    "./env": "./src/env.ts",
+    "./session": "./src/session.ts",
+    "./workspace-management-policy": "./src/workspace-management-policy.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit --project tsconfig.json"
+  }
+}

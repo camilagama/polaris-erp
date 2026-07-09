@@ -1,8 +1,8 @@
-import { describe, expect, it, vi } from "vitest";
 import {
   createPlatformSupportNote,
   listPlatformSupportNotes,
-} from "@/lib/platform-support-notes";
+} from "@polaris/platform/support-notes";
+import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 

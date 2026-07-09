@@ -1,0 +1,24 @@
+{
+  "name": "@polaris/platform",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@polaris/billing": "workspace:*",
+    "@polaris/db": "workspace:*",
+    "drizzle-orm": "^0.45.2",
+    "server-only": "^0.0.1"
+  },
+  "exports": {
+    "./admin": "./src/platform-admin.ts",
+    "./audit-events": "./src/platform-audit-events.ts",
+    "./billing": "./src/platform-billing.ts",
+    "./dashboard": "./src/platform-dashboard.ts",
+    "./directory": "./src/platform-directory.ts",
+    "./organization-mutations": "./src/platform-organization-mutations.ts",
+    "./support-notes": "./src/platform-support-notes.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit --project tsconfig.json"
+  }
+}

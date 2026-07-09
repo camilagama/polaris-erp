@@ -33,7 +33,7 @@ Estrutura atual:
 
 ```text
 apps/
-  web/              # app externo dos clientes, DB/schema/migrations e testes principais
+  web/              # app externo dos clientes e testes principais
   admin/            # admin interno protegido, dashboard, auditoria, billing, eventos e E2E
 packages/
   config/           # config compartilhada inicial
@@ -53,12 +53,12 @@ Pontos fortes:
 - CI cobre check, admin check, typecheck web/admin, unit, knip, build web/admin, E2E web/admin e jobs manuais de RLS/deploy/preflight.
 - Admin interno existe em `apps/admin`, protegido por session/platform guard e Cloudflare Access quando configurado.
 - Platform admin/audit/support notes, outbox/webhook idempotente, rota Inngest inicial, email foundation e billing foundation foram implementados de forma aditiva.
-- O acoplamento temporario `apps/admin -> apps/web/src` agora tem source test para impedir expansao enquanto `@polaris/db/auth/platform` nao forem extraidos.
+- O acoplamento temporario `apps/admin -> apps/web/src` foi removido. DB, auth/session/env de auth, eventos, plataforma operacional, Cloudflare Access e rate limit admin ja foram movidos para packages, e o source test agora exige allowlist vazia para imports temporarios do web.
 
 Pontos frageis:
 
 - Deploy real de admin ainda depende de Vercel linkado/autenticado, `ADMIN_APP_URL`, Cloudflare Access e protection de preview.
-- `apps/admin` ainda depende de alias temporario para `apps/web/src`; o guardrail atual impede expansao, mas nao substitui extracao de packages.
+- `apps/admin` nao depende mais de alias temporario para `apps/web/src`; o risco restante e migrar testes de package para seus donos, sem reabrir imports cross-app.
 - Envs reais de producao ainda faltam para `prod:preflight` e `deploy:smoke`; o preflight agora tambem exige credenciais Inngest.
 - URLs Postgres locais usam `sslmode=require`; o preflight de producao exige `sslmode=verify-full`.
 - Branch Neon `production` nao esta protegida e o projeto `free_v3` tem `history_retention_seconds=21600`.
@@ -78,7 +78,7 @@ O que ja ajuda a futura separacao:
 
 - Codigo de dominio esta em `src/features`.
 - Auth/session estao centralizados em `src/lib/auth.ts`, `src/lib/session.ts`, `src/lib/app-session.ts`.
-- DB e migrations estao em `src/db`.
+- DB schema/config/migrations estao em `packages/db`; `apps/web/src/db/*` mantem wrappers curtos de compatibilidade.
 - Configs e scripts estao bem mapeados.
 - RLS ja torna isolamento de tenant uma propriedade do banco, nao so do app.
 
@@ -138,7 +138,7 @@ Responsabilidades:
 - `packages/config`: configs compartilhadas e validacao de env por app.
 - `packages/emails`: templates transacionais, adapter Resend, contratos de eventos e logs de envio. Nao deve enviar email sem idempotencia/observabilidade quando acionado por billing.
 - `packages/billing`: modelo canonico de plano/assinatura/fatura, adapters Woovi/Asaas e normalizacao de status. Nao deve vazar detalhes de provider para UI.
-- `packages/events`: outbox, idempotencia e processamento assincromo quando houver emails/billing webhooks. Status atual: fundacao app-local com DB outbox e Inngest inicial; extrair package depois de estabilizar dispatchers.
+- `packages/events`: outbox, idempotencia e processamento assincromo quando houver emails/billing webhooks. Status atual: extraido como `@polaris/events`, com DB outbox e Inngest inicial compartilhados; dispatchers reais de email/billing ainda precisam ser estabilizados.
 
 O que nao compartilhar:
 
@@ -202,17 +202,27 @@ Protecao:
 
 ## 7. Packages
 
-Pacotes foram mantidos conservadores. O monorepo existe, mas `db`, `auth`, `ui` e `domain` continuam app-local enquanto nao houver segundo consumidor claro ou contrato estavel. Packages criados ate agora: `@polaris/config`, `@polaris/emails` e `@polaris/billing`.
+Pacotes foram mantidos conservadores. O monorepo existe, e os contratos com segundo consumidor claro ja foram extraidos. Packages criados ate agora: `@polaris/config`, `@polaris/db`, `@polaris/auth`, `@polaris/events`, `@polaris/platform`, `@polaris/platform-auth`, `@polaris/emails` e `@polaris/billing`. `ui` e `domain` continuam app-local enquanto nao houver contrato estavel suficiente.
 
 - `@polaris/db`
   - Contem schema Drizzle, migrations, tipos DB, `withTenantContext`, futuros platform DB helpers.
   - Nao contem componentes, rotas ou server actions.
-  - Status: ainda nao extraido; schema/migrations permanecem em `apps/web/src/db`.
+  - Status: extraido; schema/client/tenant-context, migrations e Drizzle config estao em `packages/db`. `apps/web/src/db/*` mantem wrappers de compatibilidade.
 
 - `@polaris/auth`
   - Contem Better Auth config, client/server helpers, session, app context, platform admin guard.
   - Nao contem UI, nem queries de dominio operacional.
-  - Status: ainda nao extraido; admin reutiliza helpers app-local ate o contrato estabilizar.
+  - Status: extraido como factory compartilhada; `apps/web` injeta audit de login tenant e `apps/admin` usa wrappers locais sem importar `apps/web`.
+
+- `@polaris/platform`
+  - Contem queries/mutacoes/admin audit/support/dashboard compartilhadas e consumidas por `apps/admin`.
+  - Nao contem Better Auth, Cloudflare Access, rate limit ou env validation.
+  - Status: extraido; arquivos app-local equivalentes foram removidos de `apps/web/src/lib`.
+
+- `@polaris/platform-auth`
+  - Contem Cloudflare Access, guard de platform admin baseado em grant DB e rate limit admin dedicado.
+  - Nao contem Better Auth completo; isso pertence a `@polaris/auth`.
+  - Status: extraido; `apps/admin/src/lib/platform-admin-auth.ts` injeta a sessao local criada a partir de `@polaris/auth/session`.
 
 - `@polaris/ui`
   - Contem `src/components/ui`, tema, hooks genericos e primitives.
@@ -239,7 +249,7 @@ Pacotes foram mantidos conservadores. O monorepo existe, mas `db`, `auth`, `ui` 
 Pacotes evitados no inicio:
 
 - `packages/api`: sem API publica suficiente.
-- `packages/events`: nao extraido; a fundacao de outbox/idempotencia/Inngest esta app-local.
+- `packages/events`: extraido como `@polaris/events`; dispatchers reais ainda sao o risco operacional restante.
 - `packages/feature-flags`: so depois de flags reais.
 - `packages/logger`: so se observabilidade crescer alem de Sentry/console estruturado.
 
@@ -503,9 +513,9 @@ Nota posterior de organizacao: `apps/admin` foi criado como workspace Next minim
 ### PR 3 - Extrair packages minimos
 
 * [x] Objetivo: compartilhar apenas o que `apps/web` e `apps/admin` realmente consomem.
-* [x] Escopo: extrair `@polaris/config` primeiro; extrair `@polaris/db`, `@polaris/auth`, `@polaris/ui` e `@polaris/domain` somente quando houver segundo consumidor claro. Concluido: `@polaris/config` e fundacao `@polaris/db`; `apps/admin` nao importa mais `@/db`, mas `auth/platform/events` ainda permanecem temporariamente app-local.
-* [x] Arquivos esperados: `packages/config`, possivelmente `packages/db`, `packages/auth`, `packages/ui`, `packages/domain`. Concluido: `packages/config` e `packages/db` com schema/client/tenant-context sincronizados ao schema atual do web.
-* [x] Criterio de aceite: sem package `utils` generico; packages nao importam features do app cliente; boundaries testadas. Concluido parcialmente para DB: `@polaris/db` nao importa `apps/web`, e o boundary test removeu os imports `@/db` do admin.
+* [x] Escopo: extrair `@polaris/config` primeiro; extrair `@polaris/db`, `@polaris/events`, `@polaris/platform`, `@polaris/platform-auth`, `@polaris/auth`, `@polaris/ui` e `@polaris/domain` somente quando houver segundo consumidor claro. Concluido: `@polaris/config`, fundacao `@polaris/db`, `@polaris/events`, `@polaris/platform`, `@polaris/platform-auth` e `@polaris/auth`; `apps/admin` nao importa mais `@/db`, `@/lib/event-foundation`, helpers platform operacionais, Cloudflare Access, rate limit admin, auth/env ou session do web; `apps/web` declara `@polaris/db` como dependencia direta porque seus wrappers/testes importam o pacote.
+* [x] Arquivos esperados: `packages/config`, possivelmente `packages/db`, `packages/auth`, `packages/ui`, `packages/domain`. Concluido: `packages/config`, `packages/db`, `packages/auth`, `packages/events`, `packages/platform` e `packages/platform-auth`.
+* [x] Criterio de aceite: sem package `utils` generico; packages nao importam features do app cliente; boundaries testadas. Concluido para DB/eventos/platform/auth: packages nao importam `apps/web`, migrations/Drizzle config rodam em `@polaris/db`, o boundary test removeu os imports admin para DB/event-foundation/platform/auth, `knip` agora cobre `apps/admin` e os packages extraidos para detectar dependencias diretas ausentes, `turbo.json` inclui `knip.config.ts` como dependencia global para evitar cache verde com configuracao antiga, packages extraidos tem `tsconfig.json`/`typecheck` proprio encadeado por Turbo, e `ci-workflow.test.ts` protege esse wiring.
 * [x] Testes: typecheck/build/test, boundary tests, `bun run knip`.
 * [x] Riscos: extrair features demais e criar dependencias circulares.
 * [x] Rollback: manter codigo app-local ate segundo consumidor existir. Status atual: web ainda mantem compatibilidade app-local para reduzir blast radius; teste de sync impede divergencia de schema ate migracao completa.
@@ -524,7 +534,7 @@ Nota posterior de organizacao: `apps/admin` foi criado como workspace Next minim
 
 * [x] Objetivo: criar base de dados para admin interno sem misturar com tenant roles.
 * [x] Escopo: tabelas `platform_admins`, `platform_admin_grants`, `platform_audit_events`, `platform_support_notes`; bootstrap auditavel de primeiros admins; helpers de escrita obrigatoria.
-* [x] Arquivos esperados: schema app-local, nova migration, testes schema/audit. Status atual: `@polaris/db` foi iniciado para schema/client/tenant-context compartilhados; migrations e ownership Drizzle ainda permanecem app-local ate a migracao completa do package DB.
+* [x] Arquivos esperados: schema app-local, nova migration, testes schema/audit. Status atual: schema/client/tenant-context, migrations e Drizzle config foram movidos para `@polaris/db`; o web mantem wrappers de compatibilidade.
 * [x] Criterio de aceite: platform admins independem de `member`; audit platform nao exige `organization_id`; bootstrap nao cria backdoor permanente.
 * [x] Testes: `bun run db:generate`, testes focados, `bun run test`, `bun run check`, `bun run knip`, `bun run build`, `bun run build:admin`. Migration gerada, ainda nao aplicada em branch Neon.
 * [x] Riscos: schema sensivel mal modelado. Risco restante: migration precisa ser aplicada primeiro em branch Neon isolada.
@@ -544,10 +554,10 @@ Nota posterior de organizacao: `apps/admin` foi criado como workspace Next minim
 
 * [x] Objetivo: criar `apps/admin` real e protegido, sem acoes perigosas.
 * [x] Escopo: app Next separado, layout operacional, session/Access/DB grant gate, dashboard vazio/health basico, forbidden. Deploy/admin env real ainda depende da configuracao do projeto Vercel.
-* [x] Arquivos esperados: `apps/admin`, config Next, env admin, scripts e tests. Concluido com alias temporario para reutilizar guards de plataforma do web ate extrair `packages/db/auth`.
+* [x] Arquivos esperados: `apps/admin`, config Next, env admin, scripts e tests. Concluido com alias local-only; auth/session/env de auth foram movidos para `@polaris/auth`.
 * [x] Criterio de aceite: somente platform admin acessa; cliente comum recebe 403/redirect; previews protegidos quando Cloudflare Access/Vercel protection forem configurados.
 * [x] Testes: unit guards, teste de regressao do admin app protegido, `bun run test`, `bun run check`, `bun run check:admin`, `bun run knip`, `bun run build`, `bun run build:admin`.
-* [x] Riscos: expor admin em preview sem protection. Risco restante: configurar Access real no deploy e remover alias cross-app quando `packages/db/auth/platform` forem extraidos. Guardrail atual: source test impede novos imports temporarios de `apps/web/src` pelo admin.
+* [x] Riscos: expor admin em preview sem protection. Risco restante: configurar Access real no deploy e manter proibicao de imports cross-app. Guardrail atual: source test exige zero imports temporarios de `apps/web/src` pelo admin.
 * [x] Rollback: desligar deploy/subdominio admin sem afetar `apps/web`.
 
 ### PR 8 - Admin: dashboard operacional read-only
@@ -662,7 +672,7 @@ Nota posterior de organizacao: `apps/admin` foi criado como workspace Next minim
 
 ## 15. Checklist Final de Producao
 
-Revisao complementar: `docs/admin-monorepo-full-review-2026-07-09.md`.
+Revisoes complementares: `docs/reports/admin-monorepo-full-review-2026-07-09.md` e `docs/reports/admin-monorepo-review-after-auth-extraction-2026-07-09.md`.
 
 * [x] `bun run check` passou.
 * [x] `bun run typecheck` passou para web.
@@ -673,12 +683,12 @@ Revisao complementar: `docs/admin-monorepo-full-review-2026-07-09.md`.
 * [x] `bun run typecheck:admin` passou para admin.
 * [x] `bun run test:e2e` passou com `E2E_DATABASE_URL` isolado.
 * [x] `bun run test:e2e:admin` passou com `E2E_DATABASE_URL` isolado.
-* [x] `bun run db:smoke:rls` passou com role runtime sem `BYPASSRLS`.
+* [x] `bun run db:smoke:rls` passou com role runtime sem `BYPASSRLS`. Revalidado apos reautenticacao do plugin Neon: `currentUser=polaris_app`, `forcedTables=13/13`, `policies=14`, `tenantCrossCheck=ok`.
 * [x] Cross-tenant smoke passou.
 * [ ] `bun run prod:preflight` passou com envs reais.
 * [ ] `bun run deploy:smoke` passou no deploy promovido.
 * [ ] Migrations aplicadas com `DATABASE_URL_DIRECT`, nao runtime.
-* [ ] `DATABASE_URL` de runtime nao usa owner/admin.
+* [ ] `DATABASE_URL` de runtime nao usa owner/admin. Evidencia parcial: role `polaris_app` existe e o smoke RLS local roda com `currentUser=polaris_app`; falta comprovar env real de producao/promoted deploy e trocar URLs para `sslmode=verify-full`.
 * [ ] Cloudflare Access ativo para `admin.*` e `staging.*`.
 * [ ] Vercel Deployment Protection ativo para previews.
 * [ ] OAuth callbacks corretos para app e admin.
@@ -718,7 +728,7 @@ Revisao complementar: `docs/admin-monorepo-full-review-2026-07-09.md`.
 
 1. Linkar/autenticar Vercel para `apps/web` e `apps/admin`, configurar projetos/dominos reais e habilitar preview protection.
 2. Configurar `ADMIN_APP_URL`, Cloudflare Access (`CLOUDFLARE_ACCESS_AUD`, `CLOUDFLARE_ACCESS_TEAM_DOMAIN`) e validar admin por origem real.
-3. Atualizar URLs Postgres de producao para `sslmode=verify-full`, mantendo `DATABASE_URL`/`RLS_DATABASE_URL` com role runtime e `DATABASE_URL_DIRECT` somente para migrations.
+3. Atualizar URLs Postgres de producao para `sslmode=verify-full`, mantendo `DATABASE_URL`/`RLS_DATABASE_URL` com role runtime (`polaris_app`) e `DATABASE_URL_DIRECT` somente para migrations; o plugin Neon ainda gera URLs com `sslmode=require`.
 4. Rodar migrations em producao com `DATABASE_URL_DIRECT` depois de revisar backup/PITR/branch protection.
 5. Rodar `vercel env run -e production -- bun run prod:preflight`.
 6. Rodar `DEPLOYMENT_SMOKE_URL=https://DOMINIO_REAL bun run deploy:smoke` no deploy promovido.

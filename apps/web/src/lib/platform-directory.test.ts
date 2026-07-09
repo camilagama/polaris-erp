@@ -1,10 +1,10 @@
-import { describe, expect, it, vi } from "vitest";
 import {
   getPlatformOrganizationDetail,
   getPlatformUserDetail,
   listPlatformUsers,
   redactEmail,
-} from "@/lib/platform-directory";
+} from "@polaris/platform/directory";
+import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 

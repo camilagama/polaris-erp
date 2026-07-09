@@ -11,10 +11,18 @@ vi.mock("next/headers", () => ({
   headers: headersMock,
 }));
 
-vi.mock("@/lib/rate-limit", () => ({
-  checkRateLimit: checkRateLimitMock,
-  getRateLimitKeyFromHeaders: (headers: Headers, scope: string) =>
-    `${scope}:${headers.get("x-real-ip") ?? "unknown"}`,
+vi.mock("@upstash/ratelimit", () => ({
+  Ratelimit: class {
+    static slidingWindow() {
+      return {};
+    }
+
+    limit = checkRateLimitMock;
+  },
+}));
+
+vi.mock("@upstash/redis", () => ({
+  Redis: class {},
 }));
 
 describe("admin rate limit", () => {
@@ -27,12 +35,16 @@ describe("admin rate limit", () => {
   it("builds an admin key from action, actor, target and request IP", async () => {
     headersMock.mockResolvedValue(new Headers({ "x-real-ip": "203.0.113.10" }));
     checkRateLimitMock.mockResolvedValue({
-      ok: true,
       remaining: 4,
-      resetAt: Date.now() + 60_000,
+      reset: Date.now() + 60_000,
+      success: true,
     });
 
-    const { assertAdminRateLimit } = await import("@/lib/admin-rate-limit");
+    process.env.UPSTASH_REDIS_REST_TOKEN = "token";
+    process.env.UPSTASH_REDIS_REST_URL = "https://redis.example.com";
+    const { assertAdminRateLimit } = await import(
+      "@polaris/platform-auth/admin-rate-limit"
+    );
 
     await expect(
       assertAdminRateLimit({
@@ -42,22 +54,23 @@ describe("admin rate limit", () => {
       })
     ).resolves.toBeUndefined();
 
-    expect(checkRateLimitMock).toHaveBeenCalledWith({
-      key: "admin:organization.status.change:actor:user-1:target:org-1:203.0.113.10",
-      limit: 5,
-      windowMs: 60_000,
-    });
+    expect(checkRateLimitMock).toHaveBeenCalledWith(
+      "admin:organization.status.change:actor:user-1:target:org-1:203.0.113.10"
+    );
   });
 
   it("throws a retry hint when the admin bucket is exhausted", async () => {
     headersMock.mockResolvedValue(new Headers({ "x-real-ip": "203.0.113.10" }));
     checkRateLimitMock.mockResolvedValue({
-      ok: false,
-      resetAt: Date.now() + 60_000,
-      retryAfterSeconds: 60,
+      reset: Date.now() + 60_000,
+      success: false,
     });
 
-    const { assertAdminRateLimit } = await import("@/lib/admin-rate-limit");
+    process.env.UPSTASH_REDIS_REST_TOKEN = "token";
+    process.env.UPSTASH_REDIS_REST_URL = "https://redis.example.com";
+    const { assertAdminRateLimit } = await import(
+      "@polaris/platform-auth/admin-rate-limit"
+    );
 
     await expect(
       assertAdminRateLimit({

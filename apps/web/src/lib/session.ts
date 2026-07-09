@@ -1,19 +1,4 @@
-import "server-only";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
+import { createSessionHelpers } from "@polaris/auth/session";
 import { auth } from "@/lib/auth";
 
-export const getSession = async () =>
-  auth.api.getSession({
-    headers: await headers(),
-  });
-
-export const requireSession = async () => {
-  const session = await getSession();
-
-  if (!session) {
-    redirect("/sign-in");
-  }
-
-  return session;
-};
+export const { getSession, requireSession } = createSessionHelpers({ auth });

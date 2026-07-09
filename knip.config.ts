@@ -1,7 +1,7 @@
 import type { KnipConfig } from "knip";
 
 const config: KnipConfig = {
-  ignoreDependencies: ["@biomejs/biome"],
+  ignoreDependencies: ["@biomejs/biome", "tailwindcss"],
   ignoreIssues: {
     "apps/web/src/components/kibo-ui/contribution-graph/index.tsx": [
       "exports",
@@ -29,6 +29,36 @@ const config: KnipConfig = {
           "src/app/api/**/*.ts",
         ],
       },
+      project: ["src/**/*.{ts,tsx,js,jsx}"],
+    },
+    "apps/admin": {
+      next: {
+        entry: [
+          "next.config.{js,ts,mjs}",
+          "src/app/**/page.{tsx,jsx}",
+          "src/app/**/layout.{tsx,jsx}",
+          "src/app/**/error.{tsx,jsx}",
+          "src/app/**/loading.{tsx,jsx}",
+          "src/app/**/not-found.{tsx,jsx}",
+          "src/app/**/route.{ts,js}",
+          "src/app/api/**/*.ts",
+        ],
+      },
+      project: ["src/**/*.{ts,tsx,js,jsx}"],
+    },
+    "packages/auth": {
+      project: ["src/**/*.{ts,tsx,js,jsx}"],
+    },
+    "packages/db": {
+      project: ["src/**/*.{ts,tsx,js,jsx}"],
+    },
+    "packages/events": {
+      project: ["src/**/*.{ts,tsx,js,jsx}"],
+    },
+    "packages/platform": {
+      project: ["src/**/*.{ts,tsx,js,jsx}"],
+    },
+    "packages/platform-auth": {
       project: ["src/**/*.{ts,tsx,js,jsx}"],
     },
   },

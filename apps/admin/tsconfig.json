@@ -2,7 +2,7 @@
   "extends": "../../packages/config/tsconfig/next.json",
   "compilerOptions": {
     "paths": {
-      "@/*": ["../web/src/*"]
+      "@/*": ["./src/*"]
     }
   },
   "include": [

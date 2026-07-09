@@ -1,10 +1,10 @@
+import { getPlatformOrganizationDetail } from "@polaris/platform/directory";
+import { listPlatformSupportNotes } from "@polaris/platform/support-notes";
 import Link from "next/link";
 import { forbidden, notFound } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { requirePlatformAdmin } from "@/lib/platform-admin-auth";
-import { getPlatformOrganizationDetail } from "@/lib/platform-directory";
-import { listPlatformSupportNotes } from "@/lib/platform-support-notes";
 import { createSupportNoteAction } from "../../support-notes/actions";
 import { changeOrganizationStatusAction } from "../actions";
 

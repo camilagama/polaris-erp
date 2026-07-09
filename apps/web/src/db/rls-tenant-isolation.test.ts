@@ -5,8 +5,11 @@ import { describe, expect, it } from "vitest";
 const migration = readFileSync(
   join(
     process.cwd(),
-    "src",
+    "..",
+    "..",
+    "packages",
     "db",
+    "src",
     "migrations",
     "20260707205000_rls_tenant_isolation.sql"
   ),

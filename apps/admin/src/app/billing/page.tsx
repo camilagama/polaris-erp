@@ -1,9 +1,9 @@
+import { getPlatformBillingOverview } from "@polaris/platform/billing";
 import Link from "next/link";
 import { forbidden } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { requirePlatformAdmin } from "@/lib/platform-admin-auth";
-import { getPlatformBillingOverview } from "@/lib/platform-billing";
 
 const guardPlatformAdmin = async () => {
   try {

@@ -3,9 +3,24 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "drizzle-orm": "^0.45.2",
+    "pg": "^8.22.0"
+  },
   "exports": {
     ".": "./src/index.ts",
     "./schema": "./src/schema.ts",
     "./tenant-context": "./src/tenant-context.ts"
+  },
+  "scripts": {
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio",
+    "typecheck": "tsc --noEmit --project tsconfig.json"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.10"
   }
 }

@@ -21,7 +21,7 @@ Essa decisao substitui o pendente anterior de "RLS ou repository tenant-scoped":
 - PostgreSQL: `18.4`.
 - Policies existentes em `public.pg_policies`: 14 apos a migration RLS.
 - Tabelas tenant-scoped com `ENABLE ROW LEVEL SECURITY` e `FORCE ROW LEVEL SECURITY`: 13/13.
-- App usa `pg.Pool` via `drizzle-orm/node-postgres` em `src/db/index.ts`.
+- App usa `pg.Pool` via `drizzle-orm/node-postgres` em `packages/db/src/index.ts`.
 - `DATABASE_URL` local foi atualizado para o role runtime `polaris_app`; `DATABASE_URL_DIRECT` permanece para migrations com `neondb_owner`.
 
 ## Docs consultadas
@@ -133,7 +133,7 @@ Decisao tomada. Implementacao em andamento.
 
 Concluido:
 
-- Helper transacional `withTenantContext`/`setTenantContext` em `src/db/tenant-context.ts`.
+- Helper transacional `withTenantContext`/`setTenantContext` em `packages/db/src/tenant-context.ts`.
 - Teste TDD do helper validando `set_config('app.organization_id', ..., true)`.
 - Catalogo em `src/features/catalog/server.ts` executando leituras e escritas tenant-scoped dentro do contexto transacional.
 - Dashboard em `src/features/dashboard/server.ts` executando consultas analiticas tenant-scoped dentro do contexto transacional.
@@ -145,7 +145,7 @@ Concluido:
 - Scan de runtime em `src/features` sem import direto de `@/db`.
 - `src/lib/app-session.ts` usando `app.user_id` para resolver membership pre-tenant e `app.organization_id` no onboarding antes de inserir dados tenant-scoped.
 - `src/lib/audit-log.ts` gravando eventos dentro de contexto tenant.
-- Migration `src/db/migrations/20260707205000_rls_tenant_isolation.sql` criada com `ENABLE ROW LEVEL SECURITY`, `FORCE ROW LEVEL SECURITY` e policies para as tabelas tenant-scoped.
+- Migration `packages/db/src/migrations/20260707205000_rls_tenant_isolation.sql` criada com `ENABLE ROW LEVEL SECURITY`, `FORCE ROW LEVEL SECURITY` e policies para as tabelas tenant-scoped.
 - Teste estatico `src/db/rls-tenant-isolation.test.ts` cobre tabelas, `FORCE RLS`, `app.organization_id` e contexto interno de reconcile.
 - Verificacao local apos trocar `DATABASE_URL` para `polaris_app`: `bun run check`, `bun run test` (74 arquivos, 265 testes), `bun run knip` e `bun run build`.
 - Migration RLS aplicada no Neon main do projeto `autumn-feather-14038163`.

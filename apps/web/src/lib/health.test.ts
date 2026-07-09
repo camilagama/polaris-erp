@@ -10,7 +10,7 @@ const queryResult = <Row extends Record<string, unknown>>(rows: Row[]) => ({
   rows,
 });
 
-vi.mock("@/db", () => ({
+vi.mock("@polaris/db", () => ({
   db: {
     execute: vi.fn(),
   },
@@ -22,7 +22,7 @@ describe("checkDatabaseHealth", () => {
   });
 
   it("returns true when the database responds", async () => {
-    const dbModule = await import("@/db");
+    const dbModule = await import("@polaris/db");
     const { checkDatabaseHealth } = await import("@/lib/health");
 
     vi.mocked(dbModule.db.execute).mockResolvedValueOnce(
@@ -33,7 +33,7 @@ describe("checkDatabaseHealth", () => {
   });
 
   it("returns false without exposing database errors", async () => {
-    const dbModule = await import("@/db");
+    const dbModule = await import("@polaris/db");
     const { checkDatabaseHealth } = await import("@/lib/health");
 
     vi.mocked(dbModule.db.execute).mockRejectedValueOnce(

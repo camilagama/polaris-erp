@@ -1,8 +1,5 @@
+import { createPlatformAdminAuth } from "@polaris/platform-auth/admin-guard";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  getPlatformAdminContext,
-  requirePlatformAdmin,
-} from "@/lib/platform-admin-auth";
 
 const { accessMock, dbMock, sessionMock } = vi.hoisted(() => ({
   accessMock: {
@@ -18,16 +15,12 @@ const { accessMock, dbMock, sessionMock } = vi.hoisted(() => ({
 
 vi.mock("server-only", () => ({}));
 
-vi.mock("@/db", () => ({
+vi.mock("@polaris/db", () => ({
   db: dbMock,
 }));
 
-vi.mock("@/lib/cloudflare-access", () => ({
+vi.mock("@polaris/platform-auth/cloudflare-access", () => ({
   verifyCloudflareAccess: accessMock.verifyCloudflareAccess,
-}));
-
-vi.mock("@/lib/session", () => ({
-  getSession: sessionMock.getSession,
 }));
 
 const mockSession = (userId = "user-1") => {
@@ -64,6 +57,9 @@ describe("getPlatformAdminContext", () => {
   it("does not treat an organization user as a platform admin", async () => {
     mockSession("org-admin-user");
     mockPlatformGrantRows([]);
+    const { getPlatformAdminContext } = createPlatformAdminAuth({
+      getSession: sessionMock.getSession,
+    });
 
     const context = await getPlatformAdminContext({
       requireAccess: false,
@@ -87,6 +83,9 @@ describe("getPlatformAdminContext", () => {
         userId: "user-founder",
       },
     ]);
+    const { getPlatformAdminContext } = createPlatformAdminAuth({
+      getSession: sessionMock.getSession,
+    });
 
     const context = await getPlatformAdminContext({
       requireAccess: false,
@@ -109,6 +108,9 @@ describe("getPlatformAdminContext", () => {
         userId: "user-founder",
       },
     ]);
+    const { requirePlatformAdmin } = createPlatformAdminAuth({
+      getSession: sessionMock.getSession,
+    });
 
     await requirePlatformAdmin();
 
@@ -124,6 +126,9 @@ describe("getPlatformAdminContext", () => {
         userId: "support-user",
       },
     ]);
+    const { requirePlatformAdmin } = createPlatformAdminAuth({
+      getSession: sessionMock.getSession,
+    });
 
     await expect(
       requirePlatformAdmin({ minimumRole: "operator", requireAccess: false })

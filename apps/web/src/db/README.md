@@ -1,4 +1,4 @@
-# Setup Neon + Drizzle ORM - dgimports
+# Setup Neon + Drizzle ORM - Polaris
 
 ## Configuracao inicial
 
@@ -99,6 +99,8 @@ bun run db:push
 
 ## Referencias
 
-- schema principal: `src/db/schema.ts`
-- migracoes: `src/db/migrations/`
+- schema principal: `packages/db/src/schema.ts`
+- migracoes: `packages/db/src/migrations/`
+- config Drizzle: `packages/db/drizzle.config.ts`
+- wrappers de compatibilidade do web: `apps/web/src/db/schema.ts`, `apps/web/src/db/tenant-context.ts`, `apps/web/src/db/index.ts`
 - regras operacionais: `docs/01-regras-de-negocio.md`

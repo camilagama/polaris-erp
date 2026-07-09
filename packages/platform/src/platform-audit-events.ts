@@ -1,7 +1,7 @@
 import "server-only";
 
+import { db } from "@polaris/db";
 import { type SQL, sql } from "drizzle-orm";
-import { db } from "@/db";
 
 const PLATFORM_AUDIT_EVENT_LIMIT = 50;
 

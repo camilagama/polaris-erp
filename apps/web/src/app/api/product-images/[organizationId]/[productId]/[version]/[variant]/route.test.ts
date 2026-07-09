@@ -20,7 +20,7 @@ vi.mock("@/lib/audit-log", () => ({
   recordActorAuditEvent: vi.fn(),
 }));
 
-vi.mock("@/db", () => ({
+vi.mock("@polaris/db", () => ({
   db: {
     execute: vi.fn(),
     query: {
@@ -41,7 +41,7 @@ vi.mock("@/db", () => ({
 type MockFn = ReturnType<typeof vi.fn>;
 
 const resolveMocks = async () => {
-  const dbModule = await import("@/db");
+  const dbModule = await import("@polaris/db");
 
   return {
     mockFindMember: (
@@ -95,7 +95,7 @@ describe("GET /api/product-images/[organizationId]/[productId]/[version]/[varian
       mockFindProduct,
       mockTransaction,
     } = await resolveMocks();
-    const dbModule = await import("@/db");
+    const dbModule = await import("@polaris/db");
     const mockDb = dbModule.db as unknown as { transaction: MockFn };
 
     mockTransaction.mockImplementation(async (callback) => callback(mockDb));

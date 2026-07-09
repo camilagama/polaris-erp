@@ -6,7 +6,7 @@ vi.mock("@/features/dashboard/server", () => ({
   getDashboardMetrics: vi.fn(),
 }));
 
-vi.mock("@/db", () => ({
+vi.mock("@polaris/db", () => ({
   db: {
     query: {
       goals: {
@@ -41,7 +41,7 @@ const archivedGoalRow = {
 
 const resolveMocks = async () => {
   const dashboardServer = await import("@/features/dashboard/server");
-  const dbModule = await import("@/db");
+  const dbModule = await import("@polaris/db");
 
   return {
     mockDb: dbModule.db as unknown as {

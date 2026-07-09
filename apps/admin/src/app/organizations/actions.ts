@@ -1,9 +1,9 @@
 "use server";
 
+import { updatePlatformOrganizationStatus } from "@polaris/platform/organization-mutations";
+import { assertAdminRateLimit } from "@polaris/platform-auth/admin-rate-limit";
 import { revalidatePath } from "next/cache";
-import { assertAdminRateLimit } from "@/lib/admin-rate-limit";
 import { requirePlatformAdmin } from "@/lib/platform-admin-auth";
-import { updatePlatformOrganizationStatus } from "@/lib/platform-organization-mutations";
 
 type OrganizationStatusChange = "active" | "suspended";
 

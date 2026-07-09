@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@/db", () => ({
+vi.mock("@polaris/db", () => ({
   db: {
     transaction: vi.fn(),
   },
@@ -10,7 +10,7 @@ describe("tenant database context", () => {
   it("sets organization id before running tenant queries in a transaction", async () => {
     const execute = vi.fn().mockResolvedValue(undefined);
     const tx = { execute };
-    const { db } = await import("@/db");
+    const { db } = await import("@polaris/db");
     const { withTenantContext } = await import("@/db/tenant-context");
 
     vi.mocked(db.transaction).mockImplementation(async (callback) =>
@@ -56,7 +56,7 @@ describe("tenant database context", () => {
   it("sets internal job context with transaction-local scope", async () => {
     const execute = vi.fn().mockResolvedValue(undefined);
     const tx = { execute };
-    const { db } = await import("@/db");
+    const { db } = await import("@polaris/db");
     const { withInternalJobContext } = await import("@/db/tenant-context");
 
     vi.mocked(db.transaction).mockImplementation(async (callback) =>

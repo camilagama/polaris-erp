@@ -1,8 +1,8 @@
 import "server-only";
 
 import { hasBillableAccess, normalizeBillingStatus } from "@polaris/billing";
+import { db } from "@polaris/db";
 import { type SQL, sql } from "drizzle-orm";
-import { db } from "@/db";
 
 interface QueryableDb {
   execute: (query: SQL) => Promise<unknown>;

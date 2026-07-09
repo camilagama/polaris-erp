@@ -4,8 +4,12 @@
   "private": true,
   "dependencies": {
     "@polaris/billing": "workspace:*",
+    "@polaris/db": "workspace:*",
     "@polaris/events": "workspace:*",
-    "@polaris/emails": "workspace:*"
+    "@polaris/emails": "workspace:*",
+    "@polaris/auth": "workspace:*",
+    "@polaris/platform": "workspace:*",
+    "@polaris/platform-auth": "workspace:*"
   },
   "scripts": {
     "dev": "bun --env-file=../../.env.local x next dev",
@@ -17,13 +21,13 @@
     "check": "cd ../.. && bun x ultracite check",
     "fix": "cd ../.. && bun x ultracite fix",
     "knip": "cd ../.. && bun x knip",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "db:push": "drizzle-kit push",
+    "db:generate": "bun run --cwd ../../packages/db db:generate",
+    "db:migrate": "bun run --cwd ../../packages/db db:migrate",
+    "db:push": "bun run --cwd ../../packages/db db:push",
     "prod:preflight": "bun ../../scripts/check-production-readiness.ts",
     "deploy:smoke": "bun ../../scripts/smoke-deployment.ts",
     "db:smoke:rls": "bun ../../scripts/smoke-rls-runtime.cjs",
     "db:analyze:listings": "bun ../../scripts/analyze-listing-plans.ts",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "bun run --cwd ../../packages/db db:studio"
   }
 }

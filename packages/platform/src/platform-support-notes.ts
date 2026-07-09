@@ -1,9 +1,9 @@
 import "server-only";
 
+import { db } from "@polaris/db";
+import { platformSupportNotes } from "@polaris/db/schema";
 import { type SQL, sql } from "drizzle-orm";
-import { db } from "@/db";
-import { platformSupportNotes } from "@/db/schema";
-import { recordPlatformAuditEvent } from "@/lib/platform-admin";
+import { recordPlatformAuditEvent } from "./platform-admin";
 
 const SUPPORT_NOTE_LIMIT = 20;
 

@@ -119,4 +119,15 @@ describe("CI workflow", () => {
       expect(turboConfig).toContain(envName);
     }
   });
+
+  it("keeps monorepo hygiene config and package typechecks wired into Turbo", () => {
+    const turboConfig = JSON.parse(readTurboConfig()) as {
+      globalDependencies?: string[];
+      tasks?: Record<string, { dependsOn?: string[] }>;
+    };
+
+    expect(turboConfig.globalDependencies).toContain("knip.config.ts");
+    expect(turboConfig.tasks?.knip?.dependsOn).toContain("^knip");
+    expect(turboConfig.tasks?.typecheck?.dependsOn).toContain("^typecheck");
+  });
 });

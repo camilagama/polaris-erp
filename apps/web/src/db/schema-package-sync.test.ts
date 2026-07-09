@@ -1,20 +1,24 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const workspaceRoot = join(process.cwd(), "..", "..");
+describe("@polaris/db compatibility wrappers", () => {
+  it("keeps the web schema wrapper pointed at the shared package", async () => {
+    const webSchema = await import("@/db/schema");
+    const packageSchema = await import("@polaris/db/schema");
 
-describe("@polaris/db schema sync", () => {
-  it("keeps the shared package schema identical to the current web schema", () => {
-    const webSchema = readFileSync(
-      join(workspaceRoot, "apps/web/src/db/schema.ts"),
-      "utf8"
-    );
-    const packageSchema = readFileSync(
-      join(workspaceRoot, "packages/db/src/schema.ts"),
-      "utf8"
-    );
+    expect(webSchema.products).toBe(packageSchema.products);
+    expect(webSchema.sales).toBe(packageSchema.sales);
+    expect(webSchema.platformAdmins).toBe(packageSchema.platformAdmins);
+  });
 
-    expect(packageSchema).toBe(webSchema);
+  it("keeps the web tenant-context wrapper pointed at the shared package", async () => {
+    const webTenantContext = await import("@/db/tenant-context");
+    const packageTenantContext = await import("@polaris/db/tenant-context");
+
+    expect(webTenantContext.withTenantContext).toBe(
+      packageTenantContext.withTenantContext
+    );
+    expect(webTenantContext.withInternalJobContext).toBe(
+      packageTenantContext.withInternalJobContext
+    );
   });
 });

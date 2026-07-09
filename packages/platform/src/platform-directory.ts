@@ -1,7 +1,7 @@
 import "server-only";
 
+import { db } from "@polaris/db";
 import { type SQL, sql } from "drizzle-orm";
-import { db } from "@/db";
 
 const LIST_LIMIT = 50;
 const REDACTED_EMAIL = "[redacted]";

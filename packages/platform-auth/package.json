@@ -1,0 +1,23 @@
+{
+  "name": "@polaris/platform-auth",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@polaris/db": "workspace:*",
+    "@upstash/ratelimit": "^2.0.8",
+    "@upstash/redis": "^1.38.0",
+    "drizzle-orm": "^0.45.2",
+    "jose": "^6.2.2",
+    "next": "16.2.1",
+    "server-only": "^0.0.1"
+  },
+  "exports": {
+    "./admin-guard": "./src/admin-guard.ts",
+    "./admin-rate-limit": "./src/admin-rate-limit.ts",
+    "./cloudflare-access": "./src/cloudflare-access.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit --project tsconfig.json"
+  }
+}

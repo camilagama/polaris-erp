@@ -14,6 +14,10 @@ const findPackageFiles = (directory: string): string[] => {
   const files: string[] = [];
 
   for (const entry of readdirSync(directory)) {
+    if (entry === "node_modules") {
+      continue;
+    }
+
     const path = join(directory, entry);
     const stats = statSync(path);
 

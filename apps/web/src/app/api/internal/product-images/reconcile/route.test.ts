@@ -11,7 +11,7 @@ vi.mock("@/lib/env", () => ({
   },
 }));
 
-vi.mock("@/db", () => ({
+vi.mock("@polaris/db", () => ({
   db: {
     execute: vi.fn(),
     select: vi.fn(),
@@ -39,7 +39,7 @@ describe("/api/internal/product-images/reconcile", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
 
-    const dbModule = await import("@/db");
+    const dbModule = await import("@polaris/db");
     const mockDb = dbModule.db as unknown as {
       transaction: ReturnType<typeof vi.fn>;
     };
@@ -136,7 +136,7 @@ describe("/api/internal/product-images/reconcile", () => {
     const { POST } = await import(
       "@/app/api/internal/product-images/reconcile/route"
     );
-    const dbModule = await import("@/db");
+    const dbModule = await import("@polaris/db");
     const imageStorageModule = await import(
       "@/features/products/image-storage"
     );
@@ -190,7 +190,7 @@ describe("/api/internal/product-images/reconcile", () => {
     const { POST } = await import(
       "@/app/api/internal/product-images/reconcile/route"
     );
-    const dbModule = await import("@/db");
+    const dbModule = await import("@polaris/db");
     const imageStorageModule = await import(
       "@/features/products/image-storage"
     );

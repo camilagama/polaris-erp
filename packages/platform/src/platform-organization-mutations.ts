@@ -1,9 +1,9 @@
 import "server-only";
 
+import { db } from "@polaris/db";
+import { organization } from "@polaris/db/schema";
 import { eq } from "drizzle-orm";
-import { db } from "@/db";
-import { organization } from "@/db/schema";
-import { recordPlatformAuditEvent } from "@/lib/platform-admin";
+import { recordPlatformAuditEvent } from "./platform-admin";
 
 type OrganizationPlatformStatus = "active" | "suspended";
 

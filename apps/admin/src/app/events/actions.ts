@@ -2,8 +2,8 @@
 
 import { db } from "@polaris/db";
 import { retryOutboxEvent } from "@polaris/events";
+import { assertAdminRateLimit } from "@polaris/platform-auth/admin-rate-limit";
 import { revalidatePath } from "next/cache";
-import { assertAdminRateLimit } from "@/lib/admin-rate-limit";
 import { requirePlatformAdmin } from "@/lib/platform-admin-auth";
 
 const getRequiredFormValue = (formData: FormData, key: string): string => {

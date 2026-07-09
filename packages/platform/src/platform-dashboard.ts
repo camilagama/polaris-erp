@@ -1,9 +1,7 @@
 import "server-only";
 
+import { db } from "@polaris/db";
 import { type SQL, sql } from "drizzle-orm";
-import { db } from "@/db";
-import { serverEnv } from "@/lib/env";
-import { checkDatabaseHealth } from "@/lib/health";
 
 const RECENT_EVENT_LIMIT = 6;
 
@@ -142,12 +140,21 @@ const getEvents = async (
 
 const hasR2Config = (): boolean =>
   Boolean(
-    serverEnv.R2_ACCOUNT_ID &&
-      serverEnv.R2_ACCESS_KEY_ID &&
-      serverEnv.R2_SECRET_ACCESS_KEY &&
-      serverEnv.R2_BUCKET_PUBLIC &&
-      serverEnv.R2_BUCKET_STAGING
+    process.env.R2_ACCOUNT_ID &&
+      process.env.R2_ACCESS_KEY_ID &&
+      process.env.R2_SECRET_ACCESS_KEY &&
+      process.env.R2_BUCKET_PUBLIC &&
+      process.env.R2_BUCKET_STAGING
   );
+
+const checkDatabaseHealth = async (): Promise<boolean> => {
+  try {
+    await db.execute(sql`select 1`);
+    return true;
+  } catch {
+    return false;
+  }
+};
 
 export const getPlatformDashboardData = async (
   queryableDb: QueryableDb = db
@@ -163,7 +170,7 @@ export const getPlatformDashboardData = async (
     health: {
       database,
       productImageReconcileSecret: Boolean(
-        serverEnv.PRODUCT_IMAGE_RECONCILE_SECRET
+        process.env.PRODUCT_IMAGE_RECONCILE_SECRET
       ),
       r2: hasR2Config(),
     },

@@ -3,8 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@polaris/auth": "workspace:*",
     "@polaris/db": "workspace:*",
-    "@polaris/events": "workspace:*"
+    "@polaris/events": "workspace:*",
+    "@polaris/platform": "workspace:*",
+    "@polaris/platform-auth": "workspace:*"
   },
   "scripts": {
     "dev": "bun --env-file=../../.env.local x next dev",
