@@ -2,25 +2,7 @@ import { forbidden } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { requirePlatformAdmin } from "@/lib/platform-admin-auth";
-
-const adminSections = [
-  {
-    label: "Organizacoes",
-    status: "Read-only pendente",
-  },
-  {
-    label: "Usuarios",
-    status: "Read-only pendente",
-  },
-  {
-    label: "Auditoria",
-    status: "Base criada",
-  },
-  {
-    label: "Suporte",
-    status: "Notas internas criadas",
-  },
-] as const;
+import { getPlatformDashboardData } from "@/lib/platform-dashboard";
 
 const getAdminContext = async () => {
   try {
@@ -30,10 +12,61 @@ const getAdminContext = async () => {
   }
 };
 
+const formatNumber = (value: number) =>
+  new Intl.NumberFormat("pt-BR").format(value);
+
+const formatEventDate = (value: string | null) => {
+  if (!value) {
+    return "Sem data";
+  }
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    month: "2-digit",
+  }).format(new Date(value));
+};
+
+const getHealthLabel = (isHealthy: boolean) =>
+  isHealthy ? "Operacional" : "Pendente";
+
 const AdminDashboard = async () => {
   await connection();
 
   const context = await getAdminContext();
+  const dashboard = await getPlatformDashboardData();
+  const summaryCards = [
+    {
+      label: "Organizacoes",
+      value: dashboard.summary.organizations,
+      detail: `${formatNumber(dashboard.summary.activeOrganizations)} ativas`,
+    },
+    {
+      label: "Usuarios",
+      value: dashboard.summary.users,
+      detail: `${formatNumber(dashboard.summary.members)} memberships`,
+    },
+    {
+      label: "Admins internos",
+      value: dashboard.summary.platformAdmins,
+      detail: `${formatNumber(dashboard.summary.disabledPlatformAdmins)} desativados`,
+    },
+  ] as const;
+  const healthCards = [
+    {
+      label: "Database",
+      ok: dashboard.health.database,
+    },
+    {
+      label: "R2",
+      ok: dashboard.health.r2,
+    },
+    {
+      label: "Reconcile",
+      ok: dashboard.health.productImageReconcileSecret,
+    },
+  ] as const;
 
   return (
     <>
@@ -75,18 +108,83 @@ const AdminDashboard = async () => {
           </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {adminSections.map((section) => (
+        <div className="grid gap-4 md:grid-cols-3">
+          {summaryCards.map((card) => (
             <article
               className="rounded-lg border border-zinc-800 bg-zinc-900 p-4"
-              key={section.label}
+              key={card.label}
             >
-              <h2 className="font-medium text-base tracking-normal">
-                {section.label}
+              <h2 className="font-medium text-sm text-zinc-400 tracking-normal">
+                {card.label}
               </h2>
-              <p className="mt-3 text-sm text-zinc-400">{section.status}</p>
+              <p className="mt-3 font-semibold text-3xl tracking-normal">
+                {formatNumber(card.value)}
+              </p>
+              <p className="mt-2 text-sm text-zinc-500">{card.detail}</p>
             </article>
           ))}
+        </div>
+
+        <div className="grid gap-4 lg:grid-cols-[0.8fr_1.2fr]">
+          <section className="rounded-lg border border-zinc-800 bg-zinc-900 p-5">
+            <h2 className="font-semibold text-lg tracking-normal">
+              Status operacional
+            </h2>
+            <div className="mt-5 grid gap-3">
+              {healthCards.map((card) => (
+                <div
+                  className="flex items-center justify-between rounded-md border border-zinc-800 px-3 py-2"
+                  key={card.label}
+                >
+                  <span className="text-sm text-zinc-300">{card.label}</span>
+                  <span
+                    className={
+                      card.ok
+                        ? "font-medium text-emerald-300 text-sm"
+                        : "font-medium text-amber-300 text-sm"
+                    }
+                  >
+                    {getHealthLabel(card.ok)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="rounded-lg border border-zinc-800 bg-zinc-900 p-5">
+            <h2 className="font-semibold text-lg tracking-normal">
+              Eventos recentes
+            </h2>
+            <div className="mt-5 grid gap-3">
+              {dashboard.events.length === 0 ? (
+                <p className="rounded-md border border-zinc-800 px-3 py-4 text-sm text-zinc-500">
+                  Nenhum evento recente para exibir.
+                </p>
+              ) : (
+                dashboard.events.map((event) => (
+                  <div
+                    className="grid gap-1 rounded-md border border-zinc-800 px-3 py-2"
+                    key={`${event.source}-${event.label}-${event.occurredAt}`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="font-medium text-sm text-zinc-200">
+                        {event.label}
+                      </span>
+                      <span className="font-mono text-xs text-zinc-500">
+                        {formatEventDate(event.occurredAt)}
+                      </span>
+                    </div>
+                    <p className="text-xs text-zinc-500">
+                      {event.source === "tenant" ? "Tenant" : "Platform"}
+                      {event.count
+                        ? ` · ${formatNumber(event.count)} eventos`
+                        : ""}
+                    </p>
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
         </div>
       </section>
     </>

@@ -536,13 +536,13 @@ Nota posterior de organizacao: `apps/admin` foi criado como workspace Next minim
 
 ### PR 8 - Admin: dashboard operacional read-only
 
-* [ ] Objetivo: dar visao interna sem expor dados sensiveis.
-* [ ] Escopo: contagem de orgs/users/members, status de health, ultimos eventos platform/tenant agregados, R2/reconcile status.
-* [ ] Arquivos esperados: admin pages, platform queries read-only, tests.
-* [ ] Criterio de aceite: dados agregados, sem tokens/secrets, todas queries server-side.
-* [ ] Testes: unit query redaction, admin page render, build admin.
-* [ ] Riscos: dashboard virar copia do dashboard financeiro tenant.
-* [ ] Rollback: ocultar cards sensiveis.
+* [x] Objetivo: dar visao interna sem expor dados sensiveis.
+* [x] Escopo: contagem de orgs/users/members, status de health, ultimos eventos platform/tenant agregados, R2/reconcile status.
+* [x] Arquivos esperados: admin page, platform query read-only, tests.
+* [x] Criterio de aceite: dados agregados, sem tokens/secrets, todas queries server-side.
+* [x] Testes: unit query redaction, admin page protection/render source, build admin.
+* [x] Riscos: dashboard virar copia do dashboard financeiro tenant. Mitigado: apenas cards agregados, health booleano e eventos redigidos.
+* [x] Rollback: ocultar cards sensiveis.
 
 ### PR 9 - Admin: organizacoes e usuarios read-only
 

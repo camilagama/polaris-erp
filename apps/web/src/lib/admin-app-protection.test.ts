@@ -14,6 +14,7 @@ const adminForbiddenSource = readFileSync(
 describe("admin app protection", () => {
   it("guards the admin root route with platform admin authorization", () => {
     expect(adminPageSource).toContain("requirePlatformAdmin");
+    expect(adminPageSource).toContain("getPlatformDashboardData");
     expect(adminPageSource).toContain("forbidden()");
     expect(adminPageSource).toContain("await connection()");
     expect(adminPageSource).not.toContain("notFound()");
