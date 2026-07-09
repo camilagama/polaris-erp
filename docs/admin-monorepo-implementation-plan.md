@@ -526,13 +526,13 @@ Nota posterior de organizacao: `apps/admin` foi criado como workspace Next minim
 
 ### PR 7 - Skeleton do admin interno
 
-* [ ] Objetivo: criar `apps/admin` real e protegido, sem acoes perigosas.
-* [ ] Escopo: app Next separado, layout operacional, login/session, Access gate, dashboard vazio/health basico, forbidden/unauthorized, deploy/admin env.
-* [ ] Arquivos esperados: `apps/admin`, config Next, env admin, scripts e tests.
-* [ ] Criterio de aceite: somente platform admin acessa; cliente comum recebe 403/redirect; previews protegidos.
-* [ ] Testes: unit guards, Playwright admin auth negativo, build web e build admin.
-* [ ] Riscos: expor admin em preview sem protection.
-* [ ] Rollback: desligar deploy/subdominio admin sem afetar `apps/web`.
+* [x] Objetivo: criar `apps/admin` real e protegido, sem acoes perigosas.
+* [x] Escopo: app Next separado, layout operacional, session/Access/DB grant gate, dashboard vazio/health basico, forbidden. Deploy/admin env real ainda depende da configuracao do projeto Vercel.
+* [x] Arquivos esperados: `apps/admin`, config Next, env admin, scripts e tests. Concluido com alias temporario para reutilizar guards de plataforma do web ate extrair `packages/db/auth`.
+* [x] Criterio de aceite: somente platform admin acessa; cliente comum recebe 403/redirect; previews protegidos quando Cloudflare Access/Vercel protection forem configurados.
+* [x] Testes: unit guards, teste de regressao do admin app protegido, `bun run test`, `bun run check`, `bun run check:admin`, `bun run knip`, `bun run build`, `bun run build:admin`.
+* [x] Riscos: expor admin em preview sem protection. Risco restante: configurar Access real no deploy e remover alias cross-app quando `packages/db/auth` for extraido.
+* [x] Rollback: desligar deploy/subdominio admin sem afetar `apps/web`.
 
 ### PR 8 - Admin: dashboard operacional read-only
 
