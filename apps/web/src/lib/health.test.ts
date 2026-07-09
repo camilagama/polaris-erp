@@ -2,6 +2,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
+const queryResult = <Row extends Record<string, unknown>>(rows: Row[]) => ({
+  command: "SELECT",
+  fields: [],
+  oid: 0,
+  rowCount: rows.length,
+  rows,
+});
+
 vi.mock("@/db", () => ({
   db: {
     execute: vi.fn(),
@@ -17,7 +25,9 @@ describe("checkDatabaseHealth", () => {
     const dbModule = await import("@/db");
     const { checkDatabaseHealth } = await import("@/lib/health");
 
-    vi.mocked(dbModule.db.execute).mockResolvedValueOnce({ rows: [{ ok: 1 }] });
+    vi.mocked(dbModule.db.execute).mockResolvedValueOnce(
+      queryResult([{ ok: 1 }])
+    );
 
     await expect(checkDatabaseHealth()).resolves.toBe(true);
   });

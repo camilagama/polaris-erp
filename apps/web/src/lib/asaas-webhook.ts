@@ -5,7 +5,11 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { reconcileAsaasBillingEvent } from "@/lib/asaas-billing-reconciliation";
 import { serverEnv } from "@/lib/env";
-import { captureWebhookEvent } from "@/lib/event-foundation";
+import {
+  captureWebhookEvent,
+  enqueueOutboxEvent,
+} from "@/lib/event-foundation";
+import { sendOutboxEventToInngest } from "@/lib/inngest-client";
 
 const ACCESS_TOKEN_HEADER = "asaas-access-token";
 
@@ -115,14 +119,26 @@ export const handleAsaasWebhook = async (request: Request) => {
     );
   }
 
+  const redactedPayload = redactAsaasWebhookPayload(payload);
+
   await captureWebhookEvent(db, {
     correlationId: eventId,
     eventId,
     headers: Object.fromEntries(request.headers.entries()),
-    payload: redactAsaasWebhookPayload(payload),
+    payload: redactedPayload,
     provider: "asaas",
     rawBody,
   });
+
+  const outboxEventId = await enqueueOutboxEvent(db, {
+    correlationId: eventId,
+    eventType: getString(payload, "event") ?? "unknown",
+    idempotencyKey: `asaas-webhook:${eventId}`,
+    payload: redactedPayload,
+    topic: "asaas.webhook",
+  });
+  await sendOutboxEventToInngest(outboxEventId).catch(() => undefined);
+
   const reconciliationStatus = await reconcileAsaasBillingEvent(
     db,
     payload,

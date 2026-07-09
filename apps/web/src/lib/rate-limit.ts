@@ -158,12 +158,18 @@ export const checkRateLimit = async (
   };
 };
 
-export const getRateLimitKeyFromRequest = (request: Request, scope: string) => {
+export const getRateLimitKeyFromHeaders = (
+  requestHeaders: Pick<Headers, "get">,
+  scope: string
+) => {
   const ip =
-    getFirstValidIp(request.headers.get("x-forwarded-for")) ||
-    getFirstValidIp(request.headers.get("x-real-ip")) ||
-    getFirstValidIp(request.headers.get("cf-connecting-ip")) ||
+    getFirstValidIp(requestHeaders.get("x-forwarded-for")) ||
+    getFirstValidIp(requestHeaders.get("x-real-ip")) ||
+    getFirstValidIp(requestHeaders.get("cf-connecting-ip")) ||
     "unknown";
 
   return `${scope}:${ip}`;
 };
+
+export const getRateLimitKeyFromRequest = (request: Request, scope: string) =>
+  getRateLimitKeyFromHeaders(request.headers, scope);

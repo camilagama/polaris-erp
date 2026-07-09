@@ -84,6 +84,18 @@ Protecao obrigatoria antes de promover:
 4. `DATABASE_URL` do admin usando role runtime sem `BYPASSRLS`, nunca `DATABASE_URL_DIRECT`.
 5. Primeiro platform admin bootstrapado por fluxo auditavel, sem reutilizar `member.role`.
 
+Bootstrap operacional do primeiro platform admin:
+
+```bash
+PLATFORM_ADMIN_EMAIL=founder@example.com \
+PLATFORM_ADMIN_NAME="Founder" \
+PLATFORM_ADMIN_ROLE=owner \
+PLATFORM_ADMIN_BOOTSTRAP_REASON="Initial production platform owner approved in release checklist" \
+bun run platform-admin:bootstrap
+```
+
+O script usa `DATABASE_URL_DIRECT`, recusa reutilizar a mesma URL de `DATABASE_URL`, cria/reusa o usuario por email, cria/reusa `platform_admins`, garante o grant ativo e registra `platform_admin.bootstrap` em `platform_audit_events`. Rode apenas depois de confirmar branch Neon/PITR e guarde o JSON de saida como evidencia operacional.
+
 Valide antes de promover:
 
 ```bash
@@ -122,7 +134,8 @@ As migracoes nao rodam automaticamente no deploy por padrao.
 2. Rode `bun run db:migrate`.
 3. Configure `DATABASE_URL` do runtime com role nao proprietaria sem `BYPASSRLS`.
 4. Rode `bun run db:smoke:rls` no ambiente apontado para a branch promovida.
-5. Confira o runbook em `docs/saas-organization-migration-runbook.md`.
+5. Rode `bun run platform-admin:bootstrap` uma unica vez para o primeiro operador interno aprovado, usando `DATABASE_URL_DIRECT`.
+6. Confira o runbook em `docs/saas-organization-migration-runbook.md`.
 
 Antes de promover producao:
 
@@ -174,6 +187,8 @@ vercel link
 vercel env pull .env.local
 bun run check
 bun run check:admin
+bun run typecheck
+bun run typecheck:admin
 bun run test
 vercel env run -e production -- bun run prod:preflight
 bun run db:smoke:rls
@@ -216,6 +231,8 @@ O workflow `.github/workflows/ci.yml` roda:
 
 - `bun run check`
 - `bun run check:admin`
+- `bun run typecheck`
+- `bun run typecheck:admin`
 - `bun run test`
 - `bun run knip`
 - `bun run build`

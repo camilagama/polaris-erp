@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { assertAdminRateLimit } from "@/lib/admin-rate-limit";
 import { requirePlatformAdmin } from "@/lib/platform-admin-auth";
 import { createPlatformSupportNote } from "@/lib/platform-support-notes";
 
@@ -30,6 +31,12 @@ export async function createSupportNoteAction(formData: FormData) {
   const body = getRequiredFormValue(formData, "body");
   const organizationId = getOptionalFormValue(formData, "organizationId");
   const customerUserId = getOptionalFormValue(formData, "customerUserId");
+
+  await assertAdminRateLimit({
+    action: "support-note.create",
+    actorUserId: context.userId,
+    targetId: organizationId ?? customerUserId ?? "untargeted",
+  });
 
   await createPlatformSupportNote({
     authorPlatformAdminId: context.platformAdminId,

@@ -2,7 +2,11 @@ import { describe, expect, it, vi } from "vitest";
 import {
   buildWebhookEventKey,
   captureWebhookEvent,
+  claimOutboxEvent,
+  enqueueOutboxEvent,
   hashRawBody,
+  markOutboxEventFailed,
+  markOutboxEventProcessed,
   redactWebhookHeaders,
 } from "@/lib/event-foundation";
 
@@ -71,5 +75,70 @@ describe("event foundation helpers", () => {
     );
     expect(db.onConflictDoNothing).toHaveBeenCalledOnce();
     expect(JSON.stringify(db.values.mock.calls)).not.toContain("Bearer secret");
+  });
+
+  it("claims a pending outbox event for durable processing", async () => {
+    const execute = vi.fn().mockResolvedValueOnce({
+      rows: [
+        {
+          attempts: 1,
+          correlation_id: "corr-1",
+          event_type: "welcome.email",
+          id: "event-1",
+          payload: { userId: "user-1" },
+          topic: "email",
+        },
+      ],
+    });
+
+    await expect(claimOutboxEvent({ execute }, "event-1")).resolves.toEqual({
+      attempts: 1,
+      correlationId: "corr-1",
+      eventType: "welcome.email",
+      id: "event-1",
+      payload: { userId: "user-1" },
+      topic: "email",
+    });
+    expect(execute).toHaveBeenCalledOnce();
+  });
+
+  it("enqueues outbox events idempotently and returns the persisted id", async () => {
+    const execute = vi.fn().mockResolvedValueOnce({
+      rows: [{ id: "event-1" }],
+    });
+
+    await expect(
+      enqueueOutboxEvent(
+        { execute },
+        {
+          correlationId: "corr-1",
+          eventType: "email.delivered",
+          idempotencyKey: "resend-webhook:evt_123",
+          payload: { type: "email.delivered" },
+          topic: "resend.webhook",
+        }
+      )
+    ).resolves.toBe("event-1");
+    expect(execute).toHaveBeenCalledOnce();
+  });
+
+  it("returns null when an outbox event cannot be claimed", async () => {
+    const execute = vi.fn().mockResolvedValueOnce({ rows: [] });
+
+    await expect(claimOutboxEvent({ execute }, "event-1")).resolves.toBeNull();
+  });
+
+  it("marks outbox events as processed or failed", async () => {
+    const execute = vi.fn().mockResolvedValue({});
+    const db = { execute };
+
+    await markOutboxEventProcessed(db, "event-1");
+    await markOutboxEventFailed({
+      db,
+      error: "No dispatcher registered.",
+      eventId: "event-2",
+    });
+
+    expect(execute).toHaveBeenCalledTimes(2);
   });
 });

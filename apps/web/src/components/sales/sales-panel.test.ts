@@ -6,7 +6,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { SalesPanel } from "@/components/sales/sales-panel";
 import type { SaleListItem, SalesAnalytics } from "@/features/sales/contracts";
 
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+(
+  globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }
+).IS_REACT_ACT_ENVIRONMENT = true;
 
 const salesMocks = vi.hoisted(() => ({
   loadMoreSalesAction: vi.fn(),
@@ -98,9 +100,8 @@ describe("SalesPanel", () => {
     const container = document.createElement("div");
     document.body.append(container);
 
-    let root: Root | null = null;
+    const root: Root = createRoot(container);
     act(() => {
-      root = createRoot(container);
       root.render(
         createElement(SalesPanel, {
           analytics,
@@ -145,7 +146,7 @@ describe("SalesPanel", () => {
     expect(loadMoreButton?.hasAttribute("disabled")).toBe(false);
 
     act(() => {
-      root?.unmount();
+      root.unmount();
     });
   });
 
@@ -153,9 +154,8 @@ describe("SalesPanel", () => {
     const container = document.createElement("div");
     document.body.append(container);
 
-    let root: Root | null = null;
+    const root: Root = createRoot(container);
     act(() => {
-      root = createRoot(container);
       root.render(
         createElement(SalesPanel, {
           analytics,
@@ -191,7 +191,7 @@ describe("SalesPanel", () => {
     );
 
     act(() => {
-      root?.unmount();
+      root.unmount();
     });
   });
 });

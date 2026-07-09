@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
+import { assertAdminRateLimit } from "@/lib/admin-rate-limit";
 import { retryOutboxEvent } from "@/lib/event-foundation";
 import { requirePlatformAdmin } from "@/lib/platform-admin-auth";
 
@@ -16,8 +17,14 @@ const getRequiredFormValue = (formData: FormData, key: string): string => {
 };
 
 export async function retryOutboxEventAction(formData: FormData) {
-  await requirePlatformAdmin({ minimumRole: "operator" });
+  const context = await requirePlatformAdmin({ minimumRole: "operator" });
   const eventId = getRequiredFormValue(formData, "eventId");
+
+  await assertAdminRateLimit({
+    action: "outbox.retry",
+    actorUserId: context.userId,
+    targetId: eventId,
+  });
 
   await retryOutboxEvent(db, eventId);
   revalidatePath("/events");

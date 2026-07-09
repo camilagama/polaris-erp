@@ -54,6 +54,8 @@ describe("email service and Resend webhook", () => {
     expect(resendWebhookHandlerSource).toContain("webhooks.verify");
     expect(resendWebhookHandlerSource).toContain("RESEND_WEBHOOK_SECRET");
     expect(resendWebhookHandlerSource).toContain("captureWebhookEvent");
+    expect(resendWebhookHandlerSource).toContain("enqueueOutboxEvent");
+    expect(resendWebhookHandlerSource).toContain("sendOutboxEventToInngest");
     expect(resendWebhookHandlerSource).toContain("recordResendEmailEvent");
   });
 });

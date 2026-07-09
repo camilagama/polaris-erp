@@ -1,6 +1,25 @@
 import { createAsaasBillingAdapter } from "@polaris/billing/providers/asaas";
 import { describe, expect, it, vi } from "vitest";
 
+type FetchCall = [string, { body: string }];
+
+const getFirstFetchCall = (calls: unknown[][]): FetchCall => {
+  const call = calls[0];
+
+  if (
+    !call ||
+    typeof call[0] !== "string" ||
+    typeof call[1] !== "object" ||
+    call[1] === null ||
+    !("body" in call[1]) ||
+    typeof call[1].body !== "string"
+  ) {
+    throw new Error("Expected fetch to be called with a JSON body.");
+  }
+
+  return [call[0], { body: call[1].body }];
+};
+
 describe("Asaas billing adapter", () => {
   it("creates credit card subscriptions using tokenized cards only", async () => {
     const fetch = vi.fn(async () => ({
@@ -36,7 +55,7 @@ describe("Asaas billing adapter", () => {
       subscriptionId: "sub_123",
     });
 
-    const [, request] = fetch.mock.calls[0];
+    const [, request] = getFirstFetchCall(fetch.mock.calls);
     const body = JSON.parse(request.body);
 
     expect(fetch).toHaveBeenCalledWith(

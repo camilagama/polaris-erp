@@ -8,9 +8,13 @@ const CI_WORKFLOW_PATH = fileURLToPath(
 const ENV_EXAMPLE_PATH = fileURLToPath(
   new URL("../../../../.env.example", import.meta.url)
 );
+const TURBO_CONFIG_PATH = fileURLToPath(
+  new URL("../../../../turbo.json", import.meta.url)
+);
 
 const readCiWorkflow = () => readFileSync(CI_WORKFLOW_PATH, "utf8");
 const readEnvExample = () => readFileSync(ENV_EXAMPLE_PATH, "utf8");
+const readTurboConfig = () => readFileSync(TURBO_CONFIG_PATH, "utf8");
 
 const RLS_DATABASE_URL_SECRET_PATTERN =
   /DATABASE_URL:\s*\$\{\{\s*secrets\.RLS_DATABASE_URL\s*\}\}/;
@@ -79,6 +83,8 @@ describe("CI workflow", () => {
     const workflow = readCiWorkflow();
 
     expect(workflow).toContain("bun run check:admin");
+    expect(workflow).toContain("bun run typecheck");
+    expect(workflow).toContain("bun run typecheck:admin");
     expect(workflow).toContain("bun run build:admin");
     expect(workflow).toContain("admin-e2e:");
     expect(workflow).toContain("bun run test:e2e:admin");
@@ -97,6 +103,16 @@ describe("CI workflow", () => {
       "RLS_DATABASE_URL",
     ]) {
       expect(envExample).toContain(`${envName}=`);
+    }
+  });
+
+  it("documents and passes Inngest envs through Turbo tasks", () => {
+    const envExample = readEnvExample();
+    const turboConfig = readTurboConfig();
+
+    for (const envName of ["INNGEST_EVENT_KEY", "INNGEST_SIGNING_KEY"]) {
+      expect(envExample).toContain(`${envName}=`);
+      expect(turboConfig).toContain(envName);
     }
   });
 });

@@ -12,6 +12,7 @@
     "start": "bun --env-file=../../.env.local x next start",
     "test": "vitest run",
     "test:e2e": "bun ../../scripts/check-e2e-db-schema.ts && playwright test",
+    "typecheck": "tsc --noEmit --project tsconfig.json",
     "check": "cd ../.. && bun x ultracite check",
     "fix": "cd ../.. && bun x ultracite fix",
     "knip": "cd ../.. && bun x knip",

@@ -26,6 +26,12 @@ jobs:
       - name: Admin lint & format check
         run: bun run check:admin
 
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Admin typecheck
+        run: bun run typecheck:admin
+
       - name: Unit tests
         run: bun run test
 

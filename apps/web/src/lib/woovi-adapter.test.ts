@@ -1,6 +1,25 @@
 import { createWooviBillingAdapter } from "@polaris/billing/providers/woovi";
 import { describe, expect, it, vi } from "vitest";
 
+type FetchCall = [string, { body: string }];
+
+const getFirstFetchCall = (calls: unknown[][]): FetchCall => {
+  const call = calls[0];
+
+  if (
+    !call ||
+    typeof call[0] !== "string" ||
+    typeof call[1] !== "object" ||
+    call[1] === null ||
+    !("body" in call[1]) ||
+    typeof call[1].body !== "string"
+  ) {
+    throw new Error("Expected fetch to be called with a JSON body.");
+  }
+
+  return [call[0], { body: call[1].body }];
+};
+
 describe("Woovi billing adapter", () => {
   it("creates Pix recurring subscriptions with correlationID and app authorization", async () => {
     const fetch = vi.fn(async () => ({
@@ -39,7 +58,9 @@ describe("Woovi billing adapter", () => {
         method: "POST",
       })
     );
-    expect(JSON.parse(fetch.mock.calls[0][1].body)).toMatchObject({
+    const [, request] = getFirstFetchCall(fetch.mock.calls);
+
+    expect(JSON.parse(request.body)).toMatchObject({
       correlationID: "billing-subscription-1",
       dayGenerateCharge: 5,
       value: 4900,

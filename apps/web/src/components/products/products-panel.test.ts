@@ -9,7 +9,9 @@ import type {
   ProductListItem,
 } from "@/features/products/contracts";
 
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+(
+  globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }
+).IS_REACT_ACT_ENVIRONMENT = true;
 
 const productMocks = vi.hoisted(() => ({
   loadMoreProductsAction: vi.fn(),
@@ -88,9 +90,8 @@ describe("ProductsPanel", () => {
     const container = document.createElement("div");
     document.body.append(container);
 
-    let root: Root | null = null;
+    const root: Root = createRoot(container);
     act(() => {
-      root = createRoot(container);
       root.render(
         createElement(ProductsPanel, {
           analytics,
@@ -130,7 +131,7 @@ describe("ProductsPanel", () => {
     expect(loadMoreButton?.hasAttribute("disabled")).toBe(false);
 
     act(() => {
-      root?.unmount();
+      root.unmount();
     });
   });
 
@@ -138,9 +139,8 @@ describe("ProductsPanel", () => {
     const container = document.createElement("div");
     document.body.append(container);
 
-    let root: Root | null = null;
+    const root: Root = createRoot(container);
     act(() => {
-      root = createRoot(container);
       root.render(
         createElement(ProductsPanel, {
           analytics,
@@ -167,7 +167,7 @@ describe("ProductsPanel", () => {
     expect(input).toBeInstanceOf(HTMLInputElement);
 
     act(() => {
-      root?.unmount();
+      root.unmount();
     });
   });
 });

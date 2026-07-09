@@ -37,13 +37,10 @@ import { ChartContainer } from "@/components/ui/chart";
 describe("ChartContainer", () => {
   it("uses a 16ms resize debounce by default", () => {
     const markup = renderToStaticMarkup(
-      createElement(
-        ChartContainer,
-        {
-          config: {},
-        },
-        createElement("span", null, "chart")
-      )
+      createElement(ChartContainer, {
+        children: createElement("span", null, "chart"),
+        config: {},
+      })
     );
 
     expect(markup).toContain('data-responsive-debounce="16"');
@@ -53,14 +50,11 @@ describe("ChartContainer", () => {
 
   it("allows overriding the responsive resize debounce", () => {
     const markup = renderToStaticMarkup(
-      createElement(
-        ChartContainer,
-        {
-          config: {},
-          resizeDebounce: 48,
-        },
-        createElement("span", null, "chart")
-      )
+      createElement(ChartContainer, {
+        children: createElement("span", null, "chart"),
+        config: {},
+        resizeDebounce: 48,
+      })
     );
 
     expect(markup).toContain('data-responsive-debounce="48"');

@@ -48,22 +48,24 @@ Pontos fortes:
 - Boundaries locais ja sao testados no app web e os scripts root delegam para workspaces.
 - RLS foi implementado com `set_config(..., true)`, `FORCE ROW LEVEL SECURITY` e role runtime sem `BYPASSRLS`.
 - Ambiente de banco documentado com `DATABASE_URL`, `DATABASE_URL_DIRECT`, `E2E_DATABASE_URL` e `RLS_DATABASE_URL`.
-- Rotas internas sensiveis usam bearer secret, segredos separados e rate limit quando aplicavel.
+- Rotas internas sensiveis usam bearer secret, segredos separados e rate limit quando aplicavel; mutacoes admin existentes tambem usam rate limit dedicado.
 - Produto preserva vertical slices em `apps/web/src/features`.
-- CI cobre check, admin check, unit, knip, build web/admin, E2E web/admin e jobs manuais de RLS/deploy/preflight.
+- CI cobre check, admin check, typecheck web/admin, unit, knip, build web/admin, E2E web/admin e jobs manuais de RLS/deploy/preflight.
 - Admin interno existe em `apps/admin`, protegido por session/platform guard e Cloudflare Access quando configurado.
-- Platform admin/audit/support notes, outbox/webhook idempotente, email foundation e billing foundation foram implementados de forma aditiva.
+- Platform admin/audit/support notes, outbox/webhook idempotente, rota Inngest inicial, email foundation e billing foundation foram implementados de forma aditiva.
+- O acoplamento temporario `apps/admin -> apps/web/src` agora tem source test para impedir expansao enquanto `@polaris/db/auth/platform` nao forem extraidos.
 
 Pontos frageis:
 
 - Deploy real de admin ainda depende de Vercel linkado/autenticado, `ADMIN_APP_URL`, Cloudflare Access e protection de preview.
+- `apps/admin` ainda depende de alias temporario para `apps/web/src`; o guardrail atual impede expansao, mas nao substitui extracao de packages.
 - Envs reais de producao ainda faltam para `prod:preflight` e `deploy:smoke`.
 - URLs Postgres locais usam `sslmode=require`; o preflight de producao exige `sslmode=verify-full`.
 - Branch Neon `production` nao esta protegida e o projeto `free_v3` tem `history_retention_seconds=21600`.
 - Migrations foram aplicadas no branch E2E; a aplicacao em producao ainda nao foi validada com `DATABASE_URL_DIRECT`.
 - Resend/Woovi/Asaas ainda precisam de validacao sandbox/producao com credenciais reais e dominios verificados.
-- `AGENTS.md` exige `aidd_docs/memory`, mas `aidd_docs/` nao existe.
-- Runbooks de cleanup destrutivo sao referenciados, mas os arquivos `docs/production-database-cleanup.md` e `.sql` nao existem.
+- `AGENTS.md` agora tem `aidd_docs/memory/project-state.md`, mas a memoria precisa ser mantida junto das mudancas de arquitetura.
+- Runbooks de cleanup destrutivo foram restaurados em `docs/production-database-cleanup.md` e `docs/production-database-cleanup.sql`; o SQL permanece com `rollback` por padrao.
 
 Riscos para admin interno:
 
@@ -93,7 +95,7 @@ O que ja ajuda a futura separacao:
 | Better Auth Admin Plugin | Nao no MVP; avaliar para user/session admin depois do modelo platform admin | Adotar agora, nunca adotar | Plugin e util para user management app-level, ban, impersonation, roles; hoje pode confundir org admin com platform admin | Confusao de roles e acoes perigosas | Quando Usuarios do admin precisarem ban/revogar sessoes/impersonation |
 | Better Auth Organization Plugin | Manter para orgs cliente; bloquear/ auditar endpoints nao usados | Remover plugin, reimplementar orgs | Ja modela org/member/invitation; user management esta desabilitado | Endpoint `organization/update` pode bypassar UI/audit se nao bloqueado | PR de hardening antes do admin |
 | API layer | Manter Server Actions + Route Handlers | Hono, Elysia, Express, tRPC, oRPC, OpenAPI completo | Superficie HTTP atual e pequena; Zod + Server Actions + Route Handlers ja dao type safety suficiente | Futuro mobile/integracoes podem pedir contratos HTTP | Quando houver API publica, mobile app, parceiros ou webhooks complexos |
-| Inngest/jobs duraveis | Nao instalar agora; criar fundacao de eventos/outbox antes de Resend/Woovi/Asaas | Inngest imediato, QStash, queues, cron custom | Carga atual cabe em Vercel Cron, mas emails e billing webhooks exigirao idempotencia, retries e observabilidade | Adiar demais deixa webhooks/email acoplados a requests | Antes da primeira integracao real de Resend, Woovi ou Asaas |
+| Inngest/jobs duraveis | Adotar fundacao Inngest minima para processar outbox, mantendo DB outbox como fonte de idempotencia/auditoria | QStash, queues, cron custom, apenas DB polling | Emails e billing webhooks exigem retries e observabilidade; Inngest encaixa no App Router via `/api/inngest` sem remover o outbox DB | Dispatchers reais ainda precisam ser registrados antes de side effects de email/billing | Antes de acionar envios/cobrancas reais por outbox |
 | Feature flags | Interno/DB tipado para org beta/entitlements; env para kill switch raro | Vercel Flags, LaunchDarkly, Statsig, GrowthBook | Produto server-heavy e audit-sensitive; provedor externo adiciona consistencia/privacidade antes de necessidade | Flags genericas virarem bypass de permissoes | Quando nao-devs precisarem rollout gradual/experimentos |
 | Email transacional | Resend no futuro; preparar `packages/emails`, logs e outbox antes de envio real | Email ad hoc em actions, SMTP generico, provedor diferente | Resend docs usam SDK/API key via env, dominios verificados em producao e retorno `{ data, error }`; isso combina melhor com adapter central e templates versionados | Enviar email direto dentro de Server Actions pode duplicar/enviesar falhas | Quando onboarding, billing ou suporte exigirem emails reais |
 | Billing | Planejar fundacao cedo; integrar Woovi Pix recorrente e Asaas cartao depois do admin MVP basico | Stripe, billing manual, planos hardcoded | A escolha dos provedores ja foi definida. Woovi Pix Automatico usa assinatura/correlationID; Asaas tem assinaturas/cartao e docs de idempotencia de webhooks | Sem billing foundation, cada provedor vira modelo paralelo | Antes de venda paga/self-serve e antes de expor status financeiro no admin |
@@ -136,7 +138,7 @@ Responsabilidades:
 - `packages/config`: configs compartilhadas e validacao de env por app.
 - `packages/emails`: templates transacionais, adapter Resend, contratos de eventos e logs de envio. Nao deve enviar email sem idempotencia/observabilidade quando acionado por billing.
 - `packages/billing`: modelo canonico de plano/assinatura/fatura, adapters Woovi/Asaas e normalizacao de status. Nao deve vazar detalhes de provider para UI.
-- `packages/events`: outbox, idempotencia e processamento assincromo quando houver emails/billing webhooks. Pode comecar como DB outbox antes de Inngest.
+- `packages/events`: outbox, idempotencia e processamento assincromo quando houver emails/billing webhooks. Status atual: fundacao app-local com DB outbox e Inngest inicial; extrair package depois de estabilizar dispatchers.
 
 O que nao compartilhar:
 
@@ -237,7 +239,7 @@ Pacotes foram mantidos conservadores. O monorepo existe, mas `db`, `auth`, `ui` 
 Pacotes evitados no inicio:
 
 - `packages/api`: sem API publica suficiente.
-- `packages/events`: nao extraido; a fundacao de outbox/idempotencia esta app-local.
+- `packages/events`: nao extraido; a fundacao de outbox/idempotencia/Inngest esta app-local.
 - `packages/feature-flags`: so depois de flags reais.
 - `packages/logger`: so se observabilidade crescer alem de Sentry/console estruturado.
 
@@ -344,14 +346,17 @@ Migrations:
 
 ## 10. Jobs/Eventos
 
-Decisao: nao adotar Inngest agora, mas criar uma fundacao de eventos/outbox antes de Resend, Woovi ou Asaas.
+Decisao atual: usar Inngest como processador/orquestrador duravel do outbox, mantendo o DB outbox como fonte local de idempotencia, auditabilidade e suporte operacional.
 
 Estado atual:
 
 - Vercel Cron diario para reconcile de imagens.
 - R2 staging/final e processamento com `sharp` no request path.
 - Auditoria tenant sincrona/best-effort.
-- Sem emails, sem billing webhooks ativos, sem fila.
+- Webhooks Resend/Woovi/Asaas persistem eventos em `event_outbox` e acionam Inngest em best-effort.
+- Rota `/api/inngest` e funcao `process-outbox-event` criadas para claim/finalizacao duravel do outbox.
+- Dispatchers reais de email/billing ainda nao foram registrados; eventos sem dispatcher ficam `failed` para revisao manual, sem fingir sucesso.
+- Woovi/Asaas ainda mantem reconciliacao sincrona no webhook para preservar comportamento atual ate os dispatchers serem validados.
 
 Manter agora:
 
@@ -542,7 +547,7 @@ Nota posterior de organizacao: `apps/admin` foi criado como workspace Next minim
 * [x] Arquivos esperados: `apps/admin`, config Next, env admin, scripts e tests. Concluido com alias temporario para reutilizar guards de plataforma do web ate extrair `packages/db/auth`.
 * [x] Criterio de aceite: somente platform admin acessa; cliente comum recebe 403/redirect; previews protegidos quando Cloudflare Access/Vercel protection forem configurados.
 * [x] Testes: unit guards, teste de regressao do admin app protegido, `bun run test`, `bun run check`, `bun run check:admin`, `bun run knip`, `bun run build`, `bun run build:admin`.
-* [x] Riscos: expor admin em preview sem protection. Risco restante: configurar Access real no deploy e remover alias cross-app quando `packages/db/auth` for extraido.
+* [x] Riscos: expor admin em preview sem protection. Risco restante: configurar Access real no deploy e remover alias cross-app quando `packages/db/auth/platform` forem extraidos. Guardrail atual: source test impede novos imports temporarios de `apps/web/src` pelo admin.
 * [x] Rollback: desligar deploy/subdominio admin sem afetar `apps/web`.
 
 ### PR 8 - Admin: dashboard operacional read-only
@@ -568,11 +573,11 @@ Nota posterior de organizacao: `apps/admin` foi criado como workspace Next minim
 ### PR 10 - Admin: mutacoes auditadas de organizacao
 
 * [x] Objetivo: operar status de organizacao com controle e rastreabilidade.
-* [x] Escopo: suspender/reativar com motivo, confirmacao UI e audit sincrona. Rate limit admin dedicado segue pendente para o primeiro pacote de rotas/mutacoes compartilhadas.
+* [x] Escopo: suspender/reativar com motivo, confirmacao UI, rate limit admin dedicado e audit sincrona.
 * [x] Arquivos esperados: admin org actions, platform audit tests.
-* [x] Criterio de aceite: status mutation exige platform admin operator, motivo e audit obrigatoria; falha de audit impede mutacao.
-* [x] Testes: guards/source tests, action protection tests, audit transaction tests.
-* [x] Riscos: mutacao indevida de status. Mitigado por role minima `operator`, motivo, confirmacao UI e transacao com audit obrigatoria.
+* [x] Criterio de aceite: status mutation exige platform admin operator, motivo, rate limit e audit obrigatoria; falha de audit impede mutacao.
+* [x] Testes: guards/source tests, action protection tests, audit transaction tests e source test cobrindo `assertAdminRateLimit`.
+* [x] Riscos: mutacao indevida de status. Mitigado por role minima `operator`, motivo, confirmacao UI, rate limit por ator/acao/alvo/IP e transacao com audit obrigatoria.
 * [x] Rollback: desabilitar mutacoes e manter read-only.
 
 ### PR 11 - Admin: suporte e notas internas
@@ -598,11 +603,11 @@ Nota posterior de organizacao: `apps/admin` foi criado como workspace Next minim
 ### PR 13 - Fundacao de eventos, outbox e idempotencia
 
 * [x] Objetivo: preparar a base duravel para Resend, Woovi e Asaas.
-* [x] Escopo: outbox Postgres, `webhook_events`, status de processamento, correlation IDs, retry manual/observabilidade no admin, helpers de raw body/hash/header redaction/token-safe capture.
-* [x] Arquivos esperados: modulo app-local equivalente a `packages/events`, schema/migration, route handler helpers, fixtures/tests.
-* [x] Criterio de aceite: evento duplicado nao reprocessa; falha fica rastreavel; handlers conseguem capturar evento duravel e responder rapido; processamento pesado fica async/outbox.
-* [x] Testes: unit/integration de retries, idempotencia e dead-letter/manual review.
-* [x] Riscos: criar fila caseira complexa demais. Mitigado com base minima: tabelas aditivas, captura idempotente, observabilidade read-only e retry manual restrito. Migration gerada, ainda nao aplicada.
+* [x] Escopo: outbox Postgres, `webhook_events`, status de processamento, correlation IDs, retry manual/observabilidade no admin, helpers de raw body/hash/header redaction/token-safe capture, claim/finalizacao de outbox, rota Inngest inicial e produtores reais via webhooks Resend/Woovi/Asaas.
+* [x] Arquivos esperados: modulo app-local equivalente a `packages/events`, schema/migration, route handler helpers, Inngest App Router route, fixtures/tests.
+* [x] Criterio de aceite: evento duplicado nao reprocessa; falha fica rastreavel; handlers conseguem capturar evento duravel e responder rapido; processamento pesado fica async/outbox/Inngest.
+* [x] Testes: unit/integration de retries, idempotencia, dead-letter/manual review, claim/finalizacao do outbox e source test da rota Inngest.
+* [x] Riscos: criar fila caseira complexa demais. Mitigado com base minima: tabelas aditivas, captura idempotente, observabilidade read-only, retry manual restrito e Inngest para processamento duravel. Migration gerada, ainda nao aplicada. Risco restante: dispatchers reais de email/billing ainda precisam ser registrados; por enquanto webhooks Resend/Woovi/Asaas continuam preservando os efeitos sincronamente tambem.
 * [x] Rollback: manter eventos sincronizados ate haver caso real.
 
 ### PR 14 - Emails transacionais com Resend
@@ -648,7 +653,7 @@ Nota posterior de organizacao: `apps/admin` foi criado como workspace Next minim
 ### PR 18 - Testes E2E/admin e hardening final
 
 * [x] Objetivo: provar fluxos criticos antes de release amplo.
-* [ ] Escopo: Playwright admin negativo/positivo, cross-tenant smoke, CI release gates, docs de deploy admin, smokes provider em sandbox quando billing/email existirem. Concluido parcialmente: Playwright web/admin, CI gates, preflight admin, docs de deploy admin e precheck de schema E2E; sandbox provider real segue pendente de ambiente.
+* [ ] Escopo: Playwright admin negativo/positivo, cross-tenant smoke, CI release gates, docs de deploy admin, smokes provider em sandbox quando billing/email existirem. Concluido parcialmente: Playwright web/admin, CI gates incluindo typecheck web/admin, preflight admin, docs de deploy admin e precheck de schema E2E; sandbox provider real segue pendente de ambiente.
 * [x] Arquivos esperados: `tests/e2e/admin*.e2e.ts`, workflows, docs.
 * [ ] Criterio de aceite: app cliente e admin passam build/test; release exige preflight/smokes. Concluido parcialmente: `check`, `check:admin`, `test`, `knip`, `build`, `build:admin`, `test:e2e`, `test:e2e:admin` e `db:smoke:rls` passaram; `prod:preflight` em `VERCEL_ENV=production` e `deploy:smoke` seguem pendentes de envs reais/deploy promovido.
 * [ ] Testes: suite completa e smokes em ambiente isolado. Concluido parcialmente: suite web/admin E2E passou em `E2E_DATABASE_URL` isolado depois de aplicar migrations no branch `e2e`; `prod:preflight` em producao falha por envs Access/R2/Upstash/admin/deploy ausentes, segredos curtos e `sslmode=verify-full` pendente; `deploy:smoke` falha sem `DEPLOYMENT_SMOKE_URL`.
@@ -658,10 +663,12 @@ Nota posterior de organizacao: `apps/admin` foi criado como workspace Next minim
 ## 15. Checklist Final de Producao
 
 * [x] `bun run check` passou.
+* [x] `bun run typecheck` passou para web.
 * [x] `bun run test` passou.
 * [x] `bun run knip` passou.
 * [x] `bun run build` passou para web.
 * [x] Build admin passou a partir do PR 7.
+* [x] `bun run typecheck:admin` passou para admin.
 * [x] `bun run test:e2e` passou com `E2E_DATABASE_URL` isolado.
 * [x] `bun run test:e2e:admin` passou com `E2E_DATABASE_URL` isolado.
 * [x] `bun run db:smoke:rls` passou com role runtime sem `BYPASSRLS`.
@@ -678,6 +685,8 @@ Nota posterior de organizacao: `apps/admin` foi criado como workspace Next minim
 * [ ] Sentry DSN/alerts configurados.
 * [ ] CSP report-only validada antes de enforcement.
 * [x] Platform audit obrigatoria para acoes sensiveis.
+* [x] Script auditavel para bootstrap do primeiro platform admin existe: `bun run platform-admin:bootstrap`.
+* [ ] Primeiro platform admin criado em ambiente real por script auditavel e evidencia registrada.
 * [x] Nenhum token/secret exibido no admin.
 * [x] Outbox/webhook idempotency validada antes de Resend/Woovi/Asaas.
 * [ ] Resend usa dominio verificado e webhook `svix-*` validado quando habilitado.
@@ -691,15 +700,16 @@ Nota posterior de organizacao: `apps/admin` foi criado como workspace Next minim
 
 * [ ] Qual dominio real sera usado: `app.*`, `admin.*`, `staging.*`?
 * [ ] Qual IdP Cloudflare Access sera usado no inicio: Google Workspace, GitHub, email OTP ou outro?
-* [ ] Quem sao os primeiros platform admins e como serao bootstrapados sem criar backdoor?
+* [ ] Quem sao os primeiros platform admins?
+* [x] Como serao bootstrapados sem criar backdoor: `bun run platform-admin:bootstrap` usa `DATABASE_URL_DIRECT`, transacao, grant proprio e `platform_audit_events`.
 * [ ] Impersonation entra no MVP ou fica fora ate suporte precisar?
 * [ ] Qual sera o primeiro fluxo real de email transacional com Resend?
 * [ ] Qual sera o primeiro plano/entitlement pago a modelar antes de Woovi/Asaas?
 * [ ] Asaas cartao usara checkout/tokenizacao do provedor ou coleta direta no app?
 * [ ] O produto sera vendido como single-owner por mais tempo ou multiusuario vira prerequisito comercial?
 * [ ] Sentry e logs atuais sao suficientes para erros recentes no admin dashboard?
-* [ ] Deseja corrigir `aidd_docs/memory` criando a pasta ou alterando `AGENTS.md` para `docs/`?
-* [ ] Deseja restaurar os runbooks de cleanup destrutivo agora ou remover referencias ate existirem?
+* [x] `aidd_docs/memory` foi criado com memoria inicial do estado do projeto.
+* [x] Runbooks de cleanup destrutivo foram restaurados com SQL transacional em rollback por padrao.
 
 ## 17. Proximos Passos Reais
 

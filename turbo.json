@@ -13,8 +13,14 @@
   ],
   "globalPassThroughEnv": [
     "ALLOW_PLAYWRIGHT_BOOTSTRAP",
+    "ADMIN_APP_URL",
+    "ASAAS_API_BASE_URL",
+    "ASAAS_API_KEY",
+    "ASAAS_WEBHOOK_TOKEN",
     "BETTER_AUTH_API_KEY",
     "BETTER_AUTH_SECRET",
+    "CLOUDFLARE_ACCESS_AUD",
+    "CLOUDFLARE_ACCESS_TEAM_DOMAIN",
     "CRON_SECRET",
     "DATABASE_URL",
     "DATABASE_URL_DIRECT",
@@ -26,7 +32,12 @@
     "GOOGLE_CLIENT_SECRET",
     "INTERNAL_BOOTSTRAP_SECRET",
     "INTERNAL_R2_HEALTH_SECRET",
+    "INNGEST_EVENT_KEY",
+    "INNGEST_SIGNING_KEY",
     "PRODUCT_IMAGE_RECONCILE_SECRET",
+    "RESEND_API_KEY",
+    "RESEND_FROM_EMAIL",
+    "RESEND_WEBHOOK_SECRET",
     "R2_ACCESS_KEY_ID",
     "R2_ACCOUNT_ID",
     "R2_BUCKET_PUBLIC",
@@ -36,8 +47,15 @@
     "SENTRY_AUTH_TOKEN",
     "SENTRY_ORG",
     "SENTRY_PROJECT",
+    "SENTRY_TRACES_SAMPLE_RATE",
+    "NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE",
+    "NEXT_PUBLIC_SENTRY_REPLAYS_SESSION_SAMPLE_RATE",
+    "NEXT_PUBLIC_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE",
     "UPSTASH_REDIS_REST_TOKEN",
-    "UPSTASH_REDIS_REST_URL"
+    "UPSTASH_REDIS_REST_URL",
+    "WOOVI_API_BASE_URL",
+    "WOOVI_API_KEY",
+    "WOOVI_WEBHOOK_SECRET"
   ],
   "tasks": {
     "dev": {
@@ -62,6 +80,10 @@
     },
     "check": {
       "dependsOn": ["^check"],
+      "outputs": []
+    },
+    "typecheck": {
+      "dependsOn": ["^typecheck"],
       "outputs": []
     },
     "fix": {

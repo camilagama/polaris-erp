@@ -154,6 +154,8 @@ describe("admin app protection", () => {
     expect(actionSource).toContain("use server");
     expect(actionSource).toContain("requirePlatformAdmin");
     expect(actionSource).toContain('minimumRole: "operator"');
+    expect(actionSource).toContain("assertAdminRateLimit");
+    expect(actionSource).toContain("organization.status.change");
     expect(actionSource).toContain("updatePlatformOrganizationStatus");
     expect(adminOrganizationDetailSource).toContain(
       "changeOrganizationStatusAction"
@@ -170,6 +172,8 @@ describe("admin app protection", () => {
     expect(actionSource).toContain("use server");
     expect(actionSource).toContain("requirePlatformAdmin");
     expect(actionSource).toContain('minimumRole: "support"');
+    expect(actionSource).toContain("assertAdminRateLimit");
+    expect(actionSource).toContain("support-note.create");
     expect(actionSource).toContain("createPlatformSupportNote");
     expect(adminOrganizationDetailSource).toContain("createSupportNoteAction");
     expect(adminUserDetailSource).toContain("createSupportNoteAction");
@@ -203,6 +207,8 @@ describe("admin app protection", () => {
     expect(eventsPageSource).toContain("retryOutboxEventAction");
     expect(eventsActionSource).toContain("requirePlatformAdmin");
     expect(eventsActionSource).toContain('minimumRole: "operator"');
+    expect(eventsActionSource).toContain("assertAdminRateLimit");
+    expect(eventsActionSource).toContain("outbox.retry");
     expect(eventsActionSource).toContain("retryOutboxEvent");
     expect(adminPageSource).toContain('href: "/events"');
   });

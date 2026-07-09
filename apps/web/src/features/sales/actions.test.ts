@@ -305,6 +305,8 @@ const createCancelSaleHarness = (params: {
                 throw new Error("Cancelamento deve atualizar o estoque.");
               }
 
+              const nextStock = payload.stock;
+
               return {
                 returning: () => {
                   productUpdateCount += 1;
@@ -313,7 +315,7 @@ const createCancelSaleHarness = (params: {
                     return [];
                   }
 
-                  product.stock = payload.stock;
+                  product.stock = nextStock;
                   return [{ id: product.id }];
                 },
               };

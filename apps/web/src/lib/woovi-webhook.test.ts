@@ -79,6 +79,9 @@ describe("Woovi webhook foundation", () => {
     expect(handlerSource).not.toContain("request.json()");
     expect(handlerSource).toContain("x-webhook-signature");
     expect(handlerSource).toContain("captureWebhookEvent");
+    expect(handlerSource).toContain("enqueueOutboxEvent");
+    expect(handlerSource).toContain("sendOutboxEventToInngest");
+    expect(handlerSource).toContain('topic: "woovi.webhook"');
     expect(handlerSource).toContain('provider: "woovi"');
   });
 });

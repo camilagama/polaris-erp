@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { assertAdminRateLimit } from "@/lib/admin-rate-limit";
 import { requirePlatformAdmin } from "@/lib/platform-admin-auth";
 import { updatePlatformOrganizationStatus } from "@/lib/platform-organization-mutations";
 
@@ -35,6 +36,12 @@ export async function changeOrganizationStatusAction(formData: FormData) {
   if (confirm !== "on") {
     throw new Error("Organization status change requires confirmation.");
   }
+
+  await assertAdminRateLimit({
+    action: "organization.status.change",
+    actorUserId: context.userId,
+    targetId: organizationId,
+  });
 
   await updatePlatformOrganizationStatus({
     actorPlatformAdminId: context.platformAdminId,

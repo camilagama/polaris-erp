@@ -5,7 +5,11 @@ import { sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { serverEnv } from "@/lib/env";
-import { captureWebhookEvent } from "@/lib/event-foundation";
+import {
+  captureWebhookEvent,
+  enqueueOutboxEvent,
+} from "@/lib/event-foundation";
+import { sendOutboxEventToInngest } from "@/lib/inngest-client";
 import { reconcileWooviBillingEvent } from "@/lib/woovi-billing-reconciliation";
 
 const SIGNATURE_HEADER = "x-webhook-signature";
@@ -142,14 +146,27 @@ export const handleWooviWebhook = async (request: Request) => {
     );
   }
 
+  const correlationId = getString(payload, "correlationID") ?? eventId;
+  const redactedPayload = redactWooviWebhookPayload(payload);
+
   await captureWebhookEvent(db, {
-    correlationId: getString(payload, "correlationID") ?? eventId,
+    correlationId,
     eventId,
     headers: Object.fromEntries(request.headers.entries()),
-    payload: redactWooviWebhookPayload(payload),
+    payload: redactedPayload,
     provider: "woovi",
     rawBody,
   });
+
+  const outboxEventId = await enqueueOutboxEvent(db, {
+    correlationId,
+    eventType: getString(payload, "event") ?? "unknown",
+    idempotencyKey: `woovi-webhook:${eventId}`,
+    payload: redactedPayload,
+    topic: "woovi.webhook",
+  });
+  await sendOutboxEventToInngest(outboxEventId).catch(() => undefined);
+
   const reconciliationStatus = await reconcileWooviBillingEvent(
     db,
     payload,

@@ -15,7 +15,9 @@ vi.mock("@upstash/ratelimit", () => {
     return {
       limit: limitMock,
     };
-  });
+  }) as ReturnType<typeof vi.fn> & {
+    slidingWindow: ReturnType<typeof vi.fn>;
+  };
 
   Ratelimit.slidingWindow = vi.fn(() => "sliding-window");
 
@@ -76,7 +78,8 @@ describe("getRateLimitKeyFromRequest", () => {
   });
 
   it("ignores invalid forwarded IP headers before building the bucket key", async () => {
-    const { getRateLimitKeyFromRequest } = await import("@/lib/rate-limit");
+    const { getRateLimitKeyFromHeaders, getRateLimitKeyFromRequest } =
+      await import("@/lib/rate-limit");
     const request = new Request("https://app.example.com/api/auth/google", {
       headers: {
         "x-forwarded-for": "spoofed-client",
@@ -85,6 +88,9 @@ describe("getRateLimitKeyFromRequest", () => {
     });
 
     expect(getRateLimitKeyFromRequest(request, "auth-google")).toBe(
+      "auth-google:203.0.113.10"
+    );
+    expect(getRateLimitKeyFromHeaders(request.headers, "auth-google")).toBe(
       "auth-google:203.0.113.10"
     );
   });

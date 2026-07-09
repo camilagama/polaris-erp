@@ -6,6 +6,7 @@
     "dev": "bun --env-file=../../.env.local x next dev",
     "build": "bun --env-file=../../.env.local x next build",
     "start": "bun --env-file=../../.env.local x next start",
+    "typecheck": "tsc --noEmit --project tsconfig.json",
     "check": "cd ../.. && bun x ultracite check",
     "test:e2e": "bun ../../scripts/check-e2e-db-schema.ts && bun x playwright test --config=playwright.config.ts"
   }

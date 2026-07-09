@@ -9,7 +9,9 @@ import type {
   CatalogSettings,
 } from "@/features/catalog/server";
 
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+(
+  globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }
+).IS_REACT_ACT_ENVIRONMENT = true;
 
 const settingsMocks = vi.hoisted(() => ({
   createCategoryAction: vi.fn(),
@@ -67,9 +69,8 @@ const renderPanel = (panelCategories = categories) => {
   const container = document.createElement("div");
   document.body.append(container);
 
-  let root: Root | null = null;
+  const root: Root = createRoot(container);
   act(() => {
-    root = createRoot(container);
     root.render(
       createElement(CatalogSettingsPanel, {
         categories: panelCategories,
@@ -153,7 +154,7 @@ describe("CatalogSettingsPanel", () => {
     });
 
     act(() => {
-      root?.unmount();
+      root.unmount();
     });
   });
 
@@ -175,7 +176,7 @@ describe("CatalogSettingsPanel", () => {
     });
 
     act(() => {
-      root?.unmount();
+      root.unmount();
     });
   });
 
@@ -198,7 +199,7 @@ describe("CatalogSettingsPanel", () => {
     );
 
     act(() => {
-      root?.unmount();
+      root.unmount();
     });
   });
 });
