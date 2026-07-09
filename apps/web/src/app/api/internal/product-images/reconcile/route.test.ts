@@ -6,7 +6,8 @@ vi.mock("server-only", () => ({}));
 
 vi.mock("@/lib/env", () => ({
   serverEnv: {
-    CRON_SECRET: "secret",
+    CRON_SECRET: "cron-secret",
+    PRODUCT_IMAGE_RECONCILE_SECRET: "reconcile-secret",
   },
 }));
 
@@ -80,6 +81,29 @@ describe("/api/internal/product-images/reconcile", () => {
     expect(response.status).toBe(401);
   });
 
+  it("does not accept the shared cron secret when the reconcile secret is configured", async () => {
+    const imageStorageModule = await import(
+      "@/features/products/image-storage"
+    );
+    const { POST } = await import(
+      "@/app/api/internal/product-images/reconcile/route"
+    );
+
+    const response = await POST(
+      new Request("http://localhost/api/internal/product-images/reconcile", {
+        headers: {
+          Authorization: "Bearer cron-secret",
+        },
+        method: "POST",
+      })
+    );
+
+    expect(response.status).toBe(401);
+    expect(
+      imageStorageModule.listAllStoredProductImageObjects
+    ).not.toHaveBeenCalled();
+  });
+
   it("returns 429 with Retry-After when the reconcile rate limit is exceeded", async () => {
     const { checkRateLimit } = await import("@/lib/rate-limit");
     const { POST } = await import(
@@ -95,7 +119,7 @@ describe("/api/internal/product-images/reconcile", () => {
     const response = await POST(
       new Request("http://localhost/api/internal/product-images/reconcile", {
         headers: {
-          Authorization: "Bearer secret",
+          Authorization: "Bearer reconcile-secret",
         },
         method: "POST",
       })
@@ -146,7 +170,7 @@ describe("/api/internal/product-images/reconcile", () => {
     const response = await POST(
       new Request("http://localhost/api/internal/product-images/reconcile", {
         headers: {
-          Authorization: "Bearer secret",
+          Authorization: "Bearer reconcile-secret",
         },
         method: "POST",
       })
@@ -199,7 +223,7 @@ describe("/api/internal/product-images/reconcile", () => {
     const response = await POST(
       new Request("http://localhost/api/internal/product-images/reconcile", {
         headers: {
-          Authorization: "Bearer secret",
+          Authorization: "Bearer reconcile-secret",
         },
         method: "POST",
       })

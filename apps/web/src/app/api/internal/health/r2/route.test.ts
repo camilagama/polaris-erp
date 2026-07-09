@@ -6,7 +6,8 @@ vi.mock("@/features/products/image-storage", () => ({
 
 vi.mock("@/lib/env", () => ({
   serverEnv: {
-    CRON_SECRET: "secret",
+    CRON_SECRET: "cron-secret",
+    INTERNAL_R2_HEALTH_SECRET: "health-secret",
   },
 }));
 
@@ -43,6 +44,25 @@ describe("/api/internal/health/r2", () => {
     expect(getR2StagingHealthDiagnostics).not.toHaveBeenCalled();
   });
 
+  it("does not accept the shared cron secret when the R2 health secret is configured", async () => {
+    const { getR2StagingHealthDiagnostics } = await import(
+      "@/features/products/image-storage"
+    );
+    const { GET } = await import("@/app/api/internal/health/r2/route");
+
+    const response = await GET(
+      new Request("http://localhost/api/internal/health/r2", {
+        headers: {
+          Authorization: "Bearer cron-secret",
+        },
+        method: "GET",
+      })
+    );
+
+    expect(response.status).toBe(401);
+    expect(getR2StagingHealthDiagnostics).not.toHaveBeenCalled();
+  });
+
   it("returns 429 with Retry-After before checking R2 when the rate limit is exceeded", async () => {
     const { getR2StagingHealthDiagnostics } = await import(
       "@/features/products/image-storage"
@@ -59,7 +79,7 @@ describe("/api/internal/health/r2", () => {
     const response = await GET(
       new Request("http://localhost/api/internal/health/r2", {
         headers: {
-          Authorization: "Bearer secret",
+          Authorization: "Bearer health-secret",
         },
         method: "GET",
       })

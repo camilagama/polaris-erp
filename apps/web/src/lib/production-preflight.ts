@@ -12,8 +12,10 @@ export interface ProductionPreflightEnv {
   E2E_DATABASE_URL?: string;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
+  INTERNAL_R2_HEALTH_SECRET?: string;
   NEXT_PUBLIC_APP_URL?: string;
   NEXT_PUBLIC_GOOGLE_CLIENT_ID?: string;
+  PRODUCT_IMAGE_RECONCILE_SECRET?: string;
   R2_ACCESS_KEY_ID?: string;
   R2_ACCOUNT_ID?: string;
   R2_BUCKET_PUBLIC?: string;
@@ -116,6 +118,18 @@ const appendProductionSecretErrors = (
   if (!hasStrongSecret(env.CRON_SECRET)) {
     errors.push(
       "CRON_SECRET must be at least 32 characters in production preflight."
+    );
+  }
+
+  if (!hasStrongSecret(env.INTERNAL_R2_HEALTH_SECRET)) {
+    errors.push(
+      "INTERNAL_R2_HEALTH_SECRET must be at least 32 characters in production preflight."
+    );
+  }
+
+  if (!hasStrongSecret(env.PRODUCT_IMAGE_RECONCILE_SECRET)) {
+    errors.push(
+      "PRODUCT_IMAGE_RECONCILE_SECRET must be at least 32 characters in production preflight."
     );
   }
 };

@@ -1,7 +1,7 @@
 import type { KnipConfig } from "knip";
 
 const config: KnipConfig = {
-  ignoreDependencies: ["@biomejs/biome", "tailwindcss"],
+  ignoreDependencies: ["@biomejs/biome"],
   ignoreIssues: {
     "apps/web/src/components/kibo-ui/contribution-graph/index.tsx": [
       "exports",

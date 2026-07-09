@@ -1,7 +1,12 @@
 "use strict";
 
 const crypto = require("node:crypto");
+const path = require("node:path");
 
+require("dotenv").config({
+  path: path.join(__dirname, "..", ".env.local"),
+  quiet: true,
+});
 require("dotenv").config({ path: ".env.local", quiet: true });
 
 const { Client } = require("pg");
@@ -83,6 +88,10 @@ const main = async () => {
     const organizationId = `rls_smoke_org_${crypto.randomUUID()}`;
     const memberId = crypto.randomUUID();
     const slug = `rls-smoke-${organizationId.slice(-8)}`;
+    const otherUserId = `rls_smoke_user_${crypto.randomUUID()}`;
+    const otherOrganizationId = `rls_smoke_org_${crypto.randomUUID()}`;
+    const otherMemberId = crypto.randomUUID();
+    const otherSlug = `rls-smoke-${otherOrganizationId.slice(-8)}`;
 
     let deniedWithoutContext = false;
     await client.query("begin");
@@ -163,6 +172,95 @@ const main = async () => {
           visibleRow.audit_events === 1,
         "Fluxo onboarding-like com contexto RLS nao ficou visivel dentro da transacao."
       );
+
+      await client.query(
+        "insert into users (id, name, email, email_verified) values ($1, $2, $3, $4)",
+        [
+          otherUserId,
+          "RLS Other Smoke User",
+          `${otherUserId}@example.invalid`,
+          true,
+        ]
+      );
+      await client.query("select set_config($1, $2, true)", [
+        "app.user_id",
+        otherUserId,
+      ]);
+      await client.query("select set_config($1, $2, true)", [
+        "app.organization_id",
+        otherOrganizationId,
+      ]);
+      await client.query(
+        "insert into organization (id, name, slug, status) values ($1, $2, $3, $4)",
+        [
+          otherOrganizationId,
+          "RLS Other Smoke Organization",
+          otherSlug,
+          "active",
+        ]
+      );
+      await client.query(
+        "insert into member (id, organization_id, user_id, role) values ($1, $2, $3, $4)",
+        [otherMemberId, otherOrganizationId, otherUserId, "owner"]
+      );
+      await client.query(
+        "insert into categories (organization_id, key, name, description, is_system) values ($1, $2, $3, $4, $5)",
+        [
+          otherOrganizationId,
+          "others",
+          "Outros",
+          "Categoria smoke outro tenant",
+          true,
+        ]
+      );
+
+      await client.query("select set_config($1, $2, true)", [
+        "app.user_id",
+        userId,
+      ]);
+      await client.query("select set_config($1, $2, true)", [
+        "app.organization_id",
+        organizationId,
+      ]);
+
+      const crossTenantVisible = await client.query(
+        `
+          select
+            (select count(*)::int from organization where id = $1) as organizations,
+            (select count(*)::int from member where organization_id = $1) as members,
+            (select count(*)::int from categories where organization_id = $1) as categories;
+        `,
+        [otherOrganizationId]
+      );
+      const crossTenantVisibleRow = crossTenantVisible.rows[0];
+
+      assertCondition(
+        crossTenantVisibleRow.organizations === 0 &&
+          crossTenantVisibleRow.members === 0 &&
+          crossTenantVisibleRow.categories === 0,
+        "Contexto tenant A conseguiu ler dados do tenant B."
+      );
+
+      let deniedCrossTenantWrite = false;
+      try {
+        await client.query(
+          "insert into categories (organization_id, key, name, description, is_system) values ($1, $2, $3, $4, $5)",
+          [
+            otherOrganizationId,
+            "cross-write",
+            "Cross write",
+            "Escrita cross-tenant smoke",
+            false,
+          ]
+        );
+      } catch (error) {
+        deniedCrossTenantWrite = RLS_POLICY_ERROR_PATTERN.test(error.message);
+      }
+
+      assertCondition(
+        deniedCrossTenantWrite,
+        "Contexto tenant A conseguiu escrever dados no tenant B."
+      );
     } finally {
       await client.query("rollback");
     }
@@ -174,6 +272,7 @@ const main = async () => {
           forcedTables: `${baselineRow.forced_count}/${TENANT_TABLES.length}`,
           policies: baselineRow.policy_count,
           result: "rls-runtime-smoke-ok",
+          tenantCrossCheck: "ok",
         },
         null,
         2

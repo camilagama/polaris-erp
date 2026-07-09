@@ -4,6 +4,7 @@ import {
   listAllStoredProductImageObjects,
 } from "@/features/products/image-storage";
 import { serverEnv } from "@/lib/env";
+import { isAuthorizedBearerRequest } from "@/lib/internal-bearer-auth";
 import { checkRateLimit, getRateLimitKeyFromRequest } from "@/lib/rate-limit";
 import { jsonError } from "@/lib/server-api-error";
 
@@ -35,12 +36,10 @@ async function reconcile(request: Request): Promise<Response> {
     );
   }
 
-  const authorization = request.headers.get("authorization");
-  const expectedAuthorization = serverEnv.CRON_SECRET
-    ? `Bearer ${serverEnv.CRON_SECRET}`
-    : null;
+  const internalSecret =
+    serverEnv.PRODUCT_IMAGE_RECONCILE_SECRET ?? serverEnv.CRON_SECRET;
 
-  if (!expectedAuthorization || authorization !== expectedAuthorization) {
+  if (!isAuthorizedBearerRequest(request, internalSecret)) {
     return Response.json({ error: "Nao autorizado." }, { status: 401 });
   }
 

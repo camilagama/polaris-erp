@@ -482,6 +482,8 @@ Rollback:
 * [x] Riscos: quebrar `@/*`, import de `@/lib/security-headers` no Next config, Drizzle `./src/db`, Vitest `src/**/*.test.ts`, Playwright root e cron em `vercel.json`.
 * [x] Rollback: reverter move antes de extracoes.
 
+Nota posterior de organizacao: `apps/admin` foi criado como workspace Next minimo e bloqueado, sem painel funcional nem acoes internas. O skeleton autenticado e navegavel continua no PR 7.
+
 ### PR 3 - Extrair packages minimos
 
 * [x] Objetivo: compartilhar apenas o que `apps/web` e `apps/admin` realmente consomem.
@@ -494,13 +496,13 @@ Rollback:
 
 ### PR 4 - Hardening pre-admin e smokes cross-tenant
 
-* [ ] Objetivo: fechar bypasses pequenos antes de expor a superficie interna.
-* [ ] Escopo: bloquear/auditar Better Auth `organization/update`; separar secrets de health/reconcile; adicionar `db:smoke:tenant-cross` ou ampliar `db:smoke:rls`; testes de activeOrganizationId spoof e matriz role/action.
-* [ ] Arquivos esperados: `apps/web/src/lib/auth.ts` ou package auth, env helpers, rotas internas, `scripts/smoke-tenant-cross.*`, testes de session/roles.
-* [ ] Criterio de aceite: org update nao bypassa UI/audit; health e reconcile nao compartilham segredo; tenant A nao le/escreve B.
-* [ ] Testes: `bun run test`, `bun run db:smoke:rls`, novo smoke em banco isolado, `bun run check`.
-* [ ] Riscos: bloquear fluxo legitimo do organization plugin; smokes exigirem secrets indisponiveis.
-* [ ] Rollback: restaurar hooks/secrets antigos temporariamente e manter smoke manual.
+* [x] Objetivo: fechar bypasses pequenos antes de expor a superficie interna.
+* [x] Escopo: bloquear/auditar Better Auth `organization/update`; separar secrets de health/reconcile; adicionar `db:smoke:tenant-cross` ou ampliar `db:smoke:rls`; testes de activeOrganizationId spoof e matriz role/action. Concluido: `organization/update` bloqueado ate existir audit platform; smoke RLS ampliado com cross-tenant.
+* [x] Arquivos esperados: `apps/web/src/lib/auth.ts` ou package auth, env helpers, rotas internas, `scripts/smoke-tenant-cross.*`, testes de session/roles.
+* [x] Criterio de aceite: org update nao bypassa UI/audit; health e reconcile nao compartilham segredo; tenant A nao le/escreve B.
+* [x] Testes: `bun run test`, `bun run db:smoke:rls`, novo smoke em banco isolado, `bun run check`.
+* [x] Riscos: bloquear fluxo legitimo do organization plugin; smokes exigirem secrets indisponiveis.
+* [x] Rollback: restaurar hooks/secrets antigos temporariamente e manter smoke manual.
 
 ### PR 5 - Schema platform admin e auditoria interna
 

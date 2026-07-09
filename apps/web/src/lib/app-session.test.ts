@@ -162,6 +162,17 @@ describe("getAppContext", () => {
     expect(dbMock.update).not.toHaveBeenCalled();
   });
 
+  it("returns null when the session active organization is not a user membership", async () => {
+    mockSession({ activeOrganizationId: "org-spoofed" });
+    selectAppContextMembershipOnce(null);
+
+    const context = await getAppContext();
+
+    expect(context).toBeNull();
+    expect(dbMock.transaction).toHaveBeenCalledOnce();
+    expect(dbMock.update).not.toHaveBeenCalled();
+  });
+
   it("updates the session active organization when resolving the first active membership", async () => {
     mockSession();
     selectAppContextMembershipOnce({

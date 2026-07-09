@@ -1,0 +1,11 @@
+{
+  "name": "@polaris/admin",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "bun --env-file=../../.env.local x next dev",
+    "build": "bun --env-file=../../.env.local x next build",
+    "start": "bun --env-file=../../.env.local x next start",
+    "check": "cd ../.. && bun x ultracite check"
+  }
+}

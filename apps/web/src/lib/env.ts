@@ -45,6 +45,8 @@ const serverEnvSchema = z
     ALLOW_PLAYWRIGHT_BOOTSTRAP: optionalBooleanString,
     CRON_SECRET: optionalNonEmptyString,
     INTERNAL_BOOTSTRAP_SECRET: optionalNonEmptyString,
+    INTERNAL_R2_HEALTH_SECRET: optionalNonEmptyString,
+    PRODUCT_IMAGE_RECONCILE_SECRET: optionalNonEmptyString,
     GOOGLE_CLIENT_ID: optionalNonEmptyString,
     GOOGLE_CLIENT_SECRET: optionalNonEmptyString,
     NEXT_PUBLIC_APP_URL: z.string().url(),
@@ -114,8 +116,23 @@ const serverEnvSchema = z
     }
 
     for (const secretName of [
+      "INTERNAL_R2_HEALTH_SECRET",
+      "PRODUCT_IMAGE_RECONCILE_SECRET",
+    ] as const) {
+      if (env.VERCEL_ENV === "production" && !env[secretName]) {
+        context.addIssue({
+          code: "custom",
+          message: `${secretName} is required in Vercel production.`,
+          path: [secretName],
+        });
+      }
+    }
+
+    for (const secretName of [
       "CRON_SECRET",
       "INTERNAL_BOOTSTRAP_SECRET",
+      "INTERNAL_R2_HEALTH_SECRET",
+      "PRODUCT_IMAGE_RECONCILE_SECRET",
     ] as const) {
       const secretValue = env[secretName];
 
@@ -138,6 +155,8 @@ export const serverEnv = serverEnvSchema.parse({
   ALLOW_PLAYWRIGHT_BOOTSTRAP: process.env.ALLOW_PLAYWRIGHT_BOOTSTRAP,
   CRON_SECRET: process.env.CRON_SECRET,
   INTERNAL_BOOTSTRAP_SECRET: process.env.INTERNAL_BOOTSTRAP_SECRET,
+  INTERNAL_R2_HEALTH_SECRET: process.env.INTERNAL_R2_HEALTH_SECRET,
+  PRODUCT_IMAGE_RECONCILE_SECRET: process.env.PRODUCT_IMAGE_RECONCILE_SECRET,
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
   GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
   NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,

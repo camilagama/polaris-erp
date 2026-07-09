@@ -1,6 +1,6 @@
 import "server-only";
 import { dash, sentinel } from "@better-auth/infra";
-import { APIError, betterAuth } from "better-auth";
+import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import {
@@ -19,6 +19,10 @@ import {
 } from "@/db/schema";
 import { recordAuthLoginAuditEvent } from "@/lib/auth-audit";
 import { serverEnv } from "@/lib/env";
+import {
+  rejectWorkspaceOrganizationUpdate,
+  rejectWorkspaceUserManagement,
+} from "@/lib/workspace-management-policy";
 
 const googleClientId = serverEnv.GOOGLE_CLIENT_ID;
 const googleClientSecret = serverEnv.GOOGLE_CLIENT_SECRET;
@@ -64,13 +68,6 @@ const socialProviders = hasGoogleAuth
     }
   : {};
 
-const rejectWorkspaceUserManagement = (): never => {
-  throw new APIError("FORBIDDEN", {
-    code: "WORKSPACE_USER_MANAGEMENT_DISABLED",
-    message: "Workspace user management is disabled for this sprint.",
-  });
-};
-
 const createOrganizationAuthPlugin = () =>
   organizationPlugin({
     allowUserToCreateOrganization: false,
@@ -81,6 +78,7 @@ const createOrganizationAuthPlugin = () =>
       beforeAddMember: rejectWorkspaceUserManagement,
       beforeCreateInvitation: rejectWorkspaceUserManagement,
       beforeRemoveMember: rejectWorkspaceUserManagement,
+      beforeUpdateOrganization: rejectWorkspaceOrganizationUpdate,
       beforeUpdateMemberRole: rejectWorkspaceUserManagement,
     },
     requireEmailVerificationOnInvitation: true,

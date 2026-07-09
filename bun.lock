@@ -57,6 +57,10 @@
         "vitest": "^4.1.9",
       },
     },
+    "apps/admin": {
+      "name": "@polaris/admin",
+      "version": "0.1.0",
+    },
     "apps/web": {
       "name": "@polaris/web",
       "version": "0.1.0",
@@ -475,6 +479,8 @@
     "@oxc-resolver/binding-win32-x64-msvc": ["@oxc-resolver/binding-win32-x64-msvc@11.21.3", "", { "os": "win32", "cpu": "x64" }, "sha512-H7BCt/VnS9hnmMp42eGhZ99izSCRvlnWwy/N71K1/J8QoExwY4262Z8QiEkMDtduRJrztayDxETTckmUuAVL9Q=="],
 
     "@playwright/test": ["@playwright/test@1.61.1", "", { "dependencies": { "playwright": "1.61.1" }, "bin": { "playwright": "cli.js" } }, "sha512-8nKv6+0RJSL9FE4jYOEGXnPeM/Hg12qZpmqzZjRh3qM0Y7c3z1mrOTfFLids72RDQYVh9WpLEfR5WdpNX4fkig=="],
+
+    "@polaris/admin": ["@polaris/admin@workspace:apps/admin"],
 
     "@polaris/config": ["@polaris/config@workspace:packages/config"],
 

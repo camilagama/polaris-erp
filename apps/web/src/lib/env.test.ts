@@ -13,8 +13,10 @@ const stubRequiredEnv = (
     "GOOGLE_CLIENT_ID",
     "GOOGLE_CLIENT_SECRET",
     "INTERNAL_BOOTSTRAP_SECRET",
+    "INTERNAL_R2_HEALTH_SECRET",
     "NEXT_PUBLIC_GOOGLE_CLIENT_ID",
     "NEXT_PUBLIC_SENTRY_DSN",
+    "PRODUCT_IMAGE_RECONCILE_SECRET",
     "R2_ACCESS_KEY_ID",
     "R2_ACCOUNT_ID",
     "R2_BUCKET_PUBLIC",
@@ -83,16 +85,20 @@ describe("serverEnv", () => {
     stubRequiredEnv({
       CRON_SECRET: "short-cron-secret",
       INTERNAL_BOOTSTRAP_SECRET: "short-bootstrap-secret",
+      INTERNAL_R2_HEALTH_SECRET: "short-r2-secret",
       NODE_ENV: "production",
+      PRODUCT_IMAGE_RECONCILE_SECRET: "short-reconcile-secret",
     });
 
     await expect(import("@/lib/env")).rejects.toThrow();
   });
 
-  it("requires a cron secret in Vercel production", async () => {
+  it("requires internal route secrets in Vercel production", async () => {
     stubRequiredEnv({
       CRON_SECRET: undefined,
+      INTERNAL_R2_HEALTH_SECRET: undefined,
       NODE_ENV: "production",
+      PRODUCT_IMAGE_RECONCILE_SECRET: undefined,
       VERCEL_ENV: "production",
     });
 
