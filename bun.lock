@@ -61,6 +61,10 @@
       "name": "@polaris/web",
       "version": "0.1.0",
     },
+    "packages/config": {
+      "name": "@polaris/config",
+      "version": "0.1.0",
+    },
   },
   "trustedDependencies": [
     "sharp",
@@ -471,6 +475,8 @@
     "@oxc-resolver/binding-win32-x64-msvc": ["@oxc-resolver/binding-win32-x64-msvc@11.21.3", "", { "os": "win32", "cpu": "x64" }, "sha512-H7BCt/VnS9hnmMp42eGhZ99izSCRvlnWwy/N71K1/J8QoExwY4262Z8QiEkMDtduRJrztayDxETTckmUuAVL9Q=="],
 
     "@playwright/test": ["@playwright/test@1.61.1", "", { "dependencies": { "playwright": "1.61.1" }, "bin": { "playwright": "cli.js" } }, "sha512-8nKv6+0RJSL9FE4jYOEGXnPeM/Hg12qZpmqzZjRh3qM0Y7c3z1mrOTfFLids72RDQYVh9WpLEfR5WdpNX4fkig=="],
+
+    "@polaris/config": ["@polaris/config@workspace:packages/config"],
 
     "@polaris/web": ["@polaris/web@workspace:apps/web"],
 

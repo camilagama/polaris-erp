@@ -484,13 +484,13 @@ Rollback:
 
 ### PR 3 - Extrair packages minimos
 
-* [ ] Objetivo: compartilhar apenas o que `apps/web` e `apps/admin` realmente consomem.
-* [ ] Escopo: extrair `@polaris/config` primeiro; extrair `@polaris/db`, `@polaris/auth`, `@polaris/ui` e `@polaris/domain` somente quando houver segundo consumidor claro.
-* [ ] Arquivos esperados: `packages/config`, possivelmente `packages/db`, `packages/auth`, `packages/ui`, `packages/domain`.
-* [ ] Criterio de aceite: sem package `utils` generico; packages nao importam features do app cliente; boundaries testadas.
-* [ ] Testes: typecheck/build/test, boundary tests, `bun run knip`.
-* [ ] Riscos: extrair features demais e criar dependencias circulares.
-* [ ] Rollback: manter codigo app-local ate segundo consumidor existir.
+* [x] Objetivo: compartilhar apenas o que `apps/web` e `apps/admin` realmente consomem.
+* [x] Escopo: extrair `@polaris/config` primeiro; extrair `@polaris/db`, `@polaris/auth`, `@polaris/ui` e `@polaris/domain` somente quando houver segundo consumidor claro. Concluido: apenas `@polaris/config`; `db/auth/ui/domain` permanecem app-local ate `apps/admin`.
+* [x] Arquivos esperados: `packages/config`, possivelmente `packages/db`, `packages/auth`, `packages/ui`, `packages/domain`. Concluido: `packages/config`.
+* [x] Criterio de aceite: sem package `utils` generico; packages nao importam features do app cliente; boundaries testadas.
+* [x] Testes: typecheck/build/test, boundary tests, `bun run knip`.
+* [x] Riscos: extrair features demais e criar dependencias circulares.
+* [x] Rollback: manter codigo app-local ate segundo consumidor existir.
 
 ### PR 4 - Hardening pre-admin e smokes cross-tenant
 
