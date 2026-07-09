@@ -7,6 +7,9 @@ const stubRequiredEnv = (
 ) => {
   const optionalEnvNames = [
     "ALLOW_PLAYWRIGHT_BOOTSTRAP",
+    "ASAAS_API_BASE_URL",
+    "ASAAS_API_KEY",
+    "ASAAS_WEBHOOK_TOKEN",
     "BETTER_AUTH_API_KEY",
     "CLOUDFLARE_ACCESS_AUD",
     "CLOUDFLARE_ACCESS_TEAM_DOMAIN",
@@ -19,6 +22,9 @@ const stubRequiredEnv = (
     "NEXT_PUBLIC_GOOGLE_CLIENT_ID",
     "NEXT_PUBLIC_SENTRY_DSN",
     "PRODUCT_IMAGE_RECONCILE_SECRET",
+    "RESEND_API_KEY",
+    "RESEND_FROM_EMAIL",
+    "RESEND_WEBHOOK_SECRET",
     "R2_ACCESS_KEY_ID",
     "R2_ACCOUNT_ID",
     "R2_BUCKET_PUBLIC",
@@ -32,6 +38,9 @@ const stubRequiredEnv = (
     "UPSTASH_REDIS_REST_TOKEN",
     "UPSTASH_REDIS_REST_URL",
     "VERCEL_ENV",
+    "WOOVI_API_BASE_URL",
+    "WOOVI_API_KEY",
+    "WOOVI_WEBHOOK_SECRET",
   ];
 
   for (const envName of optionalEnvNames) {

@@ -2,9 +2,12 @@ const MINIMUM_PRODUCTION_SECRET_LENGTH = 32;
 const OWNER_ROLE_PATTERNS = [/neondb_owner/i, /postgres/i];
 
 export interface ProductionPreflightEnv {
+  ADMIN_APP_URL?: string;
   ALLOW_PLAYWRIGHT_BOOTSTRAP?: string;
   BETTER_AUTH_SECRET?: string;
   BETTER_AUTH_URL?: string;
+  CLOUDFLARE_ACCESS_AUD?: string;
+  CLOUDFLARE_ACCESS_TEAM_DOMAIN?: string;
   CRON_SECRET?: string;
   DATABASE_URL?: string;
   DATABASE_URL_DIRECT?: string;
@@ -84,6 +87,9 @@ const getOrigin = (value: string | undefined): string | undefined => {
 
 const REQUIRED_PRODUCTION_INTEGRATION_ENV = [
   "BETTER_AUTH_URL",
+  "ADMIN_APP_URL",
+  "CLOUDFLARE_ACCESS_AUD",
+  "CLOUDFLARE_ACCESS_TEAM_DOMAIN",
   "DEPLOYMENT_SMOKE_URL",
   "NEXT_PUBLIC_APP_URL",
   "GOOGLE_CLIENT_ID",
@@ -239,6 +245,7 @@ const appendProductionEnvErrors = (
   }
 
   const betterAuthOrigin = getOrigin(env.BETTER_AUTH_URL);
+  const adminOrigin = getOrigin(env.ADMIN_APP_URL);
   const appOrigin = getOrigin(env.NEXT_PUBLIC_APP_URL);
   const deploymentSmokeOrigin = getOrigin(env.DEPLOYMENT_SMOKE_URL);
 
@@ -255,6 +262,12 @@ const appendProductionEnvErrors = (
   ) {
     errors.push(
       "DEPLOYMENT_SMOKE_URL and NEXT_PUBLIC_APP_URL must use the same origin."
+    );
+  }
+
+  if (adminOrigin && appOrigin && adminOrigin === appOrigin) {
+    errors.push(
+      "ADMIN_APP_URL must use a separate origin from NEXT_PUBLIC_APP_URL."
     );
   }
 };

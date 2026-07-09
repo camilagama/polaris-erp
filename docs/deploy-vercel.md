@@ -20,6 +20,7 @@ Configure em Production e replique/adapte para Preview:
 | `DATABASE_URL_DIRECT` | Migracoes locais/CI com role proprietaria/admin e `sslmode=verify-full` (ex.: `neondb_owner`). Nao use essa URL como runtime da aplicacao. |
 | `BETTER_AUTH_SECRET` | Segredo forte do Better Auth; em producao precisa ter pelo menos 32 caracteres. |
 | `BETTER_AUTH_URL` | URL canonica do app, sem barra final. |
+| `ADMIN_APP_URL` | Origem dedicada do admin interno, por exemplo `https://admin.seu-dominio.com`. Deve ser diferente de `NEXT_PUBLIC_APP_URL`. |
 | `BETTER_AUTH_API_KEY` | Chave do Better Auth Infrastructure para Dashboard e Sentinel. |
 | `VERCEL_ENV` | Definido pela Vercel. Em `production`, ativa guardrails extras como exigencia de `CRON_SECRET`. |
 | `NEXT_PUBLIC_APP_URL` | Mesma origem publica usada pelo navegador. |
@@ -43,6 +44,8 @@ Configure em Production e replique/adapte para Preview:
 | `NEXT_PUBLIC_SENTRY_REPLAYS_SESSION_SAMPLE_RATE` | Opcional. Replay de sessoes normais, numero entre `0` e `1`. Padrao: `0`. |
 | `NEXT_PUBLIC_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE` | Opcional. Replay em sessoes com erro, numero entre `0` e `1`. Padrao: `1`. |
 | `ALLOW_PLAYWRIGHT_BOOTSTRAP` | Nunca em producao real; apenas E2E com banco isolado. |
+| `CLOUDFLARE_ACCESS_AUD` | Audience do Cloudflare Access para o admin interno. Obrigatorio em producao. |
+| `CLOUDFLARE_ACCESS_TEAM_DOMAIN` | Team domain do Cloudflare Access usado para validar `Cf-Access-Jwt-Assertion`. Obrigatorio em producao. |
 
 Em producao, sem Upstash configurado o rate limit falha fechado para endpoints sensiveis.
 
@@ -62,6 +65,35 @@ RLS e obrigatorio em producao. Nao configure o runtime com `neondb_owner`: esse 
 - `/api/internal/health/r2` exige `Authorization: Bearer $CRON_SECRET` e nao deve expor chaves secretas.
 - Migrations destrutivas ou com precheck devem ser aplicadas primeiro em branch Neon isolada.
 - `bun run prod:preflight` valida wiring basico de producao antes de deploy: URLs runtime/migration/E2E separadas com `sslmode=verify-full`, smoke RLS configurado, bootstrap E2E desligado em Production, secrets fortes, origens canonicas alinhadas e envs obrigatorios de Google/R2/Upstash.
+- `ADMIN_APP_URL` precisa estar em origem separada do app publico e protegida por Cloudflare Access. O preflight exige `CLOUDFLARE_ACCESS_AUD` e `CLOUDFLARE_ACCESS_TEAM_DOMAIN` em producao.
+
+## Admin interno
+
+O monorepo tem duas superficies:
+
+- `apps/web`: app publico dos clientes.
+- `apps/admin`: painel interno da plataforma.
+
+O admin deve ser um projeto/deploy separado na Vercel, apontando o root para `apps/admin` e usando subdominio dedicado, por exemplo `admin.seu-dominio.com`. Nao publique o admin na mesma origem do app cliente.
+
+Protecao obrigatoria antes de promover:
+
+1. Cloudflare Access ativo para `admin.*`, com IdP/MFA/allowlist.
+2. Vercel Deployment Protection ativo para previews do admin.
+3. `CLOUDFLARE_ACCESS_AUD` e `CLOUDFLARE_ACCESS_TEAM_DOMAIN` configurados no ambiente do admin.
+4. `DATABASE_URL` do admin usando role runtime sem `BYPASSRLS`, nunca `DATABASE_URL_DIRECT`.
+5. Primeiro platform admin bootstrapado por fluxo auditavel, sem reutilizar `member.role`.
+
+Valide antes de promover:
+
+```bash
+bun run check:admin
+bun run build:admin
+E2E_DATABASE_URL="postgres://..." bun run test:e2e:admin
+vercel env run -e production -- bun run prod:preflight
+```
+
+`bun run test:e2e:admin` roda Playwright headless contra `apps/admin` e usa `/api/dev/bootstrap-platform-admin` apenas quando `ALLOW_PLAYWRIGHT_BOOTSTRAP=true`, `NODE_ENV=production`, host local e `DATABASE_URL === E2E_DATABASE_URL`. Esse endpoint deve responder `403` fora de E2E local/CI isolado.
 
 ## Google OAuth
 
@@ -141,12 +173,14 @@ Fluxo manual recomendado:
 vercel link
 vercel env pull .env.local
 bun run check
+bun run check:admin
 bun run test
 vercel env run -e production -- bun run prod:preflight
 bun run db:smoke:rls
 bun run db:analyze:listings
 DEPLOYMENT_SMOKE_URL=https://SEU_DOMINIO bun run deploy:smoke
 bun run build
+bun run build:admin
 vercel env run -e production -- bun run build
 vercel deploy
 vercel logs --deployment <preview-deployment-id> --level error
@@ -181,10 +215,13 @@ Depois do deploy:
 O workflow `.github/workflows/ci.yml` roda:
 
 - `bun run check`
+- `bun run check:admin`
 - `bun run test`
 - `bun run knip`
 - `bun run build`
+- `bun run build:admin`
 - `bun run test:e2e` no job `e2e`, dependente de `E2E_DATABASE_URL`
+- `bun run test:e2e:admin` no job `admin-e2e`, dependente de `E2E_DATABASE_URL`
 - `bun run db:smoke:rls` no job manual `rls-smoke`, dependente de `RLS_DATABASE_URL`
 - `bun run deploy:smoke` no job manual `deployment-smoke`, dependente de `DEPLOYMENT_SMOKE_URL` e `CRON_SECRET`
 - `bun run prod:preflight` no job manual `production-preflight`, dependente de `PRODUCTION_DATABASE_URL`, `PRODUCTION_DATABASE_URL_DIRECT`, `PRODUCTION_BETTER_AUTH_URL`, `PRODUCTION_NEXT_PUBLIC_APP_URL`, `DEPLOYMENT_SMOKE_URL`, `E2E_DATABASE_URL`, `RLS_DATABASE_URL`, Google OAuth, R2, Upstash, `BETTER_AUTH_SECRET` e `CRON_SECRET`

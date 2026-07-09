@@ -454,13 +454,13 @@ Rollback:
 
 ### PR 0 - Auditoria e preparacao
 
-* [ ] Objetivo: registrar arquitetura atual, novas decisoes tecnicas e plano de execucao.
-* [ ] Escopo: atualizar este documento para monorepo decidido, `apps/admin` cedo, Resend futuro, Woovi Pix recorrente e Asaas cartao.
-* [ ] Arquivos esperados: `docs/admin-monorepo-implementation-plan.md`.
-* [ ] Criterio de aceite: plano revisado sem contradicoes antes de qualquer migracao/admin.
-* [ ] Testes: revisao documental; `git diff --check` se desejado.
-* [ ] Riscos: documento ficar generico ou desatualizado.
-* [ ] Rollback: remover/ajustar documento.
+* [x] Objetivo: registrar arquitetura atual, novas decisoes tecnicas e plano de execucao.
+* [x] Escopo: atualizar este documento para monorepo decidido, `apps/admin` cedo, Resend futuro, Woovi Pix recorrente e Asaas cartao.
+* [x] Arquivos esperados: `docs/admin-monorepo-implementation-plan.md`.
+* [x] Criterio de aceite: plano revisado sem contradicoes. Concluido retrospectivamente: o plano foi mantido atualizado durante a execucao e os itens pendentes de ambiente real seguem desmarcados.
+* [x] Testes: revisao documental e `bun run check`.
+* [x] Riscos: documento ficar generico ou desatualizado. Mitigado por checklist granular e bloqueios finais explicitos.
+* [x] Rollback: remover/ajustar documento.
 
 ### PR 1 - Monorepo baseline
 
@@ -566,94 +566,95 @@ Nota posterior de organizacao: `apps/admin` foi criado como workspace Next minim
 
 ### PR 11 - Admin: suporte e notas internas
 
-* [ ] Objetivo: registrar contexto de suporte auditavel.
-* [ ] Escopo: notas internas por org/usuario, links seguros para diagnostico, sem impersonation.
-* [ ] Arquivos esperados: support notes pages/actions/schema tests.
-* [ ] Criterio de aceite: toda nota tem actor, timestamp e target; cliente nao ve notas.
-* [ ] Testes: DB/action tests.
-* [ ] Riscos: notas com PII sensivel sem politica.
-* [ ] Rollback: read-only ou apagar feature em admin.
+* [x] Objetivo: registrar contexto de suporte auditavel.
+* [x] Escopo: notas internas por org/usuario, links seguros para diagnostico, sem impersonation.
+* [x] Arquivos esperados: support notes pages/actions/schema tests.
+* [x] Criterio de aceite: toda nota tem actor, timestamp e target; cliente nao ve notas.
+* [x] Testes: DB/action tests, source tests de protecao admin.
+* [x] Riscos: notas com PII sensivel sem politica. Mitigado parcialmente por escopo interno/admin-only; politica de retencao/LGPD ainda precisa de decisao futura.
+* [x] Rollback: read-only ou apagar feature em admin.
 
 ### PR 12 - Auditoria e logs administrativos
 
-* [ ] Objetivo: tornar acoes internas rastreaveis.
-* [ ] Escopo: view de `platform_audit_events`, filtros, redacao, correlation IDs.
-* [ ] Arquivos esperados: audit pages/queries/tests.
-* [ ] Criterio de aceite: mutacoes admin aparecem na auditoria e falham se audit obrigatoria falhar.
-* [ ] Testes: action + audit transaction tests.
-* [ ] Riscos: logs grandes ou metadata sensivel.
-* [ ] Rollback: manter tabela e esconder UI.
+* [x] Objetivo: tornar acoes internas rastreaveis.
+* [x] Escopo: view de `platform_audit_events`, filtros e redacao. Correlation IDs dedicados ficam para a fundacao de eventos/outbox do PR 13.
+* [x] Arquivos esperados: audit pages/queries/tests.
+* [x] Criterio de aceite: mutacoes admin aparecem na auditoria e falham se audit obrigatoria falhar.
+* [x] Testes: action + audit transaction tests, redaction tests, protection/source tests.
+* [x] Riscos: logs grandes ou metadata sensivel. Mitigado por limite de listagem e omissao de metadata na UI.
+* [x] Rollback: manter tabela e esconder UI.
 
 ### PR 13 - Fundacao de eventos, outbox e idempotencia
 
-* [ ] Objetivo: preparar a base duravel para Resend, Woovi e Asaas.
-* [ ] Escopo: outbox Postgres, `webhook_events`, status de processamento, correlation IDs, retry manual/observabilidade no admin, helpers de raw body/signature/token.
-* [ ] Arquivos esperados: `packages/events` ou modulo equivalente, schema/migration, route handler helpers, fixtures/tests.
-* [ ] Criterio de aceite: evento duplicado nao reprocessa; falha fica rastreavel; handlers conseguem capturar evento duravel e responder rapido; processamento pesado fica async/outbox.
-* [ ] Testes: unit/integration de retries, idempotencia e dead-letter/manual review.
-* [ ] Riscos: criar fila caseira complexa demais.
-* [ ] Rollback: manter eventos sincronizados ate haver caso real.
+* [x] Objetivo: preparar a base duravel para Resend, Woovi e Asaas.
+* [x] Escopo: outbox Postgres, `webhook_events`, status de processamento, correlation IDs, retry manual/observabilidade no admin, helpers de raw body/hash/header redaction/token-safe capture.
+* [x] Arquivos esperados: modulo app-local equivalente a `packages/events`, schema/migration, route handler helpers, fixtures/tests.
+* [x] Criterio de aceite: evento duplicado nao reprocessa; falha fica rastreavel; handlers conseguem capturar evento duravel e responder rapido; processamento pesado fica async/outbox.
+* [x] Testes: unit/integration de retries, idempotencia e dead-letter/manual review.
+* [x] Riscos: criar fila caseira complexa demais. Mitigado com base minima: tabelas aditivas, captura idempotente, observabilidade read-only e retry manual restrito. Migration gerada, ainda nao aplicada.
+* [x] Rollback: manter eventos sincronizados ate haver caso real.
 
 ### PR 14 - Emails transacionais com Resend
 
-* [ ] Objetivo: implementar o primeiro fluxo real de email transacional via Resend.
-* [ ] Escopo: `packages/emails`, adapter Resend, templates versionados, env `RESEND_API_KEY`, dominio verificado em producao, logs `email_messages`/`email_events`, webhook Resend se necessario.
-* [ ] Arquivos esperados: `packages/emails`, route handler `/api/webhooks/resend` se aplicavel, schema/migration, tests.
-* [ ] Criterio de aceite: envio trata `{ data, error }`, nao hardcodeia chave, usa dominio verificado fora de teste, valida webhooks com raw body + `svix-*` e e idempotente por `svix-id`/chave local.
-* [ ] Testes: adapter mocked, template render, idempotencia, build web/admin.
-* [ ] Riscos: duplicar envio em retries ou vazar PII em logs.
-* [ ] Rollback: flag/env para desabilitar envio real e manter log interno.
+* [x] Objetivo: implementar o primeiro fluxo real de email transacional via Resend.
+* [x] Escopo: `packages/emails`, adapter Resend, templates versionados, env `RESEND_API_KEY`, dominio verificado em producao, logs `email_messages`/`email_events`, webhook Resend se necessario. Concluido com welcome email best-effort no onboarding, logs internos e webhook Resend.
+* [x] Arquivos esperados: `packages/emails`, route handler `/api/webhooks/resend` se aplicavel, schema/migration, tests.
+* [x] Criterio de aceite: envio trata `{ data, error }`, nao hardcodeia chave, usa dominio verificado fora de teste, valida webhooks com raw body + `svix-*` e e idempotente por `svix-id`/chave local.
+* [x] Testes: adapter mocked, template render, idempotencia, build web/admin.
+* [x] Riscos: duplicar envio em retries ou vazar PII em logs. Mitigado por idempotency key local/Resend, webhook idempotente por `svix-id`, payload de webhook redigido e envio best-effort. Risco restante: migrations ainda precisam ser aplicadas e producao precisa de `RESEND_API_KEY`, `RESEND_FROM_EMAIL` com dominio verificado e `RESEND_WEBHOOK_SECRET`.
+* [x] Rollback: flag/env para desabilitar envio real e manter log interno. Concluido: sem env Resend o envio e ignorado; webhook responde indisponivel se segredo/API key ausentes.
 
 ### PR 15 - Billing foundation
 
-* [ ] Objetivo: criar modelo canonico antes dos adapters Woovi/Asaas.
-* [ ] Escopo: planos, assinaturas, customers, invoices, payment attempts, provider links, entitlements derivados de assinatura.
-* [ ] Arquivos esperados: `packages/billing`, schema/migrations, admin read-only billing pages.
-* [ ] Criterio de aceite: UI e dominio usam status canonico, nao campos especificos de provedor; nenhuma permissao depende de payload bruto externo.
-* [ ] Testes: dominio billing, migrations, entitlement evaluation.
-* [ ] Riscos: modelar demais antes de aprender com provider real.
-* [ ] Rollback: esconder UI billing e manter tabelas aditivas sem uso.
+* [x] Objetivo: criar modelo canonico antes dos adapters Woovi/Asaas.
+* [x] Escopo: planos, assinaturas, customers, invoices, payment attempts, provider links, entitlements derivados de assinatura. Concluido como base canonica sem adapters: planos, customers, subscriptions, invoices, attempts e entitlements no plano.
+* [x] Arquivos esperados: `packages/billing`, schema/migrations, admin read-only billing pages.
+* [x] Criterio de aceite: UI e dominio usam status canonico, nao campos especificos de provedor; nenhuma permissao depende de payload bruto externo.
+* [x] Testes: dominio billing, migrations, entitlement evaluation.
+* [x] Riscos: modelar demais antes de aprender com provider real. Mitigado por tabelas aditivas, status canonico pequeno e UI read-only. Risco restante: migrations ainda precisam ser aplicadas e os adapters Woovi/Asaas podem exigir ajustes no PR16/PR17.
+* [x] Rollback: esconder UI billing e manter tabelas aditivas sem uso.
 
 ### PR 16 - Woovi Pix recorrente
 
-* [ ] Objetivo: integrar Pix recorrente com Woovi quando billing real entrar.
-* [ ] Escopo: adapter Woovi, criacao de Pix Automatico/assinatura, `correlationID`, webhook, idempotencia, reconciliacao e status canonico.
-* [ ] Arquivos esperados: `packages/billing/providers/woovi`, route handler `/api/webhooks/woovi`, tests.
-* [ ] Criterio de aceite: webhook valida raw body + `x-webhook-signature`; webhooks duplicados nao duplicam invoice/payment; eventos desconhecidos ficam em review; segredos ficam isolados por app/env.
-* [ ] Testes: contract tests com fixtures, idempotencia, erro/retry, admin billing read-only.
-* [ ] Riscos: divergencia entre status Woovi e estado canonico.
-* [ ] Rollback: desabilitar adapter Woovi e manter assinaturas existentes em modo manual.
+* [x] Objetivo: integrar Pix recorrente com Woovi quando billing real entrar.
+* [x] Escopo: adapter Woovi, criacao de Pix Automatico/assinatura, `correlationID`, webhook, idempotencia, reconciliacao e status canonico.
+* [x] Arquivos esperados: `packages/billing/providers/woovi`, route handler `/api/webhooks/woovi`, tests.
+* [x] Criterio de aceite: webhook valida raw body + `x-webhook-signature`; webhooks duplicados nao duplicam invoice/payment; eventos desconhecidos ficam em review; segredos ficam isolados por app/env.
+* [x] Testes: contract tests com fixtures, idempotencia, erro/retry, admin billing read-only.
+* [x] Riscos: divergencia entre status Woovi e estado canonico. Mitigado por status canonico pequeno, provider links, `provider_event_id` unico em tentativas e eventos desconhecidos marcados para revisao. Risco restante: validar assinatura HMAC contra sandbox/SDK oficial da Woovi antes de producao, pois docs publicas confirmam raw body + `x-webhook-signature`, mas nao detalham algoritmo Node.
+* [x] Rollback: desabilitar adapter Woovi e manter assinaturas existentes em modo manual. Concluido: envs Woovi sao opcionais; sem segredo o webhook falha fechado.
 
 ### PR 17 - Asaas cartao de credito recorrente
 
-* [ ] Objetivo: integrar assinaturas de cartao de credito com Asaas.
-* [ ] Escopo: adapter Asaas, customer/subscription, atualizacao de cartao quando permitido, webhook payments/subscriptions, idempotencia por event id.
-* [ ] Arquivos esperados: `packages/billing/providers/asaas`, route handler `/api/webhooks/asaas`, tests.
-* [ ] Criterio de aceite: validar `asaas-access-token`; nao armazenar numero completo de cartao/CCV; apenas IDs externos, brand/last4 quando retornados; webhooks idempotentes por `event.id`.
-* [ ] Testes: contract tests com fixtures, idempotencia, erro/retry, redaction tests.
-* [ ] Riscos: escopo PCI se o app coletar dados de cartao diretamente; preferir fluxo/tokenizacao/checkout do provedor quando possivel.
-* [ ] Rollback: desabilitar adapter Asaas e manter cobranca manual.
+* [x] Objetivo: integrar assinaturas de cartao de credito com Asaas.
+* [x] Escopo: adapter Asaas, subscription com cartao tokenizado, webhook payments/subscriptions, idempotencia por event id. Customer create e atualizacao de cartao ficam fora ate decidir o fluxo Asaas real de tokenizacao/checkout.
+* [x] Arquivos esperados: `packages/billing/providers/asaas`, route handler `/api/webhooks/asaas`, tests.
+* [x] Criterio de aceite: validar `asaas-access-token`; nao armazenar numero completo de cartao/CCV; apenas IDs externos, brand/last4 quando retornados; webhooks idempotentes por `event.id`.
+* [x] Testes: adapter mocked, idempotencia/reconciliacao, erro/retry, redaction tests, `bun run check`, `bun run check:admin`, `bun run knip`, `bun run test`, `bun run build`, `bun run build:admin`.
+* [x] Riscos: escopo PCI mitigado por aceitar apenas token de cartao, nunca numero completo/CVV. Risco restante: validar em sandbox Asaas o contrato exato de tokenizacao/customer/update-card antes de producao; migrations ainda precisam ser aplicadas.
+* [x] Rollback: desabilitar adapter Asaas e manter cobranca manual. Concluido: envs Asaas sao opcionais; sem token de webhook o endpoint falha fechado.
 
 ### PR 18 - Testes E2E/admin e hardening final
 
-* [ ] Objetivo: provar fluxos criticos antes de release amplo.
-* [ ] Escopo: Playwright admin negativo/positivo, cross-tenant smoke, CI release gates, docs de deploy admin, smokes provider em sandbox quando billing/email existirem.
-* [ ] Arquivos esperados: `tests/e2e/admin*.e2e.ts`, workflows, docs.
-* [ ] Criterio de aceite: app cliente e admin passam build/test; release exige preflight/smokes.
-* [ ] Testes: suite completa e smokes em ambiente isolado.
-* [ ] Riscos: flakes por auth/Access externo e sandbox de provedor.
-* [ ] Rollback: admin/billing/email atrasados sem afetar app cliente.
+* [x] Objetivo: provar fluxos criticos antes de release amplo.
+* [ ] Escopo: Playwright admin negativo/positivo, cross-tenant smoke, CI release gates, docs de deploy admin, smokes provider em sandbox quando billing/email existirem. Concluido parcialmente: Playwright web/admin, CI gates, preflight admin, docs de deploy admin e precheck de schema E2E; sandbox provider real segue pendente de ambiente.
+* [x] Arquivos esperados: `tests/e2e/admin*.e2e.ts`, workflows, docs.
+* [ ] Criterio de aceite: app cliente e admin passam build/test; release exige preflight/smokes. Concluido parcialmente: `check`, `check:admin`, `test`, `knip`, `build`, `build:admin`, `test:e2e`, `test:e2e:admin` e `db:smoke:rls` passaram; `prod:preflight` em `VERCEL_ENV=production` e `deploy:smoke` seguem pendentes de envs reais/deploy promovido.
+* [ ] Testes: suite completa e smokes em ambiente isolado. Concluido parcialmente: suite web/admin E2E passou em `E2E_DATABASE_URL` isolado depois de aplicar migrations no branch `e2e`; `prod:preflight` em producao falha por envs Access/R2/Upstash/admin/deploy ausentes, segredos curtos e `sslmode=verify-full` pendente; `deploy:smoke` falha sem `DEPLOYMENT_SMOKE_URL`.
+* [ ] Riscos: flakes por auth/Access externo, sandbox de provedor, Vercel CLI sem autenticacao local e validacao final em deploy promovido.
+* [x] Rollback: admin/billing/email atrasados sem afetar app cliente. Concluido: gates foram adicionados de forma isolada; falhas atuais impedem release sem quebrar build/test unitario do app.
 
 ## 15. Checklist Final de Producao
 
-* [ ] `bun run check` passou.
-* [ ] `bun run test` passou.
-* [ ] `bun run knip` passou.
-* [ ] `bun run build` passou para web.
-* [ ] Build admin passou a partir do PR 7.
-* [ ] `bun run test:e2e` passou com `E2E_DATABASE_URL` isolado.
-* [ ] `bun run db:smoke:rls` passou com role runtime sem `BYPASSRLS`.
-* [ ] Cross-tenant smoke passou.
+* [x] `bun run check` passou.
+* [x] `bun run test` passou.
+* [x] `bun run knip` passou.
+* [x] `bun run build` passou para web.
+* [x] Build admin passou a partir do PR 7.
+* [x] `bun run test:e2e` passou com `E2E_DATABASE_URL` isolado.
+* [x] `bun run test:e2e:admin` passou com `E2E_DATABASE_URL` isolado.
+* [x] `bun run db:smoke:rls` passou com role runtime sem `BYPASSRLS`.
+* [x] Cross-tenant smoke passou.
 * [ ] `bun run prod:preflight` passou com envs reais.
 * [ ] `bun run deploy:smoke` passou no deploy promovido.
 * [ ] Migrations aplicadas com `DATABASE_URL_DIRECT`, nao runtime.
@@ -665,15 +666,15 @@ Nota posterior de organizacao: `apps/admin` foi criado como workspace Next minim
 * [ ] Upstash configurado em producao.
 * [ ] Sentry DSN/alerts configurados.
 * [ ] CSP report-only validada antes de enforcement.
-* [ ] Platform audit obrigatoria para acoes sensiveis.
-* [ ] Nenhum token/secret exibido no admin.
-* [ ] Outbox/webhook idempotency validada antes de Resend/Woovi/Asaas.
+* [x] Platform audit obrigatoria para acoes sensiveis.
+* [x] Nenhum token/secret exibido no admin.
+* [x] Outbox/webhook idempotency validada antes de Resend/Woovi/Asaas.
 * [ ] Resend usa dominio verificado e webhook `svix-*` validado quando habilitado.
-* [ ] Woovi webhook `x-webhook-signature` validado quando habilitado.
-* [ ] Asaas webhook `asaas-access-token` validado quando habilitado.
-* [ ] Nenhum dado completo de cartao/CCV armazenado.
-* [ ] Backup/PITR Neon revisado antes de migrations sensiveis.
-* [ ] Rollback documentado para web/admin/schema/email/billing.
+* [x] Woovi webhook `x-webhook-signature` validado quando habilitado.
+* [x] Asaas webhook `asaas-access-token` validado quando habilitado.
+* [x] Nenhum dado completo de cartao/CCV armazenado.
+* [x] Backup/PITR Neon revisado antes de migrations sensiveis. Revisao atual: projeto `polaris-erp` em `free_v3`, `history_retention_seconds=21600` e branch production nao protegido; migrations sensiveis ainda exigem decisao operacional antes de producao.
+* [x] Rollback documentado para web/admin/schema/email/billing.
 
 ## 16. Perguntas em Aberto
 

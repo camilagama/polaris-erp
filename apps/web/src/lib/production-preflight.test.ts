@@ -9,7 +9,10 @@ const ownerUrl =
 const e2eUrl =
   "postgres://polaris_app:pass@e2e.example.neon.tech/neondb?sslmode=verify-full";
 const productionIntegrationEnv = {
+  ADMIN_APP_URL: "https://admin.example.com",
   BETTER_AUTH_URL: "https://app.example.com",
+  CLOUDFLARE_ACCESS_AUD: "cloudflare-access-audience",
+  CLOUDFLARE_ACCESS_TEAM_DOMAIN: "polaris.cloudflareaccess.com",
   DEPLOYMENT_SMOKE_URL: "https://app.example.com",
   GOOGLE_CLIENT_ID: "google-client-id",
   GOOGLE_CLIENT_SECRET: "google-client-secret",
@@ -74,6 +77,9 @@ describe("validateProductionPreflight", () => {
         "INTERNAL_R2_HEALTH_SECRET must be at least 32 characters in production preflight.",
         "PRODUCT_IMAGE_RECONCILE_SECRET must be at least 32 characters in production preflight.",
         "BETTER_AUTH_URL is required in production preflight.",
+        "ADMIN_APP_URL is required in production preflight.",
+        "CLOUDFLARE_ACCESS_AUD is required in production preflight.",
+        "CLOUDFLARE_ACCESS_TEAM_DOMAIN is required in production preflight.",
         "DEPLOYMENT_SMOKE_URL is required in production preflight.",
         "NEXT_PUBLIC_APP_URL is required in production preflight.",
         "GOOGLE_CLIENT_ID is required in production preflight.",
@@ -129,6 +135,27 @@ describe("validateProductionPreflight", () => {
     expect(result.ok).toBe(false);
     expect(result.errors).toContain(
       "DEPLOYMENT_SMOKE_URL and NEXT_PUBLIC_APP_URL must use the same origin."
+    );
+  });
+
+  it("rejects admin running on the public app origin", () => {
+    const result = validateProductionPreflight({
+      BETTER_AUTH_SECRET: strongSecret,
+      CRON_SECRET: strongSecret,
+      DATABASE_URL: runtimeUrl,
+      DATABASE_URL_DIRECT: ownerUrl,
+      E2E_DATABASE_URL: e2eUrl,
+      INTERNAL_R2_HEALTH_SECRET: strongSecret,
+      PRODUCT_IMAGE_RECONCILE_SECRET: strongSecret,
+      RLS_DATABASE_URL: runtimeUrl,
+      VERCEL_ENV: "production",
+      ...productionIntegrationEnv,
+      ADMIN_APP_URL: "https://app.example.com",
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.errors).toContain(
+      "ADMIN_APP_URL must use a separate origin from NEXT_PUBLIC_APP_URL."
     );
   });
 

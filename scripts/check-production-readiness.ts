@@ -1,12 +1,15 @@
 import {
   type ProductionPreflightEnv,
   validateProductionPreflight,
-} from "@/lib/production-preflight";
+} from "../apps/web/src/lib/production-preflight";
 
 const env: ProductionPreflightEnv = {
+  ADMIN_APP_URL: process.env.ADMIN_APP_URL,
   ALLOW_PLAYWRIGHT_BOOTSTRAP: process.env.ALLOW_PLAYWRIGHT_BOOTSTRAP,
   BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
   BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
+  CLOUDFLARE_ACCESS_AUD: process.env.CLOUDFLARE_ACCESS_AUD,
+  CLOUDFLARE_ACCESS_TEAM_DOMAIN: process.env.CLOUDFLARE_ACCESS_TEAM_DOMAIN,
   CRON_SECRET: process.env.CRON_SECRET,
   DATABASE_URL: process.env.DATABASE_URL,
   DATABASE_URL_DIRECT: process.env.DATABASE_URL_DIRECT,

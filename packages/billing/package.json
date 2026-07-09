@@ -1,0 +1,11 @@
+{
+  "name": "@polaris/billing",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./providers/asaas": "./src/providers/asaas.ts",
+    "./providers/woovi": "./src/providers/woovi.ts"
+  }
+}

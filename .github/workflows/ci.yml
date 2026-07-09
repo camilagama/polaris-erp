@@ -23,6 +23,9 @@ jobs:
       - name: Lint & format check
         run: bun run check
 
+      - name: Admin lint & format check
+        run: bun run check:admin
+
       - name: Unit tests
         run: bun run test
 
@@ -38,6 +41,17 @@ jobs:
           DATABASE_URL: postgres://ci:ci@127.0.0.1:5432/ci
           BETTER_AUTH_SECRET: ci-better-auth-secret-at-least-32-chars!!
           BETTER_AUTH_URL: http://localhost:3000
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+          GOOGLE_CLIENT_ID: dummy-google-client-id
+          GOOGLE_CLIENT_SECRET: dummy-google-client-secret
+          NEXT_PUBLIC_GOOGLE_CLIENT_ID: dummy-google-client-id
+
+      - name: Admin production build
+        run: bun run build:admin
+        env:
+          DATABASE_URL: postgres://ci:ci@127.0.0.1:5432/ci
+          BETTER_AUTH_SECRET: ci-better-auth-secret-at-least-32-chars!!
+          BETTER_AUTH_URL: http://localhost:3002
           NEXT_PUBLIC_APP_URL: http://localhost:3000
           GOOGLE_CLIENT_ID: dummy-google-client-id
           GOOGLE_CLIENT_SECRET: dummy-google-client-secret
@@ -65,6 +79,33 @@ jobs:
           E2E_DATABASE_URL: ${{ secrets.E2E_DATABASE_URL }}
           BETTER_AUTH_SECRET: ci-better-auth-secret-at-least-32-chars!!
           BETTER_AUTH_URL: http://127.0.0.1:3001
+          NEXT_PUBLIC_APP_URL: http://127.0.0.1:3001
+          GOOGLE_CLIENT_ID: dummy-google-client-id
+          GOOGLE_CLIENT_SECRET: dummy-google-client-secret
+          NEXT_PUBLIC_GOOGLE_CLIENT_ID: dummy-google-client-id
+
+  admin-e2e:
+    runs-on: ubuntu-latest
+    needs: verify
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Install Playwright browser
+        run: bun x playwright install --with-deps chromium
+
+      - name: Admin E2E tests
+        run: bun run test:e2e:admin
+        env:
+          E2E_DATABASE_URL: ${{ secrets.E2E_DATABASE_URL }}
+          BETTER_AUTH_SECRET: ci-better-auth-secret-at-least-32-chars!!
+          BETTER_AUTH_URL: http://127.0.0.1:3002
           NEXT_PUBLIC_APP_URL: http://127.0.0.1:3001
           GOOGLE_CLIENT_ID: dummy-google-client-id
           GOOGLE_CLIENT_SECRET: dummy-google-client-secret
@@ -126,6 +167,7 @@ jobs:
           DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
           DATABASE_URL_DIRECT: ${{ secrets.PRODUCTION_DATABASE_URL_DIRECT }}
           DEPLOYMENT_SMOKE_URL: ${{ secrets.DEPLOYMENT_SMOKE_URL }}
+          ADMIN_APP_URL: ${{ secrets.ADMIN_APP_URL }}
           BETTER_AUTH_URL: ${{ secrets.PRODUCTION_BETTER_AUTH_URL }}
           NEXT_PUBLIC_APP_URL: ${{ secrets.PRODUCTION_NEXT_PUBLIC_APP_URL }}
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
@@ -144,4 +186,6 @@ jobs:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           INTERNAL_R2_HEALTH_SECRET: ${{ secrets.INTERNAL_R2_HEALTH_SECRET }}
           PRODUCT_IMAGE_RECONCILE_SECRET: ${{ secrets.PRODUCT_IMAGE_RECONCILE_SECRET }}
+          CLOUDFLARE_ACCESS_AUD: ${{ secrets.CLOUDFLARE_ACCESS_AUD }}
+          CLOUDFLARE_ACCESS_TEAM_DOMAIN: ${{ secrets.CLOUDFLARE_ACCESS_TEAM_DOMAIN }}
           VERCEL_ENV: production

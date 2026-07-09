@@ -43,12 +43,25 @@ const serverEnvSchema = z
     BETTER_AUTH_URL: z.string().url(),
     BETTER_AUTH_API_KEY: optionalNonEmptyString,
     ALLOW_PLAYWRIGHT_BOOTSTRAP: optionalBooleanString,
+    ASAAS_API_BASE_URL: z.preprocess((value) => {
+      if (typeof value !== "string") {
+        return value;
+      }
+
+      const trimmedValue = value.trim();
+      return trimmedValue.length === 0 ? undefined : trimmedValue;
+    }, z.string().url().optional()),
+    ASAAS_API_KEY: optionalNonEmptyString,
+    ASAAS_WEBHOOK_TOKEN: optionalNonEmptyString,
     CRON_SECRET: optionalNonEmptyString,
     CLOUDFLARE_ACCESS_AUD: optionalNonEmptyString,
     CLOUDFLARE_ACCESS_TEAM_DOMAIN: optionalNonEmptyString,
     INTERNAL_BOOTSTRAP_SECRET: optionalNonEmptyString,
     INTERNAL_R2_HEALTH_SECRET: optionalNonEmptyString,
     PRODUCT_IMAGE_RECONCILE_SECRET: optionalNonEmptyString,
+    RESEND_API_KEY: optionalNonEmptyString,
+    RESEND_FROM_EMAIL: optionalNonEmptyString,
+    RESEND_WEBHOOK_SECRET: optionalNonEmptyString,
     GOOGLE_CLIENT_ID: optionalNonEmptyString,
     GOOGLE_CLIENT_SECRET: optionalNonEmptyString,
     NEXT_PUBLIC_APP_URL: z.string().url(),
@@ -91,6 +104,16 @@ const serverEnvSchema = z
       return trimmedValue.length === 0 ? undefined : trimmedValue;
     }, z.string().url().optional()),
     VERCEL_ENV: optionalVercelEnvironment,
+    WOOVI_API_BASE_URL: z.preprocess((value) => {
+      if (typeof value !== "string") {
+        return value;
+      }
+
+      const trimmedValue = value.trim();
+      return trimmedValue.length === 0 ? undefined : trimmedValue;
+    }, z.string().url().optional()),
+    WOOVI_API_KEY: optionalNonEmptyString,
+    WOOVI_WEBHOOK_SECRET: optionalNonEmptyString,
   })
   .superRefine((env, context) => {
     if (
@@ -155,12 +178,18 @@ export const serverEnv = serverEnvSchema.parse({
   BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
   BETTER_AUTH_API_KEY: process.env.BETTER_AUTH_API_KEY,
   ALLOW_PLAYWRIGHT_BOOTSTRAP: process.env.ALLOW_PLAYWRIGHT_BOOTSTRAP,
+  ASAAS_API_BASE_URL: process.env.ASAAS_API_BASE_URL,
+  ASAAS_API_KEY: process.env.ASAAS_API_KEY,
+  ASAAS_WEBHOOK_TOKEN: process.env.ASAAS_WEBHOOK_TOKEN,
   CRON_SECRET: process.env.CRON_SECRET,
   CLOUDFLARE_ACCESS_AUD: process.env.CLOUDFLARE_ACCESS_AUD,
   CLOUDFLARE_ACCESS_TEAM_DOMAIN: process.env.CLOUDFLARE_ACCESS_TEAM_DOMAIN,
   INTERNAL_BOOTSTRAP_SECRET: process.env.INTERNAL_BOOTSTRAP_SECRET,
   INTERNAL_R2_HEALTH_SECRET: process.env.INTERNAL_R2_HEALTH_SECRET,
   PRODUCT_IMAGE_RECONCILE_SECRET: process.env.PRODUCT_IMAGE_RECONCILE_SECRET,
+  RESEND_API_KEY: process.env.RESEND_API_KEY,
+  RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL,
+  RESEND_WEBHOOK_SECRET: process.env.RESEND_WEBHOOK_SECRET,
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
   GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
   NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
@@ -180,4 +209,7 @@ export const serverEnv = serverEnvSchema.parse({
   UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
   UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,
   VERCEL_ENV: process.env.VERCEL_ENV,
+  WOOVI_API_BASE_URL: process.env.WOOVI_API_BASE_URL,
+  WOOVI_API_KEY: process.env.WOOVI_API_KEY,
+  WOOVI_WEBHOOK_SECRET: process.env.WOOVI_WEBHOOK_SECRET,
 });

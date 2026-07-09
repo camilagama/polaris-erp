@@ -53,6 +53,42 @@ const adminUserDetailSource = readFileSync(
   ),
   "utf8"
 );
+const adminAuditPagePath = join(
+  process.cwd(),
+  "..",
+  "admin",
+  "src",
+  "app",
+  "audit",
+  "page.tsx"
+);
+const adminEventsPagePath = join(
+  process.cwd(),
+  "..",
+  "admin",
+  "src",
+  "app",
+  "events",
+  "page.tsx"
+);
+const adminEventsActionsPath = join(
+  process.cwd(),
+  "..",
+  "admin",
+  "src",
+  "app",
+  "events",
+  "actions.ts"
+);
+const adminBillingPagePath = join(
+  process.cwd(),
+  "..",
+  "admin",
+  "src",
+  "app",
+  "billing",
+  "page.tsx"
+);
 const adminSupportNoteActionsPath = join(
   process.cwd(),
   "..",
@@ -61,6 +97,17 @@ const adminSupportNoteActionsPath = join(
   "app",
   "support-notes",
   "actions.ts"
+);
+const adminBootstrapRoutePath = join(
+  process.cwd(),
+  "..",
+  "admin",
+  "src",
+  "app",
+  "api",
+  "dev",
+  "bootstrap-platform-admin",
+  "route.ts"
 );
 
 describe("admin app protection", () => {
@@ -129,5 +176,60 @@ describe("admin app protection", () => {
     expect(adminOrganizationDetailSource).toContain("listPlatformSupportNotes");
     expect(adminUserDetailSource).toContain("listPlatformSupportNotes");
     expect(adminPageSource).not.toContain("platform_support_notes");
+  });
+
+  it("guards the platform audit page and links to it from the admin dashboard", () => {
+    expect(existsSync(adminAuditPagePath)).toBe(true);
+
+    const auditPageSource = readFileSync(adminAuditPagePath, "utf8");
+
+    expect(auditPageSource).toContain("requirePlatformAdmin");
+    expect(auditPageSource).toContain("listPlatformAuditEvents");
+    expect(auditPageSource).toContain("await connection()");
+    expect(auditPageSource).not.toContain("metadata");
+    expect(adminPageSource).toContain('href: "/audit"');
+  });
+
+  it("guards event observability and manual retry actions", () => {
+    expect(existsSync(adminEventsPagePath)).toBe(true);
+    expect(existsSync(adminEventsActionsPath)).toBe(true);
+
+    const eventsPageSource = readFileSync(adminEventsPagePath, "utf8");
+    const eventsActionSource = readFileSync(adminEventsActionsPath, "utf8");
+
+    expect(eventsPageSource).toContain("requirePlatformAdmin");
+    expect(eventsPageSource).toContain("listEventOutbox");
+    expect(eventsPageSource).toContain("listWebhookEvents");
+    expect(eventsPageSource).toContain("retryOutboxEventAction");
+    expect(eventsActionSource).toContain("requirePlatformAdmin");
+    expect(eventsActionSource).toContain('minimumRole: "operator"');
+    expect(eventsActionSource).toContain("retryOutboxEvent");
+    expect(adminPageSource).toContain('href: "/events"');
+  });
+
+  it("guards the billing overview page and links to it from the admin dashboard", () => {
+    expect(existsSync(adminBillingPagePath)).toBe(true);
+
+    const billingPageSource = readFileSync(adminBillingPagePath, "utf8");
+
+    expect(billingPageSource).toContain("requirePlatformAdmin");
+    expect(billingPageSource).toContain("getPlatformBillingOverview");
+    expect(billingPageSource).toContain("await connection()");
+    expect(billingPageSource).not.toContain("provider_payload");
+    expect(adminPageSource).toContain('href: "/billing"');
+  });
+
+  it("keeps the admin E2E bootstrap route local, isolated and non-production", () => {
+    expect(existsSync(adminBootstrapRoutePath)).toBe(true);
+
+    const bootstrapRouteSource = readFileSync(adminBootstrapRoutePath, "utf8");
+
+    expect(bootstrapRouteSource).toContain("ALLOW_PLAYWRIGHT_BOOTSTRAP");
+    expect(bootstrapRouteSource).toContain("E2E_DATABASE_URL");
+    expect(bootstrapRouteSource).toContain("DATABASE_URL");
+    expect(bootstrapRouteSource).toContain("LOCAL_E2E_HOSTS");
+    expect(bootstrapRouteSource).toContain("VERCEL_ENV");
+    expect(bootstrapRouteSource).toContain("bootstrapPlatformAdmin");
+    expect(bootstrapRouteSource).toContain("status: 403");
   });
 });

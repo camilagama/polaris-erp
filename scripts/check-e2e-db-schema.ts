@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { parse } from "dotenv";
 import { Client } from "pg";
-import { assertE2eDatabaseSchema } from "@/lib/e2e-database-schema";
+import { assertE2eDatabaseSchema } from "../apps/web/src/lib/e2e-database-schema";
 
 const repoEnvPath = fileURLToPath(new URL("../.env.local", import.meta.url));
 
@@ -42,7 +42,11 @@ const main = async () => {
         to_regclass('public.sales_organization_idempotency_key_unique_idx') is not null
           as "salesOrganizationIdempotencyKeyUniqueIdx",
         to_regclass('public.sessions_id_unique_idx') is not null
-          as "sessionsIdUniqueIdx"
+          as "sessionsIdUniqueIdx",
+        to_regclass('public.platform_admins') is not null
+          as "platformAdmins",
+        to_regclass('public.platform_admin_grants') is not null
+          as "platformAdminGrants"
     `);
 
     assertE2eDatabaseSchema(rows[0]);

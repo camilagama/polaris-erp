@@ -1,10 +1,14 @@
 export interface E2eDatabaseSchemaState {
+  platformAdminGrants: boolean;
+  platformAdmins: boolean;
   salesIdempotencyKey: boolean;
   salesOrganizationIdempotencyKeyUniqueIdx: boolean;
   sessionsIdUniqueIdx: boolean;
 }
 
 const REQUIRED_SCHEMA_OBJECTS = {
+  platformAdminGrants: "platform_admin_grants",
+  platformAdmins: "platform_admins",
   salesIdempotencyKey: "sales.idempotency_key",
   salesOrganizationIdempotencyKeyUniqueIdx:
     "sales_organization_idempotency_key_unique_idx",

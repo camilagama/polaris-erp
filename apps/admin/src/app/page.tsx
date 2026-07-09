@@ -56,6 +56,24 @@ const AdminDashboard = async () => {
       detail: `${formatNumber(dashboard.summary.disabledPlatformAdmins)} desativados`,
       href: null,
     },
+    {
+      label: "Auditoria",
+      value: dashboard.events.length,
+      detail: "eventos recentes",
+      href: "/audit",
+    },
+    {
+      label: "Eventos",
+      value: dashboard.events.length,
+      detail: "outbox e webhooks",
+      href: "/events",
+    },
+    {
+      label: "Billing",
+      value: 0,
+      detail: "assinaturas e invoices",
+      href: "/billing",
+    },
   ] as const;
   const healthCards = [
     {
@@ -112,7 +130,7 @@ const AdminDashboard = async () => {
           </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
           {summaryCards.map((card) => (
             <Link
               aria-disabled={!card.href}

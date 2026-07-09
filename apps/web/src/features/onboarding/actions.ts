@@ -6,6 +6,7 @@ import {
   createInitialOrganizationForUser,
   getAppContext,
 } from "@/lib/app-session";
+import { sendWelcomeEmailIfConfigured } from "@/lib/email-service";
 import { requireSession } from "@/lib/session";
 import type { OnboardingActionState } from "./state";
 
@@ -36,6 +37,11 @@ export async function completeOnboardingAction(
 
   await createInitialOrganizationForUser({
     name: parsed.data.organizationName,
+    userId: session.user.id,
+  });
+  await sendWelcomeEmailIfConfigured({
+    name: session.user.name,
+    to: session.user.email,
     userId: session.user.id,
   });
 

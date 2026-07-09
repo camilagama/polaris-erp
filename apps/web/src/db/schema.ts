@@ -319,6 +319,372 @@ export const platformSupportNotes = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// Durable event foundation for webhooks, outbox and provider integrations
+// ---------------------------------------------------------------------------
+
+export const eventOutbox = pgTable(
+  "event_outbox",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    topic: text("topic").notNull(),
+    eventType: text("event_type").notNull(),
+    correlationId: text("correlation_id").notNull(),
+    idempotencyKey: text("idempotency_key").notNull(),
+    status: text("status").default("pending").notNull(),
+    attempts: integer("attempts").default(0).notNull(),
+    payload: jsonb("payload")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    availableAt: timestamp("available_at", tz).defaultNow().notNull(),
+    processedAt: timestamp("processed_at", tz),
+    lastError: text("last_error"),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("event_outbox_idempotency_key_unique_idx").on(
+      table.idempotencyKey
+    ),
+    index("event_outbox_status_available_at_idx").on(
+      table.status,
+      table.availableAt
+    ),
+    index("event_outbox_correlation_id_idx").on(table.correlationId),
+    check(
+      "event_outbox_status_known_check",
+      sql`${table.status} in ('pending', 'processing', 'processed', 'failed', 'dead_letter')`
+    ),
+    check("event_outbox_attempts_non_negative", sql`${table.attempts} >= 0`),
+  ]
+);
+
+export const webhookEvents = pgTable(
+  "webhook_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    provider: text("provider").notNull(),
+    providerEventId: text("provider_event_id").notNull(),
+    idempotencyKey: text("idempotency_key").notNull(),
+    correlationId: text("correlation_id").notNull(),
+    status: text("status").default("received").notNull(),
+    rawBodySha256: text("raw_body_sha256").notNull(),
+    redactedHeaders: jsonb("redacted_headers")
+      .$type<Record<string, string>>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    payload: jsonb("payload")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    processedAt: timestamp("processed_at", tz),
+    lastError: text("last_error"),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("webhook_events_idempotency_key_unique_idx").on(
+      table.idempotencyKey
+    ),
+    uniqueIndex("webhook_events_provider_event_unique_idx").on(
+      table.provider,
+      table.providerEventId
+    ),
+    index("webhook_events_status_created_at_idx").on(
+      table.status,
+      table.createdAt
+    ),
+    index("webhook_events_correlation_id_idx").on(table.correlationId),
+    check(
+      "webhook_events_status_known_check",
+      sql`${table.status} in ('received', 'processing', 'processed', 'failed', 'duplicate')`
+    ),
+  ]
+);
+
+// ---------------------------------------------------------------------------
+// Transactional email logs
+// ---------------------------------------------------------------------------
+
+export const emailMessages = pgTable(
+  "email_messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    to: text("to").notNull(),
+    from: text("from").notNull(),
+    subject: text("subject").notNull(),
+    template: text("template").notNull(),
+    templateVersion: text("template_version").notNull(),
+    provider: text("provider").default("resend").notNull(),
+    providerMessageId: text("provider_message_id"),
+    idempotencyKey: text("idempotency_key").notNull(),
+    status: text("status").default("pending").notNull(),
+    lastError: text("last_error"),
+    sentAt: timestamp("sent_at", tz),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("email_messages_idempotency_key_unique_idx").on(
+      table.idempotencyKey
+    ),
+    uniqueIndex("email_messages_provider_message_id_unique_idx")
+      .on(table.providerMessageId)
+      .where(sql`provider_message_id IS NOT NULL`),
+    index("email_messages_status_created_at_idx").on(
+      table.status,
+      table.createdAt
+    ),
+    check(
+      "email_messages_status_known_check",
+      sql`${table.status} in ('pending', 'sent', 'failed', 'delivered', 'bounced', 'complained', 'suppressed')`
+    ),
+  ]
+);
+
+export const emailEvents = pgTable(
+  "email_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    emailMessageId: uuid("email_message_id").references(
+      () => emailMessages.id,
+      { onDelete: "set null" }
+    ),
+    provider: text("provider").default("resend").notNull(),
+    providerEventId: text("provider_event_id").notNull(),
+    providerMessageId: text("provider_message_id"),
+    type: text("type").notNull(),
+    payload: jsonb("payload")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    occurredAt: timestamp("occurred_at", tz),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("email_events_provider_event_unique_idx").on(
+      table.provider,
+      table.providerEventId
+    ),
+    index("email_events_email_message_id_idx").on(table.emailMessageId),
+    index("email_events_type_created_at_idx").on(table.type, table.createdAt),
+  ]
+);
+
+// ---------------------------------------------------------------------------
+// Billing foundation (canonical state before provider adapters)
+// ---------------------------------------------------------------------------
+
+export const billingPlans = pgTable(
+  "billing_plans",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    status: text("status").default("active").notNull(),
+    interval: text("interval").notNull(),
+    currency: text("currency").default("BRL").notNull(),
+    amountCents: integer("amount_cents").notNull(),
+    entitlements: jsonb("entitlements")
+      .$type<Array<{ key: string; value: boolean | number | string }>>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    ...timestamps,
+  },
+  (table) => [
+    index("billing_plans_status_idx").on(table.status),
+    check(
+      "billing_plans_status_known_check",
+      sql`${table.status} in ('active', 'archived')`
+    ),
+    check(
+      "billing_plans_interval_known_check",
+      sql`${table.interval} in ('month', 'year')`
+    ),
+    check(
+      "billing_plans_amount_cents_non_negative",
+      sql`${table.amountCents} >= 0`
+    ),
+  ]
+);
+
+export const billingCustomers = pgTable(
+  "billing_customers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    billingEmail: text("billing_email"),
+    taxIdLast4: text("tax_id_last4"),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("billing_customers_organization_unique_idx").on(
+      table.organizationId
+    ),
+  ]
+);
+
+export const billingSubscriptions = pgTable(
+  "billing_subscriptions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    billingCustomerId: uuid("billing_customer_id").references(
+      () => billingCustomers.id,
+      { onDelete: "set null" }
+    ),
+    planId: text("plan_id")
+      .notNull()
+      .references(() => billingPlans.id),
+    status: text("status").default("incomplete").notNull(),
+    currentPeriodStart: timestamp("current_period_start", tz),
+    currentPeriodEnd: timestamp("current_period_end", tz),
+    cancelAtPeriodEnd: boolean("cancel_at_period_end").default(false).notNull(),
+    canceledAt: timestamp("canceled_at", tz),
+    ...timestamps,
+  },
+  (table) => [
+    index("billing_subscriptions_organization_id_idx").on(table.organizationId),
+    index("billing_subscriptions_status_idx").on(table.status),
+    uniqueIndex("billing_subscriptions_active_organization_unique_idx")
+      .on(table.organizationId)
+      .where(sql`status in ('trialing', 'active', 'past_due', 'paused')`),
+    check(
+      "billing_subscriptions_status_known_check",
+      sql`${table.status} in ('trialing', 'active', 'past_due', 'paused', 'canceled', 'incomplete')`
+    ),
+  ]
+);
+
+export const billingInvoices = pgTable(
+  "billing_invoices",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    billingSubscriptionId: uuid("billing_subscription_id").references(
+      () => billingSubscriptions.id,
+      { onDelete: "set null" }
+    ),
+    status: text("status").default("draft").notNull(),
+    currency: text("currency").default("BRL").notNull(),
+    subtotalCents: integer("subtotal_cents").default(0).notNull(),
+    discountCents: integer("discount_cents").default(0).notNull(),
+    totalCents: integer("total_cents").default(0).notNull(),
+    dueAt: timestamp("due_at", tz),
+    paidAt: timestamp("paid_at", tz),
+    ...timestamps,
+  },
+  (table) => [
+    index("billing_invoices_organization_created_at_idx").on(
+      table.organizationId,
+      table.createdAt
+    ),
+    index("billing_invoices_status_idx").on(table.status),
+    check(
+      "billing_invoices_status_known_check",
+      sql`${table.status} in ('draft', 'open', 'paid', 'void', 'uncollectible')`
+    ),
+    check(
+      "billing_invoices_amounts_non_negative",
+      sql`${table.subtotalCents} >= 0 and ${table.discountCents} >= 0 and ${table.totalCents} >= 0`
+    ),
+  ]
+);
+
+export const billingPaymentAttempts = pgTable(
+  "billing_payment_attempts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    billingInvoiceId: uuid("billing_invoice_id")
+      .notNull()
+      .references(() => billingInvoices.id, { onDelete: "cascade" }),
+    provider: text("provider").notNull(),
+    providerEventId: text("provider_event_id"),
+    status: text("status").default("pending").notNull(),
+    amountCents: integer("amount_cents").notNull(),
+    attemptedAt: timestamp("attempted_at", tz).defaultNow().notNull(),
+    lastError: text("last_error"),
+    ...timestamps,
+  },
+  (table) => [
+    index("billing_payment_attempts_invoice_id_idx").on(table.billingInvoiceId),
+    index("billing_payment_attempts_status_idx").on(table.status),
+    uniqueIndex("billing_payment_attempts_provider_event_unique_idx")
+      .on(table.provider, table.providerEventId)
+      .where(sql`provider_event_id IS NOT NULL`),
+    check(
+      "billing_payment_attempts_provider_known_check",
+      sql`${table.provider} in ('woovi', 'asaas', 'manual')`
+    ),
+    check(
+      "billing_payment_attempts_status_known_check",
+      sql`${table.status} in ('pending', 'processing', 'succeeded', 'failed')`
+    ),
+    check(
+      "billing_payment_attempts_amount_cents_non_negative",
+      sql`${table.amountCents} >= 0`
+    ),
+  ]
+);
+
+export const billingProviderLinks = pgTable(
+  "billing_provider_links",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    provider: text("provider").notNull(),
+    entityType: text("entity_type").notNull(),
+    externalId: text("external_id").notNull(),
+    billingCustomerId: uuid("billing_customer_id").references(
+      () => billingCustomers.id,
+      { onDelete: "set null" }
+    ),
+    billingSubscriptionId: uuid("billing_subscription_id").references(
+      () => billingSubscriptions.id,
+      { onDelete: "set null" }
+    ),
+    billingInvoiceId: uuid("billing_invoice_id").references(
+      () => billingInvoices.id,
+      { onDelete: "set null" }
+    ),
+    cardBrand: text("card_brand"),
+    cardLast4: text("card_last4"),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex(
+      "billing_provider_links_provider_entity_external_unique_idx"
+    ).on(table.provider, table.entityType, table.externalId),
+    index("billing_provider_links_organization_id_idx").on(
+      table.organizationId
+    ),
+    index("billing_provider_links_subscription_id_idx").on(
+      table.billingSubscriptionId
+    ),
+    index("billing_provider_links_invoice_id_idx").on(table.billingInvoiceId),
+    check(
+      "billing_provider_links_provider_known_check",
+      sql`${table.provider} in ('woovi', 'asaas', 'manual')`
+    ),
+    check(
+      "billing_provider_links_entity_type_known_check",
+      sql`${table.entityType} in ('customer', 'subscription', 'invoice', 'payment_attempt', 'payment_method')`
+    ),
+    check(
+      "billing_provider_links_card_last4_safe_check",
+      sql`${table.cardLast4} is null or length(${table.cardLast4}) <= 4`
+    ),
+  ]
+);
+
+// ---------------------------------------------------------------------------
 // Domain enums
 // ---------------------------------------------------------------------------
 

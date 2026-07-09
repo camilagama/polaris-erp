@@ -1,4 +1,4 @@
-import { runDeploymentSmoke } from "@/lib/deployment-smoke";
+import { runDeploymentSmoke } from "../apps/web/src/lib/deployment-smoke";
 
 const deploymentSmokeUrl = process.env.DEPLOYMENT_SMOKE_URL;
 const cronSecret = process.env.CRON_SECRET;
