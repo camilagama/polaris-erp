@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { forbidden } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
@@ -41,16 +42,19 @@ const AdminDashboard = async () => {
       label: "Organizacoes",
       value: dashboard.summary.organizations,
       detail: `${formatNumber(dashboard.summary.activeOrganizations)} ativas`,
+      href: "/organizations",
     },
     {
       label: "Usuarios",
       value: dashboard.summary.users,
       detail: `${formatNumber(dashboard.summary.members)} memberships`,
+      href: "/users",
     },
     {
       label: "Admins internos",
       value: dashboard.summary.platformAdmins,
       detail: `${formatNumber(dashboard.summary.disabledPlatformAdmins)} desativados`,
+      href: null,
     },
   ] as const;
   const healthCards = [
@@ -110,9 +114,12 @@ const AdminDashboard = async () => {
 
         <div className="grid gap-4 md:grid-cols-3">
           {summaryCards.map((card) => (
-            <article
-              className="rounded-lg border border-zinc-800 bg-zinc-900 p-4"
+            <Link
+              aria-disabled={!card.href}
+              className="rounded-lg border border-zinc-800 bg-zinc-900 p-4 transition-colors hover:border-zinc-700 hover:bg-zinc-900/80"
+              href={card.href ?? "/"}
               key={card.label}
+              prefetch={false}
             >
               <h2 className="font-medium text-sm text-zinc-400 tracking-normal">
                 {card.label}
@@ -121,7 +128,7 @@ const AdminDashboard = async () => {
                 {formatNumber(card.value)}
               </p>
               <p className="mt-2 text-sm text-zinc-500">{card.detail}</p>
-            </article>
+            </Link>
           ))}
         </div>
 

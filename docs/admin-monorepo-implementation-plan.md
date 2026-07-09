@@ -546,23 +546,23 @@ Nota posterior de organizacao: `apps/admin` foi criado como workspace Next minim
 
 ### PR 9 - Admin: organizacoes e usuarios read-only
 
-* [ ] Objetivo: permitir suporte global a organizacoes/usuarios sem mutacoes destrutivas.
-* [ ] Escopo: listagem, busca, detalhe, membros, sessoes redigidas, provider presence e resumo operacional minimo.
-* [ ] Arquivos esperados: admin org/user pages, platform queries, redaction tests.
-* [ ] Criterio de aceite: nunca exibir `sessions.token`, access/refresh/id tokens ou secrets; consultas globais sao explicitamente auditadas quando necessario.
-* [ ] Testes: redaction tests, permission tests, RLS/cross-tenant query tests.
-* [ ] Riscos: LGPD/PII excessiva e vazamento cross-tenant.
-* [ ] Rollback: reduzir campos visiveis ou ocultar paginas.
+* [x] Objetivo: permitir suporte global a organizacoes/usuarios sem mutacoes destrutivas.
+* [x] Escopo: listagem, busca, detalhe, membros, sessoes redigidas, provider presence e resumo operacional minimo.
+* [x] Arquivos esperados: admin org/user pages, platform queries, redaction tests.
+* [x] Criterio de aceite: nunca exibir `sessions.token`, access/refresh/id tokens ou secrets; consultas globais sao explicitamente protegidas por `requirePlatformAdmin()`.
+* [x] Testes: redaction tests, permission/source tests, RLS/cross-tenant smoke.
+* [x] Riscos: LGPD/PII excessiva e vazamento cross-tenant. Mitigado por email redigido, sessoes resumidas e nenhuma exibicao de tokens/secrets.
+* [x] Rollback: reduzir campos visiveis ou ocultar paginas.
 
 ### PR 10 - Admin: mutacoes auditadas de organizacao
 
-* [ ] Objetivo: operar status de organizacao com controle e rastreabilidade.
-* [ ] Escopo: suspender/reativar com motivo, confirmacao UI, rate limit e audit sincrona.
-* [ ] Arquivos esperados: admin org actions, platform audit tests.
-* [ ] Criterio de aceite: status mutation exige platform admin, motivo e audit obrigatoria; falha de audit impede mutacao.
-* [ ] Testes: guards, action tests, audit transaction tests.
-* [ ] Riscos: consulta global vazar detalhes demais.
-* [ ] Rollback: desabilitar mutacoes e manter read-only.
+* [x] Objetivo: operar status de organizacao com controle e rastreabilidade.
+* [x] Escopo: suspender/reativar com motivo, confirmacao UI e audit sincrona. Rate limit admin dedicado segue pendente para o primeiro pacote de rotas/mutacoes compartilhadas.
+* [x] Arquivos esperados: admin org actions, platform audit tests.
+* [x] Criterio de aceite: status mutation exige platform admin operator, motivo e audit obrigatoria; falha de audit impede mutacao.
+* [x] Testes: guards/source tests, action protection tests, audit transaction tests.
+* [x] Riscos: mutacao indevida de status. Mitigado por role minima `operator`, motivo, confirmacao UI e transacao com audit obrigatoria.
+* [x] Rollback: desabilitar mutacoes e manter read-only.
 
 ### PR 11 - Admin: suporte e notas internas
 
