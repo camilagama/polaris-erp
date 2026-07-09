@@ -506,23 +506,23 @@ Nota posterior de organizacao: `apps/admin` foi criado como workspace Next minim
 
 ### PR 5 - Schema platform admin e auditoria interna
 
-* [ ] Objetivo: criar base de dados para admin interno sem misturar com tenant roles.
-* [ ] Escopo: tabelas `platform_admins`, `platform_admin_grants`, `platform_audit_events`, `platform_support_notes`; bootstrap auditavel de primeiros admins; helpers de escrita obrigatoria.
-* [ ] Arquivos esperados: package/db ou schema movido, nova migration, testes schema/audit.
-* [ ] Criterio de aceite: platform admins independem de `member`; audit platform nao exige `organization_id`; bootstrap nao cria backdoor permanente.
-* [ ] Testes: `bun run db:generate` se aprovado, `bun run test`, migration em branch Neon isolada.
-* [ ] Riscos: schema sensivel mal modelado.
-* [ ] Rollback: migration aditiva reversivel; sem dados criticos ainda.
+* [x] Objetivo: criar base de dados para admin interno sem misturar com tenant roles.
+* [x] Escopo: tabelas `platform_admins`, `platform_admin_grants`, `platform_audit_events`, `platform_support_notes`; bootstrap auditavel de primeiros admins; helpers de escrita obrigatoria.
+* [x] Arquivos esperados: schema app-local, nova migration, testes schema/audit. `packages/db` continua adiado ate existir segundo consumidor real.
+* [x] Criterio de aceite: platform admins independem de `member`; audit platform nao exige `organization_id`; bootstrap nao cria backdoor permanente.
+* [x] Testes: `bun run db:generate`, testes focados, `bun run test`, `bun run check`, `bun run knip`, `bun run build`, `bun run build:admin`. Migration gerada, ainda nao aplicada em branch Neon.
+* [x] Riscos: schema sensivel mal modelado. Risco restante: migration precisa ser aplicada primeiro em branch Neon isolada.
+* [x] Rollback: migration aditiva reversivel; sem dados criticos ainda.
 
 ### PR 6 - Guards de plataforma e Cloudflare Access
 
-* [ ] Objetivo: implementar autorizacao interna em camadas antes do admin UI.
-* [ ] Escopo: `requirePlatformAdmin()`, validacao Cloudflare Access para admin, rate limit admin, redacao de metadata.
-* [ ] Arquivos esperados: package/auth ou `apps/admin` shared guards, `cloudflare-access` helper, testes de guards.
-* [ ] Criterio de aceite: org admin nao passa como platform admin; Access/session/DB grant precisam concordar.
-* [ ] Testes: `bun run test`, casos de token ausente/invalido/expirado.
-* [ ] Riscos: validar Access de forma incompleta e permitir bypass de origin.
-* [ ] Rollback: manter admin app inacessivel ate corrigir.
+* [x] Objetivo: implementar autorizacao interna em camadas antes do admin UI.
+* [x] Escopo: `requirePlatformAdmin()`, validacao Cloudflare Access para admin, envs opcionais do Access. Rate limit admin e redacao detalhada de metadata ficam para as primeiras rotas/mutacoes reais.
+* [x] Arquivos esperados: helper app-local de platform guard, `cloudflare-access` helper, testes de guards. Package/auth continua adiado ate `apps/admin` consumir de fato.
+* [x] Criterio de aceite: org admin nao passa como platform admin; Access/session/DB grant precisam concordar quando Access esta configurado/enforced.
+* [x] Testes: testes focados de token ausente/config ausente/sucesso mockado; `bun run test`, `bun run check`, `bun run knip`, `bun run build`, `bun run build:admin`.
+* [x] Riscos: validar Access de forma incompleta e permitir bypass de origin. Risco restante: PR7 precisa conectar o guard ao `apps/admin` e configurar Access real no deploy.
+* [x] Rollback: manter admin app inacessivel ate corrigir.
 
 ### PR 7 - Skeleton do admin interno
 

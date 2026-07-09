@@ -195,6 +195,130 @@ export const auditEvents = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// Platform admin tables (internal SaaS operations, not tenant membership)
+// ---------------------------------------------------------------------------
+
+export const platformAdminRoleEnum = pgEnum("platform_admin_role", [
+  "owner",
+  "operator",
+  "support",
+]);
+
+export const platformAdmins = pgTable(
+  "platform_admins",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    status: text("status").default("active").notNull(),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("platform_admins_user_id_unique_idx").on(table.userId),
+    index("platform_admins_status_idx").on(table.status),
+    check(
+      "platform_admins_status_known_check",
+      sql`${table.status} in ('active', 'disabled')`
+    ),
+  ]
+);
+
+export const platformAdminGrants = pgTable(
+  "platform_admin_grants",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    platformAdminId: uuid("platform_admin_id")
+      .notNull()
+      .references(() => platformAdmins.id, { onDelete: "cascade" }),
+    role: platformAdminRoleEnum("role").notNull(),
+    grantedByPlatformAdminId: uuid("granted_by_platform_admin_id").references(
+      () => platformAdmins.id,
+      { onDelete: "set null" }
+    ),
+    reason: text("reason").notNull(),
+    expiresAt: timestamp("expires_at", tz),
+    revokedAt: timestamp("revoked_at", tz),
+    ...timestamps,
+  },
+  (table) => [
+    index("platform_admin_grants_platform_admin_id_idx").on(
+      table.platformAdminId
+    ),
+    index("platform_admin_grants_role_idx").on(table.role),
+    index("platform_admin_grants_active_idx").on(
+      table.platformAdminId,
+      table.revokedAt,
+      table.expiresAt
+    ),
+  ]
+);
+
+export const platformAuditEvents = pgTable(
+  "platform_audit_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    actorPlatformAdminId: uuid("actor_platform_admin_id").references(
+      () => platformAdmins.id,
+      { onDelete: "set null" }
+    ),
+    actorUserId: text("actor_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    action: text("action").notNull(),
+    subjectType: text("subject_type").notNull(),
+    subjectId: text("subject_id"),
+    metadata: jsonb("metadata")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    createdAt: timestamp("created_at", tz).defaultNow().notNull(),
+  },
+  (table) => [
+    index("platform_audit_events_created_at_idx").on(table.createdAt),
+    index("platform_audit_events_actor_platform_admin_id_idx").on(
+      table.actorPlatformAdminId
+    ),
+    index("platform_audit_events_action_idx").on(table.action),
+  ]
+);
+
+export const platformSupportNotes = pgTable(
+  "platform_support_notes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    authorPlatformAdminId: uuid("author_platform_admin_id").references(
+      () => platformAdmins.id,
+      { onDelete: "set null" }
+    ),
+    organizationId: text("organization_id").references(() => organization.id, {
+      onDelete: "set null",
+    }),
+    customerUserId: text("customer_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    body: text("body").notNull(),
+    metadata: jsonb("metadata")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    ...timestamps,
+  },
+  (table) => [
+    index("platform_support_notes_author_platform_admin_id_idx").on(
+      table.authorPlatformAdminId
+    ),
+    index("platform_support_notes_organization_id_idx").on(
+      table.organizationId
+    ),
+    index("platform_support_notes_customer_user_id_idx").on(
+      table.customerUserId
+    ),
+    index("platform_support_notes_created_at_idx").on(table.createdAt),
+  ]
+);
+
+// ---------------------------------------------------------------------------
 // Domain enums
 // ---------------------------------------------------------------------------
 

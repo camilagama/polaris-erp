@@ -8,6 +8,8 @@ const stubRequiredEnv = (
   const optionalEnvNames = [
     "ALLOW_PLAYWRIGHT_BOOTSTRAP",
     "BETTER_AUTH_API_KEY",
+    "CLOUDFLARE_ACCESS_AUD",
+    "CLOUDFLARE_ACCESS_TEAM_DOMAIN",
     "CRON_SECRET",
     "DATABASE_URL_DIRECT",
     "GOOGLE_CLIENT_ID",
