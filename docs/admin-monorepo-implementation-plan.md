@@ -622,7 +622,7 @@ Rollback:
 * [ ] Riscos: divergencia entre status Woovi e estado canonico.
 * [ ] Rollback: desabilitar adapter Woovi e manter assinaturas existentes em modo manual.
 
-### PR 17 - Asaas cartao de credito
+### PR 17 - Asaas cartao de credito recorrente
 
 * [ ] Objetivo: integrar assinaturas de cartao de credito com Asaas.
 * [ ] Escopo: adapter Asaas, customer/subscription, atualizacao de cartao quando permitido, webhook payments/subscriptions, idempotencia por event id.
@@ -697,14 +697,3 @@ Rollback:
 6. "Implemente o PR 6 de `requirePlatformAdmin()` e Cloudflare Access validation, sem UI admin ainda."
 7. "Execute o PR 7: crie `apps/admin` protegido, sem acoes perigosas."
 8. "Planeje o PR 13: fundacao de eventos/outbox/webhook idempotente antes de Resend, Woovi e Asaas."
-
-## Fontes Consultadas
-
-- Codigo e docs locais: `package.json`, `tsconfig.json`, `next.config.ts`, `drizzle.config.ts`, `proxy.ts`, `src/db/schema.ts`, `src/lib/auth.ts`, `src/lib/app-session.ts`, `src/lib/audit-log.ts`, `src/lib/rate-limit.ts`, `src/features/products/image-storage.ts`, `.github/workflows/ci.yml`, `docs/roadmap.md`, `docs/rls-tenant-isolation.md`, `docs/database-environments.md`, `docs/deploy-vercel.md`, `docs/product-images-r2.md`, `README.md`.
-- Subagents read-only 1-12: arquitetura, DB/Drizzle, auth, monorepo/Turbo, admin MVP, API layer, jobs/eventos, seguranca, flags, testes/CI, produto/SaaS readiness, DevEx/governanca.
-- Subagents read-only desta revisao: monorepo/admin decidido, email/billing Resend/Woovi/Asaas, consistencia do documento.
-- Context7 docs: Turborepo `/vercel/turborepo`, Next.js `/vercel/next.js/v16.2.2` (projeto em `16.2.1`), Better Auth `/better-auth/better-auth/v1.6.23`, Drizzle `/drizzle-team/drizzle-orm-docs`, Neon `/websites/neon`, Cloudflare R2 `/websites/developers_cloudflare_r2`, Upstash Rate Limit `/websites/upstash_redis_sdks_ratelimit-`, Inngest `/inngest/website`, Hono `/websites/hono_dev`, Elysia `/elysiajs/documentation`, tRPC `/trpc/trpc`, oRPC `/dinwwwh/orpc`, Express `/websites/expressjs`, Vercel Flags `/vercel/flags`, React `/reactjs/react.dev`.
-- Context7 docs desta revisao: Resend `/websites/resend`, Woovi `/websites/developers_woovi`, Asaas `/llmstxt/asaas_llms_txt`.
-- Docs oficiais via links: Resend webhook verification `https://resend.com/docs/webhooks/verify-webhooks-requests`; Woovi Pix Automatico/webhooks `https://developers.woovi.com/docs/pix-automatic/webhooks/pix-automatic-webhooks`; Asaas webhooks/idempotencia `https://docs.asaas.com/docs/about-webhooks` e `https://docs.asaas.com/docs/subscription-events`.
-- Cloudflare Access/Zero Trust docs via Context7 `/cloudflare/cloudflare-docs`.
-- Codex manual oficial: `C:\Users\Junior\AppData\Local\Temp\openai-docs-cache\codex-manual.md`.
