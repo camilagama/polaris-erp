@@ -1,0 +1,98 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "globalDependencies": [".env*"],
+  "globalEnv": [
+    "BETTER_AUTH_URL",
+    "NEXT_PUBLIC_APP_URL",
+    "NEXT_PUBLIC_GOOGLE_CLIENT_ID",
+    "NEXT_PUBLIC_SENTRY_DSN",
+    "NODE_ENV",
+    "R2_PUBLIC_BASE_URL",
+    "SENTRY_DSN",
+    "VERCEL_ENV"
+  ],
+  "globalPassThroughEnv": [
+    "ALLOW_PLAYWRIGHT_BOOTSTRAP",
+    "BETTER_AUTH_API_KEY",
+    "BETTER_AUTH_SECRET",
+    "CRON_SECRET",
+    "DATABASE_URL",
+    "DATABASE_URL_DIRECT",
+    "DEPLOYMENT_SMOKE_URL",
+    "E2E_CRON_SECRET",
+    "E2E_DATABASE_URL",
+    "E2E_INTERNAL_BOOTSTRAP_SECRET",
+    "GOOGLE_CLIENT_ID",
+    "GOOGLE_CLIENT_SECRET",
+    "INTERNAL_BOOTSTRAP_SECRET",
+    "R2_ACCESS_KEY_ID",
+    "R2_ACCOUNT_ID",
+    "R2_BUCKET_PUBLIC",
+    "R2_BUCKET_STAGING",
+    "R2_SECRET_ACCESS_KEY",
+    "RLS_DATABASE_URL",
+    "SENTRY_AUTH_TOKEN",
+    "SENTRY_ORG",
+    "SENTRY_PROJECT",
+    "UPSTASH_REDIS_REST_TOKEN",
+    "UPSTASH_REDIS_REST_URL"
+  ],
+  "tasks": {
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": [".next/**", "!.next/cache/**", "!.next/dev/**"]
+    },
+    "start": {
+      "cache": false,
+      "persistent": true
+    },
+    "test": {
+      "dependsOn": ["^test"],
+      "outputs": []
+    },
+    "test:e2e": {
+      "cache": false
+    },
+    "check": {
+      "dependsOn": ["^check"],
+      "outputs": []
+    },
+    "fix": {
+      "cache": false
+    },
+    "knip": {
+      "dependsOn": ["^knip"],
+      "outputs": []
+    },
+    "db:generate": {
+      "cache": false
+    },
+    "db:migrate": {
+      "cache": false
+    },
+    "db:push": {
+      "cache": false
+    },
+    "prod:preflight": {
+      "cache": false
+    },
+    "deploy:smoke": {
+      "cache": false
+    },
+    "db:smoke:rls": {
+      "cache": false
+    },
+    "db:analyze:listings": {
+      "cache": false
+    },
+    "db:studio": {
+      "cache": false,
+      "persistent": true
+    }
+  }
+}

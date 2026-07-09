@@ -20,15 +20,15 @@
       }
     ],
     "paths": {
-      "@/*": ["./apps/web/src/*"]
+      "@/*": ["./src/*"]
     }
   },
   "include": [
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    "apps/web/.next/types/**/*.ts",
-    "apps/web/.next/dev/types/**/*.ts",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
   "exclude": ["node_modules"]

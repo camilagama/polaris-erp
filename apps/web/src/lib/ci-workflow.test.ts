@@ -1,9 +1,12 @@
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-const readCiWorkflow = () =>
-  readFileSync(join(process.cwd(), ".github", "workflows", "ci.yml"), "utf8");
+const CI_WORKFLOW_PATH = fileURLToPath(
+  new URL("../../../../.github/workflows/ci.yml", import.meta.url)
+);
+
+const readCiWorkflow = () => readFileSync(CI_WORKFLOW_PATH, "utf8");
 
 const RLS_DATABASE_URL_SECRET_PATTERN =
   /DATABASE_URL:\s*\$\{\{\s*secrets\.RLS_DATABASE_URL\s*\}\}/;

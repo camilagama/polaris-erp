@@ -464,23 +464,23 @@ Rollback:
 
 ### PR 1 - Monorepo baseline
 
-* [ ] Objetivo: criar o baseline de monorepo sem mudar comportamento.
-* [ ] Escopo: Bun workspaces, `turbo.json`, scripts root delegando para apps/packages, ajustes iniciais de CI.
-* [ ] Arquivos esperados: `package.json`, `turbo.json`, configs de workspace, `.github/workflows/ci.yml`.
-* [ ] Criterio de aceite: o app atual ainda roda/builda/testa no root sem mudanca funcional.
-* [ ] Testes: `bun run check`, `bun run test`, `bun run build`.
-* [ ] Riscos: root scripts assumem app unico e CI pode passar a executar alvos errados.
-* [ ] Rollback: reverter workspace/Turbo antes de mover arquivos.
+* [x] Objetivo: criar o baseline de monorepo sem mudar comportamento.
+* [x] Escopo: Bun workspaces, `turbo.json`, scripts root delegando para apps/packages; CI mantido porque os comandos root preservaram os mesmos nomes.
+* [x] Arquivos alterados: `package.json`, `bun.lock`, `turbo.json`, `apps/web/package.json`, `knip.config.ts`.
+* [x] Criterio de aceite: o app atual ainda roda/builda/testa no root sem mudanca funcional.
+* [x] Testes: `bun run check`, `bun run test`, `bun run knip`, `bun run build`.
+* [x] Riscos: `apps/web` e um workspace proxy ate o PR 2; cache de output do build fica desabilitado no Turbo ate o app ser movido fisicamente para `apps/web`.
+* [x] Rollback: reverter workspace/Turbo antes de mover arquivos.
 
 ### PR 2 - Mover app atual para `apps/web`
 
-* [ ] Objetivo: separar fisicamente o app cliente como primeira superficie do monorepo.
-* [ ] Escopo: mover `src`, configs Next/Tailwind/PostCSS/shadcn, assets e testes relacionados para `apps/web`; ajustar scripts root e Vercel root.
-* [ ] Arquivos esperados: `apps/web/*`, `package.json`, `tsconfig.json`, `next.config.ts` movido/ajustado, `components.json`, `vitest.config.ts`, `playwright.config.ts`, `knip.config.ts`, `drizzle.config.ts`, `vercel.json`, CI.
-* [ ] Criterio de aceite: comportamento preservado; aliases `@/*`, Drizzle schema/migrations, Playwright e shadcn apontam para o novo root correto.
-* [ ] Testes: `bun run check`, `bun run test`, `bun run knip`, `bun run build`, `bun run test:e2e`.
-* [ ] Riscos: quebrar `@/*`, import de `@/lib/security-headers` no Next config, Drizzle `./src/db`, Vitest `src/**/*.test.ts`, Playwright root e cron em `vercel.json`.
-* [ ] Rollback: reverter move antes de extracoes.
+* [x] Objetivo: separar fisicamente o app cliente como primeira superficie do monorepo.
+* [x] Escopo: mover `src`, configs Next/Tailwind/PostCSS/shadcn, assets e testes relacionados para `apps/web`; ajustar scripts root e Vercel root.
+* [x] Arquivos esperados: `apps/web/*`, `package.json`, `tsconfig.json`, `next.config.ts` movido/ajustado, `components.json`, `vitest.config.ts`, `playwright.config.ts`, `knip.config.ts`, `drizzle.config.ts`, `vercel.json`, CI.
+* [x] Criterio de aceite: comportamento preservado; aliases `@/*`, Drizzle schema/migrations, Playwright e shadcn apontam para o novo root correto.
+* [x] Testes: `bun run check`, `bun run test`, `bun run knip`, `bun run build`, `bun run test:e2e`.
+* [x] Riscos: quebrar `@/*`, import de `@/lib/security-headers` no Next config, Drizzle `./src/db`, Vitest `src/**/*.test.ts`, Playwright root e cron em `vercel.json`.
+* [x] Rollback: reverter move antes de extracoes.
 
 ### PR 3 - Extrair packages minimos
 

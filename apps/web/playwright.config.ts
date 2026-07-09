@@ -6,6 +6,7 @@ import {
   E2E_DEFAULT_INTERNAL_BOOTSTRAP_SECRET,
 } from "./tests/e2e/constants";
 
+loadEnvConfig("../..");
 loadEnvConfig(process.cwd());
 
 const isCi = process.env.CI === "true";

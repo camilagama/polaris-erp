@@ -5,6 +5,35 @@ vi.mock("server-only", () => ({}));
 const stubRequiredEnv = (
   overrides: Record<string, string | undefined> = {}
 ) => {
+  const optionalEnvNames = [
+    "ALLOW_PLAYWRIGHT_BOOTSTRAP",
+    "BETTER_AUTH_API_KEY",
+    "CRON_SECRET",
+    "DATABASE_URL_DIRECT",
+    "GOOGLE_CLIENT_ID",
+    "GOOGLE_CLIENT_SECRET",
+    "INTERNAL_BOOTSTRAP_SECRET",
+    "NEXT_PUBLIC_GOOGLE_CLIENT_ID",
+    "NEXT_PUBLIC_SENTRY_DSN",
+    "R2_ACCESS_KEY_ID",
+    "R2_ACCOUNT_ID",
+    "R2_BUCKET_PUBLIC",
+    "R2_BUCKET_STAGING",
+    "R2_PUBLIC_BASE_URL",
+    "R2_SECRET_ACCESS_KEY",
+    "SENTRY_AUTH_TOKEN",
+    "SENTRY_DSN",
+    "SENTRY_ORG",
+    "SENTRY_PROJECT",
+    "UPSTASH_REDIS_REST_TOKEN",
+    "UPSTASH_REDIS_REST_URL",
+    "VERCEL_ENV",
+  ];
+
+  for (const envName of optionalEnvNames) {
+    vi.stubEnv(envName, "");
+  }
+
   vi.stubEnv("DATABASE_URL", "postgres://user:pass@example.com:5432/app");
   vi.stubEnv("BETTER_AUTH_SECRET", "a".repeat(32));
   vi.stubEnv("BETTER_AUTH_URL", "https://app.example.com");

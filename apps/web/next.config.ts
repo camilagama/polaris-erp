@@ -1,6 +1,9 @@
+import { loadEnvConfig } from "@next/env";
 import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 import { getSecurityHeaders } from "@/lib/security-headers";
+
+loadEnvConfig("../..");
 
 const TRAILING_SLASH_PATTERN = /\/$/;
 const PLACEHOLDER_DOMAIN_PATTERN = /seu-dominio\.com/i;

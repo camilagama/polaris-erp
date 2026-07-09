@@ -1,5 +1,9 @@
 import "server-only";
+import { config } from "dotenv";
 import { z } from "zod";
+
+config({ path: "../../.env.local", quiet: true });
+config({ path: ".env.local", quiet: true });
 
 const optionalNonEmptyString = z.preprocess((value) => {
   if (typeof value !== "string") {
@@ -10,17 +14,35 @@ const optionalNonEmptyString = z.preprocess((value) => {
   return trimmedValue.length === 0 ? undefined : trimmedValue;
 }, z.string().min(1).optional());
 
+const optionalVercelEnvironment = z.preprocess((value) => {
+  if (typeof value !== "string") {
+    return value;
+  }
+
+  const trimmedValue = value.trim();
+  return trimmedValue.length === 0 ? undefined : trimmedValue;
+}, z.enum(["development", "preview", "production"]).optional());
+
+const optionalBooleanString = z.preprocess((value) => {
+  if (typeof value !== "string") {
+    return value;
+  }
+
+  const trimmedValue = value.trim();
+  return trimmedValue.length === 0 ? undefined : trimmedValue;
+}, z.enum(["true", "false"]).optional());
+
 const MINIMUM_AUTH_SECRET_LENGTH = 32;
 const MINIMUM_INTERNAL_SECRET_LENGTH = 32;
 
 const serverEnvSchema = z
   .object({
     DATABASE_URL: z.string().min(1),
-    DATABASE_URL_DIRECT: z.string().min(1).optional(),
+    DATABASE_URL_DIRECT: optionalNonEmptyString,
     BETTER_AUTH_SECRET: z.string().min(1),
     BETTER_AUTH_URL: z.string().url(),
     BETTER_AUTH_API_KEY: optionalNonEmptyString,
-    ALLOW_PLAYWRIGHT_BOOTSTRAP: z.enum(["true", "false"]).optional(),
+    ALLOW_PLAYWRIGHT_BOOTSTRAP: optionalBooleanString,
     CRON_SECRET: optionalNonEmptyString,
     INTERNAL_BOOTSTRAP_SECRET: optionalNonEmptyString,
     GOOGLE_CLIENT_ID: optionalNonEmptyString,
@@ -64,7 +86,7 @@ const serverEnvSchema = z
       const trimmedValue = value.trim();
       return trimmedValue.length === 0 ? undefined : trimmedValue;
     }, z.string().url().optional()),
-    VERCEL_ENV: z.enum(["development", "preview", "production"]).optional(),
+    VERCEL_ENV: optionalVercelEnvironment,
   })
   .superRefine((env, context) => {
     if (
