@@ -1,5 +1,6 @@
 import "server-only";
 
+import { captureWebhookEvent, enqueueOutboxEvent } from "@polaris/events";
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import { db } from "@/db";
@@ -8,10 +9,6 @@ import {
   redactResendWebhookPayload,
 } from "@/lib/email-service";
 import { serverEnv } from "@/lib/env";
-import {
-  captureWebhookEvent,
-  enqueueOutboxEvent,
-} from "@/lib/event-foundation";
 import { sendOutboxEventToInngest } from "@/lib/inngest-client";
 
 const getWebhookHeaders = (request: Request) => {

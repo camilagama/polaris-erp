@@ -1,9 +1,9 @@
 import "server-only";
 
 import { createHash } from "node:crypto";
+import { webhookEvents } from "@polaris/db/schema";
 import { type SQL, sql } from "drizzle-orm";
 import type { IndexColumn } from "drizzle-orm/pg-core";
-import { webhookEvents } from "@/db/schema";
 
 const MAX_OUTBOX_ATTEMPTS = 5;
 
@@ -288,16 +288,23 @@ export const markOutboxEventFailed = async ({
   db,
   error,
   eventId,
+  terminal = false,
 }: {
   db: QueryableDb;
   error: string;
   eventId: string;
+  terminal?: boolean;
 }): Promise<void> => {
   await db.execute(sql`
     update event_outbox
     set status = case
+          when ${terminal} then 'failed'
           when attempts >= ${MAX_OUTBOX_ATTEMPTS} then 'dead_letter'
-          else 'failed'
+          else 'pending'
+        end,
+        available_at = case
+          when ${terminal} or attempts >= ${MAX_OUTBOX_ATTEMPTS} then available_at
+          else now()
         end,
         last_error = ${error},
         updated_at = now()

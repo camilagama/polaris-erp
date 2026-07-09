@@ -1,4 +1,3 @@
-import { describe, expect, it, vi } from "vitest";
 import {
   buildWebhookEventKey,
   captureWebhookEvent,
@@ -8,7 +7,8 @@ import {
   markOutboxEventFailed,
   markOutboxEventProcessed,
   redactWebhookHeaders,
-} from "@/lib/event-foundation";
+} from "@polaris/events";
+import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 

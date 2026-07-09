@@ -1,10 +1,10 @@
-import { db } from "@/db";
 import {
   claimOutboxEvent,
   markOutboxEventFailed,
   markOutboxEventProcessed,
   type QueryableDb,
-} from "@/lib/event-foundation";
+} from "@polaris/events";
+import { db } from "@/db";
 import { inngest, OUTBOX_EVENT_PENDING } from "@/lib/inngest-client";
 
 type OutboxDispatcher = (
@@ -47,6 +47,7 @@ export const processOutboxEvent = async (
       db: database,
       error: `No outbox dispatcher registered for ${event.topic}:${event.eventType}.`,
       eventId: event.id,
+      terminal: true,
     });
 
     return "failed";

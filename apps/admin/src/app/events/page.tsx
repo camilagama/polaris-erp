@@ -1,9 +1,9 @@
+import { db } from "@polaris/db";
+import { listEventOutbox, listWebhookEvents } from "@polaris/events";
 import Link from "next/link";
 import { forbidden } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { db } from "@/db";
-import { listEventOutbox, listWebhookEvents } from "@/lib/event-foundation";
 import { requirePlatformAdmin } from "@/lib/platform-admin-auth";
 import { retryOutboxEventAction } from "./actions";
 

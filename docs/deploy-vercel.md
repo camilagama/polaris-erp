@@ -46,6 +46,8 @@ Configure em Production e replique/adapte para Preview:
 | `ALLOW_PLAYWRIGHT_BOOTSTRAP` | Nunca em producao real; apenas E2E com banco isolado. |
 | `CLOUDFLARE_ACCESS_AUD` | Audience do Cloudflare Access para o admin interno. Obrigatorio em producao. |
 | `CLOUDFLARE_ACCESS_TEAM_DOMAIN` | Team domain do Cloudflare Access usado para validar `Cf-Access-Jwt-Assertion`. Obrigatorio em producao. |
+| `INNGEST_EVENT_KEY` | Chave de eventos do Inngest usada para enviar eventos do outbox em producao. |
+| `INNGEST_SIGNING_KEY` | Chave de assinatura do Inngest usada para autenticar invocacoes cloud da rota `/api/inngest`. |
 
 Em producao, sem Upstash configurado o rate limit falha fechado para endpoints sensiveis.
 
@@ -64,7 +66,7 @@ RLS e obrigatorio em producao. Nao configure o runtime com `neondb_owner`: esse 
 - `/api/health` nao exige segredo e deve retornar apenas status sanitizado. Falha de banco retorna `503` sem mensagem interna.
 - `/api/internal/health/r2` exige `Authorization: Bearer $CRON_SECRET` e nao deve expor chaves secretas.
 - Migrations destrutivas ou com precheck devem ser aplicadas primeiro em branch Neon isolada.
-- `bun run prod:preflight` valida wiring basico de producao antes de deploy: URLs runtime/migration/E2E separadas com `sslmode=verify-full`, smoke RLS configurado, bootstrap E2E desligado em Production, secrets fortes, origens canonicas alinhadas e envs obrigatorios de Google/R2/Upstash.
+- `bun run prod:preflight` valida wiring basico de producao antes de deploy: URLs runtime/migration/E2E separadas com `sslmode=verify-full`, smoke RLS configurado, bootstrap E2E desligado em Production, secrets fortes, origens canonicas alinhadas e envs obrigatorios de Google/R2/Upstash/Inngest/Sentry.
 - `ADMIN_APP_URL` precisa estar em origem separada do app publico e protegida por Cloudflare Access. O preflight exige `CLOUDFLARE_ACCESS_AUD` e `CLOUDFLARE_ACCESS_TEAM_DOMAIN` em producao.
 
 ## Admin interno
@@ -241,7 +243,7 @@ O workflow `.github/workflows/ci.yml` roda:
 - `bun run test:e2e:admin` no job `admin-e2e`, dependente de `E2E_DATABASE_URL`
 - `bun run db:smoke:rls` no job manual `rls-smoke`, dependente de `RLS_DATABASE_URL`
 - `bun run deploy:smoke` no job manual `deployment-smoke`, dependente de `DEPLOYMENT_SMOKE_URL` e `CRON_SECRET`
-- `bun run prod:preflight` no job manual `production-preflight`, dependente de `PRODUCTION_DATABASE_URL`, `PRODUCTION_DATABASE_URL_DIRECT`, `PRODUCTION_BETTER_AUTH_URL`, `PRODUCTION_NEXT_PUBLIC_APP_URL`, `DEPLOYMENT_SMOKE_URL`, `E2E_DATABASE_URL`, `RLS_DATABASE_URL`, Google OAuth, R2, Upstash, `BETTER_AUTH_SECRET` e `CRON_SECRET`
+- `bun run prod:preflight` no job manual `production-preflight`, dependente de `PRODUCTION_DATABASE_URL`, `PRODUCTION_DATABASE_URL_DIRECT`, `PRODUCTION_BETTER_AUTH_URL`, `PRODUCTION_NEXT_PUBLIC_APP_URL`, `DEPLOYMENT_SMOKE_URL`, `E2E_DATABASE_URL`, `RLS_DATABASE_URL`, Google OAuth, R2, Upstash, Inngest, Sentry, `BETTER_AUTH_SECRET` e `CRON_SECRET`
 
 Antes de promover producao, confira se o secret `E2E_DATABASE_URL` aponta para uma branch Neon isolada.
 

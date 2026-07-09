@@ -59,7 +59,7 @@ Pontos frageis:
 
 - Deploy real de admin ainda depende de Vercel linkado/autenticado, `ADMIN_APP_URL`, Cloudflare Access e protection de preview.
 - `apps/admin` ainda depende de alias temporario para `apps/web/src`; o guardrail atual impede expansao, mas nao substitui extracao de packages.
-- Envs reais de producao ainda faltam para `prod:preflight` e `deploy:smoke`.
+- Envs reais de producao ainda faltam para `prod:preflight` e `deploy:smoke`; o preflight agora tambem exige credenciais Inngest.
 - URLs Postgres locais usam `sslmode=require`; o preflight de producao exige `sslmode=verify-full`.
 - Branch Neon `production` nao esta protegida e o projeto `free_v3` tem `history_retention_seconds=21600`.
 - Migrations foram aplicadas no branch E2E; a aplicacao em producao ainda nao foi validada com `DATABASE_URL_DIRECT`.
@@ -503,12 +503,12 @@ Nota posterior de organizacao: `apps/admin` foi criado como workspace Next minim
 ### PR 3 - Extrair packages minimos
 
 * [x] Objetivo: compartilhar apenas o que `apps/web` e `apps/admin` realmente consomem.
-* [x] Escopo: extrair `@polaris/config` primeiro; extrair `@polaris/db`, `@polaris/auth`, `@polaris/ui` e `@polaris/domain` somente quando houver segundo consumidor claro. Concluido: apenas `@polaris/config`; `db/auth/ui/domain` permanecem app-local ate `apps/admin`.
-* [x] Arquivos esperados: `packages/config`, possivelmente `packages/db`, `packages/auth`, `packages/ui`, `packages/domain`. Concluido: `packages/config`.
-* [x] Criterio de aceite: sem package `utils` generico; packages nao importam features do app cliente; boundaries testadas.
+* [x] Escopo: extrair `@polaris/config` primeiro; extrair `@polaris/db`, `@polaris/auth`, `@polaris/ui` e `@polaris/domain` somente quando houver segundo consumidor claro. Concluido: `@polaris/config` e fundacao `@polaris/db`; `apps/admin` nao importa mais `@/db`, mas `auth/platform/events` ainda permanecem temporariamente app-local.
+* [x] Arquivos esperados: `packages/config`, possivelmente `packages/db`, `packages/auth`, `packages/ui`, `packages/domain`. Concluido: `packages/config` e `packages/db` com schema/client/tenant-context sincronizados ao schema atual do web.
+* [x] Criterio de aceite: sem package `utils` generico; packages nao importam features do app cliente; boundaries testadas. Concluido parcialmente para DB: `@polaris/db` nao importa `apps/web`, e o boundary test removeu os imports `@/db` do admin.
 * [x] Testes: typecheck/build/test, boundary tests, `bun run knip`.
 * [x] Riscos: extrair features demais e criar dependencias circulares.
-* [x] Rollback: manter codigo app-local ate segundo consumidor existir.
+* [x] Rollback: manter codigo app-local ate segundo consumidor existir. Status atual: web ainda mantem compatibilidade app-local para reduzir blast radius; teste de sync impede divergencia de schema ate migracao completa.
 
 ### PR 4 - Hardening pre-admin e smokes cross-tenant
 
@@ -524,7 +524,7 @@ Nota posterior de organizacao: `apps/admin` foi criado como workspace Next minim
 
 * [x] Objetivo: criar base de dados para admin interno sem misturar com tenant roles.
 * [x] Escopo: tabelas `platform_admins`, `platform_admin_grants`, `platform_audit_events`, `platform_support_notes`; bootstrap auditavel de primeiros admins; helpers de escrita obrigatoria.
-* [x] Arquivos esperados: schema app-local, nova migration, testes schema/audit. `packages/db` continua adiado ate existir segundo consumidor real.
+* [x] Arquivos esperados: schema app-local, nova migration, testes schema/audit. Status atual: `@polaris/db` foi iniciado para schema/client/tenant-context compartilhados; migrations e ownership Drizzle ainda permanecem app-local ate a migracao completa do package DB.
 * [x] Criterio de aceite: platform admins independem de `member`; audit platform nao exige `organization_id`; bootstrap nao cria backdoor permanente.
 * [x] Testes: `bun run db:generate`, testes focados, `bun run test`, `bun run check`, `bun run knip`, `bun run build`, `bun run build:admin`. Migration gerada, ainda nao aplicada em branch Neon.
 * [x] Riscos: schema sensivel mal modelado. Risco restante: migration precisa ser aplicada primeiro em branch Neon isolada.
@@ -604,10 +604,10 @@ Nota posterior de organizacao: `apps/admin` foi criado como workspace Next minim
 
 * [x] Objetivo: preparar a base duravel para Resend, Woovi e Asaas.
 * [x] Escopo: outbox Postgres, `webhook_events`, status de processamento, correlation IDs, retry manual/observabilidade no admin, helpers de raw body/hash/header redaction/token-safe capture, claim/finalizacao de outbox, rota Inngest inicial e produtores reais via webhooks Resend/Woovi/Asaas.
-* [x] Arquivos esperados: modulo app-local equivalente a `packages/events`, schema/migration, route handler helpers, Inngest App Router route, fixtures/tests.
+* [x] Arquivos esperados: modulo compartilhado `@polaris/events`, schema/migration, route handler helpers, Inngest App Router route, fixtures/tests.
 * [x] Criterio de aceite: evento duplicado nao reprocessa; falha fica rastreavel; handlers conseguem capturar evento duravel e responder rapido; processamento pesado fica async/outbox/Inngest.
 * [x] Testes: unit/integration de retries, idempotencia, dead-letter/manual review, claim/finalizacao do outbox e source test da rota Inngest.
-* [x] Riscos: criar fila caseira complexa demais. Mitigado com base minima: tabelas aditivas, captura idempotente, observabilidade read-only, retry manual restrito e Inngest para processamento duravel. Migration gerada, ainda nao aplicada. Risco restante: dispatchers reais de email/billing ainda precisam ser registrados; por enquanto webhooks Resend/Woovi/Asaas continuam preservando os efeitos sincronamente tambem.
+* [x] Riscos: criar fila caseira complexa demais. Mitigado com base minima: `@polaris/events`, tabelas aditivas, captura idempotente, observabilidade read-only, retry manual restrito e Inngest para processamento duravel. Migration gerada, ainda nao aplicada. Risco restante: dispatchers reais de email/billing ainda precisam ser registrados; por enquanto webhooks Resend/Woovi/Asaas continuam preservando os efeitos sincronamente tambem.
 * [x] Rollback: manter eventos sincronizados ate haver caso real.
 
 ### PR 14 - Emails transacionais com Resend
@@ -662,6 +662,8 @@ Nota posterior de organizacao: `apps/admin` foi criado como workspace Next minim
 
 ## 15. Checklist Final de Producao
 
+Revisao complementar: `docs/admin-monorepo-full-review-2026-07-09.md`.
+
 * [x] `bun run check` passou.
 * [x] `bun run typecheck` passou para web.
 * [x] `bun run test` passou.
@@ -682,7 +684,8 @@ Nota posterior de organizacao: `apps/admin` foi criado como workspace Next minim
 * [ ] OAuth callbacks corretos para app e admin.
 * [ ] R2 staging/final configurados; lifecycle staging ativo.
 * [ ] Upstash configurado em producao.
-* [ ] Sentry DSN/alerts configurados.
+* [x] `prod:preflight` exige `SENTRY_DSN` e `NEXT_PUBLIC_SENTRY_DSN` em producao.
+* [ ] Sentry alerts configurados para webhook/outbox/admin.
 * [ ] CSP report-only validada antes de enforcement.
 * [x] Platform audit obrigatoria para acoes sensiveis.
 * [x] Script auditavel para bootstrap do primeiro platform admin existe: `bun run platform-admin:bootstrap`.

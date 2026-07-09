@@ -1,14 +1,11 @@
 import "server-only";
 
+import { captureWebhookEvent, enqueueOutboxEvent } from "@polaris/events";
 import { sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { reconcileAsaasBillingEvent } from "@/lib/asaas-billing-reconciliation";
 import { serverEnv } from "@/lib/env";
-import {
-  captureWebhookEvent,
-  enqueueOutboxEvent,
-} from "@/lib/event-foundation";
 import { sendOutboxEventToInngest } from "@/lib/inngest-client";
 
 const ACCESS_TOKEN_HEADER = "asaas-access-token";

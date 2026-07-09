@@ -9,7 +9,6 @@ const WEB_ALIAS_IMPORT_PATTERN =
   /(?:from\s+|import\s*\(\s*|import\s+)["'](@\/[^"']+)["']/g;
 
 const DECLARED_TEMPORARY_WEB_IMPORTS = new Set([
-  "apps/admin/src/app/api/dev/bootstrap-platform-admin/route.ts -> @/db",
   "apps/admin/src/app/api/dev/bootstrap-platform-admin/route.ts -> @/lib/auth",
   "apps/admin/src/app/api/dev/bootstrap-platform-admin/route.ts -> @/lib/env",
   "apps/admin/src/app/api/dev/bootstrap-platform-admin/route.ts -> @/lib/platform-admin",
@@ -17,12 +16,8 @@ const DECLARED_TEMPORARY_WEB_IMPORTS = new Set([
   "apps/admin/src/app/audit/page.tsx -> @/lib/platform-audit-events",
   "apps/admin/src/app/billing/page.tsx -> @/lib/platform-admin-auth",
   "apps/admin/src/app/billing/page.tsx -> @/lib/platform-billing",
-  "apps/admin/src/app/events/actions.ts -> @/db",
   "apps/admin/src/app/events/actions.ts -> @/lib/admin-rate-limit",
-  "apps/admin/src/app/events/actions.ts -> @/lib/event-foundation",
   "apps/admin/src/app/events/actions.ts -> @/lib/platform-admin-auth",
-  "apps/admin/src/app/events/page.tsx -> @/db",
-  "apps/admin/src/app/events/page.tsx -> @/lib/event-foundation",
   "apps/admin/src/app/events/page.tsx -> @/lib/platform-admin-auth",
   "apps/admin/src/app/organizations/[organizationId]/page.tsx -> @/lib/platform-admin-auth",
   "apps/admin/src/app/organizations/[organizationId]/page.tsx -> @/lib/platform-directory",

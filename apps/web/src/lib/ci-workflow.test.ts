@@ -52,6 +52,8 @@ describe("CI workflow", () => {
     expect(workflow).toContain("secrets.PRODUCTION_NEXT_PUBLIC_APP_URL");
     expect(workflow).toContain("secrets.GOOGLE_CLIENT_ID");
     expect(workflow).toContain("secrets.GOOGLE_CLIENT_SECRET");
+    expect(workflow).toContain("secrets.INNGEST_EVENT_KEY");
+    expect(workflow).toContain("secrets.INNGEST_SIGNING_KEY");
     expect(workflow).toContain("secrets.NEXT_PUBLIC_GOOGLE_CLIENT_ID");
     expect(workflow).toContain("secrets.UPSTASH_REDIS_REST_URL");
     expect(workflow).toContain("secrets.UPSTASH_REDIS_REST_TOKEN");
@@ -60,6 +62,8 @@ describe("CI workflow", () => {
     expect(workflow).toContain("secrets.R2_SECRET_ACCESS_KEY");
     expect(workflow).toContain("secrets.R2_BUCKET_STAGING");
     expect(workflow).toContain("secrets.R2_BUCKET_PUBLIC");
+    expect(workflow).toContain("secrets.SENTRY_DSN");
+    expect(workflow).toContain("secrets.NEXT_PUBLIC_SENTRY_DSN");
     expect(workflow).toContain("secrets.DEPLOYMENT_SMOKE_URL");
     expect(workflow).toContain("secrets.E2E_DATABASE_URL");
     expect(workflow).toContain("secrets.RLS_DATABASE_URL");

@@ -19,7 +19,7 @@ const {
   markProcessedMock: vi.fn(),
 }));
 
-vi.mock("@/lib/event-foundation", () => ({
+vi.mock("@polaris/events", () => ({
   claimOutboxEvent: claimOutboxEventMock,
   markOutboxEventFailed: markFailedMock,
   markOutboxEventProcessed: markProcessedMock,
@@ -72,6 +72,7 @@ describe("inngest outbox functions", () => {
       db: { execute: expect.any(Function) },
       error: "No outbox dispatcher registered for email:welcome.email.",
       eventId: "event-1",
+      terminal: true,
     });
   });
 
@@ -104,5 +105,36 @@ describe("inngest outbox functions", () => {
       { execute: expect.any(Function) },
       "event-1"
     );
+  });
+
+  it("marks dispatcher failures as retryable and rethrows for Inngest retry", async () => {
+    const dispatcher = vi.fn().mockRejectedValue(new Error("resend timeout"));
+    const event = {
+      attempts: 1,
+      correlationId: "corr-1",
+      eventType: "welcome.email",
+      id: "event-1",
+      payload: {},
+      topic: "email",
+    };
+    claimOutboxEventMock.mockResolvedValueOnce(event);
+
+    const { processOutboxEvent, registerOutboxDispatcher } = await import(
+      "@/lib/inngest-functions"
+    );
+    registerOutboxDispatcher({
+      dispatcher,
+      eventType: "welcome.email",
+      topic: "email",
+    });
+
+    await expect(
+      processOutboxEvent({ execute: vi.fn() }, "event-1")
+    ).rejects.toThrow("resend timeout");
+    expect(markFailedMock).toHaveBeenCalledWith({
+      db: { execute: expect.any(Function) },
+      error: "resend timeout",
+      eventId: "event-1",
+    });
   });
 });

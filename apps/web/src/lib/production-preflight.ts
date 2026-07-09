@@ -15,9 +15,12 @@ export interface ProductionPreflightEnv {
   E2E_DATABASE_URL?: string;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
+  INNGEST_EVENT_KEY?: string;
+  INNGEST_SIGNING_KEY?: string;
   INTERNAL_R2_HEALTH_SECRET?: string;
   NEXT_PUBLIC_APP_URL?: string;
   NEXT_PUBLIC_GOOGLE_CLIENT_ID?: string;
+  NEXT_PUBLIC_SENTRY_DSN?: string;
   PRODUCT_IMAGE_RECONCILE_SECRET?: string;
   R2_ACCESS_KEY_ID?: string;
   R2_ACCOUNT_ID?: string;
@@ -25,6 +28,7 @@ export interface ProductionPreflightEnv {
   R2_BUCKET_STAGING?: string;
   R2_SECRET_ACCESS_KEY?: string;
   RLS_DATABASE_URL?: string;
+  SENTRY_DSN?: string;
   UPSTASH_REDIS_REST_TOKEN?: string;
   UPSTASH_REDIS_REST_URL?: string;
   VERCEL_ENV?: string;
@@ -94,6 +98,8 @@ const REQUIRED_PRODUCTION_INTEGRATION_ENV = [
   "NEXT_PUBLIC_APP_URL",
   "GOOGLE_CLIENT_ID",
   "GOOGLE_CLIENT_SECRET",
+  "INNGEST_EVENT_KEY",
+  "INNGEST_SIGNING_KEY",
   "NEXT_PUBLIC_GOOGLE_CLIENT_ID",
   "UPSTASH_REDIS_REST_URL",
   "UPSTASH_REDIS_REST_TOKEN",
@@ -102,6 +108,8 @@ const REQUIRED_PRODUCTION_INTEGRATION_ENV = [
   "R2_SECRET_ACCESS_KEY",
   "R2_BUCKET_STAGING",
   "R2_BUCKET_PUBLIC",
+  "SENTRY_DSN",
+  "NEXT_PUBLIC_SENTRY_DSN",
 ] as const satisfies ReadonlyArray<keyof ProductionPreflightEnv>;
 
 const REQUIRED_VERIFY_FULL_DATABASE_URLS = [

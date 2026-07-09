@@ -16,6 +16,8 @@ const productionIntegrationEnv = {
   DEPLOYMENT_SMOKE_URL: "https://app.example.com",
   GOOGLE_CLIENT_ID: "google-client-id",
   GOOGLE_CLIENT_SECRET: "google-client-secret",
+  INNGEST_EVENT_KEY: "inngest-event-key",
+  INNGEST_SIGNING_KEY: "inngest-signing-key",
   NEXT_PUBLIC_APP_URL: "https://app.example.com",
   NEXT_PUBLIC_GOOGLE_CLIENT_ID: "google-client-id",
   R2_ACCESS_KEY_ID: "r2-access-key",
@@ -23,6 +25,8 @@ const productionIntegrationEnv = {
   R2_BUCKET_PUBLIC: "polaris-public",
   R2_BUCKET_STAGING: "polaris-staging",
   R2_SECRET_ACCESS_KEY: "r2-secret-key",
+  NEXT_PUBLIC_SENTRY_DSN: "https://public@example.ingest.sentry.io/1",
+  SENTRY_DSN: "https://server@example.ingest.sentry.io/1",
   UPSTASH_REDIS_REST_TOKEN: "upstash-token",
   UPSTASH_REDIS_REST_URL: "https://upstash.example.com",
 } as const;
@@ -84,6 +88,8 @@ describe("validateProductionPreflight", () => {
         "NEXT_PUBLIC_APP_URL is required in production preflight.",
         "GOOGLE_CLIENT_ID is required in production preflight.",
         "GOOGLE_CLIENT_SECRET is required in production preflight.",
+        "INNGEST_EVENT_KEY is required in production preflight.",
+        "INNGEST_SIGNING_KEY is required in production preflight.",
         "NEXT_PUBLIC_GOOGLE_CLIENT_ID is required in production preflight.",
         "UPSTASH_REDIS_REST_URL is required in production preflight.",
         "UPSTASH_REDIS_REST_TOKEN is required in production preflight.",
@@ -92,6 +98,8 @@ describe("validateProductionPreflight", () => {
         "R2_SECRET_ACCESS_KEY is required in production preflight.",
         "R2_BUCKET_STAGING is required in production preflight.",
         "R2_BUCKET_PUBLIC is required in production preflight.",
+        "SENTRY_DSN is required in production preflight.",
+        "NEXT_PUBLIC_SENTRY_DSN is required in production preflight.",
       ])
     );
   });

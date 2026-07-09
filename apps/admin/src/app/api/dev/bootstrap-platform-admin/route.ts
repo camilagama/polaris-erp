@@ -1,5 +1,5 @@
+import { db } from "@polaris/db";
 import { z } from "zod";
-import { db } from "@/db";
 import { auth } from "@/lib/auth";
 import { serverEnv } from "@/lib/env";
 import { bootstrapPlatformAdmin } from "@/lib/platform-admin";

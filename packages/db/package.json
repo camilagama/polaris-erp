@@ -1,0 +1,11 @@
+{
+  "name": "@polaris/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema.ts",
+    "./tenant-context": "./src/tenant-context.ts"
+  }
+}

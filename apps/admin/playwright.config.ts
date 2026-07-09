@@ -10,11 +10,21 @@ loadEnvConfig("../..");
 loadEnvConfig(process.cwd());
 
 const isCi = process.env.CI === "true";
+const isStaticAnalysis = process.argv.some((arg) => arg.includes("knip"));
 const e2eDatabaseUrl = process.env.E2E_DATABASE_URL;
 
-validateE2eDatabaseEnv(process.env);
+if (!isStaticAnalysis) {
+  validateE2eDatabaseEnv(process.env);
+}
 
-if (!(e2eDatabaseUrl || process.env.ALLOW_E2E_SHARED_DATABASE || isCi)) {
+if (
+  !(
+    isStaticAnalysis ||
+    e2eDatabaseUrl ||
+    process.env.ALLOW_E2E_SHARED_DATABASE ||
+    isCi
+  )
+) {
   throw new Error(
     "Admin E2E exige E2E_DATABASE_URL apontando para banco isolado."
   );

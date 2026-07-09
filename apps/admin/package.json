@@ -2,6 +2,10 @@
   "name": "@polaris/admin",
   "version": "0.1.0",
   "private": true,
+  "dependencies": {
+    "@polaris/db": "workspace:*",
+    "@polaris/events": "workspace:*"
+  },
   "scripts": {
     "dev": "bun --env-file=../../.env.local x next dev",
     "build": "bun --env-file=../../.env.local x next build",

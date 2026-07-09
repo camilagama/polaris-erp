@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "@polaris/billing": "workspace:*",
+    "@polaris/events": "workspace:*",
     "@polaris/emails": "workspace:*"
   },
   "scripts": {

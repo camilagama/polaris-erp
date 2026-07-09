@@ -319,6 +319,7 @@ Itens locais removidos da fila durante esta continuacao:
 - `docs/production-database-cleanup.md` e `docs/production-database-cleanup.sql` restaurados; o SQL e conservador e termina em `rollback` por padrao.
 - `bun run platform-admin:bootstrap` adicionado para bootstrap auditavel do primeiro platform admin; execucao real e identidade do primeiro admin continuam pendentes.
 - CI atualizado para executar `bun run typecheck` e `bun run typecheck:admin` no job `verify`.
+- `prod:preflight` atualizado para exigir `INNGEST_EVENT_KEY` e `INNGEST_SIGNING_KEY` em producao.
 
 ## Decisao de Release
 
