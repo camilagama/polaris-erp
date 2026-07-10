@@ -1,12 +1,12 @@
 import "server-only";
 
+import { withInternalJobContext } from "@polaris/db/tenant-context";
 import { captureWebhookEvent, enqueueOutboxEvent } from "@polaris/events";
 import { sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { reconcileAsaasBillingEvent } from "@/lib/asaas-billing-reconciliation";
 import { serverEnv } from "@/lib/env";
-import { sendOutboxEventToInngest } from "@/lib/inngest-client";
 
 const ACCESS_TOKEN_HEADER = "asaas-access-token";
 
@@ -127,19 +127,17 @@ export const handleAsaasWebhook = async (request: Request) => {
     rawBody,
   });
 
-  const outboxEventId = await enqueueOutboxEvent(db, {
+  await enqueueOutboxEvent(db, {
     correlationId: eventId,
     eventType: getString(payload, "event") ?? "unknown",
     idempotencyKey: `asaas-webhook:${eventId}`,
     payload: redactedPayload,
     topic: "asaas.webhook",
   });
-  await sendOutboxEventToInngest(outboxEventId).catch(() => undefined);
 
-  const reconciliationStatus = await reconcileAsaasBillingEvent(
-    db,
-    payload,
-    eventId
+  const reconciliationStatus = await withInternalJobContext(
+    "billing_webhook_reconcile",
+    (tx) => reconcileAsaasBillingEvent(tx, payload, eventId)
   );
 
   await db.execute(sql`

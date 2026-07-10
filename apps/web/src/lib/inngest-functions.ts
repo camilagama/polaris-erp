@@ -11,6 +11,13 @@ type OutboxDispatcher = (
   event: NonNullable<Awaited<ReturnType<typeof claimOutboxEvent>>>
 ) => Promise<void>;
 
+export const CAPTURE_ONLY_OUTBOX_TOPICS = [
+  "asaas.webhook",
+  "resend.webhook",
+  "woovi.webhook",
+] as const;
+
+const captureOnlyOutboxTopics = new Set<string>(CAPTURE_ONLY_OUTBOX_TOPICS);
 const outboxDispatchers = new Map<string, OutboxDispatcher>();
 
 const getDispatcherKey = (topic: string, eventType: string): string =>
@@ -43,11 +50,14 @@ export const processOutboxEvent = async (
   );
 
   if (!dispatcher) {
+    const error = captureOnlyOutboxTopics.has(event.topic)
+      ? `Outbox topic ${event.topic} is capture-only and is not dispatched.`
+      : `No outbox dispatcher registered for ${event.topic}:${event.eventType}.`;
+
     await markOutboxEventFailed({
       db: database,
-      error: `No outbox dispatcher registered for ${event.topic}:${event.eventType}.`,
+      error,
       eventId: event.id,
-      terminal: true,
     });
 
     return "failed";

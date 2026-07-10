@@ -7,7 +7,7 @@ export default function ForbiddenPage() {
           Admin interno protegido
         </h1>
         <p className="mt-3 text-sm text-zinc-400">
-          Esta area exige Cloudflare Access, sessao valida e grant ativo de
+          Esta area exige Vercel Authentication, sessao valida e grant ativo de
           platform admin.
         </p>
       </section>

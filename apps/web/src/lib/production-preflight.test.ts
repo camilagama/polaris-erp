@@ -11,8 +11,6 @@ const e2eUrl =
 const productionIntegrationEnv = {
   ADMIN_APP_URL: "https://admin.example.com",
   BETTER_AUTH_URL: "https://app.example.com",
-  CLOUDFLARE_ACCESS_AUD: "cloudflare-access-audience",
-  CLOUDFLARE_ACCESS_TEAM_DOMAIN: "polaris.cloudflareaccess.com",
   DEPLOYMENT_SMOKE_URL: "https://app.example.com",
   GOOGLE_CLIENT_ID: "google-client-id",
   GOOGLE_CLIENT_SECRET: "google-client-secret",
@@ -82,8 +80,6 @@ describe("validateProductionPreflight", () => {
         "PRODUCT_IMAGE_RECONCILE_SECRET must be at least 32 characters in production preflight.",
         "BETTER_AUTH_URL is required in production preflight.",
         "ADMIN_APP_URL is required in production preflight.",
-        "CLOUDFLARE_ACCESS_AUD is required in production preflight.",
-        "CLOUDFLARE_ACCESS_TEAM_DOMAIN is required in production preflight.",
         "DEPLOYMENT_SMOKE_URL is required in production preflight.",
         "NEXT_PUBLIC_APP_URL is required in production preflight.",
         "GOOGLE_CLIENT_ID is required in production preflight.",

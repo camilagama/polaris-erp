@@ -53,4 +53,28 @@ describe("completeOnboardingAction", () => {
     ).not.toHaveBeenCalled();
     expect(onboardingMocks.redirect).not.toHaveBeenCalled();
   });
+
+  it("creates the initial tenant with billing email before redirecting", async () => {
+    onboardingMocks.requireSession.mockResolvedValue({
+      user: {
+        email: "owner@example.com",
+        id: "user-1",
+        name: "Owner",
+      },
+    });
+
+    await completeOnboardingAction(
+      { error: null },
+      buildFormData("Polaris Brasil")
+    );
+
+    expect(
+      onboardingMocks.createInitialOrganizationForUser
+    ).toHaveBeenCalledWith({
+      billingEmail: "owner@example.com",
+      name: "Polaris Brasil",
+      userId: "user-1",
+    });
+    expect(onboardingMocks.redirect).toHaveBeenCalledWith("/");
+  });
 });

@@ -44,8 +44,6 @@ Configure em Production e replique/adapte para Preview:
 | `NEXT_PUBLIC_SENTRY_REPLAYS_SESSION_SAMPLE_RATE` | Opcional. Replay de sessoes normais, numero entre `0` e `1`. Padrao: `0`. |
 | `NEXT_PUBLIC_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE` | Opcional. Replay em sessoes com erro, numero entre `0` e `1`. Padrao: `1`. |
 | `ALLOW_PLAYWRIGHT_BOOTSTRAP` | Nunca em producao real; apenas E2E com banco isolado. |
-| `CLOUDFLARE_ACCESS_AUD` | Audience do Cloudflare Access para o admin interno. Obrigatorio em producao. |
-| `CLOUDFLARE_ACCESS_TEAM_DOMAIN` | Team domain do Cloudflare Access usado para validar `Cf-Access-Jwt-Assertion`. Obrigatorio em producao. |
 | `INNGEST_EVENT_KEY` | Chave de eventos do Inngest usada para enviar eventos do outbox em producao. |
 | `INNGEST_SIGNING_KEY` | Chave de assinatura do Inngest usada para autenticar invocacoes cloud da rota `/api/inngest`. |
 
@@ -67,7 +65,7 @@ RLS e obrigatorio em producao. Nao configure o runtime com `neondb_owner`: esse 
 - `/api/internal/health/r2` exige `Authorization: Bearer $CRON_SECRET` e nao deve expor chaves secretas.
 - Migrations destrutivas ou com precheck devem ser aplicadas primeiro em branch Neon isolada.
 - `bun run prod:preflight` valida wiring basico de producao antes de deploy: URLs runtime/migration/E2E separadas com `sslmode=verify-full`, smoke RLS configurado, bootstrap E2E desligado em Production, secrets fortes, origens canonicas alinhadas e envs obrigatorios de Google/R2/Upstash/Inngest/Sentry.
-- `ADMIN_APP_URL` precisa estar em origem separada do app publico e protegida por Cloudflare Access. O preflight exige `CLOUDFLARE_ACCESS_AUD` e `CLOUDFLARE_ACCESS_TEAM_DOMAIN` em producao.
+- `ADMIN_APP_URL` precisa estar em origem separada do app publico. Proteja o projeto Vercel do admin com Vercel Authentication/deployment protection; o preflight valida a origem separada, mas a protecao da Vercel precisa ser conferida no projeto.
 
 ## Admin interno
 
@@ -80,11 +78,26 @@ O admin deve ser um projeto/deploy separado na Vercel, apontando o root para `ap
 
 Protecao obrigatoria antes de promover:
 
-1. Cloudflare Access ativo para `admin.*`, com IdP/MFA/allowlist.
-2. Vercel Deployment Protection ativo para previews do admin.
-3. `CLOUDFLARE_ACCESS_AUD` e `CLOUDFLARE_ACCESS_TEAM_DOMAIN` configurados no ambiente do admin.
-4. `DATABASE_URL` do admin usando role runtime sem `BYPASSRLS`, nunca `DATABASE_URL_DIRECT`.
-5. Primeiro platform admin bootstrapado por fluxo auditavel, sem reutilizar `member.role`.
+1. Vercel Authentication/deployment protection ativo no projeto Vercel do admin. Recomendado: proteger production deployment URLs e todos os previews.
+2. Better Auth session e grant ativo em `platform_admins` continuam obrigatorios dentro do app.
+3. `DATABASE_URL` do admin usando role runtime sem `BYPASSRLS`, nunca `DATABASE_URL_DIRECT`.
+4. Primeiro platform admin bootstrapado por fluxo auditavel, sem reutilizar `member.role`.
+
+Exemplo via Vercel CLI:
+
+```bash
+vercel project protection enable <admin-project> --sso
+```
+
+Exemplo via API da Vercel:
+
+```json
+{
+  "ssoProtection": {
+    "deploymentType": "prod_deployment_urls_and_all_previews"
+  }
+}
+```
 
 Bootstrap operacional do primeiro platform admin:
 

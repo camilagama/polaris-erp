@@ -3,6 +3,14 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
+const { withPlatformAdminContextMock } = vi.hoisted(() => ({
+  withPlatformAdminContextMock: vi.fn(),
+}));
+
+vi.mock("@polaris/db/tenant-context", () => ({
+  withPlatformAdminContext: withPlatformAdminContextMock,
+}));
+
 const createDb = (results: unknown[]) => {
   const execute = vi.fn(async () => results.shift());
 
@@ -10,6 +18,29 @@ const createDb = (results: unknown[]) => {
 };
 
 describe("platform billing overview", () => {
+  it("runs admin billing reads inside platform admin DB context", async () => {
+    const db = createDb([{ rows: [] }, { rows: [] }, { rows: [] }]);
+    withPlatformAdminContextMock.mockImplementationOnce(
+      async (_platformAdminId, callback) => callback(db)
+    );
+
+    const { getPlatformBillingOverviewForAdmin } = await import(
+      "@polaris/platform/billing"
+    );
+
+    await expect(
+      getPlatformBillingOverviewForAdmin("platform-admin-1")
+    ).resolves.toMatchObject({
+      invoices: [],
+      subscriptions: [],
+    });
+    expect(withPlatformAdminContextMock).toHaveBeenCalledWith(
+      "platform-admin-1",
+      expect.any(Function)
+    );
+    expect(db.execute).toHaveBeenCalledTimes(3);
+  });
+
   it("returns canonical read-only billing data for admin", async () => {
     const db = createDb([
       {

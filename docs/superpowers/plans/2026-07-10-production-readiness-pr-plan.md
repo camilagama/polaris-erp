@@ -113,6 +113,18 @@
 
 ### PR 02 - Stop Secret Leakage in Webhook Event Capture
 
+**Status:** Concluida em 2026-07-10.
+
+**Resultado:** Added exact `asaas-access-token` redaction to `@polaris/events` and expanded the event foundation test to prove case-insensitive redaction for Asaas, Woovi `x-webhook-signature`, Resend/Svix `svix-signature`, `Authorization`, and `Cookie`. Raw body handling was unchanged.
+
+**Verificacao executada:**
+- `bun --cwd apps/web vitest run src/lib/event-foundation.test.ts` passed: 1 file, 7 tests.
+- `bun run test` passed: 110 files, 385 tests.
+- `bun run check` passed.
+- `bun run typecheck` passed.
+
+**Risco residual:** Provider-specific headers beyond the current Asaas/Woovi/Resend set would still need explicit addition if introduced later.
+
 **Objetivo:** Ensure webhook secrets are never persisted in `webhook_events.redactedHeaders`.
 
 **Escopo exato:**
@@ -146,6 +158,20 @@
 - Revert redaction set and tests.
 
 ### PR 03 - Make Outbox Semantics Production-Safe
+
+**Status:** Concluida em 2026-07-10.
+
+**Resultado:** Current production webhook topics (`asaas.webhook`, `woovi.webhook`, `resend.webhook`) were classified as capture-only because their side effects are already executed synchronously in the webhook handlers. They still write `event_outbox` rows for visibility/idempotency, but no longer call `sendOutboxEventToInngest` until a real dispatcher is introduced. Missing dispatchers no longer pass `terminal: true`; the processor records an observable error without making the item terminal solely because a dispatcher is absent.
+
+**Verificacao executada:**
+- `bun --cwd apps/web vitest run src/lib/inngest-functions.test.ts src/lib/asaas-webhook.test.ts src/lib/woovi-webhook.test.ts src/lib/email-service-source.test.ts src/lib/event-foundation.test.ts` passed: 5 files, 22 tests.
+- `bun run check` passed.
+- `bun run typecheck` passed.
+- `bun run test` passed: 110 files, 386 tests.
+
+**Decisao de escopo:** No real dispatcher was registered in this PR because every currently enqueued production webhook topic already performs its side effect synchronously (`reconcileAsaasBillingEvent`, `reconcileWooviBillingEvent`, `recordResendEmailEvent`). Registering dispatchers now would duplicate side effects.
+
+**Risco residual:** `event_outbox` rows for capture-only topics remain pending for operational visibility until a future PR either adds a completed/audit-only status model or moves these side effects fully into durable dispatchers.
 
 **Objetivo:** Convert outbox from partially wired durable mechanism into a safe production mechanism.
 
@@ -194,6 +220,26 @@
 
 ### PR 04 - Add RLS for Billing with Platform Admin Access Model
 
+**Status:** Concluida em 2026-07-10 para codigo e testes locais. Validacao live pendente.
+
+**Resultado:** Added billing RLS migration for tenant-scoped billing tables, explicit `app.platform_admin_id` context for platform admin billing reads, and `billing_webhook_reconcile` internal context for Asaas/Woovi billing reconciliation. Admin billing now reads through `getPlatformBillingOverviewForAdmin(platformAdminId)`. Billing runtime smoke and RLS architecture docs were expanded.
+
+**Verificacao executada:**
+- `bun --cwd apps/web vitest run src/db/rls-tenant-isolation.test.ts src/db/tenant-context.test.ts src/lib/platform-billing.test.ts src/lib/asaas-webhook.test.ts src/lib/woovi-webhook.test.ts` passed: 5 files, 20 tests.
+- `node --check scripts/smoke-rls-runtime.cjs` passed.
+- `bun x ultracite check` passed.
+- `bun run check` passed.
+- `bun run check:admin` passed.
+- `bun run typecheck` passed.
+- `bun run typecheck:admin` passed.
+- `bun run test` passed: 110 files, 391 tests.
+- `bun run build` passed.
+- `bun run build:admin` passed.
+
+**Validacao nao executada:** `bun run db:smoke:rls` was not run against a live database because the new billing RLS migration has not been applied to an approved Neon branch/environment in this session. Running the smoke before applying the migration would fail by design; applying the migration to shared infrastructure needs an explicit operational target.
+
+**Risco residual:** Billing RLS must still be applied with `DATABASE_URL_DIRECT` and verified against the promoted runtime role without `BYPASSRLS`; the updated smoke should report `forcedTables = 18/18`.
+
 **Objetivo:** Protect tenant billing tables with RLS while preserving platform admin billing access.
 
 **Escopo exato:**
@@ -232,6 +278,25 @@
 - Revert migration before production deploy; if deployed, create forward migration restoring previous policies only after approval.
 
 ### PR 05 - Remove Cloudflare Access from Admin and Use Vercel Authentication
+
+**Status:** Concluida em 2026-07-10 para codigo, docs e testes locais.
+
+**Resultado:** Removed the Cloudflare Access runtime module/export, app envs, CI/preflight env wiring, admin copy, and current deploy runbook requirements. Admin authorization now depends on Better Auth session plus active `platform_admins` grant only, while the runbook requires Vercel Authentication/deployment protection on the separate `apps/admin` Vercel project. `jose` was removed from `@polaris/platform-auth` dependencies because it was only used by the Cloudflare Access verifier.
+
+**Verificacao executada:**
+- Active code/config search passed with no `Cloudflare Access`, `cloudflare-access`, `CLOUDFLARE_ACCESS`, `cf-access`, `verifyCloudflareAccess`, or `requireAccess` references in `apps`, `packages`, `scripts`, `.github`, `.env.example`, `turbo.json`, and current deploy runbook.
+- `bun --cwd apps/web vitest run src/lib/platform-admin-auth.test.ts src/lib/admin-app-protection.test.ts src/lib/production-preflight.test.ts src/lib/env.test.ts src/lib/ci-workflow.test.ts` passed: 5 files, 32 tests.
+- `bun x ultracite check` passed.
+- `bun run check` passed.
+- `bun run check:admin` passed.
+- `bun run typecheck` passed.
+- `bun run typecheck:admin` passed.
+- `bun run test` passed: 109 files, 387 tests.
+- `bun run build` passed.
+- `bun run build:admin` passed.
+- `bun run test:e2e:admin` passed: 2 Playwright tests.
+
+**Risco residual:** Vercel Authentication/deployment protection is platform state and cannot be proven by local tests. Before promoting admin, the operator must verify the admin Vercel project has SSO/deployment protection enabled for production deployment URLs and previews.
 
 **Objetivo:** Replace Cloudflare Access code-level dependency with Vercel Authentication/deployment protection plus in-app platform admin authorization.
 
@@ -279,6 +344,22 @@
 - Revert code/docs and restore Cloudflare envs.
 
 ### PR 06 - Require Subscription from Day One
+
+**Status:** Concluida em 2026-07-10 para codigo, migracao e testes locais.
+
+**Resultado:** Added the initial active production billing plan seed migration (`polaris-start-monthly`), made onboarding create billing customer/subscription records, and made operational app access require billable subscription status (`trialing`, `active`, or `past_due`). New tenants created through the normal onboarding path start with `incomplete` billing and are redirected to `/billing-required` until activation; isolated local Playwright bootstrap can create an active subscription only when `DATABASE_URL === E2E_DATABASE_URL`, `ALLOW_PLAYWRIGHT_BOOTSTRAP=true`, and the request is loopback. The app shell now forces dynamic session/billing evaluation before rendering protected pages.
+
+**Verificacao executada:**
+- `bun --cwd apps/web vitest run src/lib/feature-boundary.test.ts src/app/api/auth/dev/bootstrap-session/route.test.ts` passed: 2 files, 15 tests.
+- `bun run test` passed: 109 files, 394 tests.
+- `bun run typecheck` passed.
+- `bun run build` passed; `/billing-required` is included in the production route manifest.
+- `bun run test:e2e` passed: 9 tests using 1 worker.
+- `bun x ultracite check` passed.
+
+**Decisao de escopo:** The billing block is production-enforced, but the customer-facing activation is a minimal handoff page instead of full self-service checkout/plan management. This keeps the PR inside the agreed "minimum production gate" scope and leaves full billing UX for a later billing/provider PR.
+
+**Risco residual:** The new billing plan seed migration still needs to be applied to an approved database branch/environment before production promotion. E2E web now runs with `workers: 1` because the billing gate adds authenticated DB reads and the previous 6-worker run exhausted/terminated local E2E database connections.
 
 **Objetivo:** Make billing a production gate, not a future/internal-only module.
 
@@ -1026,4 +1107,4 @@
 
 Reason: it is the safest, smallest, and most urgent blocker. It reduces known security exposure before touching auth, billing, RLS, cron, or monorepo structure. After PR 01 passes, implement PR 02 and PR 03 before broader architecture changes.
 
-Next implementation target: **PR 02 - Stop Secret Leakage in Webhook Event Capture**.
+Next implementation target: **PR 07 - Remove Customer-Controlled Organization Naming**.

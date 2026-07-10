@@ -80,7 +80,9 @@ describe("Woovi webhook foundation", () => {
     expect(handlerSource).toContain("x-webhook-signature");
     expect(handlerSource).toContain("captureWebhookEvent");
     expect(handlerSource).toContain("enqueueOutboxEvent");
-    expect(handlerSource).toContain("sendOutboxEventToInngest");
+    expect(handlerSource).not.toContain("sendOutboxEventToInngest");
+    expect(handlerSource).toContain("withInternalJobContext");
+    expect(handlerSource).toContain("billing_webhook_reconcile");
     expect(handlerSource).toContain('topic: "woovi.webhook"');
     expect(handlerSource).toContain('provider: "woovi"');
   });

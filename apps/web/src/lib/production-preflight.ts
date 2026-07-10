@@ -6,8 +6,6 @@ export interface ProductionPreflightEnv {
   ALLOW_PLAYWRIGHT_BOOTSTRAP?: string;
   BETTER_AUTH_SECRET?: string;
   BETTER_AUTH_URL?: string;
-  CLOUDFLARE_ACCESS_AUD?: string;
-  CLOUDFLARE_ACCESS_TEAM_DOMAIN?: string;
   CRON_SECRET?: string;
   DATABASE_URL?: string;
   DATABASE_URL_DIRECT?: string;
@@ -92,8 +90,6 @@ const getOrigin = (value: string | undefined): string | undefined => {
 const REQUIRED_PRODUCTION_INTEGRATION_ENV = [
   "BETTER_AUTH_URL",
   "ADMIN_APP_URL",
-  "CLOUDFLARE_ACCESS_AUD",
-  "CLOUDFLARE_ACCESS_TEAM_DOMAIN",
   "DEPLOYMENT_SMOKE_URL",
   "NEXT_PUBLIC_APP_URL",
   "GOOGLE_CLIENT_ID",

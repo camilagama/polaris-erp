@@ -1,12 +1,12 @@
 import "server-only";
 
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { withInternalJobContext } from "@polaris/db/tenant-context";
 import { captureWebhookEvent, enqueueOutboxEvent } from "@polaris/events";
 import { sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { serverEnv } from "@/lib/env";
-import { sendOutboxEventToInngest } from "@/lib/inngest-client";
 import { reconcileWooviBillingEvent } from "@/lib/woovi-billing-reconciliation";
 
 const SIGNATURE_HEADER = "x-webhook-signature";
@@ -155,19 +155,17 @@ export const handleWooviWebhook = async (request: Request) => {
     rawBody,
   });
 
-  const outboxEventId = await enqueueOutboxEvent(db, {
+  await enqueueOutboxEvent(db, {
     correlationId,
     eventType: getString(payload, "event") ?? "unknown",
     idempotencyKey: `woovi-webhook:${eventId}`,
     payload: redactedPayload,
     topic: "woovi.webhook",
   });
-  await sendOutboxEventToInngest(outboxEventId).catch(() => undefined);
 
-  const reconciliationStatus = await reconcileWooviBillingEvent(
-    db,
-    payload,
-    eventId
+  const reconciliationStatus = await withInternalJobContext(
+    "billing_webhook_reconcile",
+    (tx) => reconcileWooviBillingEvent(tx, payload, eventId)
   );
 
   await db.execute(sql`

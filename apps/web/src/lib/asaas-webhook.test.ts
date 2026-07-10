@@ -74,8 +74,10 @@ describe("Asaas webhook foundation", () => {
     expect(handlerSource).not.toContain("request.json()");
     expect(handlerSource).toContain("captureWebhookEvent");
     expect(handlerSource).toContain("enqueueOutboxEvent");
-    expect(handlerSource).toContain("sendOutboxEventToInngest");
+    expect(handlerSource).not.toContain("sendOutboxEventToInngest");
     expect(handlerSource).toContain("reconcileAsaasBillingEvent");
+    expect(handlerSource).toContain("withInternalJobContext");
+    expect(handlerSource).toContain("billing_webhook_reconcile");
     expect(handlerSource).toContain('topic: "asaas.webhook"');
     expect(handlerSource).toContain('provider: "asaas"');
   });

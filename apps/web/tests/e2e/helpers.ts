@@ -129,6 +129,7 @@ export const login = async (page: Page) => {
     .waitForFunction(
       () =>
         document.body.innerText.includes("Criar organizacao") ||
+        document.body.innerText.includes("Assinatura necessaria") ||
         document.body.innerText.includes("Dashboard"),
       undefined,
       { timeout: 5000 }
@@ -145,6 +146,13 @@ export const login = async (page: Page) => {
       .getByLabel("Nome da organizacao")
       .fill(createRunLabel("Organizacao E2E"));
     await page.getByRole("button", { name: "Comecar" }).click();
+    await page.waitForFunction(
+      () =>
+        document.body.innerText.includes("Assinatura necessaria") ||
+        document.body.innerText.includes("Dashboard"),
+      undefined,
+      { timeout: 5000 }
+    );
   }
 
   await expect(

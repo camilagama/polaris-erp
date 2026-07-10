@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { auth } from "@/lib/auth";
+import { ensureE2EBillingPlan } from "@/lib/e2e-bootstrap-billing";
 import { serverEnv } from "@/lib/env";
 import { checkRateLimit, getRateLimitKeyFromRequest } from "@/lib/rate-limit";
 
@@ -182,6 +183,10 @@ export async function POST(request: Request) {
 
   if (authorization !== expectedAuthorization) {
     return Response.json({ error: "Nao autorizado." }, { status: 401 });
+  }
+
+  if (isLocalProductionE2e) {
+    await ensureE2EBillingPlan();
   }
 
   const payload = await request.json().catch(() => null);

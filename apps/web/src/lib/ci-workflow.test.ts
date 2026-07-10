@@ -24,6 +24,7 @@ const DEPLOYMENT_SMOKE_URL_SECRET_PATTERN =
   /DEPLOYMENT_SMOKE_URL:\s*\$\{\{\s*secrets\.DEPLOYMENT_SMOKE_URL\s*\}\}/;
 const CRON_SECRET_PATTERN =
   /CRON_SECRET:\s*\$\{\{\s*secrets\.CRON_SECRET\s*\}\}/;
+const REMOVED_ADMIN_PERIMETER_ENV_PATTERN = /CLOUD[F]LARE_ACCESS/;
 
 describe("CI workflow", () => {
   it("exposes RLS smoke as a manual secret-gated job", () => {
@@ -46,8 +47,7 @@ describe("CI workflow", () => {
     expect(workflow).toContain("secrets.PRODUCTION_DATABASE_URL");
     expect(workflow).toContain("secrets.PRODUCTION_DATABASE_URL_DIRECT");
     expect(workflow).toContain("secrets.ADMIN_APP_URL");
-    expect(workflow).toContain("secrets.CLOUDFLARE_ACCESS_AUD");
-    expect(workflow).toContain("secrets.CLOUDFLARE_ACCESS_TEAM_DOMAIN");
+    expect(workflow).not.toMatch(REMOVED_ADMIN_PERIMETER_ENV_PATTERN);
     expect(workflow).toContain("secrets.PRODUCTION_BETTER_AUTH_URL");
     expect(workflow).toContain("secrets.PRODUCTION_NEXT_PUBLIC_APP_URL");
     expect(workflow).toContain("secrets.GOOGLE_CLIENT_ID");
@@ -100,8 +100,6 @@ describe("CI workflow", () => {
 
     for (const envName of [
       "ADMIN_APP_URL",
-      "CLOUDFLARE_ACCESS_AUD",
-      "CLOUDFLARE_ACCESS_TEAM_DOMAIN",
       "DEPLOYMENT_SMOKE_URL",
       "E2E_DATABASE_URL",
       "RLS_DATABASE_URL",

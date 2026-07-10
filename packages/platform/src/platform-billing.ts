@@ -2,6 +2,7 @@ import "server-only";
 
 import { hasBillableAccess, normalizeBillingStatus } from "@polaris/billing";
 import { db } from "@polaris/db";
+import { withPlatformAdminContext } from "@polaris/db/tenant-context";
 import { type SQL, sql } from "drizzle-orm";
 
 interface QueryableDb {
@@ -176,3 +177,8 @@ export const getPlatformBillingOverview = async (
 
   return { invoices, subscriptions, totals };
 };
+
+export const getPlatformBillingOverviewForAdmin = async (
+  platformAdminId: string
+): Promise<PlatformBillingOverview> =>
+  withPlatformAdminContext(platformAdminId, getPlatformBillingOverview);

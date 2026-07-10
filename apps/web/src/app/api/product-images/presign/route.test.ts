@@ -49,6 +49,8 @@ describe("POST /api/product-images/presign", () => {
       },
     } as never);
     vi.mocked(requireAppContext).mockResolvedValue({
+      billingStatus: "active",
+      hasBillableAccess: true,
       organizationId: "org_dg_imports",
       organizationName: "Polaris",
       role: "owner",
@@ -154,6 +156,8 @@ describe("POST /api/product-images/presign", () => {
       },
     } as never);
     vi.mocked(requireAppContext).mockResolvedValue({
+      billingStatus: "active",
+      hasBillableAccess: true,
       organizationId: "org_dg_imports",
       organizationName: "Polaris",
       role: "owner",
@@ -207,6 +211,8 @@ describe("POST /api/product-images/presign", () => {
     });
     expect(auditLog.recordAuditEvent).toHaveBeenCalledWith({
       context: {
+        billingStatus: "active",
+        hasBillableAccess: true,
         organizationId: "org_dg_imports",
         organizationName: "Polaris",
         role: "owner",

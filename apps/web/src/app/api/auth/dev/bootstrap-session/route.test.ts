@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { POST } from "@/app/api/auth/dev/bootstrap-session/route";
 
-const { authContext, serverEnvMock } = vi.hoisted(() => ({
+const { authContext, billingBootstrapMock, serverEnvMock } = vi.hoisted(() => ({
   authContext: {
     authCookies: {
       sessionToken: {
@@ -21,6 +21,9 @@ const { authContext, serverEnvMock } = vi.hoisted(() => ({
       findUserByEmail: vi.fn(),
     },
     secret: "better-auth-secret",
+  },
+  billingBootstrapMock: {
+    ensureE2EBillingPlan: vi.fn(),
   },
   serverEnvMock: {
     ALLOW_PLAYWRIGHT_BOOTSTRAP: undefined as "false" | "true" | undefined,
@@ -50,6 +53,10 @@ vi.mock("@/lib/auth", () => ({
   },
 }));
 
+vi.mock("@/lib/e2e-bootstrap-billing", () => ({
+  ensureE2EBillingPlan: billingBootstrapMock.ensureE2EBillingPlan,
+}));
+
 vi.mock("@/lib/rate-limit", () => ({
   checkRateLimit: rateLimitMocks.checkRateLimit,
   getRateLimitKeyFromRequest: vi.fn(() => "bootstrap:127.0.0.1"),
@@ -73,6 +80,7 @@ describe("POST /api/auth/dev/bootstrap-session", () => {
       id: "session-1",
       token: "session-token",
     });
+    billingBootstrapMock.ensureE2EBillingPlan.mockResolvedValue(undefined);
     rateLimitMocks.checkRateLimit.mockReset();
     rateLimitMocks.checkRateLimit.mockResolvedValue({
       ok: true,
@@ -124,6 +132,7 @@ describe("POST /api/auth/dev/bootstrap-session", () => {
     );
 
     expect(response.status).toBe(200);
+    expect(billingBootstrapMock.ensureE2EBillingPlan).toHaveBeenCalledOnce();
     expect(authContext.internalAdapter.createSession).toHaveBeenCalledWith(
       "user-1"
     );

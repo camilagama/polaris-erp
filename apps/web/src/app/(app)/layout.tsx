@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import type { ReactNode } from "react";
 import { AppSidebar } from "@/components/app-sidebar";
 import {
@@ -10,6 +11,8 @@ import { requirePageAppContext } from "@/lib/app-session";
 import { requireSession } from "@/lib/session";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
+  await connection();
+
   const [session, context] = await Promise.all([
     requireSession(),
     requirePageAppContext(),

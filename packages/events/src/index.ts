@@ -9,6 +9,7 @@ const MAX_OUTBOX_ATTEMPTS = 5;
 
 const SENSITIVE_HEADER_NAMES = new Set([
   "authorization",
+  "asaas-access-token",
   "cookie",
   "set-cookie",
   "x-asaas-access-token",

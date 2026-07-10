@@ -53,6 +53,56 @@ describe("tenant database context", () => {
     expect(JSON.stringify(execute.mock.calls[0]?.[0])).toContain("true");
   });
 
+  it("sets platform admin context with transaction-local scope", async () => {
+    const execute = vi.fn().mockResolvedValue(undefined);
+    const tx = { execute };
+    const { db } = await import("@polaris/db");
+    const { withPlatformAdminContext } = await import("@/db/tenant-context");
+
+    vi.mocked(db.transaction).mockImplementation(async (callback) =>
+      callback(tx as never)
+    );
+
+    const result = await withPlatformAdminContext("platform-admin-1", () =>
+      Promise.resolve("ok")
+    );
+
+    expect(result).toBe("ok");
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(JSON.stringify(execute.mock.calls[0]?.[0])).toContain(
+      "app.platform_admin_id"
+    );
+    expect(JSON.stringify(execute.mock.calls[0]?.[0])).toContain(
+      "platform-admin-1"
+    );
+    expect(JSON.stringify(execute.mock.calls[0]?.[0])).toContain("true");
+  });
+
+  it("allows billing webhook reconcile as an internal job context", async () => {
+    const execute = vi.fn().mockResolvedValue(undefined);
+    const tx = { execute };
+    const { db } = await import("@polaris/db");
+    const { withInternalJobContext } = await import("@/db/tenant-context");
+
+    vi.mocked(db.transaction).mockImplementation(async (callback) =>
+      callback(tx as never)
+    );
+
+    const result = await withInternalJobContext(
+      "billing_webhook_reconcile",
+      () => Promise.resolve("ok")
+    );
+
+    expect(result).toBe("ok");
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(JSON.stringify(execute.mock.calls[0]?.[0])).toContain(
+      "app.internal_job"
+    );
+    expect(JSON.stringify(execute.mock.calls[0]?.[0])).toContain(
+      "billing_webhook_reconcile"
+    );
+  });
+
   it("sets internal job context with transaction-local scope", async () => {
     const execute = vi.fn().mockResolvedValue(undefined);
     const tx = { execute };

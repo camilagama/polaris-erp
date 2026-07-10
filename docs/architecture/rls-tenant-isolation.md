@@ -55,6 +55,22 @@ select set_config('app.internal_job', 'product_image_reconcile', true);
 
 Policies podem permitir apenas as leituras necessarias para esse job quando `current_setting('app.internal_job', true) = 'product_image_reconcile'`. Esse caminho nao deve ser usado para fluxos de usuario.
 
+Billing de plataforma usa um contexto proprio, tambem transacional:
+
+```sql
+select set_config('app.platform_admin_id', '<platform-admin-id>', true);
+```
+
+Esse contexto so deve ser definido depois de `requirePlatformAdmin` aprovar a sessao interna. Ele permite que o admin leia billing sem transformar platform admin em membro tenant.
+
+Reconciliacao de webhooks de billing usa:
+
+```sql
+select set_config('app.internal_job', 'billing_webhook_reconcile', true);
+```
+
+Esse contexto existe para Asaas/Woovi atualizarem estado canonico de billing sem depender de um tenant ja conhecido antes da busca por provider/external reference.
+
 ## Escopo inicial de RLS
 
 RLS deve cobrir tabelas com dados de organizacao:
@@ -72,6 +88,16 @@ RLS deve cobrir tabelas com dados de organizacao:
 - `sales`
 - `sale_items`
 - `goals`
+
+Billing tenant-scoped tambem entra no modelo RLS:
+
+- `billing_customers`
+- `billing_subscriptions`
+- `billing_invoices`
+- `billing_payment_attempts`
+- `billing_provider_links`
+
+`billing_plans` fica fora desse corte por ser catalogo global de planos, sem `organization_id`.
 
 Auth base do Better Auth fica fora do primeiro corte:
 
@@ -146,6 +172,11 @@ Concluido:
 - `src/lib/app-session.ts` usando `app.user_id` para resolver membership pre-tenant e `app.organization_id` no onboarding antes de inserir dados tenant-scoped.
 - `src/lib/audit-log.ts` gravando eventos dentro de contexto tenant.
 - Migration `packages/db/src/migrations/20260707205000_rls_tenant_isolation.sql` criada com `ENABLE ROW LEVEL SECURITY`, `FORCE ROW LEVEL SECURITY` e policies para as tabelas tenant-scoped.
+- Migration `packages/db/src/migrations/20260710041000_billing_rls_platform_admin.sql` criada com `ENABLE ROW LEVEL SECURITY`, `FORCE ROW LEVEL SECURITY` e policies para billing tenant-scoped usando `app.organization_id`, `app.platform_admin_id` e `billing_webhook_reconcile`.
+- `withPlatformAdminContext`/`setPlatformAdminContext` adicionados em `packages/db/src/tenant-context.ts`.
+- Admin billing passou a chamar `getPlatformBillingOverviewForAdmin(platformAdminId)`, que seta contexto transacional de plataforma.
+- Reconciliacao Asaas/Woovi passou a executar billing dentro de `withInternalJobContext("billing_webhook_reconcile", ...)`.
+- Smoke reexecutavel `scripts/smoke-rls-runtime.cjs` foi expandido para validar FORCE RLS e isolamento basico de billing entre tenants.
 - Teste estatico `src/db/rls-tenant-isolation.test.ts` cobre tabelas, `FORCE RLS`, `app.organization_id` e contexto interno de reconcile.
 - Verificacao local apos trocar `DATABASE_URL` para `polaris_app`: `bun run check`, `bun run test` (74 arquivos, 265 testes), `bun run knip` e `bun run build`.
 - Migration RLS aplicada no Neon main do projeto `autumn-feather-14038163`.
@@ -167,5 +198,6 @@ Ainda pendente antes de producao:
 
 - Atualizar o `DATABASE_URL` do ambiente de deploy para usar `polaris_app`; manter `DATABASE_URL_DIRECT`/migrations com `neondb_owner`.
 - Coordenar deploy desta versao RLS-aware e rodar `bun run db:smoke:rls` contra o ambiente promovido. Aplicar/usar RLS antes do runtime com `set_config` quebra reads/writes tenant-scoped.
+- Aplicar a migration de billing RLS via `DATABASE_URL_DIRECT` em branch/ambiente aprovado antes de exigir o smoke atualizado. O smoke atualizado espera billing RLS ativo e deve reportar `forcedTables = 18/18`.
 - Rodar smoke pos-migration para login, onboarding, dashboard, produtos, vendas, imagens e reconcile.
 - Manter o banco E2E sincronizado nas proximas migrations. Em 2026-07-08 o branch E2E `br-flat-cherry-acbnuhz4` foi alinhado via Neon MCP e `bun run test:e2e` passou com 9/9 apos preflight de schema.

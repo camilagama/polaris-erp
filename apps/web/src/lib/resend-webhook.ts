@@ -9,7 +9,6 @@ import {
   redactResendWebhookPayload,
 } from "@/lib/email-service";
 import { serverEnv } from "@/lib/env";
-import { sendOutboxEventToInngest } from "@/lib/inngest-client";
 
 const getWebhookHeaders = (request: Request) => {
   const id = request.headers.get("svix-id");
@@ -62,7 +61,7 @@ export const handleResendWebhook = async (request: Request) => {
       provider: "resend",
       rawBody,
     });
-    const outboxEventId = await enqueueOutboxEvent(db, {
+    await enqueueOutboxEvent(db, {
       correlationId: webhookHeaders.id,
       eventType: toStringPayloadValue(payload.type, "unknown"),
       idempotencyKey: `resend-webhook:${webhookHeaders.id}`,
@@ -70,7 +69,6 @@ export const handleResendWebhook = async (request: Request) => {
       topic: "resend.webhook",
     });
 
-    await sendOutboxEventToInngest(outboxEventId).catch(() => undefined);
     await recordResendEmailEvent(db, {
       event,
       providerEventId: webhookHeaders.id,

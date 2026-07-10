@@ -53,7 +53,7 @@ describe("inngest outbox functions", () => {
     expect(markProcessedMock).not.toHaveBeenCalled();
   });
 
-  it("marks claimed events without a dispatcher as failed for manual review", async () => {
+  it("marks claimed events without a dispatcher as observable but non-terminal", async () => {
     claimOutboxEventMock.mockResolvedValueOnce({
       attempts: 1,
       correlationId: "corr-1",
@@ -72,8 +72,19 @@ describe("inngest outbox functions", () => {
       db: { execute: expect.any(Function) },
       error: "No outbox dispatcher registered for email:welcome.email.",
       eventId: "event-1",
-      terminal: true,
     });
+  });
+
+  it("keeps webhook topics as explicit capture-only outbox policy", async () => {
+    const { CAPTURE_ONLY_OUTBOX_TOPICS } = await import(
+      "@/lib/inngest-functions"
+    );
+
+    expect(CAPTURE_ONLY_OUTBOX_TOPICS).toEqual([
+      "asaas.webhook",
+      "resend.webhook",
+      "woovi.webhook",
+    ]);
   });
 
   it("runs a registered dispatcher and marks the event processed", async () => {

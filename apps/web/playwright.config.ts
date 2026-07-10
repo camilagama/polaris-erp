@@ -60,12 +60,13 @@ export default defineConfig({
   testMatch: "**/*.e2e.ts",
   fullyParallel: true,
   retries: process.env.CI ? 2 : 0,
+  workers: 1,
   use: {
     baseURL: "http://127.0.0.1:3001",
     trace: "on-first-retry",
   },
   webServer: {
-    command: "bun run build && bun x next start --port 3001",
+    command: "bun x next build && bun x next start --port 3001",
     env: webServerEnv,
     port: 3001,
     reuseExistingServer: false,

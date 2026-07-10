@@ -31,15 +31,21 @@ describe("event foundation helpers", () => {
     );
     expect(
       redactWebhookHeaders({
-        authorization: "Bearer secret",
+        "Asaas-Access-Token": "asaas-secret",
+        Authorization: "Bearer secret",
         "content-type": "application/json",
-        cookie: "session=secret",
-        "x-webhook-signature": "signature-secret",
+        Cookie: "session=secret",
+        "svix-id": "msg_123",
+        "Svix-Signature": "svix-secret",
+        "X-Webhook-Signature": "woovi-secret",
       })
     ).toEqual({
+      "asaas-access-token": "[redacted]",
       authorization: "[redacted]",
       "content-type": "application/json",
       cookie: "[redacted]",
+      "svix-id": "msg_123",
+      "svix-signature": "[redacted]",
       "x-webhook-signature": "[redacted]",
     });
   });

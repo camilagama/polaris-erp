@@ -21,7 +21,18 @@ export const setUserContext = async (
   await tx.execute(sql`select set_config('app.user_id', ${userId}, true)`);
 };
 
-export type InternalJobContext = "product_image_reconcile";
+export const setPlatformAdminContext = async (
+  tx: TenantTransaction,
+  platformAdminId: string
+): Promise<void> => {
+  await tx.execute(
+    sql`select set_config('app.platform_admin_id', ${platformAdminId}, true)`
+  );
+};
+
+export type InternalJobContext =
+  | "billing_webhook_reconcile"
+  | "product_image_reconcile";
 
 const setInternalJobContext = async (
   tx: TenantTransaction,
@@ -36,6 +47,15 @@ export const withTenantContext = async <T>(
 ): Promise<T> =>
   db.transaction(async (tx) => {
     await setTenantContext(tx, organizationId);
+    return callback(tx);
+  });
+
+export const withPlatformAdminContext = async <T>(
+  platformAdminId: string,
+  callback: (tx: TenantTransaction) => Promise<T> | T
+): Promise<T> =>
+  db.transaction(async (tx) => {
+    await setPlatformAdminContext(tx, platformAdminId);
     return callback(tx);
   });
 

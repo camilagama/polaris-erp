@@ -1,4 +1,4 @@
-import { getPlatformBillingOverview } from "@polaris/platform/billing";
+import { getPlatformBillingOverviewForAdmin } from "@polaris/platform/billing";
 import Link from "next/link";
 import { forbidden } from "next/navigation";
 import { connection } from "next/server";
@@ -7,7 +7,7 @@ import { requirePlatformAdmin } from "@/lib/platform-admin-auth";
 
 const guardPlatformAdmin = async () => {
   try {
-    await requirePlatformAdmin();
+    return await requirePlatformAdmin();
   } catch {
     forbidden();
   }
@@ -33,9 +33,11 @@ const formatDateTime = (value: string | null) => {
 
 const BillingContent = async () => {
   await connection();
-  await guardPlatformAdmin();
+  const platformAdmin = await guardPlatformAdmin();
 
-  const overview = await getPlatformBillingOverview();
+  const overview = await getPlatformBillingOverviewForAdmin(
+    platformAdmin.platformAdminId
+  );
 
   return (
     <section className="mx-auto grid w-full max-w-6xl gap-6 px-6 py-8">

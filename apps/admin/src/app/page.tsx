@@ -117,7 +117,7 @@ const AdminDashboard = async () => {
                 Console operacional
               </h2>
               <p className="mt-2 max-w-2xl text-sm text-zinc-400">
-                Superficie interna bloqueada por Cloudflare Access, sessao
+                Superficie interna bloqueada por Vercel Authentication, sessao
                 Better Auth e grant ativo de platform admin.
               </p>
             </div>

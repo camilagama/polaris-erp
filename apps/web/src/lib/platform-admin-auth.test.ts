@@ -1,10 +1,7 @@
 import { createPlatformAdminAuth } from "@polaris/platform-auth/admin-guard";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { accessMock, dbMock, sessionMock } = vi.hoisted(() => ({
-  accessMock: {
-    verifyCloudflareAccess: vi.fn(),
-  },
+const { dbMock, sessionMock } = vi.hoisted(() => ({
   dbMock: {
     select: vi.fn(),
   },
@@ -17,10 +14,6 @@ vi.mock("server-only", () => ({}));
 
 vi.mock("@polaris/db", () => ({
   db: dbMock,
-}));
-
-vi.mock("@polaris/platform-auth/cloudflare-access", () => ({
-  verifyCloudflareAccess: accessMock.verifyCloudflareAccess,
 }));
 
 const mockSession = (userId = "user-1") => {
@@ -48,10 +41,6 @@ const mockPlatformGrantRows = (
 describe("getPlatformAdminContext", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    accessMock.verifyCloudflareAccess.mockResolvedValue({
-      email: "founder@example.com",
-      subject: "access-user-1",
-    });
   });
 
   it("does not treat an organization user as a platform admin", async () => {
@@ -61,12 +50,9 @@ describe("getPlatformAdminContext", () => {
       getSession: sessionMock.getSession,
     });
 
-    const context = await getPlatformAdminContext({
-      requireAccess: false,
-    });
+    const context = await getPlatformAdminContext();
 
     expect(context).toBeNull();
-    expect(accessMock.verifyCloudflareAccess).not.toHaveBeenCalled();
   });
 
   it("returns the strongest active platform grant for the signed-in user", async () => {
@@ -87,19 +73,16 @@ describe("getPlatformAdminContext", () => {
       getSession: sessionMock.getSession,
     });
 
-    const context = await getPlatformAdminContext({
-      requireAccess: false,
-    });
+    const context = await getPlatformAdminContext();
 
     expect(context).toEqual({
-      access: null,
       platformAdminId: "platform-admin-1",
       role: "owner",
       userId: "user-founder",
     });
   });
 
-  it("requires Cloudflare Access before accepting a DB platform grant", async () => {
+  it("accepts an active DB platform grant after Better Auth session", async () => {
     mockSession("user-founder");
     mockPlatformGrantRows([
       {
@@ -112,9 +95,11 @@ describe("getPlatformAdminContext", () => {
       getSession: sessionMock.getSession,
     });
 
-    await requirePlatformAdmin();
-
-    expect(accessMock.verifyCloudflareAccess).toHaveBeenCalledOnce();
+    await expect(requirePlatformAdmin()).resolves.toEqual({
+      platformAdminId: "platform-admin-1",
+      role: "operator",
+      userId: "user-founder",
+    });
   });
 
   it("rejects a platform admin that lacks the minimum platform role", async () => {
@@ -131,7 +116,7 @@ describe("getPlatformAdminContext", () => {
     });
 
     await expect(
-      requirePlatformAdmin({ minimumRole: "operator", requireAccess: false })
+      requirePlatformAdmin({ minimumRole: "operator" })
     ).rejects.toThrow("Voce nao tem permissao de plataforma suficiente.");
   });
 });

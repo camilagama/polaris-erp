@@ -36,6 +36,7 @@ export async function completeOnboardingAction(
   }
 
   await createInitialOrganizationForUser({
+    billingEmail: session.user.email,
     name: parsed.data.organizationName,
     userId: session.user.id,
   });

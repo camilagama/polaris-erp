@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createInitialOrganizationForUser,
   getAppContext,
+  requireAppContext,
+  requirePageAppContext,
 } from "@/lib/app-session";
 
 const { dbMock, sessionMock, txMock } = vi.hoisted(() => {
@@ -50,6 +52,30 @@ const selectMembershipOnce = (organizationId: string) => {
   });
 };
 
+const selectNoMembershipOnce = () => {
+  txMock.select.mockReturnValueOnce({
+    from: vi.fn().mockReturnValue({
+      where: vi.fn().mockReturnValue({
+        orderBy: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue([]),
+        }),
+      }),
+    }),
+  });
+};
+
+const selectDefaultBillingPlanOnce = (planId: string | null) => {
+  txMock.select.mockReturnValueOnce({
+    from: vi.fn().mockReturnValue({
+      where: vi.fn().mockReturnValue({
+        orderBy: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue(planId ? [{ id: planId }] : []),
+        }),
+      }),
+    }),
+  });
+};
+
 const selectAppContextMembershipOnce = (
   membership: {
     organizationId: string;
@@ -69,6 +95,25 @@ const selectAppContextMembershipOnce = (
       }),
     }),
   });
+};
+
+const selectBillingStatusOnce = (status: string | null) => {
+  txMock.select.mockReturnValueOnce({
+    from: vi.fn().mockReturnValue({
+      where: vi.fn().mockReturnValue({
+        orderBy: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue(status ? [{ status }] : []),
+        }),
+      }),
+    }),
+  });
+};
+
+const mockInsertValues = () => {
+  const values = vi.fn().mockResolvedValue([]);
+  txMock.insert.mockReturnValue({ values });
+
+  return values;
 };
 
 const mockUpdateSession = () => {
@@ -102,6 +147,7 @@ const mockSession = ({
 describe("createInitialOrganizationForUser", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.unstubAllEnvs();
     dbMock.transaction.mockImplementation(async (callback) => callback(txMock));
   });
 
@@ -138,6 +184,67 @@ describe("createInitialOrganizationForUser", () => {
     expect(
       txMock.execute.mock.invocationCallOrder[userContextCallIndex]
     ).toBeLessThan(txMock.select.mock.invocationCallOrder[0]);
+  });
+
+  it("creates an incomplete subscription from the active billing plan during onboarding", async () => {
+    selectNoMembershipOnce();
+    selectDefaultBillingPlanOnce("polaris-start-monthly");
+    const insertValues = mockInsertValues();
+
+    await createInitialOrganizationForUser({
+      billingEmail: "user@example.com",
+      name: "Polaris Brasil",
+      userId: "user-1",
+    });
+
+    expect(insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        billingEmail: "user@example.com",
+      })
+    );
+    expect(insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        planId: "polaris-start-monthly",
+        status: "incomplete",
+      })
+    );
+  });
+
+  it("activates the initial subscription only for isolated local E2E bootstrap", async () => {
+    const isolatedDatabaseUrl = "postgres://e2e:e2e@example.com/e2e";
+
+    vi.stubEnv("ALLOW_PLAYWRIGHT_BOOTSTRAP", "true");
+    vi.stubEnv("DATABASE_URL", isolatedDatabaseUrl);
+    vi.stubEnv("E2E_DATABASE_URL", isolatedDatabaseUrl);
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("VERCEL_ENV", "development");
+    selectNoMembershipOnce();
+    selectDefaultBillingPlanOnce("polaris-start-monthly");
+    const insertValues = mockInsertValues();
+
+    await createInitialOrganizationForUser({
+      name: "Polaris Brasil",
+      userId: "user-1",
+    });
+
+    expect(insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        planId: "polaris-start-monthly",
+        status: "active",
+      })
+    );
+  });
+
+  it("fails onboarding when no active billing plan exists", async () => {
+    selectNoMembershipOnce();
+    selectDefaultBillingPlanOnce(null);
+
+    await expect(
+      createInitialOrganizationForUser({
+        name: "Polaris Brasil",
+        userId: "user-1",
+      })
+    ).rejects.toThrow("Plano de billing ativo nao encontrado.");
   });
 });
 
@@ -181,21 +288,78 @@ describe("getAppContext", () => {
       organizationStatus: "active",
       role: "owner",
     });
+    selectBillingStatusOnce("active");
     const { set } = mockUpdateSession();
 
     const context = await getAppContext();
 
     expect(context).toEqual({
+      billingStatus: "active",
+      hasBillableAccess: true,
       organizationId: "org-active",
       organizationName: "Polaris",
       role: "owner",
       userId: "user-1",
     });
-    expect(dbMock.transaction).toHaveBeenCalledOnce();
+    expect(dbMock.transaction).toHaveBeenCalledTimes(2);
     expect(set).toHaveBeenCalledWith(
       expect.objectContaining({
         activeOrganizationId: "org-active",
       })
     );
+  });
+
+  it("returns active organization context without billable access for incomplete subscriptions", async () => {
+    mockSession({ activeOrganizationId: "org-active" });
+    selectAppContextMembershipOnce({
+      organizationId: "org-active",
+      organizationName: "Polaris",
+      organizationStatus: "active",
+      role: "owner",
+    });
+    selectBillingStatusOnce("incomplete");
+
+    const context = await getAppContext();
+
+    expect(context).toEqual({
+      billingStatus: "incomplete",
+      hasBillableAccess: false,
+      organizationId: "org-active",
+      organizationName: "Polaris",
+      role: "owner",
+      userId: "user-1",
+    });
+  });
+
+  it("blocks operational app actions without a billable subscription", async () => {
+    mockSession({ activeOrganizationId: "org-active" });
+    selectAppContextMembershipOnce({
+      organizationId: "org-active",
+      organizationName: "Polaris",
+      organizationStatus: "active",
+      role: "owner",
+    });
+    selectBillingStatusOnce("incomplete");
+
+    await expect(requireAppContext("catalog:read")).rejects.toThrow(
+      "Assinatura ativa necessaria para acessar o Polaris."
+    );
+  });
+
+  it("redirects app pages without a billable subscription to the billing block page", async () => {
+    const navigation = await import("next/navigation");
+
+    mockSession({ activeOrganizationId: "org-active" });
+    selectAppContextMembershipOnce({
+      organizationId: "org-active",
+      organizationName: "Polaris",
+      organizationStatus: "active",
+      role: "owner",
+    });
+    selectBillingStatusOnce("incomplete");
+
+    await requirePageAppContext();
+
+    expect(navigation.redirect).toHaveBeenCalledWith("/billing-required");
   });
 });

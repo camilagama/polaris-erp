@@ -122,7 +122,7 @@ describe("admin app protection", () => {
   it("renders a dedicated forbidden state for denied internal access", () => {
     expect(adminForbiddenSource).toContain("Acesso negado");
     expect(adminForbiddenSource).toContain("platform admin");
-    expect(adminForbiddenSource).toContain("Cloudflare Access");
+    expect(adminForbiddenSource).toContain("Vercel Authentication");
   });
 
   it("guards admin organization and user directory routes", () => {
