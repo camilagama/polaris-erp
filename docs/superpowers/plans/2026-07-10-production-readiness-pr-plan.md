@@ -1,0 +1,1013 @@
+# Production Readiness PR Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. This document is a PR execution plan, not an implementation patch. Do not implement without explicit user approval.
+
+**Goal:** Turn Polaris from internal/beta-ready into production-ready SaaS with subscription from day one, hardened tenant data isolation, safer admin deployment, clearer monorepo boundaries, and verified operational gates.
+
+**Architecture:** Keep `apps/web` as the customer product and deploy `apps/admin` as a separate Vercel project rooted at `apps/admin`. Remove Cloudflare Access from admin code and env, enable Vercel Authentication/deployment protection at the platform layer, and keep Better Auth + platform admin grants as the in-app authorization layer. Move recurring internal maintenance from Vercel Cron to Inngest scheduled functions because the project already uses Inngest for durable background execution and image reconciliation benefits from retries/observability.
+
+**Tech Stack:** Next.js 16, React 19, Bun, Turborepo, Drizzle/Postgres/Neon, Better Auth, Vercel, Inngest, R2, Upstash, Sentry, Vitest, Playwright.
+
+## Global Constraints
+
+- Do not implement during this planning PR.
+- Keep PRs small, reviewable, and independently shippable.
+- Run narrow tests first, then broader gates.
+- Do not run destructive migrations against shared or production databases.
+- Use `E2E_DATABASE_URL` isolated for every E2E run.
+- Billing is required from day one: no free/beta assumption in production.
+- Platform admin must be able to view/manage billing.
+- Customers must not name organizations/workspaces; onboarding should not ask for organization name.
+- Remove Cloudflare Access from the admin app and replace perimeter protection with Vercel Authentication/deployment protection plus in-app platform admin grants.
+
+---
+
+## Decision Log
+
+1. **Admin deploy:** use a separate Vercel project with root `apps/admin`.
+   - Reason: the admin has a different audience, auth perimeter, smoke checks, and operational blast radius.
+   - Keep it in the monorepo, but make deployment config app-local and explicit.
+
+2. **Admin protection:** remove Cloudflare Access from code and docs; enable Vercel Authentication/deployment protection for admin deployments.
+   - Vercel Authentication protects deployments at the platform layer.
+   - Better Auth session + `platform_admins` grants remain mandatory inside the app.
+   - Do not rely on platform protection alone for authorization.
+
+3. **Image reconcile schedule:** move from Vercel Cron to Inngest scheduled function.
+   - Vercel Cron is simple and supports `CRON_SECRET`, but this job is background maintenance with retry/observability needs.
+   - Inngest already exists at `/api/inngest`, and docs support cron schedules via `createFunction(..., { cron })`.
+   - Remove `vercel.json` cron after the Inngest scheduled function is verified.
+
+4. **Outbox:** treat it as a real durable event mechanism, not temporary logging.
+   - Reason: schema, admin event UI, retry helpers, and Inngest processor already exist.
+   - Fix by registering real dispatchers or converting currently unsupported events into explicit synchronous effects plus non-dispatched audit records.
+
+5. **Organization naming:** remove customer-controlled organization naming.
+   - If Better Auth organization plugin still requires `name`/`slug`, generate hidden technical values from user/tenant ID until the auth model is replaced.
+   - Remove the user-facing field and remove domain reliance on organization name.
+   - Plan DB migration only after confirming Better Auth table constraints and adapter requirements.
+
+---
+
+## P0 Blockers
+
+### PR 01 - Patch Critical Dependency Advisories
+
+**Objetivo:** Remove known vulnerable dependency ranges before any production work continues.
+
+**Escopo exato:**
+- Upgrade `next` from `16.2.1` to a patched version at or above `16.2.5`.
+- Update dependent lockfile entries affected by `bun audit`.
+- Re-run compatibility checks for Next App Router, Proxy, Cache Components, Sentry, and Inngest.
+
+**Achados endereçados:** `SEC-001`, dependency audit high findings.
+
+**Arquivos prováveis:**
+- `package.json`
+- `bun.lock`
+- `apps/web/next.config.ts`
+- `apps/admin/next.config.ts`
+- Possibly generated `.next` ignored artifacts only if build runs locally.
+
+**O que não deve ser alterado:**
+- No feature changes.
+- No auth or DB behavior changes.
+- No dependency major upgrades unrelated to advisories unless required by Next.
+
+**Testes necessários:**
+- `bun run check`
+- `bun run check:admin`
+- `bun run typecheck`
+- `bun run typecheck:admin`
+- `bun run test`
+- `bun run build`
+- `bun run build:admin`
+- `bun audit`
+
+**Critério de aceite:**
+- Next advisory for `<16.2.5` no longer appears in `bun audit`.
+- Web/admin builds pass.
+
+**Riscos:**
+- Next patch may change Cache Components or Proxy behavior.
+- Sentry plugin compatibility may need config adjustment.
+
+**Rollback:**
+- Revert `package.json` and `bun.lock`.
+
+### PR 02 - Stop Secret Leakage in Webhook Event Capture
+
+**Objetivo:** Ensure webhook secrets are never persisted in `webhook_events.redactedHeaders`.
+
+**Escopo exato:**
+- Add `asaas-access-token` to sensitive header redaction.
+- Add tests for Asaas, Woovi, Resend/Svix, Authorization, Cookie, and mixed-case header names.
+- Keep raw body hashing, not raw body persistence.
+
+**Achados endereçados:** `SEC-002`.
+
+**Arquivos prováveis:**
+- `packages/events/src/index.ts`
+- `apps/web/src/lib/event-foundation.test.ts`
+- Possibly `apps/web/src/lib/asaas-webhook.test.ts`
+
+**O que não deve ser alterado:**
+- Do not change provider signature validation.
+- Do not change webhook schemas or DB migrations.
+
+**Testes necessários:**
+- Targeted Vitest for event foundation.
+- `bun run test`
+
+**Critério de aceite:**
+- `asaas-access-token` is stored as `[redacted]`.
+- Tests prove case-insensitive redaction.
+
+**Riscos:**
+- Low. Main risk is missing provider-specific custom headers.
+
+**Rollback:**
+- Revert redaction set and tests.
+
+### PR 03 - Make Outbox Semantics Production-Safe
+
+**Objetivo:** Convert outbox from partially wired durable mechanism into a safe production mechanism.
+
+**Escopo exato:**
+- Inventory every `enqueueOutboxEvent` topic/event type.
+- Add a source test that fails if enqueued topic/eventType has no dispatcher or explicit non-dispatch policy.
+- Register real dispatchers for supported events.
+- For events that only need audit/idempotency, do not enqueue to Inngest until a dispatcher exists.
+- Make unsupported dispatcher absence non-silent and observable.
+
+**Achados endereçados:** `BACK-001`.
+
+**Arquivos prováveis:**
+- `apps/web/src/lib/inngest-functions.ts`
+- `apps/web/src/lib/inngest-client.ts`
+- `apps/web/src/lib/woovi-webhook.ts`
+- `apps/web/src/lib/asaas-webhook.ts`
+- `apps/web/src/lib/resend-webhook.ts`
+- `packages/events/src/index.ts`
+- `apps/web/src/lib/inngest-functions.test.ts`
+- `apps/web/src/lib/event-foundation.test.ts`
+
+**O que não deve ser alterado:**
+- Do not redesign billing provider adapters in this PR.
+- Do not remove admin event visibility.
+
+**Testes necessários:**
+- Webhook valid event -> outbox event -> Inngest processor -> processed.
+- Unsupported event source test.
+- Retry/dead-letter behavior test.
+- `bun run test`
+
+**Critério de aceite:**
+- No production-enqueued outbox event can become terminal solely because no dispatcher exists.
+- Admin event/outbox UI still lists events.
+
+**Riscos:**
+- Dispatchers may accidentally duplicate synchronous side effects.
+
+**Rollback:**
+- Disable Inngest sending for outbox events while keeping capture records.
+
+---
+
+## P1 Segurança, Autorização e Dados
+
+### PR 04 - Add RLS for Billing with Platform Admin Access Model
+
+**Objetivo:** Protect tenant billing tables with RLS while preserving platform admin billing access.
+
+**Escopo exato:**
+- Enable and force RLS on billing tenant tables.
+- Add policies using `app.organization_id` for customer runtime access.
+- Add explicit platform/admin access policy or separate DB role/session context for platform admin workflows.
+- Expand RLS smoke and source tests to billing.
+
+**Achados endereçados:** `DB-001`.
+
+**Arquivos prováveis:**
+- `packages/db/src/schema.ts`
+- `packages/db/src/migrations/*.sql`
+- `apps/web/src/db/rls-tenant-isolation.test.ts`
+- `scripts/smoke-rls-runtime.cjs`
+- `docs/architecture/rls-tenant-isolation.md`
+- `docs/architecture/database-environments.md`
+
+**O que não deve ser alterado:**
+- Do not change billing product behavior yet.
+- Do not make platform admin a tenant member.
+
+**Testes necessários:**
+- Source test for `ENABLE/FORCE ROW LEVEL SECURITY`.
+- Runtime smoke: tenant A cannot read tenant B billing.
+- Platform admin path can read billing through approved context.
+
+**Critério de aceite:**
+- Billing tables are covered by RLS and tested.
+- Platform admin billing access is explicit and documented.
+
+**Riscos:**
+- Incorrect policy could block admin billing pages.
+
+**Rollback:**
+- Revert migration before production deploy; if deployed, create forward migration restoring previous policies only after approval.
+
+### PR 05 - Remove Cloudflare Access from Admin and Use Vercel Authentication
+
+**Objetivo:** Replace Cloudflare Access code-level dependency with Vercel Authentication/deployment protection plus in-app platform admin authorization.
+
+**Escopo exato:**
+- Remove `@polaris/platform-auth/cloudflare-access` usage.
+- Remove `CLOUDFLARE_ACCESS_AUD` and `CLOUDFLARE_ACCESS_TEAM_DOMAIN` from app env validation, docs, CI preflight, and runbooks.
+- Keep `requirePlatformAdmin` based on Better Auth session + `platform_admins` grants.
+- Update admin copy that mentions Cloudflare Access.
+- Add docs/runbook steps to enable Vercel Authentication/deployment protection for the admin Vercel project.
+
+**Achados endereçados:** `SEC-004`, user request to remove Cloudflare Access.
+
+**Arquivos prováveis:**
+- `packages/platform-auth/src/admin-guard.ts`
+- `packages/platform-auth/src/cloudflare-access.ts`
+- `packages/platform-auth/package.json`
+- `apps/admin/src/lib/platform-admin-auth.ts`
+- `apps/admin/src/app/forbidden.tsx`
+- `apps/admin/src/app/page.tsx`
+- `apps/web/src/lib/production-preflight.ts`
+- `.env.example`
+- `turbo.json`
+- `docs/runbooks/deploy-vercel.md`
+- `README.md`
+
+**O que não deve ser alterado:**
+- Do not weaken platform admin grants.
+- Do not expose admin on the same origin as web.
+
+**Testes necessários:**
+- Admin auth unit tests for no session, no grant, insufficient role, valid grant.
+- `bun run typecheck:admin`
+- `bun run build:admin`
+- `bun run test:e2e:admin` with isolated DB.
+
+**Critério de aceite:**
+- No Cloudflare Access envs or runtime imports remain.
+- Admin still requires Better Auth session and active platform grant.
+- Runbook tells operator to enable Vercel Authentication for admin deployments.
+
+**Riscos:**
+- Vercel Authentication is platform config, so local tests cannot prove dashboard state.
+
+**Rollback:**
+- Revert code/docs and restore Cloudflare envs.
+
+### PR 06 - Require Subscription from Day One
+
+**Objetivo:** Make billing a production gate, not a future/internal-only module.
+
+**Escopo exato:**
+- Define initial production plan(s).
+- During onboarding/first-login flow, create or require a billing customer/subscription state.
+- Block app access when organization has no active/trialing subscription.
+- Add user-facing billing state page or checkout handoff.
+- Keep platform admin able to inspect and manage billing.
+
+**Achados endereçados:** product billing gap, `DB-001`, user decision: subscription from day one.
+
+**Arquivos prováveis:**
+- `packages/db/src/schema.ts`
+- `packages/billing/src/**`
+- `packages/platform/src/platform-billing.ts`
+- `apps/web/src/lib/app-session.ts`
+- `apps/web/src/features/onboarding/actions.ts`
+- `apps/web/src/app/(app)/layout.tsx`
+- `apps/web/src/app/(app)/configuracoes/page.tsx`
+- `apps/admin/src/app/billing/page.tsx`
+- `docs/product/01-regras-de-negocio.md`
+- `docs/product/roadmap.md`
+
+**O que não deve ser alterado:**
+- Do not build full self-serve plan management beyond minimum production gate.
+- Do not introduce a second auth system.
+
+**Testes necessários:**
+- New user without subscription cannot enter operational app.
+- Active/trialing subscription allows access.
+- Past due/canceled blocks or shows configured restricted state.
+- Platform admin can view subscription/invoice records.
+
+**Critério de aceite:**
+- Production path cannot create active tenant usage without subscription state.
+- Billing status is visible and test-covered.
+
+**Riscos:**
+- Premature billing gate may block E2E/dev unless test bootstrap creates valid billing state.
+
+**Rollback:**
+- Feature flag billing gate off for non-production only; production rollback requires explicit release decision.
+
+### PR 07 - Remove Customer-Controlled Organization Naming
+
+**Objetivo:** Remove organization naming from onboarding, UI, and domain behavior for the one-user-per-tenant model.
+
+**Escopo exato:**
+- Remove organization name input from onboarding.
+- Auto-create tenant/workspace after successful auth or with one-button onboarding.
+- Remove `organizationName` from app context UI usage.
+- Replace generated org name/slug with hidden technical identifiers if Better Auth requires them.
+- Investigate whether Better Auth organization table can drop `name`/`slug`; if not, keep generated hidden values and document constraint.
+- If safe, add migration removing unused customer-facing organization name fields or moving technical tenant metadata to a separate table.
+
+**Achados endereçados:** user request, onboarding simplification, product readiness.
+
+**Arquivos prováveis:**
+- `apps/web/src/app/(auth)/onboarding/page.tsx`
+- `apps/web/src/app/(auth)/onboarding/onboarding-form.tsx`
+- `apps/web/src/features/onboarding/actions.ts`
+- `apps/web/src/lib/app-session.ts`
+- `apps/web/src/lib/app-context.ts`
+- `packages/db/src/schema.ts`
+- `packages/db/src/migrations/*.sql`
+- `README.md`
+- `docs/runbooks/deploy-vercel.md`
+
+**O que não deve ser alterado:**
+- Do not remove tenant isolation.
+- Do not remove `organization_id` from domain tables.
+- Do not remove Better Auth session organization linkage unless replaced safely.
+
+**Testes necessários:**
+- New user completes onboarding without entering organization name.
+- Tenant is created with owner membership, default category, settings, audit event.
+- No UI asks for or displays customer organization name.
+- DB migration tests for removed/hidden fields.
+
+**Critério de aceite:**
+- Customer cannot name workspace.
+- Existing tenants migrate safely.
+- Tenant isolation still works.
+
+**Riscos:**
+- Better Auth organization plugin may require `name`/`slug`.
+
+**Rollback:**
+- Reintroduce hidden generated name/slug fields without restoring UI input.
+
+---
+
+## P1/P2 Bugs Funcionais
+
+### PR 08 - Fix Admin Organization Status Mutation Integrity
+
+**Objetivo:** Prevent false audit success when no organization row changes.
+
+**Escopo exato:**
+- Add `.returning()` to status mutation.
+- Throw when update touches zero rows.
+- Audit only after confirmed update.
+
+**Achados endereçados:** `BACK-002`.
+
+**Arquivos prováveis:**
+- `packages/platform/src/platform-organization-mutations.ts`
+- `apps/web/src/lib/platform-organization-mutations.test.ts`
+
+**O que não deve ser alterado:**
+- No admin UI redesign.
+
+**Testes necessários:**
+- Missing organization rejects.
+- No audit insert on missing organization.
+- Valid update still audits.
+
+**Critério de aceite:**
+- Audit cannot claim status changed when DB did not change.
+
+**Riscos:**
+- Existing callers may need to surface the thrown error.
+
+**Rollback:**
+- Revert mutation change.
+
+### PR 09 - Make Catalog Audit Transactional
+
+**Objetivo:** Ensure catalog changes and audit records commit or rollback together.
+
+**Escopo exato:**
+- Move category/settings mutations and audit insert into one transaction.
+- Use tenant context inside the same transaction.
+
+**Achados endereçados:** `DB-004`.
+
+**Arquivos prováveis:**
+- `apps/web/src/features/catalog/actions.ts`
+- `apps/web/src/features/catalog/server.ts`
+- `apps/web/src/lib/audit-log.ts`
+- `apps/web/src/features/catalog/actions.test.ts`
+
+**O que não deve ser alterado:**
+- No settings UI behavior changes.
+
+**Testes necessários:**
+- Simulated audit failure rolls back mutation, or outbox fallback is created transactionally.
+
+**Critério de aceite:**
+- No catalog mutation can persist without audit or declared durable fallback.
+
+**Riscos:**
+- Existing helper `writeAuditEvent` may not accept an external transaction.
+
+**Rollback:**
+- Revert to prior mutation path.
+
+### PR 10 - Validate Platform Support Note Targets
+
+**Objetivo:** Prevent notes linking unrelated user and organization.
+
+**Escopo exato:**
+- If both `organizationId` and `customerUserId` exist, validate membership relation.
+- Fix list query semantics when both filters are supplied.
+
+**Achados endereçados:** `DB-003`.
+
+**Arquivos prováveis:**
+- `packages/platform/src/platform-support-notes.ts`
+- `apps/web/src/lib/platform-support-notes.test.ts`
+
+**O que não deve ser alterado:**
+- Do not redesign support notes UI.
+
+**Testes necessários:**
+- User outside organization is rejected.
+- Query with both filters does not return unrelated notes.
+
+**Critério de aceite:**
+- Support note target is semantically consistent.
+
+**Riscos:**
+- Historical inconsistent notes may exist and need a cleanup report.
+
+**Rollback:**
+- Revert validation while preserving tests as skipped only with explicit approval.
+
+---
+
+## Testes Para Fluxos Críticos
+
+### PR 11 - Add Package-Level Test Suites
+
+**Objetivo:** Give extracted packages their own behavioral tests.
+
+**Escopo exato:**
+- Add `test` scripts for `@polaris/auth`, `@polaris/events`, `@polaris/platform`, `@polaris/platform-auth` or their replacements after Cloudflare removal.
+- Move package-owned tests out of `apps/web/src/lib` where appropriate.
+- Add root `test:all`.
+
+**Achados endereçados:** `TEST-001`, monorepo organization.
+
+**Arquivos prováveis:**
+- `packages/*/package.json`
+- `packages/*/src/**/*.test.ts`
+- `apps/web/src/lib/*platform*.test.ts`
+- `turbo.json`
+- `package.json`
+
+**O que não deve ser alterado:**
+- No production logic changes except import path updates needed for moved tests.
+
+**Testes necessários:**
+- `bun run test:all`
+- Existing `bun run test`
+
+**Critério de aceite:**
+- Shared packages fail independently when their contracts break.
+
+**Riscos:**
+- Moving tests may require test aliases/config.
+
+**Rollback:**
+- Restore tests to web app and remove package scripts.
+
+### PR 12 - Add Direct Webhook Behavior Tests
+
+**Objetivo:** Cover public webhook edges directly.
+
+**Escopo exato:**
+- Add behavior tests for Resend webhook.
+- Expand Asaas/Woovi tests for missing headers, invalid signature/token, oversized body, duplicate event, successful capture/outbox.
+
+**Achados endereçados:** `TEST-002`, `SEC-003`, `BACK-001`.
+
+**Arquivos prováveis:**
+- `apps/web/src/lib/resend-webhook.test.ts`
+- `apps/web/src/lib/asaas-webhook.test.ts`
+- `apps/web/src/lib/woovi-webhook.test.ts`
+- `apps/web/src/app/api/webhooks/*/route.test.ts`
+
+**O que não deve ser alterado:**
+- No provider adapter redesign.
+
+**Testes necessários:**
+- Targeted webhook tests.
+- `bun run test`
+
+**Critério de aceite:**
+- Every public webhook route has direct negative and positive tests.
+
+**Riscos:**
+- Provider signature mocks can become too implementation-specific.
+
+**Rollback:**
+- Remove new tests only if they are proven incorrect.
+
+### PR 13 - Add Admin Unit Tests and E2E Isolation
+
+**Objetivo:** Make admin regressions visible before Playwright.
+
+**Escopo exato:**
+- Add admin unit/source test setup.
+- Cover bootstrap admin negative paths.
+- Split CI E2E DBs for web/admin or serialize jobs.
+
+**Achados endereçados:** `TEST-003`, `DEVOPS-006`.
+
+**Arquivos prováveis:**
+- `apps/admin/package.json`
+- `apps/admin/vitest.config.ts`
+- `apps/admin/src/**/*.test.ts`
+- `.github/workflows/ci.yml`
+- `scripts/check-e2e-db-schema.ts`
+
+**O que não deve ser alterado:**
+- No admin feature changes.
+
+**Testes necessários:**
+- `bun run test:admin`
+- `bun run test:e2e:admin` with isolated DB.
+
+**Critério de aceite:**
+- Admin has fast tests for auth/bootstrap guardrails.
+- Web/admin E2E no longer share a DB in parallel.
+
+**Riscos:**
+- More CI time.
+
+**Rollback:**
+- Keep unit tests but temporarily serialize E2E if DB split is not ready.
+
+---
+
+## UX Crítica
+
+### PR 14 - Confirm Destructive Product Actions
+
+**Objetivo:** Prevent accidental stock write-offs and product archiving.
+
+**Escopo exato:**
+- Add confirmation for stock write-off and archive.
+- Validate `NaN`, `<=0`, and `> stock` client-side before submit.
+- Show inline errors.
+
+**Achados endereçados:** `UX-001`, `UX-002`.
+
+**Arquivos prováveis:**
+- `apps/web/src/components/products/product-detail-actions.tsx`
+- `apps/web/tests/e2e/operations.e2e.ts`
+- Component tests if existing setup supports it.
+
+**O que não deve ser alterado:**
+- No inventory domain rule changes.
+
+**Testes necessários:**
+- E2E cancel/confirm archive.
+- E2E write-off above stock blocked.
+- Unit/component test for disabled states.
+
+**Critério de aceite:**
+- Destructive actions require explicit confirmation.
+
+**Riscos:**
+- Extra clicks in operations flow.
+
+**Rollback:**
+- Revert UI confirmation only; keep server-side validation.
+
+### PR 15 - Fix Admin Accessibility and Mobile Layout
+
+**Objetivo:** Make admin filters/forms navigable and reduce mobile layout breakage.
+
+**Escopo exato:**
+- Add labels or `aria-label` for admin inputs/textareas.
+- Render disabled admin dashboard card as non-link.
+- Add mobile-safe table/list wrappers.
+
+**Achados endereçados:** `UX-003`, `UX-004`, `UX-005`.
+
+**Arquivos prováveis:**
+- `apps/admin/src/app/page.tsx`
+- `apps/admin/src/app/organizations/page.tsx`
+- `apps/admin/src/app/audit/page.tsx`
+- `apps/admin/src/app/organizations/[organizationId]/page.tsx`
+- `apps/admin/src/app/users/[userId]/page.tsx`
+- `apps/admin/tests/e2e/admin-access.e2e.ts`
+
+**O que não deve ser alterado:**
+- No admin data model changes.
+
+**Testes necessários:**
+- Playwright `getByLabel`.
+- Mobile viewport no horizontal overflow for key pages.
+
+**Critério de aceite:**
+- Inputs have accessible names.
+- Disabled card is not a misleading link.
+
+**Riscos:**
+- Minor visual regressions.
+
+**Rollback:**
+- Revert layout wrappers/labels.
+
+---
+
+## Performance
+
+### PR 16 - Move Dashboard/List Aggregations to SQL
+
+**Objetivo:** Reduce memory/CPU and improve TTFB for growing tenants.
+
+**Escopo exato:**
+- Replace JS aggregation of raw rows with SQL aggregation.
+- Keep result contracts stable.
+- Add representative tests for totals/top products/date buckets.
+
+**Achados endereçados:** `PERF-001`.
+
+**Arquivos prováveis:**
+- `apps/web/src/features/dashboard/server.ts`
+- `apps/web/src/features/dashboard/metrics.ts`
+- `apps/web/src/features/sales/server.ts`
+- `apps/web/src/features/products/server.ts`
+- Related tests.
+
+**O que não deve ser alterado:**
+- No UI redesign.
+
+**Testes necessários:**
+- Existing dashboard/sales/products tests.
+- New SQL contract tests.
+
+**Critério de aceite:**
+- Critical aggregates no longer require loading all rows.
+
+**Riscos:**
+- SQL/date bucket behavior may differ from JS.
+
+**Rollback:**
+- Revert to previous aggregation implementation.
+
+### PR 17 - Add Search Index Strategy
+
+**Objetivo:** Prevent scans from `%term%` search at scale.
+
+**Escopo exato:**
+- Add `pg_trgm` extension if acceptable for Neon.
+- Add GIN/trigram indexes for product/category/sales customer search.
+- Prefer exact UUID/prefix search instead of casting UUID with `%term%`.
+
+**Achados endereçados:** `PERF-002`.
+
+**Arquivos prováveis:**
+- `packages/db/src/migrations/*.sql`
+- `packages/db/src/schema.ts`
+- `apps/web/src/features/products/queries.ts`
+- `apps/web/src/features/sales/queries.ts`
+- `scripts/analyze-listing-plans.ts`
+
+**O que não deve ser alterado:**
+- No visible search UX changes except stricter ID matching.
+
+**Testes necessários:**
+- Query tests.
+- Optional `db:analyze:listings` on representative data.
+
+**Critério de aceite:**
+- Search plan uses intended indexes on realistic dataset or documented fallback.
+
+**Riscos:**
+- Migration lock/time on large tables.
+
+**Rollback:**
+- Drop indexes in forward migration.
+
+### PR 18 - Paginate Product Picker for Sales
+
+**Objetivo:** Avoid loading all sellable products into the sales dialog.
+
+**Escopo exato:**
+- Add server-side search/pagination endpoint or server action for sale product options.
+- Update `CreateSaleDialog` to query options on demand.
+
+**Achados endereçados:** `PERF-007`.
+
+**Arquivos prováveis:**
+- `apps/web/src/features/sales/queries.ts`
+- `apps/web/src/components/sales/create-sale-dialog.tsx`
+- `apps/web/src/features/sales/actions.ts`
+- `apps/web/src/app/(app)/vendas/(list)/page.tsx`
+
+**O que não deve ser alterado:**
+- No sale calculation changes.
+
+**Testes necessários:**
+- Dialog searches/paginates.
+- Sale creation still validates selected product server-side.
+
+**Critério de aceite:**
+- Page no longer passes full product catalog to client.
+
+**Riscos:**
+- More client/server interaction complexity.
+
+**Rollback:**
+- Restore eager options while keeping server validation.
+
+---
+
+## DevOps/Produção
+
+### PR 19 - Move Image Reconcile from Vercel Cron to Inngest
+
+**Objetivo:** Use durable scheduled jobs for image reconciliation.
+
+**Escopo exato:**
+- Add Inngest scheduled function with cron `0 4 * * *`.
+- Remove `crons` entry from root `vercel.json` after verification.
+- Remove or simplify `PRODUCT_IMAGE_RECONCILE_SECRET` if no direct public cron endpoint remains.
+- Keep manual/admin-triggered endpoint only if needed, protected consistently.
+
+**Achados endereçados:** `DEVOPS-001`, user cron question.
+
+**Arquivos prováveis:**
+- `apps/web/src/lib/inngest-functions.ts`
+- `apps/web/src/app/api/inngest/route.ts`
+- `apps/web/src/app/api/internal/product-images/reconcile/route.ts`
+- `vercel.json`
+- `.env.example`
+- `docs/runbooks/deploy-vercel.md`
+- `apps/web/src/lib/production-preflight.ts`
+
+**O que não deve ser alterado:**
+- Do not change reconciliation deletion rules in this PR.
+
+**Testes necessários:**
+- Inngest function invokes reconcile service.
+- Manual endpoint, if kept, has consistent auth.
+- `bun run test`
+- `bun run build`
+
+**Critério de aceite:**
+- Daily reconcile is scheduled by Inngest.
+- Vercel Cron secret mismatch no longer exists.
+
+**Riscos:**
+- Inngest schedule requires synced deployed app/function.
+
+**Rollback:**
+- Re-add Vercel Cron entry and restore `CRON_SECRET` auth path.
+
+### PR 20 - Make Admin a First-Class Vercel Project
+
+**Objetivo:** Make admin deployment explicit, repeatable, and protected.
+
+**Escopo exato:**
+- Add `apps/admin/vercel.json` or documented Vercel project root config.
+- Remove ambiguous `vercel.admin.json` or make its usage explicit.
+- Add admin health route.
+- Add admin deployment smoke script.
+- Add Sentry/instrumentation parity where appropriate.
+
+**Achados endereçados:** `DEVOPS-003`, `DEVOPS-004`.
+
+**Arquivos prováveis:**
+- `apps/admin/vercel.json`
+- `vercel.admin.json`
+- `apps/admin/src/app/api/health/route.ts`
+- `apps/admin/src/instrumentation.ts`
+- `scripts/smoke-admin-deployment.ts`
+- `package.json`
+- `.github/workflows/ci.yml`
+- `docs/runbooks/deploy-vercel.md`
+
+**O que não deve ser alterado:**
+- No admin product feature changes.
+
+**Testes necessários:**
+- `bun run build:admin`
+- Admin smoke against preview/prod URL.
+
+**Critério de aceite:**
+- Admin deploy does not depend on hidden dashboard-only config.
+- Vercel Authentication/deployment protection is documented as required.
+
+**Riscos:**
+- Vercel dashboard state cannot be fully tested from repo.
+
+**Rollback:**
+- Revert app-local config and use existing manual config.
+
+### PR 21 - Harden CI and Migration Operations
+
+**Objetivo:** Make production gates deterministic and safer.
+
+**Escopo exato:**
+- Pin Bun in CI to `1.3.11` or derive from `packageManager`.
+- Add wrapper for migrations requiring `DATABASE_URL_DIRECT`.
+- Remove `DATABASE_URL_DIRECT ?? DATABASE_URL` fallback.
+- Add restore drill/checklist script or documented CI/manual job.
+- Add `build:all`, `check:all`, `typecheck:all`, `test:all`.
+
+**Achados endereçados:** `ARCH-001`, `DEVOPS-005`, `DEVOPS-007`, `DEVOPS-008`.
+
+**Arquivos prováveis:**
+- `.github/workflows/ci.yml`
+- `packages/db/drizzle.config.ts`
+- `scripts/*migration*.ts`
+- `package.json`
+- `turbo.json`
+- `docs/runbooks/saas-organization-migration-runbook.md`
+
+**O que não deve ser alterado:**
+- Do not auto-run production migrations on deploy.
+
+**Testes necessários:**
+- CI dry-equivalent local commands.
+- Migration wrapper unit/source tests.
+
+**Critério de aceite:**
+- CI runtime matches repo.
+- Migrations cannot silently use runtime DB URL.
+
+**Riscos:**
+- Existing local dev migration habits may break.
+
+**Rollback:**
+- Restore previous script while keeping docs warning.
+
+---
+
+## Refactors
+
+### PR 22 - Reorganize Monorepo Boundaries and `apps/web/src/lib`
+
+**Objetivo:** Turn the current mixed `lib` area into intention-based modules/packages.
+
+**Escopo exato:**
+- Move billing integrations to `features/billing` or `packages/billing` based on reuse.
+- Move webhook/provider-specific code to `features/integrations/{asaas,woovi,resend}` or package-owned modules.
+- Move operational scripts/preflight/smoke logic under `apps/web/src/ops` or `packages/ops` only if shared.
+- Keep thin route handlers in `app/api`.
+- Add/extend boundary tests.
+- Add Turborepo tasks for all app/package checks.
+
+**Achados endereçados:** `ARCH-002`, `ARCH-003`, DX concerns.
+
+**Arquivos prováveis:**
+- `apps/web/src/lib/**`
+- `apps/web/src/features/**`
+- `packages/billing/src/**`
+- `packages/events/src/**`
+- `packages/platform/src/**`
+- `apps/web/src/lib/*boundary*.test.ts`
+- `turbo.json`
+- `package.json`
+
+**O que não deve ser alterado:**
+- No behavior changes.
+- No DB migrations.
+
+**Testes necessários:**
+- Boundary tests.
+- `bun run test`
+- `bun run typecheck`
+- `bun run build`
+
+**Critério de aceite:**
+- `apps/web/src/lib` contains only true cross-cutting app utilities.
+- Provider/domain/ops code lives by intention.
+
+**Riscos:**
+- Import churn and hidden circular deps.
+
+**Rollback:**
+- Revert file moves.
+
+### PR 23 - Finish DB Import Migration
+
+**Objetivo:** Stop new code from relying on legacy `apps/web/src/db` wrappers.
+
+**Escopo exato:**
+- Migrate app imports to `@polaris/db` where practical.
+- Keep wrappers only if needed for alias compatibility.
+- Add boundary test preventing new `@/db/*` imports outside wrappers.
+
+**Achados endereçados:** `ARCH-004`.
+
+**Arquivos prováveis:**
+- `apps/web/src/**/*.ts`
+- `apps/web/src/**/*.tsx`
+- `apps/web/src/db/**`
+- `apps/web/src/lib/db-boundary.test.ts`
+
+**O que não deve ser alterado:**
+- No schema or migration changes.
+
+**Testes necessários:**
+- Typecheck.
+- Boundary tests.
+
+**Critério de aceite:**
+- DB ownership is visibly in `@polaris/db`.
+
+**Riscos:**
+- Alias/import churn.
+
+**Rollback:**
+- Restore wrapper imports.
+
+---
+
+## Melhorias Pós-MVP
+
+### PR 24 - Add Workspace/Account Minimal Page
+
+**Objetivo:** Give a one-user customer a minimal account surface without organization naming.
+
+**Escopo exato:**
+- Show current user email/name, subscription status, support contact, export/delete request instructions.
+- Do not allow organization naming.
+
+**Achados endereçados:** product account/workspace gap.
+
+**Arquivos prováveis:**
+- `apps/web/src/app/(app)/configuracoes/page.tsx`
+- `apps/web/src/components/settings/**`
+- `docs/product/roadmap.md`
+
+**O que não deve ser alterado:**
+- No multi-user invitations.
+
+**Testes necessários:**
+- Page renders for owner.
+- Subscription state visible.
+
+**Critério de aceite:**
+- User has a clear place for account/support/billing status.
+
+**Riscos:**
+- Could expand scope into full account management.
+
+**Rollback:**
+- Hide the page/section.
+
+### PR 25 - Add Inventory Movements View
+
+**Objetivo:** Make stock operations discoverable beyond product detail menus.
+
+**Escopo exato:**
+- Add movement list filtered by product/date/type.
+- Link from product detail and sidebar if useful.
+
+**Achados endereçados:** product stock discoverability gap.
+
+**Arquivos prováveis:**
+- `apps/web/src/app/(app)/estoque/**`
+- `apps/web/src/features/products/history.ts`
+- `apps/web/src/components/app-sidebar.tsx`
+
+**O que não deve ser alterado:**
+- No stock valuation redesign.
+
+**Testes necessários:**
+- Movement list query tests.
+- E2E basic navigation.
+
+**Critério de aceite:**
+- Operator can audit stock movement without opening each product.
+
+**Riscos:**
+- Adds another route before core production hardening is complete.
+
+**Rollback:**
+- Remove route/sidebar entry.
+
+---
+
+## First PR to Implement
+
+Implement **PR 01 - Patch Critical Dependency Advisories** first.
+
+Reason: it is the safest, smallest, and most urgent blocker. It reduces known security exposure before touching auth, billing, RLS, cron, or monorepo structure. After PR 01 passes, implement PR 02 and PR 03 before broader architecture changes.
+
+Awaiting authorization before implementation.
