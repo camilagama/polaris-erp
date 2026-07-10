@@ -1,7 +1,7 @@
 import "server-only";
 
+import { db } from "@polaris/db";
 import { sql } from "drizzle-orm";
-import { db } from "@/db";
 
 export const checkDatabaseHealth = async (): Promise<boolean> => {
   try {

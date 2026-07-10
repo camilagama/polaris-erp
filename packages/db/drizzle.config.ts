@@ -5,12 +5,14 @@ config({ path: ".env.local" });
 
 import { defineConfig } from "drizzle-kit";
 
+const databaseUrl = process.env.DATABASE_URL_DIRECT?.trim() ?? "";
+
 export default defineConfig({
   dialect: "postgresql",
   schema: "./src/schema.ts",
   out: "./src/migrations",
   dbCredentials: {
-    url: process.env.DATABASE_URL_DIRECT ?? process.env.DATABASE_URL ?? "",
+    url: databaseUrl,
   },
   migrations: {
     prefix: "timestamp",

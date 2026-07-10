@@ -1,4 +1,5 @@
 import { serve } from "inngest/next";
+import { productImageInngestFunctions } from "@/features/products/image-reconcile-inngest";
 import { inngest } from "@/lib/inngest-client";
 import { inngestFunctions } from "@/lib/inngest-functions";
 
@@ -6,5 +7,5 @@ export const maxDuration = 300;
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
-  functions: inngestFunctions,
+  functions: [...inngestFunctions, ...productImageInngestFunctions],
 });

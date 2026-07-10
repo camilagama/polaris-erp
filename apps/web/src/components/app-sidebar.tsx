@@ -53,6 +53,12 @@ const navigationItems = [
     permission: "catalog:read",
   },
   {
+    href: "/estoque",
+    icon: ShoppingBag01Icon,
+    label: "Estoque",
+    permission: "catalog:read",
+  },
+  {
     href: "/vendas",
     icon: Invoice01Icon,
     label: "Vendas",

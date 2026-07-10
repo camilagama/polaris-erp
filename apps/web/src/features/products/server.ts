@@ -1,6 +1,5 @@
 import "server-only";
 
-import { and, asc, eq, gte, lte, sql } from "drizzle-orm";
 import {
   auditEvents,
   categories,
@@ -10,8 +9,12 @@ import {
   products,
   saleItems,
   sales,
-} from "@/db/schema";
-import { type TenantTransaction, withTenantContext } from "@/db/tenant-context";
+} from "@polaris/db/schema";
+import {
+  type TenantTransaction,
+  withTenantContext,
+} from "@polaris/db/tenant-context";
+import { and, asc, eq, gte, lte, sql } from "drizzle-orm";
 import {
   buildProductAnalytics,
   buildProductSalesHistoryMetrics,

@@ -7,14 +7,17 @@
     "@polaris/db": "workspace:*",
     "@polaris/events": "workspace:*",
     "@polaris/platform": "workspace:*",
-    "@polaris/platform-auth": "workspace:*"
+    "@polaris/platform-auth": "workspace:*",
+    "@sentry/nextjs": "^10.63.0"
   },
   "scripts": {
     "dev": "bun --env-file=../../.env.local x next dev",
     "build": "bun --env-file=../../.env.local x next build",
     "start": "bun --env-file=../../.env.local x next start",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit --project tsconfig.json",
     "check": "cd ../.. && bun x ultracite check",
+    "deploy:smoke": "bun ../../scripts/smoke-admin-deployment.ts",
     "test:e2e": "bun ../../scripts/check-e2e-db-schema.ts && bun x playwright test --config=playwright.config.ts"
   }
 }

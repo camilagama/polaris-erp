@@ -1,14 +1,13 @@
 import {
   type ProductionPreflightEnv,
   validateProductionPreflight,
-} from "../apps/web/src/lib/production-preflight";
+} from "../apps/web/src/ops/production-preflight";
 
 const env: ProductionPreflightEnv = {
   ADMIN_APP_URL: process.env.ADMIN_APP_URL,
   ALLOW_PLAYWRIGHT_BOOTSTRAP: process.env.ALLOW_PLAYWRIGHT_BOOTSTRAP,
   BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
   BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
-  CRON_SECRET: process.env.CRON_SECRET,
   DATABASE_URL: process.env.DATABASE_URL,
   DATABASE_URL_DIRECT: process.env.DATABASE_URL_DIRECT,
   DEPLOYMENT_SMOKE_URL: process.env.DEPLOYMENT_SMOKE_URL,

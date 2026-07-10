@@ -109,8 +109,8 @@ const UserDetailContent = async ({ params }: UserDetailPageProps) => {
         </div>
       </section>
 
-      <section className="overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900">
-        <div className="grid grid-cols-[1.4fr_0.8fr_0.8fr_0.8fr] gap-4 border-zinc-800 border-b px-4 py-3 text-xs text-zinc-500 uppercase">
+      <section className="overflow-x-auto rounded-lg border border-zinc-800 bg-zinc-900">
+        <div className="grid min-w-[720px] grid-cols-[1.4fr_0.8fr_0.8fr_0.8fr] gap-4 border-zinc-800 border-b px-4 py-3 text-xs text-zinc-500 uppercase">
           <span>Organizacao</span>
           <span>Status</span>
           <span>Role</span>
@@ -123,7 +123,7 @@ const UserDetailContent = async ({ params }: UserDetailPageProps) => {
         ) : (
           user.organizations.map((organization) => (
             <Link
-              className="grid grid-cols-[1.4fr_0.8fr_0.8fr_0.8fr] gap-4 border-zinc-800 border-b px-4 py-3 text-sm hover:bg-zinc-800/40"
+              className="grid min-w-[720px] grid-cols-[1.4fr_0.8fr_0.8fr_0.8fr] gap-4 border-zinc-800 border-b px-4 py-3 text-sm hover:bg-zinc-800/40"
               href={`/organizations/${organization.id}`}
               key={organization.id}
               prefetch={false}
@@ -153,6 +153,7 @@ const UserDetailContent = async ({ params }: UserDetailPageProps) => {
         <form action={createSupportNoteAction} className="mt-4 grid gap-3">
           <input name="customerUserId" type="hidden" value={user.id} />
           <textarea
+            aria-label="Adicionar nota interna do usuario"
             className="min-h-24 rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-zinc-600"
             name="body"
             placeholder="Adicionar contexto interno de suporte"

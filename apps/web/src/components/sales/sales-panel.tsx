@@ -41,7 +41,6 @@ import {
 import type { CardInstallmentRule } from "@/features/catalog/payment-rules";
 import type {
   SaleListItem,
-  SaleProductOption,
   SaleStatusFilter,
   SalesAnalytics,
 } from "@/features/sales/contracts";
@@ -241,7 +240,6 @@ export function SalesPanel({
   dateBounds,
   initialCursor,
   role,
-  saleProducts,
   sales: initialSales,
   selectedRange,
   status,
@@ -255,7 +253,6 @@ export function SalesPanel({
   };
   initialCursor: string | null;
   role: OrganizationRole;
-  saleProducts: SaleProductOption[];
   sales: SaleListItem[];
   selectedRange: SalesDateRange;
   status: SaleStatusFilter;
@@ -391,10 +388,7 @@ export function SalesPanel({
           </div>
 
           {canWriteSales ? (
-            <CreateSaleDialog
-              cardInstallmentRules={cardInstallmentRules}
-              products={saleProducts}
-            />
+            <CreateSaleDialog cardInstallmentRules={cardInstallmentRules} />
           ) : null}
         </div>
 

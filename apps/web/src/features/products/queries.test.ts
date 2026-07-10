@@ -56,4 +56,32 @@ describe("products queries", () => {
 
     expect(mockDb.transaction).toHaveBeenCalledOnce();
   });
+
+  it("normalizes inventory movement filters from search params", async () => {
+    const { normalizeInventoryMovementFilters } = await import(
+      "@/features/products/queries"
+    );
+
+    expect(
+      normalizeInventoryMovementFilters({
+        from: "2026-03-01",
+        productId: "product-1",
+        to: "2026-03-31",
+        type: "write_off",
+      })
+    ).toEqual({
+      from: "2026-03-01",
+      productId: "product-1",
+      to: "2026-03-31",
+      type: "write_off",
+    });
+    expect(
+      normalizeInventoryMovementFilters({
+        from: "03/01/2026",
+        productId: "",
+        to: ["2026-03-31"],
+        type: "unknown",
+      })
+    ).toEqual({});
+  });
 });

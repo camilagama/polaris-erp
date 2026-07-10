@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import { recordPlatformAuditEvent } from "./platform-admin";
 
 type OrganizationPlatformStatus = "active" | "suspended";
+type MutationReturningRow = Record<string, unknown>;
 
 export interface UpdatePlatformOrganizationStatusInput {
   actorPlatformAdminId: string;
@@ -21,7 +22,11 @@ interface PlatformOrganizationMutationTx {
   };
   update: (table: unknown) => {
     set: (value: Record<string, unknown>) => {
-      where: (condition: unknown) => Promise<unknown> | unknown;
+      where: (condition: unknown) => {
+        returning: (
+          value: Record<string, unknown>
+        ) => Promise<MutationReturningRow[]> | MutationReturningRow[];
+      };
     };
   };
 }
@@ -55,13 +60,18 @@ export const updatePlatformOrganizationStatus = async (
   }
 
   await mutationDb.transaction(async (tx) => {
-    await tx
+    const updatedOrganizations = await tx
       .update(organization)
       .set({
         status: input.status,
         updatedAt: new Date(),
       })
-      .where(eq(organization.id, input.organizationId));
+      .where(eq(organization.id, input.organizationId))
+      .returning({ id: organization.id });
+
+    if (updatedOrganizations.length === 0) {
+      throw new Error("Organization not found for status change.");
+    }
 
     await recordPlatformAuditEvent(tx, {
       action: "organization.status_changed",

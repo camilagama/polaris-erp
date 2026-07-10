@@ -1,10 +1,10 @@
+import { db } from "@polaris/db";
 import {
   claimOutboxEvent,
   markOutboxEventFailed,
   markOutboxEventProcessed,
   type QueryableDb,
 } from "@polaris/events";
-import { db } from "@/db";
 import { inngest, OUTBOX_EVENT_PENDING } from "@/lib/inngest-client";
 
 type OutboxDispatcher = (

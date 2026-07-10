@@ -1,4 +1,9 @@
 export type ProductStatusFilter = "active" | "archived";
+export type InventoryMovementType =
+  | "entry"
+  | "sale"
+  | "sale_reversal"
+  | "write_off";
 
 export interface ProductImageAsset {
   blurDataURL: string;
@@ -92,4 +97,35 @@ export interface ProductSalesHistoryMetrics {
   totalQuantitySold: number;
   totalSoldAmount: number;
   trend: ProductSalesPoint[];
+}
+
+export interface InventoryMovementFilterProduct {
+  id: string;
+  name: string;
+}
+
+export interface InventoryMovementItem {
+  createdAt: Date;
+  date: string;
+  id: string;
+  notes: string | null;
+  productId: string;
+  productName: string;
+  quantity: number;
+  totalValue: number;
+  type: InventoryMovementType;
+  unitCost: number;
+}
+
+export interface InventoryMovementFilters {
+  from?: string;
+  productId?: string;
+  to?: string;
+  type?: InventoryMovementType;
+}
+
+export interface InventoryMovementsResult {
+  filters: InventoryMovementFilters;
+  items: InventoryMovementItem[];
+  products: InventoryMovementFilterProduct[];
 }

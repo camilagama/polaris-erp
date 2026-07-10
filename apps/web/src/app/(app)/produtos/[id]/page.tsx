@@ -1,8 +1,10 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ProductDetailActions } from "@/components/products/product-detail-actions";
 import { ProductHistoryPanel } from "@/components/products/product-history-panel";
 import { ProductImageFrame } from "@/components/products/product-image-frame";
 import { ProductUnitsSoldChart } from "@/components/products/product-sales-chart";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   getCatalogSettings,
@@ -122,14 +124,21 @@ export default async function ProdutoDetalhePage(
                     <h1 className="font-semibold text-2xl tracking-tight">
                       {product.name}
                     </h1>
-                    <ProductDetailActions
-                      categories={categories.map((category) => ({
-                        id: category.id,
-                        name: category.name,
-                      }))}
-                      product={product}
-                      settings={settings}
-                    />
+                    <div className="flex items-center gap-2">
+                      <Button asChild size="sm" variant="outline">
+                        <Link href={`/estoque?productId=${product.id}`}>
+                          Movimentacoes
+                        </Link>
+                      </Button>
+                      <ProductDetailActions
+                        categories={categories.map((category) => ({
+                          id: category.id,
+                          name: category.name,
+                        }))}
+                        product={product}
+                        settings={settings}
+                      />
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
                     <div>

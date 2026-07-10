@@ -58,7 +58,7 @@ describe("GET /api/health", () => {
     const source = readFileSync(join(import.meta.dirname, "route.ts"), "utf8");
 
     expect(source).toContain("checkDatabaseHealth");
-    expect(source).not.toContain('from "@/db"');
+    expect(source).not.toContain('from "@polaris/db"');
     expect(source).not.toContain("db.execute");
   });
 });

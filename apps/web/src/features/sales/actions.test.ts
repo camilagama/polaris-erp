@@ -1055,8 +1055,8 @@ describe("sales server actions", () => {
     expect(source).toContain("createSale");
     expect(source).toContain("cancelSale");
     expect(source).toContain('from "@/features/sales/server"');
-    expect(source).not.toContain('from "@/db"');
-    expect(source).not.toContain('from "@/db/schema"');
+    expect(source).not.toContain('from "@polaris/db"');
+    expect(source).not.toContain('from "@polaris/db/schema"');
     expect(source).not.toContain("tx.insert(sales)");
     expect(source).not.toContain("tx.insert(saleItems)");
     expect(source).not.toContain("tx.update(products)");

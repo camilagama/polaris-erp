@@ -98,7 +98,7 @@ bun run db:smoke:rls
    - dashboard;
    - produto/upload;
    - venda/cancelamento;
-   - reconcile com `CRON_SECRET`;
+   - reconcile manual com `PRODUCT_IMAGE_RECONCILE_SECRET`;
    - rate limit com Upstash configurado.
 7. No GitHub Actions, acione manualmente `rls-smoke` com `RLS_DATABASE_URL` apontando para o ambiente promovido.
 

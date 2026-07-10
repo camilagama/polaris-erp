@@ -1,22 +1,17 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { z } from "zod";
+import { sendWelcomeEmailIfConfigured } from "@/integrations/resend/email-service";
 import {
   createInitialOrganizationForUser,
   getAppContext,
 } from "@/lib/app-session";
-import { sendWelcomeEmailIfConfigured } from "@/lib/email-service";
 import { requireSession } from "@/lib/session";
 import type { OnboardingActionState } from "./state";
 
-const onboardingSchema = z.object({
-  organizationName: z.string().trim().min(2, "Informe o nome da organizacao."),
-});
-
 export async function completeOnboardingAction(
   _state: OnboardingActionState,
-  formData: FormData
+  _formData: FormData
 ): Promise<OnboardingActionState> {
   const session = await requireSession();
   const existingContext = await getAppContext();
@@ -25,19 +20,8 @@ export async function completeOnboardingAction(
     redirect("/");
   }
 
-  const parsed = onboardingSchema.safeParse({
-    organizationName: formData.get("organizationName"),
-  });
-
-  if (!parsed.success) {
-    return {
-      error: "Informe um nome valido para a organizacao.",
-    };
-  }
-
   await createInitialOrganizationForUser({
     billingEmail: session.user.email,
-    name: parsed.data.organizationName,
     userId: session.user.id,
   });
   await sendWelcomeEmailIfConfigured({

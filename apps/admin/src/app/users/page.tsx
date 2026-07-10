@@ -66,6 +66,7 @@ const UsersContent = async ({ searchParams }: UsersPageProps) => {
         <search className="w-full max-w-md">
           <form className="flex gap-2">
             <input
+              aria-label="Buscar usuarios"
               className="min-w-0 flex-1 rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-zinc-600"
               defaultValue={query}
               name="q"
@@ -81,8 +82,8 @@ const UsersContent = async ({ searchParams }: UsersPageProps) => {
         </search>
       </div>
 
-      <section className="overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900">
-        <div className="grid grid-cols-[1.3fr_1fr_0.7fr_0.7fr_1fr] gap-4 border-zinc-800 border-b px-4 py-3 text-xs text-zinc-500 uppercase">
+      <section className="overflow-x-auto rounded-lg border border-zinc-800 bg-zinc-900">
+        <div className="grid min-w-[760px] grid-cols-[1.3fr_1fr_0.7fr_0.7fr_1fr] gap-4 border-zinc-800 border-b px-4 py-3 text-xs text-zinc-500 uppercase">
           <span>Usuario</span>
           <span>Email redigido</span>
           <span>Orgs</span>
@@ -96,7 +97,7 @@ const UsersContent = async ({ searchParams }: UsersPageProps) => {
         ) : (
           users.map((user) => (
             <Link
-              className="grid grid-cols-[1.3fr_1fr_0.7fr_0.7fr_1fr] gap-4 border-zinc-800 border-b px-4 py-3 text-sm hover:bg-zinc-800/40"
+              className="grid min-w-[760px] grid-cols-[1.3fr_1fr_0.7fr_0.7fr_1fr] gap-4 border-zinc-800 border-b px-4 py-3 text-sm hover:bg-zinc-800/40"
               href={`/users/${user.id}`}
               key={user.id}
               prefetch={false}

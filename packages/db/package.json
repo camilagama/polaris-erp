@@ -15,8 +15,8 @@
   },
   "scripts": {
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "db:push": "drizzle-kit push",
+    "db:migrate": "bun ../../scripts/require-database-url-direct.ts && drizzle-kit migrate",
+    "db:push": "bun ../../scripts/require-database-url-direct.ts && drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "typecheck": "tsc --noEmit --project tsconfig.json"
   },

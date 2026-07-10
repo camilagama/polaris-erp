@@ -37,21 +37,19 @@ describe("OnboardingForm", () => {
     );
     const formAction = vi.fn();
     reactMocks.useActionState.mockReturnValue([
-      { error: "Informe um nome valido para a organizacao." },
+      { error: "Nao foi possivel iniciar sua conta." },
       formAction,
       true,
     ]);
 
-    const markup = renderToStaticMarkup(
-      createElement(OnboardingForm, {
-        defaultOrganizationName: "Polaris",
-      })
-    );
+    const markup = renderToStaticMarkup(createElement(OnboardingForm));
 
     expect(markup).toContain('aria-live="polite"');
-    expect(markup).toContain("Informe um nome valido para a organizacao.");
+    expect(markup).toContain("Nao foi possivel iniciar sua conta.");
     expect(markup).toContain("Criando...");
     expect(markup).toMatch(DISABLED_BUTTON_ATTRIBUTE_PATTERN);
+    expect(markup).not.toContain("organizationName");
+    expect(markup).not.toContain("Nome da organizacao");
   });
 
   it("keeps onboarding server actions outside the route tree", () => {

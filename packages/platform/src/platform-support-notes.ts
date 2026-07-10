@@ -24,7 +24,8 @@ export interface PlatformSupportNote {
   updatedAt: string | null;
 }
 
-interface InsertableTx {
+interface SupportNoteTx {
+  execute: (query: SQL) => Promise<unknown> | unknown;
   insert: (table: unknown) => {
     values: (value: Record<string, unknown>) => Promise<unknown> | unknown;
   };
@@ -32,7 +33,7 @@ interface InsertableTx {
 
 interface TransactionalDb {
   transaction: <Result>(
-    callback: (tx: InsertableTx) => Result | Promise<Result>
+    callback: (tx: SupportNoteTx) => Result | Promise<Result>
   ) => Promise<Result>;
 }
 
@@ -99,6 +100,37 @@ const requireTarget = ({
   }
 };
 
+const assertCustomerBelongsToOrganization = async (
+  tx: SupportNoteTx,
+  {
+    customerUserId,
+    organizationId,
+  }: {
+    customerUserId?: string | null;
+    organizationId?: string | null;
+  }
+) => {
+  if (!(customerUserId && organizationId)) {
+    return;
+  }
+
+  const rows = toRows(
+    await tx.execute(sql`
+      select 1
+      from "member"
+      where organization_id = ${organizationId}
+        and user_id = ${customerUserId}
+      limit 1
+    `)
+  );
+
+  if (rows.length === 0) {
+    throw new Error(
+      "Platform support note customer user does not belong to organization."
+    );
+  }
+};
+
 export const createPlatformSupportNote = async (
   input: CreatePlatformSupportNoteInput,
   transactionalDb: TransactionalDb = getDefaultTransactionalDb()
@@ -112,6 +144,8 @@ export const createPlatformSupportNote = async (
   requireTarget(input);
 
   await transactionalDb.transaction(async (tx) => {
+    await assertCustomerBelongsToOrganization(tx, input);
+
     await tx.insert(platformSupportNotes).values({
       authorPlatformAdminId: input.authorPlatformAdminId,
       body,
@@ -137,7 +171,7 @@ const getSupportNotesWhereClause = ({
   organizationId,
 }: ListPlatformSupportNotesInput): SQL => {
   if (customerUserId && organizationId) {
-    return sql`where organization_id = ${organizationId} or customer_user_id = ${customerUserId}`;
+    return sql`where organization_id = ${organizationId} and customer_user_id = ${customerUserId}`;
   }
 
   if (organizationId) {

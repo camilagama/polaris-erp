@@ -2,6 +2,8 @@
 
 import { revalidatePath, updateTag } from "next/cache";
 import { getCatalogSettings } from "@/features/catalog/server";
+import type { PaginatedSaleProductOptions } from "@/features/sales/queries";
+import { getSaleProductsQuery } from "@/features/sales/queries";
 import { createSaleSchema } from "@/features/sales/schema";
 import {
   cancelSale,
@@ -113,4 +115,20 @@ export async function cancelSaleAction(id: string) {
 
   revalidateSalesViews(context.organizationId);
   revalidateSaleDetail(id);
+}
+
+export async function searchSaleProductOptionsAction({
+  cursor,
+  query,
+}: {
+  cursor?: string;
+  query?: string;
+}): Promise<PaginatedSaleProductOptions> {
+  const context = await requireAppContext("sales:write");
+
+  return getSaleProductsQuery({
+    cursor,
+    organizationId: context.organizationId,
+    query,
+  });
 }

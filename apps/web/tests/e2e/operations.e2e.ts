@@ -107,8 +107,19 @@ test("creates inventory, records a sale, cancels it, and archives the product wi
 
   const writeOffDialog = page.getByRole("dialog");
 
+  await writeOffDialog.getByLabel("Quantidade").fill("7");
+  await expect(
+    writeOffDialog.getByText("A baixa nao pode ser maior que o estoque atual.")
+  ).toBeVisible();
+  await expect(
+    writeOffDialog.getByRole("button", { name: "Revisar baixa" })
+  ).toBeDisabled();
   await writeOffDialog.getByLabel("Quantidade").fill("1");
   await writeOffDialog.getByLabel("Observacoes").fill("Baixa operacional E2E");
+  await writeOffDialog.getByRole("button", { name: "Revisar baixa" }).click();
+  await expect(
+    page.getByRole("dialog", { name: "Confirmar baixa" })
+  ).toBeVisible();
   await writeOffDialog.getByRole("button", { name: "Confirmar baixa" }).click();
   await reloadAfterToast(page, "Baixa registrada.");
   await expect(page.getByText("5 un.").first()).toBeVisible();
@@ -140,6 +151,14 @@ test("creates inventory, records a sale, cancels it, and archives the product wi
 
   await page.getByRole("button", { name: `Acoes para ${productName}` }).click();
   await page.getByRole("menuitem", { name: "Arquivar" }).click();
+  await expect(
+    page.getByRole("dialog", { name: "Arquivar produto?" })
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Cancelar" }).click();
+  await expect(page).toHaveURL(productDetailRouteRegex);
+  await page.getByRole("button", { name: `Acoes para ${productName}` }).click();
+  await page.getByRole("menuitem", { name: "Arquivar" }).click();
+  await page.getByRole("button", { name: "Confirmar arquivamento" }).click();
   await expect(page).toHaveURL(productsRouteRegex);
   await page
     .getByPlaceholder("Buscar por nome ou categoria")

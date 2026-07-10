@@ -25,14 +25,24 @@ interface ProductComboboxOption {
 }
 
 export function ProductCombobox({
+  hasMore = false,
   label,
+  loading = false,
+  onLoadMore,
+  onSearchChange,
   onSelect,
   options,
+  searchValue,
   value,
 }: {
+  hasMore?: boolean;
   label: string;
+  loading?: boolean;
+  onLoadMore?: () => void;
+  onSearchChange?: (query: string) => void;
   onSelect: (productId: string) => void;
   options: ProductComboboxOption[];
+  searchValue?: string;
   value: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -70,10 +80,19 @@ export function ProductCombobox({
         align="start"
         className="w-[--radix-popover-trigger-width] p-0"
       >
-        <Command>
-          <CommandInput aria-label={label} placeholder="Buscar produto..." />
+        <Command shouldFilter={false}>
+          <CommandInput
+            aria-label={label}
+            onValueChange={onSearchChange}
+            placeholder="Buscar produto..."
+            value={searchValue}
+          />
           <CommandList>
-            <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
+            {loading && options.length === 0 ? (
+              <CommandEmpty>Carregando produtos...</CommandEmpty>
+            ) : (
+              <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
+            )}
             <CommandGroup>
               {options.map((option) => (
                 <CommandItem
@@ -92,6 +111,18 @@ export function ProductCombobox({
                   </span>
                 </CommandItem>
               ))}
+              {hasMore && onLoadMore ? (
+                <div className="p-1">
+                  <button
+                    className="flex h-8 w-full items-center justify-center rounded-md text-muted-foreground text-xs transition-colors hover:bg-muted hover:text-foreground disabled:opacity-60"
+                    disabled={loading}
+                    onClick={onLoadMore}
+                    type="button"
+                  >
+                    {loading ? "Carregando..." : "Carregar mais produtos"}
+                  </button>
+                </div>
+              ) : null}
             </CommandGroup>
           </CommandList>
         </Command>

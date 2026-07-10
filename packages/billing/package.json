@@ -9,6 +9,7 @@
     "./providers/woovi": "./src/providers/woovi.ts"
   },
   "scripts": {
+    "test": "vitest run",
     "typecheck": "tsc --noEmit --project tsconfig.json"
   }
 }

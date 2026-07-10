@@ -59,6 +59,30 @@ interface ProductCategoryOption {
   name: string;
 }
 
+const getWriteOffQuantityError = ({
+  quantity,
+  stock,
+}: {
+  quantity: string;
+  stock: number;
+}): string | null => {
+  const parsedQuantity = Number(quantity);
+
+  if (quantity.trim().length === 0 || Number.isNaN(parsedQuantity)) {
+    return "Informe uma quantidade valida.";
+  }
+
+  if (parsedQuantity <= 0) {
+    return "A quantidade da baixa deve ser maior que zero.";
+  }
+
+  if (parsedQuantity > stock) {
+    return "A baixa nao pode ser maior que o estoque atual.";
+  }
+
+  return null;
+};
+
 export function ProductDetailActions({
   categories,
   product,
@@ -76,6 +100,9 @@ export function ProductDetailActions({
   const [editing, setEditing] = useState(false);
   const [stocking, setStocking] = useState(false);
   const [writingOff, setWritingOff] = useState(false);
+  const [writeOffReviewing, setWriteOffReviewing] = useState(false);
+  const [writeOffTouched, setWriteOffTouched] = useState(false);
+  const [archiveConfirmationOpen, setArchiveConfirmationOpen] = useState(false);
   const [editName, setEditName] = useState(product.name);
   const [editCategoryId, setEditCategoryId] = useState(product.categoryId);
   const [editDescription, setEditDescription] = useState(
@@ -96,6 +123,14 @@ export function ProductDetailActions({
     "adjustment" | "operational"
   >("operational");
   const [writeOffNotes, setWriteOffNotes] = useState("");
+
+  const writeOffQuantityNumber = Number(writeOffQuantity);
+  const writeOffQuantityError = getWriteOffQuantityError({
+    quantity: writeOffQuantity,
+    stock: product.stock,
+  });
+  const showWriteOffQuantityError =
+    writeOffTouched && writeOffQuantityError !== null;
 
   useEffect(() => {
     setEditName(product.name);
@@ -167,16 +202,23 @@ export function ProductDetailActions({
   };
 
   const handleWriteOffStock = () => {
+    setWriteOffTouched(true);
+
+    if (writeOffQuantityError) {
+      return;
+    }
+
     startTransition(async () => {
       try {
         await writeOffProductStockAction(product.id, {
           happenedOn: writeOffDate,
           notes: writeOffNotes || undefined,
-          quantity: Number(writeOffQuantity),
+          quantity: writeOffQuantityNumber,
           reason: writeOffReason,
         });
         toast.success("Baixa registrada.");
         setWritingOff(false);
+        setWriteOffReviewing(false);
         router.refresh();
       } catch (error) {
         toast.error(
@@ -188,18 +230,29 @@ export function ProductDetailActions({
     });
   };
 
-  const handleArchiveToggle = () => {
+  const handleArchiveProduct = () => {
     startTransition(async () => {
       try {
-        if (product.archivedAt) {
-          await unarchiveProductAction(product.id);
-          toast.success("Produto desarquivado.");
-          router.refresh();
-        } else {
-          await archiveProductAction(product.id);
-          toast.success("Produto arquivado.");
-          router.push("/produtos");
-        }
+        await archiveProductAction(product.id);
+        toast.success("Produto arquivado.");
+        setArchiveConfirmationOpen(false);
+        router.push("/produtos");
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Nao foi possivel alterar o status do produto."
+        );
+      }
+    });
+  };
+
+  const handleUnarchiveProduct = () => {
+    startTransition(async () => {
+      try {
+        await unarchiveProductAction(product.id);
+        toast.success("Produto desarquivado.");
+        router.refresh();
       } catch (error) {
         toast.error(
           error instanceof Error
@@ -253,7 +306,16 @@ export function ProductDetailActions({
             <HugeiconsIcon icon={MinusSignCircleIcon} strokeWidth={2} />
             Baixa
           </DropdownMenuItem>
-          <DropdownMenuItem onSelect={handleArchiveToggle}>
+          <DropdownMenuItem
+            onSelect={() => {
+              if (product.archivedAt) {
+                handleUnarchiveProduct();
+                return;
+              }
+
+              setArchiveConfirmationOpen(true);
+            }}
+          >
             <HugeiconsIcon icon={Archive01Icon} strokeWidth={2} />
             {product.archivedAt ? "Ativar" : "Arquivar"}
           </DropdownMenuItem>
@@ -364,74 +426,179 @@ export function ProductDetailActions({
         </DialogContent>
       </Dialog>
 
-      <Dialog onOpenChange={setWritingOff} open={writingOff}>
+      <Dialog
+        onOpenChange={(open) => {
+          setWritingOff(open);
+
+          if (!open) {
+            setWriteOffReviewing(false);
+            setWriteOffTouched(false);
+          }
+        }}
+        open={writingOff}
+      >
         <DialogContent className="sm:max-w-105">
           <DialogHeader>
-            <DialogTitle>Baixa de estoque</DialogTitle>
+            <DialogTitle>
+              {writeOffReviewing ? "Confirmar baixa" : "Baixa de estoque"}
+            </DialogTitle>
             <DialogDescription>
-              Registre perda, avaria ou ajuste sem apagar o historico do
-              produto.
+              {writeOffReviewing
+                ? "Revise a baixa antes de alterar o estoque do produto."
+                : "Registre perda, avaria ou ajuste sem apagar o historico do produto."}
             </DialogDescription>
           </DialogHeader>
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="detail-writeoff-quantity">Quantidade</Label>
-              <Input
-                id="detail-writeoff-quantity"
-                max={product.stock}
-                min="1"
-                onChange={(event) => setWriteOffQuantity(event.target.value)}
-                step="1"
-                type="number"
-                value={writeOffQuantity}
-              />
+          {writeOffReviewing ? (
+            <div className="flex flex-col gap-3 text-sm">
+              <p>
+                Voce esta prestes a dar baixa de{" "}
+                <strong>{writeOffQuantityNumber} un.</strong> em {product.name}.
+              </p>
+              <p className="text-muted-foreground">
+                Estoque atual: {product.stock} un. Estoque apos baixa:{" "}
+                {product.stock - writeOffQuantityNumber} un.
+              </p>
             </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="detail-writeoff-reason">Motivo</Label>
-              <Select
-                onValueChange={(value) =>
-                  setWriteOffReason(value as "adjustment" | "operational")
-                }
-                value={writeOffReason}
+          ) : (
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="detail-writeoff-quantity">Quantidade</Label>
+                <Input
+                  aria-describedby={
+                    showWriteOffQuantityError
+                      ? "detail-writeoff-quantity-error"
+                      : undefined
+                  }
+                  aria-invalid={showWriteOffQuantityError}
+                  id="detail-writeoff-quantity"
+                  max={product.stock}
+                  min="1"
+                  onBlur={() => setWriteOffTouched(true)}
+                  onChange={(event) => {
+                    setWriteOffTouched(true);
+                    setWriteOffQuantity(event.target.value);
+                  }}
+                  step="1"
+                  type="number"
+                  value={writeOffQuantity}
+                />
+                {showWriteOffQuantityError ? (
+                  <p
+                    className="text-destructive text-xs"
+                    id="detail-writeoff-quantity-error"
+                    role="alert"
+                  >
+                    {writeOffQuantityError}
+                  </p>
+                ) : null}
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="detail-writeoff-reason">Motivo</Label>
+                <Select
+                  onValueChange={(value) =>
+                    setWriteOffReason(value as "adjustment" | "operational")
+                  }
+                  value={writeOffReason}
+                >
+                  <SelectTrigger className="w-full" id="detail-writeoff-reason">
+                    <SelectValue placeholder="Selecione um motivo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="adjustment">Ajuste</SelectItem>
+                    <SelectItem value="operational">Operacional</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="detail-writeoff-date">Data da baixa</Label>
+                <ProductDatePicker
+                  id="detail-writeoff-date"
+                  onChange={setWriteOffDate}
+                  value={writeOffDate}
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="detail-writeoff-notes">Observacoes</Label>
+                <Textarea
+                  className="min-h-20"
+                  id="detail-writeoff-notes"
+                  onChange={(event) => setWriteOffNotes(event.target.value)}
+                  value={writeOffNotes}
+                />
+              </div>
+              <p className="text-muted-foreground text-xs">
+                Estoque atual: {product.stock} un.
+              </p>
+            </div>
+          )}
+          <DialogFooter>
+            {writeOffReviewing ? (
+              <>
+                <Button
+                  disabled={pending}
+                  onClick={() => setWriteOffReviewing(false)}
+                  type="button"
+                  variant="outline"
+                >
+                  Voltar
+                </Button>
+                <Button
+                  disabled={pending}
+                  onClick={handleWriteOffStock}
+                  type="button"
+                  variant="destructive"
+                >
+                  Confirmar baixa
+                </Button>
+              </>
+            ) : (
+              <Button
+                disabled={pending || writeOffQuantityError !== null}
+                onClick={() => {
+                  setWriteOffTouched(true);
+
+                  if (!writeOffQuantityError) {
+                    setWriteOffReviewing(true);
+                  }
+                }}
+                type="button"
+                variant="destructive"
               >
-                <SelectTrigger className="w-full" id="detail-writeoff-reason">
-                  <SelectValue placeholder="Selecione um motivo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="adjustment">Ajuste</SelectItem>
-                  <SelectItem value="operational">Operacional</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="detail-writeoff-date">Data da baixa</Label>
-              <ProductDatePicker
-                id="detail-writeoff-date"
-                onChange={setWriteOffDate}
-                value={writeOffDate}
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="detail-writeoff-notes">Observacoes</Label>
-              <Textarea
-                className="min-h-20"
-                id="detail-writeoff-notes"
-                onChange={(event) => setWriteOffNotes(event.target.value)}
-                value={writeOffNotes}
-              />
-            </div>
-            <p className="text-muted-foreground text-xs">
-              Estoque atual: {product.stock} un.
-            </p>
-          </div>
+                Revisar baixa
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        onOpenChange={setArchiveConfirmationOpen}
+        open={archiveConfirmationOpen}
+      >
+        <DialogContent className="sm:max-w-105">
+          <DialogHeader>
+            <DialogTitle>Arquivar produto?</DialogTitle>
+            <DialogDescription>
+              O produto sairá da lista principal, mas o historico de vendas e
+              estoque sera mantido.
+            </DialogDescription>
+          </DialogHeader>
           <DialogFooter>
             <Button
-              disabled={pending || Number(writeOffQuantity) <= 0}
-              onClick={handleWriteOffStock}
+              disabled={pending}
+              onClick={() => setArchiveConfirmationOpen(false)}
+              type="button"
+              variant="outline"
+            >
+              Cancelar
+            </Button>
+            <Button
+              disabled={pending}
+              onClick={handleArchiveProduct}
               type="button"
               variant="destructive"
             >
-              Confirmar baixa
+              Confirmar arquivamento
             </Button>
           </DialogFooter>
         </DialogContent>

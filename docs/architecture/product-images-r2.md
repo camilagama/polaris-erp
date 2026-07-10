@@ -10,7 +10,7 @@ R2_ACCESS_KEY_ID=
 R2_SECRET_ACCESS_KEY=
 R2_BUCKET_STAGING=product-images-staging
 R2_BUCKET_PUBLIC=product-images-public
-CRON_SECRET=
+PRODUCT_IMAGE_RECONCILE_SECRET=
 ```
 
 `R2_PUBLIC_BASE_URL` pode existir em ambientes antigos, mas o app SaaS nao usa URL publica direta para imagens de produto. A entrega passa pela rota autenticada do Next.js para validar sessao, tenant e produto antes de retornar bytes.
@@ -63,9 +63,9 @@ No bucket final:
 - nao aplicar expiracao automatica
 - limpeza por substituicao/remocao no app e reconciliacao diaria
 
-## Cron de reconciliacao
+## Reconciliacao agendada
 
-O projeto inclui `vercel.json` com cron diario para:
+O projeto registra a funcao agendada `reconcile-product-images` no Inngest com cron `0 4 * * *` para:
 
 - listar variantes finais em `organizations/`
 - comparar com produtos e `image_version` no banco
@@ -75,7 +75,7 @@ Teste manual:
 
 ```bash
 curl -X POST https://seu-app.com/api/internal/product-images/reconcile \
-  -H "Authorization: Bearer $CRON_SECRET"
+  -H "Authorization: Bearer $PRODUCT_IMAGE_RECONCILE_SECRET"
 ```
 
 O payload retorna contagens (`deletedCount`, `orphanedCount`, `scannedCount`) e nao retorna as chaves completas dos objetos, para reduzir exposicao operacional entre tenants.

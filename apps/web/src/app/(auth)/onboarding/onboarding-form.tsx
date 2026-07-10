@@ -2,18 +2,10 @@
 
 import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { completeOnboardingAction } from "@/features/onboarding/actions";
 import { initialOnboardingActionState } from "@/features/onboarding/state";
 
-interface OnboardingFormProps {
-  defaultOrganizationName: string;
-}
-
-export function OnboardingForm({
-  defaultOrganizationName,
-}: OnboardingFormProps) {
+export function OnboardingForm() {
   const [state, formAction, pending] = useActionState(
     completeOnboardingAction,
     initialOnboardingActionState
@@ -21,22 +13,6 @@ export function OnboardingForm({
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="organizationName">Nome da organizacao</Label>
-        <Input
-          aria-describedby={state.error ? "onboarding-error" : undefined}
-          aria-invalid={state.error ? true : undefined}
-          autoComplete="organization"
-          defaultValue={defaultOrganizationName}
-          disabled={pending}
-          id="organizationName"
-          minLength={2}
-          name="organizationName"
-          placeholder="Minha loja"
-          required
-        />
-      </div>
-
       <p
         aria-live="polite"
         className="min-h-5 text-destructive text-sm"

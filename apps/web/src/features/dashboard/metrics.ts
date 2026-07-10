@@ -60,6 +60,26 @@ interface BuildDashboardMetricsInput {
   sales: DashboardSaleRecord[];
 }
 
+export interface DashboardPeriodSalesAggregate {
+  bucketKey: string;
+  salesCount: number;
+  shippingAndSellerFees: number;
+  sold: number;
+}
+
+export interface DashboardPeriodProductCostAggregate {
+  bucketKey: string;
+  productCosts: number;
+}
+
+export interface BuildDashboardMetricsFromAggregatesInput {
+  inventory: DashboardInventoryRecord[];
+  periodProductCosts: DashboardPeriodProductCostAggregate[];
+  periodSales: DashboardPeriodSalesAggregate[];
+  range: DashboardSelectedRange;
+  topProducts: DashboardTopProduct[];
+}
+
 interface DashboardPeriodBucket {
   key: string;
   label: string;
@@ -385,6 +405,75 @@ export const buildDashboardMetrics = ({
       range,
       saleItems,
     }),
+  };
+};
+
+export const buildDashboardMetricsFromAggregates = ({
+  inventory,
+  periodProductCosts,
+  periodSales,
+  range,
+  topProducts,
+}: BuildDashboardMetricsFromAggregatesInput): DashboardMetrics => {
+  const { buckets, granularity } = buildPeriodBuckets(range);
+  const salesByBucket = new Map(
+    periodSales.map((bucket) => [bucket.bucketKey, bucket])
+  );
+  const productCostsByBucket = new Map(
+    periodProductCosts.map((bucket) => [bucket.bucketKey, bucket.productCosts])
+  );
+  let totalProductCosts = 0;
+  let totalShippingAndSellerFees = 0;
+  let totalSold = 0;
+  let totalSalesCount = 0;
+
+  const periodComparison: DashboardPeriodComparisonPoint[] = buckets.map(
+    (bucket) => {
+      const salesBucket = salesByBucket.get(bucket.key);
+      const sold = roundCurrency(salesBucket?.sold ?? 0);
+      const shippingAndSellerFees = roundCurrency(
+        salesBucket?.shippingAndSellerFees ?? 0
+      );
+      const productCosts = roundCurrency(
+        productCostsByBucket.get(bucket.key) ?? 0
+      );
+      const costs = roundCurrency(shippingAndSellerFees + productCosts);
+      const salesCount = salesBucket?.salesCount ?? 0;
+
+      totalSold = roundCurrency(totalSold + sold);
+      totalShippingAndSellerFees = roundCurrency(
+        totalShippingAndSellerFees + shippingAndSellerFees
+      );
+      totalProductCosts = roundCurrency(totalProductCosts + productCosts);
+      totalSalesCount += salesCount;
+
+      return {
+        costs,
+        label: bucket.label,
+        result: roundCurrency(sold - costs),
+        salesCount,
+        sold,
+      };
+    }
+  );
+  const totalCosts = roundCurrency(
+    totalShippingAndSellerFees + totalProductCosts
+  );
+  const totalResult = roundCurrency(totalSold - totalCosts);
+
+  return {
+    inventoryByCategory: buildInventoryByCategory(inventory),
+    periodComparison,
+    periodGranularity: granularity,
+    resultStatus: getResultStatus(totalResult),
+    selectedRange: range,
+    topProducts,
+    totalCosts,
+    totalProductCosts,
+    totalResult,
+    totalSalesCount,
+    totalShippingAndSellerFees,
+    totalSold,
   };
 };
 

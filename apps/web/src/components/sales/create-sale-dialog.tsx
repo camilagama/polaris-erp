@@ -3,7 +3,7 @@
 import { Add01Icon, Delete02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useCallback, useRef, useState, useTransition } from "react";
 import { ProductDatePicker } from "@/components/products/product-date-picker";
 import { ProductCombobox } from "@/components/sales/product-combobox";
 import { Button } from "@/components/ui/button";
@@ -38,7 +38,10 @@ import {
   findCardInstallmentRule,
   getCardInstallmentRuleLabel,
 } from "@/features/catalog/payment-rules";
-import { createSaleAction } from "@/features/sales/actions";
+import {
+  createSaleAction,
+  searchSaleProductOptionsAction,
+} from "@/features/sales/actions";
 import {
   calculateSaleFinancials,
   calculateSaleReceivedAmount,
@@ -80,6 +83,23 @@ const createSaleRow = (): SaleRowDraft => ({
   productId: "",
   quantity: "1",
 });
+
+const mergeProductOptions = (
+  currentProducts: SaleProductOption[],
+  nextProducts: SaleProductOption[]
+) => {
+  const productById = new Map(
+    currentProducts.map((product) => [product.id, product])
+  );
+
+  for (const product of nextProducts) {
+    productById.set(product.id, product);
+  }
+
+  return Array.from(productById.values()).sort((left, right) =>
+    left.name.localeCompare(right.name, "pt-BR")
+  );
+};
 
 const isCardFeePayer = (
   value: SalePaymentFeePayer | ""
@@ -233,13 +253,23 @@ const updateDraftItem = (
 function SaleProductRow({
   item,
   items,
+  loadingProducts,
+  onLoadMoreProducts,
+  onProductSearchChange,
+  productSearchQuery,
   products,
+  productsHasMore,
   removeItem,
   updateItem,
 }: {
   item: SaleRowDraft;
   items: SaleRowDraft[];
+  loadingProducts: boolean;
+  onLoadMoreProducts: () => void;
+  onProductSearchChange: (query: string) => void;
+  productSearchQuery: string;
   products: SaleProductOption[];
+  productsHasMore: boolean;
   removeItem: (rowId: string) => void;
   updateItem: (
     rowId: string,
@@ -272,7 +302,11 @@ function SaleProductRow({
           Produto
         </Label>
         <ProductCombobox
+          hasMore={productsHasMore}
           label="Selecionar produto da venda"
+          loading={loadingProducts}
+          onLoadMore={onLoadMoreProducts}
+          onSearchChange={onProductSearchChange}
           onSelect={(productId) => {
             updateItem(item.id, (currentItem) => ({
               ...currentItem,
@@ -280,6 +314,7 @@ function SaleProductRow({
             }));
           }}
           options={availableProducts}
+          searchValue={productSearchQuery}
           value={item.productId}
         />
       </div>
@@ -353,14 +388,13 @@ function SaleProductRow({
 
 export function CreateSaleDialog({
   cardInstallmentRules,
-  products,
 }: {
   cardInstallmentRules: CardInstallmentRule[];
-  products: SaleProductOption[];
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
+  const [productsPending, startProductsTransition] = useTransition();
   const [occurredOn, setOccurredOn] = useState(() => formatDateInputValue());
   const [customerName, setCustomerName] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"card" | "pix">("pix");
@@ -373,11 +407,22 @@ export function CreateSaleDialog({
   const [freightAmount, setFreightAmount] = useState("0");
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<SaleRowDraft[]>([createSaleRow()]);
+  const [productOptions, setProductOptions] = useState<SaleProductOption[]>([]);
+  const [productOptionsCursor, setProductOptionsCursor] = useState<
+    string | null
+  >(null);
+  const [productSearchQuery, setProductSearchQuery] = useState("");
   const [idempotencyKey, setIdempotencyKey] = useState(() =>
     crypto.randomUUID()
   );
+  const productSearchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
+  const productRequestIdRef = useRef(0);
 
-  const productById = new Map(products.map((product) => [product.id, product]));
+  const productById = new Map(
+    productOptions.map((product) => [product.id, product])
+  );
   const itemSubtotal = items.reduce((acc, item) => {
     const quantity = Number(item.quantity);
     const selectedProduct = productById.get(item.productId);
@@ -438,7 +483,66 @@ export function CreateSaleDialog({
     setFreightAmount("0");
     setNotes("");
     setItems([createSaleRow()]);
+    setProductSearchQuery("");
     setIdempotencyKey(crypto.randomUUID());
+  };
+
+  const loadProductOptions = useCallback(
+    ({
+      cursor = null,
+      query = productSearchQuery,
+      replace = false,
+    }: {
+      cursor?: string | null;
+      query?: string;
+      replace?: boolean;
+    } = {}) => {
+      const requestId = productRequestIdRef.current + 1;
+      productRequestIdRef.current = requestId;
+
+      startProductsTransition(async () => {
+        try {
+          const result = await searchSaleProductOptionsAction({
+            cursor: cursor ?? undefined,
+            query,
+          });
+
+          if (productRequestIdRef.current !== requestId) {
+            return;
+          }
+
+          setProductOptions((currentProducts) => {
+            const selectedProducts = currentProducts.filter((product) =>
+              items.some((item) => item.productId === product.id)
+            );
+
+            return replace
+              ? mergeProductOptions(selectedProducts, result.items)
+              : mergeProductOptions(currentProducts, result.items);
+          });
+          setProductOptionsCursor(result.nextCursor);
+        } catch (error) {
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : "Nao foi possivel carregar os produtos."
+          );
+        }
+      });
+    },
+    [items, productSearchQuery]
+  );
+
+  const handleProductSearchChange = (query: string) => {
+    setProductSearchQuery(query);
+
+    if (productSearchTimeoutRef.current) {
+      clearTimeout(productSearchTimeoutRef.current);
+    }
+
+    productSearchTimeoutRef.current = setTimeout(() => {
+      loadProductOptions({ query, replace: true });
+    }, 250);
   };
 
   const removeItem = (rowId: string) => {
@@ -524,7 +628,16 @@ export function CreateSaleDialog({
       onOpenChange={(nextOpen) => {
         setOpen(nextOpen);
 
+        if (nextOpen && productOptions.length === 0) {
+          loadProductOptions({ query: "", replace: true });
+        }
+
         if (!nextOpen) {
+          if (productSearchTimeoutRef.current) {
+            clearTimeout(productSearchTimeoutRef.current);
+            productSearchTimeoutRef.current = null;
+          }
+
           resetForm();
         }
       }}
@@ -712,7 +825,14 @@ export function CreateSaleDialog({
                         item={item}
                         items={items}
                         key={item.id}
-                        products={products}
+                        loadingProducts={productsPending}
+                        onLoadMoreProducts={() =>
+                          loadProductOptions({ cursor: productOptionsCursor })
+                        }
+                        onProductSearchChange={handleProductSearchChange}
+                        productSearchQuery={productSearchQuery}
+                        products={productOptions}
+                        productsHasMore={Boolean(productOptionsCursor)}
                         removeItem={removeItem}
                         updateItem={updateItem}
                       />
@@ -890,7 +1010,7 @@ export function CreateSaleDialog({
             Cancelar
           </Button>
           <Button
-            disabled={pending || products.length === 0}
+            disabled={pending || productOptions.length === 0}
             onClick={handleSubmit}
             type="button"
           >

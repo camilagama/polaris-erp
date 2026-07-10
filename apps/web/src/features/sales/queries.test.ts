@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
@@ -34,18 +36,43 @@ describe("sales queries", () => {
     mockDb.select.mockReturnValue({
       from: () => ({
         where: () => ({
-          orderBy: () => Promise.resolve([]),
+          orderBy: () => ({
+            limit: () => Promise.resolve([]),
+          }),
         }),
       }),
     });
   });
 
-  it("runs sale product options inside tenant database context", async () => {
+  it("runs paginated sale product options inside tenant database context", async () => {
     const { getSaleProductsQuery } = await import("@/features/sales/queries");
     const { mockDb } = await resolveMocks();
 
-    await getSaleProductsQuery("org_dg_imports");
+    const result = await getSaleProductsQuery({
+      organizationId: "org_dg_imports",
+      query: "fone",
+    });
 
     expect(mockDb.transaction).toHaveBeenCalledOnce();
+    expect(result).toEqual({
+      items: [],
+      nextCursor: null,
+    });
+  });
+
+  it("keeps sale product options loaded on demand instead of in the sales page", () => {
+    const salesPage = readFileSync(
+      join(process.cwd(), "src/app/(app)/vendas/(list)/page.tsx"),
+      "utf8"
+    );
+    const createSaleDialog = readFileSync(
+      join(process.cwd(), "src/components/sales/create-sale-dialog.tsx"),
+      "utf8"
+    );
+
+    expect(salesPage).not.toContain("getSaleProductsQuery");
+    expect(salesPage).not.toContain("saleProducts");
+    expect(createSaleDialog).toContain("searchSaleProductOptionsAction");
+    expect(createSaleDialog).toContain("productOptionsCursor");
   });
 });

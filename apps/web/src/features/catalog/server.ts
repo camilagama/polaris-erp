@@ -1,9 +1,17 @@
 import "server-only";
 
+import {
+  auditEvents,
+  categories,
+  products,
+  systemSettings,
+} from "@polaris/db/schema";
+import {
+  type TenantTransaction,
+  withTenantContext,
+} from "@polaris/db/tenant-context";
 import { and, asc, count, desc, eq } from "drizzle-orm";
 import { cacheLife, cacheTag } from "next/cache";
-import { categories, products, systemSettings } from "@/db/schema";
-import { withTenantContext } from "@/db/tenant-context";
 import {
   catalogSettingsSchema,
   categorySchema,
@@ -30,6 +38,35 @@ export interface CatalogSettings {
   idealMarkupPercent: number;
   minimumMarkupPercent: number;
 }
+
+interface CatalogAuditEventInput {
+  actorUserId: string;
+  metadata?: Record<string, unknown>;
+  organizationId: string;
+  subjectId?: string | null;
+  subjectType: string;
+  type: string;
+}
+
+const insertCatalogAuditEvent = (
+  tx: TenantTransaction,
+  {
+    actorUserId,
+    metadata = {},
+    organizationId,
+    subjectId = null,
+    subjectType,
+    type,
+  }: CatalogAuditEventInput
+) =>
+  tx.insert(auditEvents).values({
+    actorUserId,
+    metadata,
+    organizationId,
+    subjectId,
+    subjectType,
+    type,
+  });
 
 export const getCatalogSettings = async (
   organizationId: string
@@ -98,20 +135,37 @@ export const listCategoriesWithUsage = async (
   }));
 };
 
-export const createCategory = (organizationId: string, input: unknown) => {
+export const createCategory = (
+  organizationId: string,
+  actorUserId: string,
+  input: unknown
+) => {
   const parsed = categorySchema.parse(input);
 
-  return withTenantContext(organizationId, (tx) =>
-    tx.insert(categories).values({
-      ...parsed,
-      key: crypto.randomUUID(),
+  return withTenantContext(organizationId, async (tx) => {
+    const [createdCategory] = await tx
+      .insert(categories)
+      .values({
+        ...parsed,
+        key: crypto.randomUUID(),
+        organizationId,
+      })
+      .returning({ id: categories.id });
+
+    await insertCatalogAuditEvent(tx, {
+      actorUserId,
+      metadata: { name: parsed.name },
       organizationId,
-    })
-  );
+      subjectId: createdCategory?.id ?? null,
+      subjectType: "category",
+      type: "category.created",
+    });
+  });
 };
 
 export const updateCategory = async (
   organizationId: string,
+  actorUserId: string,
   id: string,
   input: unknown
 ) => {
@@ -146,10 +200,23 @@ export const updateCategory = async (
     if (updatedRows.length === 0) {
       throw new Error("Categoria nao encontrada.");
     }
+
+    await insertCatalogAuditEvent(tx, {
+      actorUserId,
+      metadata: { name: parsed.name },
+      organizationId,
+      subjectId: id,
+      subjectType: "category",
+      type: "category.updated",
+    });
   });
 };
 
-export const deleteCategory = async (organizationId: string, id: string) => {
+export const deleteCategory = async (
+  organizationId: string,
+  actorUserId: string,
+  id: string
+) => {
   await withTenantContext(organizationId, async (tx) => {
     const category = await tx.query.categories.findFirst({
       where: and(
@@ -197,11 +264,20 @@ export const deleteCategory = async (organizationId: string, id: string) => {
     if (deletedRows.length === 0) {
       throw new Error("Categoria nao encontrada.");
     }
+
+    await insertCatalogAuditEvent(tx, {
+      actorUserId,
+      organizationId,
+      subjectId: id,
+      subjectType: "category",
+      type: "category.deleted",
+    });
   });
 };
 
 export const saveCatalogSettings = async (
   organizationId: string,
+  actorUserId: string,
   input: unknown
 ) => {
   const parsed = catalogSettingsSchema.parse(input);
@@ -209,8 +285,8 @@ export const saveCatalogSettings = async (
     parsed.cardInstallmentRules
   );
 
-  await withTenantContext(organizationId, (tx) =>
-    tx
+  await withTenantContext(organizationId, async (tx) => {
+    await tx
       .insert(systemSettings)
       .values({
         id: GLOBAL_SETTINGS_ID,
@@ -227,10 +303,16 @@ export const saveCatalogSettings = async (
           updatedAt: new Date(),
         },
         target: [systemSettings.organizationId, systemSettings.id],
-      })
-  );
-};
+      });
 
+    await insertCatalogAuditEvent(tx, {
+      actorUserId,
+      organizationId,
+      subjectType: "settings",
+      type: "settings.updated",
+    });
+  });
+};
 export const getProductCategoryById = async (
   organizationId: string,
   id: string

@@ -1,19 +1,6 @@
 import "server-only";
 
 import {
-  and,
-  asc,
-  desc,
-  eq,
-  gt,
-  ilike,
-  isNotNull,
-  isNull,
-  or,
-  type SQL,
-} from "drizzle-orm";
-import { z } from "zod";
-import {
   categories,
   productPriceChanges,
   productStockEntries,
@@ -22,9 +9,30 @@ import {
   saleItems,
   sales,
   users,
-} from "@/db/schema";
-import { withTenantContext } from "@/db/tenant-context";
+} from "@polaris/db/schema";
+import { withTenantContext } from "@polaris/db/tenant-context";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gt,
+  gte,
+  ilike,
+  isNotNull,
+  isNull,
+  lte,
+  or,
+  type SQL,
+  sql,
+} from "drizzle-orm";
+import { z } from "zod";
 import type {
+  InventoryMovementFilterProduct,
+  InventoryMovementFilters,
+  InventoryMovementItem,
+  InventoryMovementsResult,
+  InventoryMovementType,
   ProductListItem,
   ProductPriceChangeItem,
   ProductSaleHistoryItem,
@@ -36,6 +44,14 @@ import { buildProductImageUrl } from "@/features/products/image-urls";
 import { decodeOpaqueCursor, encodeOpaqueCursor } from "@/lib/opaque-cursor";
 
 const DEFAULT_PAGE_SIZE = 15;
+const INVENTORY_MOVEMENTS_LIMIT = 200;
+const INVENTORY_MOVEMENT_TYPES = [
+  "entry",
+  "sale",
+  "sale_reversal",
+  "write_off",
+] as const satisfies InventoryMovementType[];
+const DATE_FILTER_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const productCursorSchema = z.object({
   createdAt: z.string().min(1),
   id: z.string().min(1),
@@ -145,6 +161,68 @@ const parseProductsCursor = (cursor: string) => {
   };
 };
 
+const isInventoryMovementType = (
+  value: string | undefined
+): value is InventoryMovementType =>
+  Boolean(value) &&
+  INVENTORY_MOVEMENT_TYPES.includes(value as InventoryMovementType);
+
+const isDateFilter = (value: string | undefined): value is string =>
+  Boolean(value && DATE_FILTER_PATTERN.test(value));
+
+export const normalizeInventoryMovementFilters = (input: {
+  from?: string | string[];
+  productId?: string | string[];
+  to?: string | string[];
+  type?: string | string[];
+}): InventoryMovementFilters => {
+  const rawFrom = typeof input.from === "string" ? input.from.trim() : "";
+  const rawProductId =
+    typeof input.productId === "string" ? input.productId.trim() : "";
+  const rawTo = typeof input.to === "string" ? input.to.trim() : "";
+  const rawType = typeof input.type === "string" ? input.type.trim() : "";
+
+  return {
+    ...(isDateFilter(rawFrom) ? { from: rawFrom } : {}),
+    ...(rawProductId ? { productId: rawProductId } : {}),
+    ...(isDateFilter(rawTo) ? { to: rawTo } : {}),
+    ...(isInventoryMovementType(rawType) ? { type: rawType } : {}),
+  };
+};
+
+const byNewestMovement = (
+  left: InventoryMovementItem,
+  right: InventoryMovementItem
+) => {
+  const dateComparison = right.date.localeCompare(left.date);
+
+  if (dateComparison !== 0) {
+    return dateComparison;
+  }
+
+  return right.createdAt.getTime() - left.createdAt.getTime();
+};
+
+const shouldQueryMovementType = (
+  filters: InventoryMovementFilters,
+  type: InventoryMovementType
+) => !filters.type || filters.type === type;
+
+const listProductsForInventoryMovementFilter = (
+  organizationId: string
+): Promise<InventoryMovementFilterProduct[]> =>
+  withTenantContext(organizationId, (tx) =>
+    tx
+      .select({
+        id: products.id,
+        name: products.name,
+      })
+      .from(products)
+      .where(eq(products.organizationId, organizationId))
+      .orderBy(asc(products.name), asc(products.createdAt), asc(products.id))
+      .limit(250)
+  );
+
 export interface PaginatedProductsList {
   items: ProductListItem[];
   nextCursor: string | null;
@@ -241,6 +319,319 @@ export async function getProductsQuery({
   return {
     items: items.map(mapProductListItem),
     nextCursor: hasMore && lastItem ? buildProductsCursor(lastItem) : null,
+  };
+}
+
+interface InventoryMovementsQueryInput {
+  filters: InventoryMovementFilters;
+  organizationId: string;
+}
+
+const getEntryMovements = ({
+  filters,
+  organizationId,
+}: InventoryMovementsQueryInput): Promise<InventoryMovementItem[]> => {
+  const entryFilters: SQL[] = [
+    eq(productStockEntries.organizationId, organizationId),
+  ];
+
+  if (filters.productId) {
+    entryFilters.push(eq(productStockEntries.productId, filters.productId));
+  }
+
+  if (filters.from) {
+    entryFilters.push(gte(productStockEntries.stockedOn, filters.from));
+  }
+
+  if (filters.to) {
+    entryFilters.push(lte(productStockEntries.stockedOn, filters.to));
+  }
+
+  return withTenantContext(organizationId, (tx) =>
+    tx
+      .select({
+        createdAt: productStockEntries.createdAt,
+        date: productStockEntries.stockedOn,
+        id: productStockEntries.id,
+        productId: productStockEntries.productId,
+        productName: products.name,
+        quantity: productStockEntries.quantity,
+        unitCost: productStockEntries.unitCost,
+      })
+      .from(productStockEntries)
+      .innerJoin(
+        products,
+        and(
+          eq(productStockEntries.productId, products.id),
+          eq(products.organizationId, organizationId)
+        )
+      )
+      .where(and(...entryFilters))
+      .orderBy(
+        desc(productStockEntries.stockedOn),
+        desc(productStockEntries.createdAt)
+      )
+      .limit(INVENTORY_MOVEMENTS_LIMIT)
+      .then((rows) =>
+        rows.map((row) => ({
+          createdAt: row.createdAt,
+          date: row.date,
+          id: row.id,
+          notes: null,
+          productId: row.productId,
+          productName: row.productName,
+          quantity: Number(row.quantity),
+          totalValue: Number(row.quantity) * Number(row.unitCost),
+          type: "entry" as const,
+          unitCost: Number(row.unitCost),
+        }))
+      )
+  );
+};
+
+const getWriteOffMovements = ({
+  filters,
+  organizationId,
+}: InventoryMovementsQueryInput): Promise<InventoryMovementItem[]> => {
+  const writeOffFilters: SQL[] = [
+    eq(productStockWriteOffs.organizationId, organizationId),
+  ];
+
+  if (filters.productId) {
+    writeOffFilters.push(
+      eq(productStockWriteOffs.productId, filters.productId)
+    );
+  }
+
+  if (filters.from) {
+    writeOffFilters.push(gte(productStockWriteOffs.happenedOn, filters.from));
+  }
+
+  if (filters.to) {
+    writeOffFilters.push(lte(productStockWriteOffs.happenedOn, filters.to));
+  }
+
+  return withTenantContext(organizationId, (tx) =>
+    tx
+      .select({
+        createdAt: productStockWriteOffs.createdAt,
+        date: productStockWriteOffs.happenedOn,
+        id: productStockWriteOffs.id,
+        notes: productStockWriteOffs.notes,
+        productId: productStockWriteOffs.productId,
+        productName: products.name,
+        quantity: productStockWriteOffs.quantity,
+        unitCost: productStockWriteOffs.unitCostSnapshot,
+      })
+      .from(productStockWriteOffs)
+      .innerJoin(
+        products,
+        and(
+          eq(productStockWriteOffs.productId, products.id),
+          eq(products.organizationId, organizationId)
+        )
+      )
+      .where(and(...writeOffFilters))
+      .orderBy(
+        desc(productStockWriteOffs.happenedOn),
+        desc(productStockWriteOffs.createdAt)
+      )
+      .limit(INVENTORY_MOVEMENTS_LIMIT)
+      .then((rows) =>
+        rows.map((row) => ({
+          createdAt: row.createdAt,
+          date: row.date,
+          id: row.id,
+          notes: row.notes,
+          productId: row.productId,
+          productName: row.productName,
+          quantity: -Number(row.quantity),
+          totalValue: Number(row.quantity) * Number(row.unitCost),
+          type: "write_off" as const,
+          unitCost: Number(row.unitCost),
+        }))
+      )
+  );
+};
+
+const getSaleMovements = ({
+  filters,
+  organizationId,
+}: InventoryMovementsQueryInput): Promise<InventoryMovementItem[]> => {
+  const saleFilters: SQL[] = [
+    eq(saleItems.organizationId, organizationId),
+    eq(sales.organizationId, organizationId),
+  ];
+
+  if (filters.productId) {
+    saleFilters.push(eq(saleItems.productId, filters.productId));
+  }
+
+  if (filters.from) {
+    saleFilters.push(gte(sales.occurredOn, filters.from));
+  }
+
+  if (filters.to) {
+    saleFilters.push(lte(sales.occurredOn, filters.to));
+  }
+
+  return withTenantContext(organizationId, (tx) =>
+    tx
+      .select({
+        createdAt: saleItems.createdAt,
+        date: sales.occurredOn,
+        id: saleItems.id,
+        productId: saleItems.productId,
+        productName: products.name,
+        quantity: saleItems.quantity,
+        saleId: sales.id,
+        unitCost: saleItems.unitCostSnapshot,
+      })
+      .from(saleItems)
+      .innerJoin(
+        sales,
+        and(
+          eq(saleItems.saleId, sales.id),
+          eq(sales.organizationId, organizationId)
+        )
+      )
+      .innerJoin(
+        products,
+        and(
+          eq(saleItems.productId, products.id),
+          eq(products.organizationId, organizationId)
+        )
+      )
+      .where(and(...saleFilters))
+      .orderBy(desc(sales.occurredOn), desc(saleItems.createdAt))
+      .limit(INVENTORY_MOVEMENTS_LIMIT)
+      .then((rows) =>
+        rows.map((row) => ({
+          createdAt: row.createdAt,
+          date: row.date,
+          id: `sale-${row.id}`,
+          notes: `Venda ${row.saleId}`,
+          productId: row.productId,
+          productName: row.productName,
+          quantity: -Number(row.quantity),
+          totalValue: Number(row.quantity) * Number(row.unitCost),
+          type: "sale" as const,
+          unitCost: Number(row.unitCost),
+        }))
+      )
+  );
+};
+
+const getSaleReversalMovements = ({
+  filters,
+  organizationId,
+}: InventoryMovementsQueryInput): Promise<InventoryMovementItem[]> => {
+  const reversalDate = sql<string>`date(${sales.cancelledAt})`;
+  const reversalFilters: SQL[] = [
+    eq(saleItems.organizationId, organizationId),
+    eq(sales.organizationId, organizationId),
+    isNotNull(sales.cancelledAt),
+  ];
+
+  if (filters.productId) {
+    reversalFilters.push(eq(saleItems.productId, filters.productId));
+  }
+
+  if (filters.from) {
+    reversalFilters.push(gte(reversalDate, filters.from));
+  }
+
+  if (filters.to) {
+    reversalFilters.push(lte(reversalDate, filters.to));
+  }
+
+  return withTenantContext(organizationId, (tx) =>
+    tx
+      .select({
+        createdAt: sales.cancelledAt,
+        date: reversalDate,
+        id: saleItems.id,
+        productId: saleItems.productId,
+        productName: products.name,
+        quantity: saleItems.quantity,
+        saleId: sales.id,
+        unitCost: saleItems.unitCostSnapshot,
+      })
+      .from(saleItems)
+      .innerJoin(
+        sales,
+        and(
+          eq(saleItems.saleId, sales.id),
+          eq(sales.organizationId, organizationId)
+        )
+      )
+      .innerJoin(
+        products,
+        and(
+          eq(saleItems.productId, products.id),
+          eq(products.organizationId, organizationId)
+        )
+      )
+      .where(and(...reversalFilters))
+      .orderBy(desc(sales.cancelledAt), desc(saleItems.createdAt))
+      .limit(INVENTORY_MOVEMENTS_LIMIT)
+      .then((rows) =>
+        rows.map((row) => ({
+          createdAt: row.createdAt ?? new Date(`${row.date}T12:00:00Z`),
+          date: row.date,
+          id: `sale-reversal-${row.id}`,
+          notes: `Venda ${row.saleId} cancelada`,
+          productId: row.productId,
+          productName: row.productName,
+          quantity: Number(row.quantity),
+          totalValue: Number(row.quantity) * Number(row.unitCost),
+          type: "sale_reversal" as const,
+          unitCost: Number(row.unitCost),
+        }))
+      )
+  );
+};
+
+const getMovementQueries = (
+  input: InventoryMovementsQueryInput
+): Promise<InventoryMovementItem[]>[] => {
+  const queries: Promise<InventoryMovementItem[]>[] = [];
+
+  if (shouldQueryMovementType(input.filters, "entry")) {
+    queries.push(getEntryMovements(input));
+  }
+
+  if (shouldQueryMovementType(input.filters, "write_off")) {
+    queries.push(getWriteOffMovements(input));
+  }
+
+  if (shouldQueryMovementType(input.filters, "sale")) {
+    queries.push(getSaleMovements(input));
+  }
+
+  if (shouldQueryMovementType(input.filters, "sale_reversal")) {
+    queries.push(getSaleReversalMovements(input));
+  }
+
+  return queries;
+};
+
+export async function getInventoryMovementsQuery(
+  input: InventoryMovementsQueryInput
+): Promise<InventoryMovementsResult> {
+  const [productsForFilter, movementGroups] = await Promise.all([
+    listProductsForInventoryMovementFilter(input.organizationId),
+    Promise.all(getMovementQueries(input)),
+  ]);
+  const items = movementGroups
+    .flat()
+    .sort(byNewestMovement)
+    .slice(0, INVENTORY_MOVEMENTS_LIMIT);
+
+  return {
+    filters: input.filters,
+    items,
+    products: productsForFilter,
   };
 }
 

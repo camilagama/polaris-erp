@@ -6,7 +6,6 @@ vi.mock("@/features/products/image-storage", () => ({
 
 vi.mock("@/lib/env", () => ({
   serverEnv: {
-    CRON_SECRET: "cron-secret",
     INTERNAL_R2_HEALTH_SECRET: "health-secret",
   },
 }));
@@ -44,7 +43,7 @@ describe("/api/internal/health/r2", () => {
     expect(getR2StagingHealthDiagnostics).not.toHaveBeenCalled();
   });
 
-  it("does not accept the shared cron secret when the R2 health secret is configured", async () => {
+  it("only accepts the R2 health secret", async () => {
     const { getR2StagingHealthDiagnostics } = await import(
       "@/features/products/image-storage"
     );
@@ -53,7 +52,7 @@ describe("/api/internal/health/r2", () => {
     const response = await GET(
       new Request("http://localhost/api/internal/health/r2", {
         headers: {
-          Authorization: "Bearer cron-secret",
+          Authorization: "Bearer unrelated-secret",
         },
         method: "GET",
       })

@@ -19,6 +19,7 @@
     "./workspace-management-policy": "./src/workspace-management-policy.ts"
   },
   "scripts": {
+    "test": "vitest run",
     "typecheck": "tsc --noEmit --project tsconfig.json"
   }
 }

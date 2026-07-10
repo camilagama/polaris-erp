@@ -16,6 +16,7 @@
     "./admin-rate-limit": "./src/admin-rate-limit.ts"
   },
   "scripts": {
+    "test": "vitest run",
     "typecheck": "tsc --noEmit --project tsconfig.json"
   }
 }

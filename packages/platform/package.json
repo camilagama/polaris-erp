@@ -19,6 +19,7 @@
     "./support-notes": "./src/platform-support-notes.ts"
   },
   "scripts": {
+    "test": "vitest run",
     "typecheck": "tsc --noEmit --project tsconfig.json"
   }
 }

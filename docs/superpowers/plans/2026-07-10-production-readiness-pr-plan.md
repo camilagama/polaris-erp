@@ -406,6 +406,23 @@
 
 ### PR 07 - Remove Customer-Controlled Organization Naming
 
+**Status:** Concluida em 2026-07-10 para produto web, onboarding e testes locais.
+
+**Resultado:** Removed the customer-controlled organization name field from onboarding, changed onboarding into a one-button account activation flow, stopped exposing `organizationName` through `AppContext`, and removed the organization name from the authenticated app header. Tenant creation now generates hidden Better Auth-compatible technical values (`Tenant <id>` / `tenant-<id>`) server-side.
+
+**Verificacao executada:**
+- Context7 Better Auth docs confirmed the organization plugin still requires `name` and `slug` in create/schema, so the DB columns were not dropped in this PR.
+- `bun --cwd apps/web vitest run src/features/onboarding/actions.test.ts 'src/app/(auth)/onboarding/onboarding-form.test.ts' src/lib/app-session.test.ts src/app/api/product-images/presign/route.test.ts 'src/app/(app)/page.test.ts'` passed: 5 files, 20 tests.
+- `bun run test` passed: 109 files, 393 tests.
+- `bun run typecheck` passed.
+- `bun x ultracite check` passed.
+- `bun run build` passed.
+- `bun run test:e2e` passed: 9 tests using 1 worker.
+
+**Decisao de escopo:** Better Auth still models organizations with required `name` and unique `slug`, so this PR removes customer naming and product reliance on the name, but keeps DB fields populated with non-customer technical values. Dropping or remapping those columns would require a later auth-model migration away from the current plugin contract.
+
+**Risco residual:** Admin/platform billing still has `organizationName` as an internal listing label because the platform billing query joins the Better Auth organization table. That label is now technical and should be replaced by customer email/account identifier in a later admin UX/refactor PR if needed.
+
 **Objetivo:** Remove organization naming from onboarding, UI, and domain behavior for the one-user-per-tenant model.
 
 **Escopo exato:**
@@ -457,6 +474,19 @@
 
 ### PR 08 - Fix Admin Organization Status Mutation Integrity
 
+**Status:** Concluida em 2026-07-10.
+
+**Resultado:** `updatePlatformOrganizationStatus` now uses Drizzle `returning({ id })` after the status update and throws `Organization not found for status change.` when no organization row is updated. Platform audit insertion only runs after the update is confirmed.
+
+**Verificacao executada:**
+- Context7 Drizzle docs confirmed PostgreSQL `update().set().where().returning({ id })` syntax.
+- `bun --cwd apps/web vitest run src/lib/platform-organization-mutations.test.ts` passed: 1 file, 4 tests.
+- `bun run typecheck` passed.
+- `bun x ultracite check` passed.
+- `bun run test` passed: 109 files, 394 tests.
+
+**Risco residual:** Existing admin callers must surface the thrown missing-organization error cleanly; this PR preserves current caller behavior except for preventing false audit success.
+
 **Objetivo:** Prevent false audit success when no organization row changes.
 
 **Escopo exato:**
@@ -489,6 +519,19 @@
 
 ### PR 09 - Make Catalog Audit Transactional
 
+**Status:** Concluida em 2026-07-10.
+
+**Resultado:** Catalog mutations now write their audit events inside the same `withTenantContext` transaction as the category/settings mutation. Catalog actions pass `context.userId` into the server mutators and only revalidate cache after the transactional mutator succeeds. `recordAuditEvent` remains best-effort for unrelated domains; it is no longer used by catalog mutations.
+
+**Verificacao executada:**
+- `bun --cwd apps/web vitest run src/features/catalog/actions.test.ts src/features/catalog/server.test.ts` passed: 2 files, 11 tests.
+- `bun x ultracite check` passed.
+- `bun run test` passed: 109 files, 395 tests.
+- `bun run typecheck` passed.
+- `bun run build` passed.
+
+**Risco residual:** This PR intentionally scoped transactional audit to catalog/category/settings mutations only. Product, sales, goals, and image audit flows still use their previous audit behavior and should be addressed separately if the same transactional guarantee is required there.
+
 **Objetivo:** Ensure catalog changes and audit records commit or rollback together.
 
 **Escopo exato:**
@@ -519,6 +562,18 @@
 - Revert to prior mutation path.
 
 ### PR 10 - Validate Platform Support Note Targets
+
+**Status:** Concluida em 2026-07-10.
+
+**Resultado:** Support notes now validate `customerUserId + organizationId` against the Better Auth `member` table before inserting the note/audit event. Listing support notes with both filters now uses `organization_id = ... and customer_user_id = ...` instead of `or`, preventing unrelated notes from leaking into combined target views.
+
+**Verificacao executada:**
+- `bun --cwd apps/web vitest run src/lib/platform-support-notes.test.ts` passed: 1 file, 5 tests.
+- `bun run typecheck` passed.
+- `bun x ultracite check` passed.
+- `bun run test` passed: 109 files, 397 tests.
+
+**Risco residual:** Historical inconsistent notes, if any, are not cleaned up by this PR. This change prevents new inconsistent notes and fixes combined-filter reads going forward.
 
 **Objetivo:** Prevent notes linking unrelated user and organization.
 
@@ -554,6 +609,21 @@
 
 ### PR 11 - Add Package-Level Test Suites
 
+**Status:** Concluido em 2026-07-10.
+
+**Resultado:** Added package-owned `test` scripts, moved package contract tests from `apps/web/src/lib` into their owning packages, added root `test:all`, and kept production logic unchanged.
+
+**Verificacao:**
+- `bun --cwd packages/auth test` passed.
+- `bun --cwd packages/billing test` passed.
+- `bun --cwd packages/events test` passed.
+- `bun --cwd packages/platform test` passed.
+- `bun --cwd packages/platform-auth test` passed.
+- `bun run test:all` passed.
+- `bun run test` passed.
+- `bun run typecheck` passed.
+- `bun x ultracite check` passed.
+
 **Objetivo:** Give extracted packages their own behavioral tests.
 
 **Escopo exato:**
@@ -588,6 +658,16 @@
 
 ### PR 12 - Add Direct Webhook Behavior Tests
 
+**Status:** Concluido em 2026-07-10.
+
+**Resultado:** Added direct route behavior tests for Asaas, Woovi, and Resend webhooks, covering missing credentials/headers, invalid signatures or payloads, duplicate-safe idempotency keys, successful capture/outbox paths, and oversized payload rejection. Added a shared webhook request size guard returning `413`.
+
+**Verificacao:**
+- `bun --cwd apps/web vitest run src/app/api/webhooks/asaas/route.test.ts src/app/api/webhooks/woovi/route.test.ts src/app/api/webhooks/resend/route.test.ts src/lib/asaas-webhook.test.ts src/lib/woovi-webhook.test.ts` passed.
+- `bun run test` passed.
+- `bun run typecheck` passed.
+- `bun x ultracite check` passed.
+
 **Objetivo:** Cover public webhook edges directly.
 
 **Escopo exato:**
@@ -619,6 +699,17 @@
 - Remove new tests only if they are proven incorrect.
 
 ### PR 13 - Add Admin Unit Tests and E2E Isolation
+
+**Status:** Concluido em 2026-07-10.
+
+**Resultado:** Added admin Vitest setup, root `test:admin`, CI admin unit-test step, and fast bootstrap guard tests for forbidden environment, missing secret, invalid authorization, and invalid payload. Updated admin E2E CI to use `ADMIN_E2E_DATABASE_URL` through `E2E_DATABASE_URL`, avoiding parallel reuse of the web E2E database.
+
+**Verificacao:**
+- `bun run test:admin` passed.
+- `bun run test:all` passed.
+- `bun run typecheck:admin` passed.
+- `bun x ultracite check` passed.
+- `bun run test:e2e:admin` not run locally because it requires a real isolated admin E2E database secret; CI must provide `ADMIN_E2E_DATABASE_URL`.
 
 **Objetivo:** Make admin regressions visible before Playwright.
 
@@ -659,6 +750,18 @@
 
 ### PR 14 - Confirm Destructive Product Actions
 
+**Status:** Concluido em 2026-07-10.
+
+**Resultado:** Added explicit archive confirmation, converted stock write-off into a review/confirm flow, added client-side `NaN`/empty/`<=0`/`> stock` validation with inline feedback, and updated the operations E2E scenario for cancel/confirm archive plus blocked over-stock write-off.
+
+**Verificacao:**
+- `bun --cwd apps/web vitest run src/components/products/product-detail-actions.test.ts src/components/products/products-panel.test.ts src/features/products/actions.test.ts` passed.
+- `bun --cwd apps/web vitest run src/features/sales/actions.test.ts src/features/sales/server.test.ts` passed after first full-suite timeout indicated contention in unrelated sales tests.
+- `bun run test` passed on rerun.
+- `bun run typecheck` passed.
+- `bun x ultracite check` passed.
+- `bun run test:e2e` not run locally because it requires the isolated E2E database; `apps/web/tests/e2e/operations.e2e.ts` was updated for the new confirmation flow.
+
 **Objetivo:** Prevent accidental stock write-offs and product archiving.
 
 **Escopo exato:**
@@ -691,6 +794,16 @@
 - Revert UI confirmation only; keep server-side validation.
 
 ### PR 15 - Fix Admin Accessibility and Mobile Layout
+
+**Status:** Concluido em 2026-07-10.
+
+**Resultado:** Added accessible names for admin search/filter inputs and support-note textareas, changed the disabled dashboard summary card from a fake link into a non-interactive `article`, and added horizontal overflow/min-width wrappers to fixed admin grids for mobile safety.
+
+**Verificacao:**
+- `bun run test:admin` passed.
+- `bun run typecheck:admin` passed.
+- `bun x ultracite check` passed.
+- Playwright `getByLabel`/mobile viewport checks were not run locally because admin E2E requires the isolated admin E2E database; source-level admin accessibility tests now cover the labels, non-link disabled card, and responsive wrappers.
 
 **Objetivo:** Make admin filters/forms navigable and reduce mobile layout breakage.
 
@@ -732,6 +845,20 @@
 
 ### PR 16 - Move Dashboard/List Aggregations to SQL
 
+**Status:** Concluido em 2026-07-10.
+
+**Resultado:** Moved the critical dashboard metrics path from raw sales/item hydration plus JavaScript aggregation to SQL aggregates for period sales, period product costs, and top products. Kept the dashboard contract stable by adding `buildDashboardMetricsFromAggregates`, while preserving the old raw-row builder for isolated domain tests and compatibility.
+
+**Verificacao:**
+- `bun --cwd apps/web vitest run src/features/dashboard/metrics.test.ts src/features/dashboard/server.test.ts` passed.
+- `bun run typecheck` passed.
+- `bun x ultracite check` passed.
+- `bun run test` passed.
+
+**Decisao de escopo:** This PR intentionally limited the performance fix to the dashboard metrics route, the clearest critical aggregate. Contribution graph and list/search/index work remain assigned to later performance PRs so this change stays reviewable.
+
+**Risco residual:** SQL bucket behavior is covered by contract tests, but query plan/performance should still be validated against representative Neon data before production promotion.
+
 **Objetivo:** Reduce memory/CPU and improve TTFB for growing tenants.
 
 **Escopo exato:**
@@ -766,6 +893,23 @@
 
 ### PR 17 - Add Search Index Strategy
 
+**Status:** Concluido em 2026-07-10.
+
+**Resultado:** Added `pg_trgm` search strategy for listing text searches: category names, active/archived product names, and sale customer names now have GIN trigram indexes in schema and migration. Sale ID search no longer casts UUID to text with `%term%`; full UUID queries now use exact `eq(sales.id, normalizedQuery)`, while customer-name search remains textual. The listing plan analyzer can now include search-plan checks when `PERFORMANCE_SEARCH_TERM` is provided.
+
+**Verificacao:**
+- Neon docs checked with `ctx7`: `pg_trgm` is enabled with `CREATE EXTENSION IF NOT EXISTS pg_trgm`.
+- `bun --cwd apps/web vitest run src/db/listing-indexes.test.ts src/features/sales/queries.test.ts src/features/products/queries.test.ts` passed.
+- `bun run typecheck` passed.
+- `bun x ultracite check` passed.
+- `bun --cwd apps/web vitest run src/features/products/actions.test.ts` passed after a full-suite timeout in that unrelated file.
+- `bun --cwd apps/web vitest run src/features/sales/actions.test.ts` passed after a full-suite timeout in that unrelated file.
+- `bun --cwd apps/web vitest run --maxWorkers=1` passed: 99 files, 372 tests.
+
+**Validacao nao executada:** `scripts/analyze-listing-plans.ts` was not run against a representative Neon dataset because this session does not have an approved `DATABASE_URL` plus `PERFORMANCE_ORGANIZATION_ID`/`PERFORMANCE_SEARCH_TERM` target.
+
+**Risco residual:** Applying GIN indexes on large production tables can take time and should be done on an approved Neon branch/maintenance window. Query-plan validation still needs representative data after migration.
+
 **Objetivo:** Prevent scans from `%term%` search at scale.
 
 **Escopo exato:**
@@ -799,6 +943,20 @@
 - Drop indexes in forward migration.
 
 ### PR 18 - Paginate Product Picker for Sales
+
+**Status:** Concluido em 2026-07-10.
+
+**Resultado:** The sales page no longer loads the full sellable product catalog. Product options for the create-sale dialog are now fetched on demand through a `sales:write` server action backed by a paginated/cursor-based query. The dialog loads the first page when opened, searches product names with debounce, supports loading more options, and keeps selected products in client state so price preview and expected-unit-price validation remain intact.
+
+**Verificacao:**
+- `bun --cwd apps/web vitest run src/features/sales/queries.test.ts src/components/sales/sales-panel.test.ts` passed.
+- `bun x ultracite check` passed.
+- `bun run typecheck` passed.
+- `bun --cwd apps/web vitest run --maxWorkers=1` passed: 99 files, 373 tests.
+
+**Decisao de escopo:** The PR did not change sale financial calculations or server-side sale validation. It only changed how selectable products are loaded into the dialog.
+
+**Risco residual:** No browser/E2E run was executed in this session because the project requires an isolated E2E database. The source/unit tests cover the data-loading boundary, but the interactive combobox flow should still be covered in Playwright later.
 
 **Objetivo:** Avoid loading all sellable products into the sales dialog.
 
@@ -835,6 +993,23 @@
 ## DevOps/Produção
 
 ### PR 19 - Move Image Reconcile from Vercel Cron to Inngest
+
+**Status:** Concluido em 2026-07-10.
+
+**Resultado:** Moved the daily product-image reconcile schedule from Vercel Cron to an Inngest scheduled function (`reconcile-product-images`, cron `0 4 * * *`). Extracted reconcile domain logic into `features/products/image-reconcile.ts`, kept the manual HTTP endpoint for operational diagnostics only, removed the `vercel.json` cron entry, and replaced generic `CRON_SECRET` wiring with route-specific `PRODUCT_IMAGE_RECONCILE_SECRET` and `INTERNAL_R2_HEALTH_SECRET`.
+
+**Verificacao:**
+- Inngest docs checked with `ctx7`: scheduled functions support `createFunction` with cron triggers.
+- `bun --cwd apps/web vitest run src/lib/inngest-functions.test.ts src/app/api/internal/product-images/reconcile/route.test.ts src/app/api/internal/health/r2/route.test.ts src/lib/env.test.ts src/lib/production-preflight.test.ts src/lib/deployment-smoke.test.ts src/lib/ci-workflow.test.ts src/lib/playwright-env.test.ts` passed.
+- `bun --cwd apps/web vitest run src/lib/inngest-functions.test.ts src/features/products/image-reconcile-inngest.test.ts src/lib/inngest-route-source.test.ts src/lib/lib-boundary.test.ts` passed.
+- `bun run typecheck` passed.
+- `bun x ultracite check` passed.
+- `bun --cwd apps/web vitest run --maxWorkers=1` passed: 100 files, 375 tests.
+- Source search found no active `CRON_SECRET`/`E2E_CRON_SECRET` references in apps, scripts, workflows, `.env.example`, `turbo.json`, `vercel.json`, README, runbooks, or architecture docs.
+
+**Validacao nao executada:** Inngest cloud sync/schedule execution was not verified against a deployed app in this session. After deploy, confirm the Inngest app has synced `reconcile-product-images` and that the schedule appears in the Inngest dashboard.
+
+**Risco residual:** The manual endpoint remains available by design for diagnostics, protected by `PRODUCT_IMAGE_RECONCILE_SECRET`; operational runbooks must use that secret, not an old cron secret.
 
 **Objetivo:** Use durable scheduled jobs for image reconciliation.
 
@@ -876,6 +1051,25 @@
 
 ### PR 20 - Make Admin a First-Class Vercel Project
 
+**Status:** Concluido em 2026-07-10 para codigo, docs e verificacoes locais.
+
+**Resultado:** Replaced the root-level `vercel.admin.json` with explicit app-local `apps/admin/vercel.json` for the separate Vercel project rooted at `apps/admin`. Added admin `/api/health`, admin deployment smoke support (`bun run deploy:smoke:admin`) with normal health validation and Vercel Authentication/deployment-protection mode, manual CI smoke job, env documentation, and Sentry instrumentation/source-map parity for the admin app.
+
+**Verificacao:**
+- Vercel monorepo docs checked with `ctx7`: each deployed directory should be imported as a separate project and configured with the matching Root Directory.
+- Next local docs checked for `src/instrumentation.ts` and Route Handlers.
+- `bun --cwd apps/admin vitest run src/app/api/health/route.test.ts src/lib/deployment-smoke.test.ts` passed.
+- `bun --cwd apps/web vitest run src/lib/ci-workflow.test.ts` passed.
+- `bun run typecheck:admin` passed.
+- `bun run build:admin` passed and emitted `/api/health` as a dynamic route.
+- `bun run test:admin` passed.
+- `bun x ultracite check` passed.
+- Source search found no active root `vercel.admin.json`; remaining references are only this plan and the runbook note explaining its removal.
+
+**Validacao nao executada:** `bun run deploy:smoke:admin` was not run against a real preview/prod admin URL in this session because no deployed admin URL or Vercel-authenticated smoke context was provided. Use `ADMIN_DEPLOYMENT_SMOKE_URL=... bun run deploy:smoke:admin` when the route is reachable, or add `ADMIN_DEPLOYMENT_SMOKE_PROTECTED=true` when validating that Vercel Authentication blocks anonymous access with `401/403`.
+
+**Risco residual:** Vercel Authentication/deployment protection remains platform state and cannot be proven from the repo. Before promotion, the operator must verify the `apps/admin` Vercel project has Root Directory `apps/admin`, source files outside the root included, and production/previews protected.
+
 **Objetivo:** Make admin deployment explicit, repeatable, and protected.
 
 **Escopo exato:**
@@ -915,6 +1109,23 @@
 - Revert app-local config and use existing manual config.
 
 ### PR 21 - Harden CI and Migration Operations
+
+**Status:** Concluido em 2026-07-10 para codigo, CI, docs e verificacoes locais.
+
+**Resultado:** CI now pins `oven-sh/setup-bun` to Bun `1.3.11`, matching `packageManager`. Root aggregate gates were added: `build:all`, `check:all`, `typecheck:all`, and `test:all`. Database migrations/push now run through `scripts/require-database-url-direct.ts`, which refuses missing/invalid `DATABASE_URL_DIRECT` and refuses reuse of `DATABASE_URL`; `packages/db/drizzle.config.ts` no longer falls back from `DATABASE_URL_DIRECT` to `DATABASE_URL`. Added a manual CI `restore-drill-checklist` job and `scripts/check-restore-drill.ts` to require explicit restore drill evidence before risky operational work.
+
+**Verificacao:**
+- `ctx7` setup-bun docs checked: exact `bun-version` pinning is supported, and packageManager can define the intended version.
+- `bun --cwd apps/web vitest run src/lib/ci-workflow.test.ts src/lib/operations-gates.test.ts` passed.
+- `bun scripts/require-database-url-direct.ts` passed with synthetic separate runtime/direct Postgres URLs and printed a redacted target.
+- `bun scripts/check-restore-drill.ts` passed with synthetic restore drill evidence.
+- Source search found no `bun-version: latest`, `DATABASE_URL_DIRECT ?? DATABASE_URL`, `DATABASE_URL ??`, or `bu n` typo in the touched operational files.
+- `bun run typecheck:all` passed.
+- `bun run check:all` passed.
+- `bun run test:all` passed.
+- `bun run build:all` passed.
+
+**Risco residual:** The restore drill job validates evidence variables only; it does not perform a Neon restore automatically. The actual restore/PITR drill remains an operator action that must be done before filling the checklist. `bun run build:all` emitted the existing local Postgres SSL warning when an env URL uses `sslmode=require`; production docs continue to require `sslmode=verify-full`.
 
 **Objetivo:** Make production gates deterministic and safer.
 
@@ -957,6 +1168,22 @@
 ## Refactors
 
 ### PR 22 - Reorganize Monorepo Boundaries and `apps/web/src/lib`
+
+**Status:** Concluido em 2026-07-10.
+
+**Resultado:** Reorganized `apps/web/src/lib` by intention without changing behavior. Provider/webhook/email modules moved to `apps/web/src/integrations/{asaas,woovi,resend,webhooks}`. Operational preflight/smoke/E2E/performance-plan helpers moved to `apps/web/src/ops`. Public API route handlers remain thin and import provider handlers from `src/integrations`; onboarding imports the Resend email service from the integration module. Added `integration-boundary.test.ts` and expanded `lib-boundary.test.ts` so provider/webhook/ops modules do not drift back into shared `lib`.
+
+**Verificacao:**
+- `bun --cwd apps/web vitest run src/lib/lib-boundary.test.ts src/lib/integration-boundary.test.ts src/integrations/asaas/webhook.test.ts src/integrations/woovi/webhook.test.ts src/integrations/resend/email-service-source.test.ts src/ops/deployment-smoke.test.ts src/ops/production-preflight.test.ts src/ops/playwright-env.test.ts src/ops/postgres-plan.test.ts src/ops/ci-workflow.test.ts src/ops/operations-gates.test.ts` passed.
+- Source search found no remaining imports from old `@/lib/{asaas,woovi,resend,email-service,deployment-smoke,production-preflight,postgres-plan,playwright-env,e2e-*,webhook-request-limits}` paths.
+- `bun run typecheck` passed.
+- `bun run check` passed.
+- `bun run test` passed: 102 web test files, 389 web tests, plus package dependency tests.
+- `bun run build` passed.
+
+**Decisao de escopo:** Provider/webhook handlers were placed under top-level `src/integrations` instead of `src/features/integrations` because current feature boundary tests intentionally prohibit feature runtime modules from direct `@/db` access, while these webhook handlers still own capture/outbox writes. This keeps the refactor honest without weakening existing feature boundaries.
+
+**Risco residual:** This PR does not yet extract provider integrations into standalone packages, and `src/lib` still contains genuine app cross-cutting runtime utilities such as auth/session/env/audit/cache/rate-limit/Sentry. Future package extraction should happen only when reuse across apps justifies it.
 
 **Objetivo:** Turn the current mixed `lib` area into intention-based modules/packages.
 
@@ -1002,6 +1229,20 @@
 
 ### PR 23 - Finish DB Import Migration
 
+**Status:** Concluido em 2026-07-10.
+
+**Resultado:** App runtime imports now use package ownership directly through `@polaris/db`, `@polaris/db/schema`, and `@polaris/db/tenant-context` instead of the legacy `@/db` wrappers. The `apps/web/src/db` wrappers remain only as compatibility shims with wrapper-focused tests. Added a DB boundary test preventing new runtime source files outside `src/db` from importing legacy `@/db/*` paths.
+
+**Verificacao:**
+- `bun --cwd apps/web vitest run src/lib/db-boundary.test.ts src/lib/boundary-test-helpers.test.ts src/features/catalog/server.test.ts src/features/products/queries.test.ts src/integrations/asaas/webhook.test.ts src/ops/playwright-env.test.ts` passed.
+- Source search found `@/db` only in wrapper tests and boundary-helper examples.
+- `bun run typecheck` passed.
+- `bun run check` passed.
+- `bun run test` passed: 102 web test files, 390 web tests, plus package dependency tests.
+- `bun run build` passed.
+
+**Risco residual:** The compatibility wrappers still exist under `apps/web/src/db` so existing alias tests and any external assumptions remain stable. A later cleanup can delete those wrappers only after confirming no consumers rely on the web alias surface.
+
 **Objetivo:** Stop new code from relying on legacy `apps/web/src/db` wrappers.
 
 **Escopo exato:**
@@ -1039,6 +1280,22 @@
 
 ### PR 24 - Add Workspace/Account Minimal Page
 
+**Status:** Concluido em 2026-07-10.
+
+**Resultado:** The existing `Configuracoes` page now includes a minimal one-user account surface before operational settings. It shows authenticated user name/email/role, billing status/plan/next cycle, billing email fallback, and support/data-request guidance. Billing details are loaded through `features/account/server.ts` with tenant context; `src/app` and UI components still avoid direct DB access. No organization naming field, organization display name, invitations, or multi-user management was added.
+
+**Verificacao:**
+- Next local docs checked for App Router pages and Server Components.
+- `bun --cwd apps/web vitest run src/components/settings/account-settings-panel.test.ts "src/app/(app)/configuracoes/page.test.ts" src/lib/app-boundary.test.ts src/lib/component-boundary.test.ts src/lib/feature-boundary.test.ts` passed: 5 files, 14 tests.
+- `bun run test` passed: 104 web test files, 392 web tests, plus package dependency tests.
+- `bun run typecheck` passed.
+- `bun run check` passed.
+- `bun run build` passed.
+
+**Decisao de escopo:** This PR keeps account management intentionally informational. Export/delete requests point to support, subscription management stays read-only, and multi-user invitations remain outside MVP to preserve the one-user-per-tenant model.
+
+**Risco residual:** Support contact is still generic because no dedicated support email/config exists in env schema. A future support/billing portal PR can replace the guidance with provider-specific self-service links.
+
 **Objetivo:** Give a one-user customer a minimal account surface without organization naming.
 
 **Escopo exato:**
@@ -1069,6 +1326,21 @@
 - Hide the page/section.
 
 ### PR 25 - Add Inventory Movements View
+
+**Status:** Concluido em 2026-07-10.
+
+**Resultado:** Added a server-rendered `/estoque` route with filters for product, date range, and movement type. The new `getInventoryMovementsQuery` aggregates entries, sales, sale reversals, and write-offs into a common inventory movement contract while preserving tenant context. The sidebar now links to `Estoque`, and product detail pages include a shortcut to `/estoque?productId=<id>`.
+
+**Verificacao:**
+- `bun --cwd apps/web vitest run "src/app/(app)/estoque/page.test.ts" src/features/products/queries.test.ts src/lib/app-boundary.test.ts src/lib/feature-boundary.test.ts` passed: 4 files, 13 tests.
+- `bun run typecheck` passed.
+- `bun run check` passed.
+- `bun run test` passed: 105 web test files, 394 web tests, plus package dependency tests.
+- `bun run build` passed and emitted `/estoque` as a Partial Prerender route.
+
+**Decisao de escopo:** This PR adds discoverability and auditability only. It does not redesign stock valuation, change existing product-detail history calculations, or add export/reporting flows.
+
+**Risco residual:** The page caps product filter options and movement rows for responsive server rendering. Very large tenants may later need cursor pagination and indexed date/type-specific query-plan validation.
 
 **Objetivo:** Make stock operations discoverable beyond product detail menus.
 
@@ -1107,4 +1379,4 @@
 
 Reason: it is the safest, smallest, and most urgent blocker. It reduces known security exposure before touching auth, billing, RLS, cron, or monorepo structure. After PR 01 passes, implement PR 02 and PR 03 before broader architecture changes.
 
-Next implementation target: **PR 07 - Remove Customer-Controlled Organization Naming**.
+Next implementation target: none. PR 01 through PR 25 are marked complete in this plan.

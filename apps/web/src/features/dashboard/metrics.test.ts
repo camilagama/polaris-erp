@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildDashboardContributionGraph,
   buildDashboardMetrics,
+  buildDashboardMetricsFromAggregates,
   resolveContributionGraphRange,
 } from "@/features/dashboard/metrics";
 
@@ -313,6 +314,72 @@ describe("buildDashboardMetrics", () => {
     expect(metrics.totalSalesCount).toBe(0);
     expect(metrics.topProducts).toEqual([]);
     expect(metrics.inventoryByCategory).toEqual([]);
+  });
+});
+
+describe("buildDashboardMetricsFromAggregates", () => {
+  it("preserves dashboard totals and empty buckets from SQL aggregates", () => {
+    const metrics = buildDashboardMetricsFromAggregates({
+      inventory: [{ categoryName: "Celulares", inventoryValue: 500 }],
+      periodProductCosts: [
+        {
+          bucketKey: "2026-04-02",
+          productCosts: 40,
+        },
+      ],
+      periodSales: [
+        {
+          bucketKey: "2026-04-02",
+          salesCount: 2,
+          shippingAndSellerFees: 15,
+          sold: 100,
+        },
+      ],
+      range: {
+        from: "2026-04-01",
+        to: "2026-04-03",
+      },
+      topProducts: [
+        {
+          id: "product-1",
+          imageBlurDataUrl: null,
+          imageHeight: null,
+          imageVersion: null,
+          imageWidth: null,
+          name: "Produto A",
+          quantitySold: 3,
+          soldAmount: 100,
+        },
+      ],
+    });
+
+    expect(metrics.periodGranularity).toBe("day");
+    expect(metrics.periodComparison).toEqual([
+      { costs: 0, label: "01/04", result: 0, salesCount: 0, sold: 0 },
+      { costs: 55, label: "02/04", result: 45, salesCount: 2, sold: 100 },
+      { costs: 0, label: "03/04", result: 0, salesCount: 0, sold: 0 },
+    ]);
+    expect(metrics.inventoryByCategory).toEqual([
+      { categoryName: "Celulares", inventoryValue: 500 },
+    ]);
+    expect(metrics.topProducts).toEqual([
+      {
+        id: "product-1",
+        imageBlurDataUrl: null,
+        imageHeight: null,
+        imageVersion: null,
+        imageWidth: null,
+        name: "Produto A",
+        quantitySold: 3,
+        soldAmount: 100,
+      },
+    ]);
+    expect(metrics.totalSold).toBe(100);
+    expect(metrics.totalProductCosts).toBe(40);
+    expect(metrics.totalShippingAndSellerFees).toBe(15);
+    expect(metrics.totalCosts).toBe(55);
+    expect(metrics.totalResult).toBe(45);
+    expect(metrics.totalSalesCount).toBe(2);
   });
 });
 

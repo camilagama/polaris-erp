@@ -6,7 +6,6 @@ vi.mock("server-only", () => ({}));
 
 vi.mock("@/lib/env", () => ({
   serverEnv: {
-    CRON_SECRET: "cron-secret",
     PRODUCT_IMAGE_RECONCILE_SECRET: "reconcile-secret",
   },
 }));
@@ -64,7 +63,7 @@ describe("/api/internal/product-images/reconcile", () => {
     expect(response.status).toBe(401);
   });
 
-  it("returns 401 when the bearer token is invalid (GET, Vercel Cron)", async () => {
+  it("returns 401 when the bearer token is invalid (GET)", async () => {
     const { GET } = await import(
       "@/app/api/internal/product-images/reconcile/route"
     );
@@ -81,7 +80,7 @@ describe("/api/internal/product-images/reconcile", () => {
     expect(response.status).toBe(401);
   });
 
-  it("does not accept the shared cron secret when the reconcile secret is configured", async () => {
+  it("only accepts the reconcile secret", async () => {
     const imageStorageModule = await import(
       "@/features/products/image-storage"
     );
@@ -92,7 +91,7 @@ describe("/api/internal/product-images/reconcile", () => {
     const response = await POST(
       new Request("http://localhost/api/internal/product-images/reconcile", {
         headers: {
-          Authorization: "Bearer cron-secret",
+          Authorization: "Bearer unrelated-secret",
         },
         method: "POST",
       })
@@ -242,7 +241,7 @@ describe("/api/internal/product-images/reconcile", () => {
   it("keeps product image reference queries outside the route handler", () => {
     const source = readFileSync(join(import.meta.dirname, "route.ts"), "utf8");
 
-    expect(source).not.toContain('from "@/db"');
-    expect(source).not.toContain('from "@/db/schema"');
+    expect(source).not.toContain('from "@polaris/db"');
+    expect(source).not.toContain('from "@polaris/db/schema"');
   });
 });

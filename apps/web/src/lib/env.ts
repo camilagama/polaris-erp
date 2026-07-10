@@ -53,7 +53,6 @@ const serverEnvSchema = z
     }, z.string().url().optional()),
     ASAAS_API_KEY: optionalNonEmptyString,
     ASAAS_WEBHOOK_TOKEN: optionalNonEmptyString,
-    CRON_SECRET: optionalNonEmptyString,
     INTERNAL_BOOTSTRAP_SECRET: optionalNonEmptyString,
     INTERNAL_R2_HEALTH_SECRET: optionalNonEmptyString,
     PRODUCT_IMAGE_RECONCILE_SECRET: optionalNonEmptyString,
@@ -130,14 +129,6 @@ const serverEnvSchema = z
       return;
     }
 
-    if (env.VERCEL_ENV === "production" && !env.CRON_SECRET) {
-      context.addIssue({
-        code: "custom",
-        message: "CRON_SECRET is required in Vercel production.",
-        path: ["CRON_SECRET"],
-      });
-    }
-
     for (const secretName of [
       "INTERNAL_R2_HEALTH_SECRET",
       "PRODUCT_IMAGE_RECONCILE_SECRET",
@@ -152,7 +143,6 @@ const serverEnvSchema = z
     }
 
     for (const secretName of [
-      "CRON_SECRET",
       "INTERNAL_BOOTSTRAP_SECRET",
       "INTERNAL_R2_HEALTH_SECRET",
       "PRODUCT_IMAGE_RECONCILE_SECRET",
@@ -179,7 +169,6 @@ export const serverEnv = serverEnvSchema.parse({
   ASAAS_API_BASE_URL: process.env.ASAAS_API_BASE_URL,
   ASAAS_API_KEY: process.env.ASAAS_API_KEY,
   ASAAS_WEBHOOK_TOKEN: process.env.ASAAS_WEBHOOK_TOKEN,
-  CRON_SECRET: process.env.CRON_SECRET,
   INTERNAL_BOOTSTRAP_SECRET: process.env.INTERNAL_BOOTSTRAP_SECRET,
   INTERNAL_R2_HEALTH_SECRET: process.env.INTERNAL_R2_HEALTH_SECRET,
   PRODUCT_IMAGE_RECONCILE_SECRET: process.env.PRODUCT_IMAGE_RECONCILE_SECRET,

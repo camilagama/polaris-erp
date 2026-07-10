@@ -22,7 +22,7 @@ Configure em Production e replique/adapte para Preview:
 | `BETTER_AUTH_URL` | URL canonica do app, sem barra final. |
 | `ADMIN_APP_URL` | Origem dedicada do admin interno, por exemplo `https://admin.seu-dominio.com`. Deve ser diferente de `NEXT_PUBLIC_APP_URL`. |
 | `BETTER_AUTH_API_KEY` | Chave do Better Auth Infrastructure para Dashboard e Sentinel. |
-| `VERCEL_ENV` | Definido pela Vercel. Em `production`, ativa guardrails extras como exigencia de `CRON_SECRET`. |
+| `VERCEL_ENV` | Definido pela Vercel. Em `production`, ativa guardrails extras para segredos internos. |
 | `NEXT_PUBLIC_APP_URL` | Mesma origem publica usada pelo navegador. |
 | `GOOGLE_CLIENT_ID` | OAuth Google server-side. |
 | `GOOGLE_CLIENT_SECRET` | OAuth Google server-side. |
@@ -34,7 +34,8 @@ Configure em Production e replique/adapte para Preview:
 | `R2_SECRET_ACCESS_KEY` | Cloudflare R2. |
 | `R2_BUCKET_STAGING` | Upload temporario. |
 | `R2_BUCKET_PUBLIC` | Variantes finais. |
-| `CRON_SECRET` | Obrigatorio em Vercel Production. Protege endpoints internos/cron e precisa ter pelo menos 32 caracteres. |
+| `INTERNAL_R2_HEALTH_SECRET` | Obrigatorio em Vercel Production. Protege `/api/internal/health/r2` e precisa ter pelo menos 32 caracteres. |
+| `PRODUCT_IMAGE_RECONCILE_SECRET` | Obrigatorio em Vercel Production. Protege o disparo manual de `/api/internal/product-images/reconcile` e precisa ter pelo menos 32 caracteres. |
 | `INTERNAL_BOOTSTRAP_SECRET` | Apenas para E2E/dev. Nunca habilite bootstrap em producao; se existir em producao, precisa ter pelo menos 32 caracteres. |
 | `SENTRY_DSN` | Sentry server-side. |
 | `NEXT_PUBLIC_SENTRY_DSN` | Sentry client-side. |
@@ -58,11 +59,11 @@ RLS e obrigatorio em producao. Nao configure o runtime com `neondb_owner`: esse 
 ## Guardrails de producao
 
 - `NODE_ENV=production` bloqueia `/api/auth/dev/bootstrap-session`, mesmo se `ALLOW_PLAYWRIGHT_BOOTSTRAP=true`.
-- `CRON_SECRET` ausente quebra validacao de env em `VERCEL_ENV=production`.
-- `BETTER_AUTH_SECRET`, `CRON_SECRET` e `INTERNAL_BOOTSTRAP_SECRET` fracos sao rejeitados em producao.
-- `/api/internal/product-images/reconcile` exige `Authorization: Bearer $CRON_SECRET`.
+- `INTERNAL_R2_HEALTH_SECRET` ou `PRODUCT_IMAGE_RECONCILE_SECRET` ausentes quebram validacao de env em `VERCEL_ENV=production`.
+- `BETTER_AUTH_SECRET`, `INTERNAL_R2_HEALTH_SECRET`, `PRODUCT_IMAGE_RECONCILE_SECRET` e `INTERNAL_BOOTSTRAP_SECRET` fracos sao rejeitados em producao.
+- `/api/internal/product-images/reconcile` exige `Authorization: Bearer $PRODUCT_IMAGE_RECONCILE_SECRET` para disparo manual.
 - `/api/health` nao exige segredo e deve retornar apenas status sanitizado. Falha de banco retorna `503` sem mensagem interna.
-- `/api/internal/health/r2` exige `Authorization: Bearer $CRON_SECRET` e nao deve expor chaves secretas.
+- `/api/internal/health/r2` exige `Authorization: Bearer $INTERNAL_R2_HEALTH_SECRET` e nao deve expor chaves secretas.
 - Migrations destrutivas ou com precheck devem ser aplicadas primeiro em branch Neon isolada.
 - `bun run prod:preflight` valida wiring basico de producao antes de deploy: URLs runtime/migration/E2E separadas com `sslmode=verify-full`, smoke RLS configurado, bootstrap E2E desligado em Production, secrets fortes, origens canonicas alinhadas e envs obrigatorios de Google/R2/Upstash/Inngest/Sentry.
 - `ADMIN_APP_URL` precisa estar em origem separada do app publico. Proteja o projeto Vercel do admin com Vercel Authentication/deployment protection; o preflight valida a origem separada, mas a protecao da Vercel precisa ser conferida no projeto.
@@ -75,6 +76,13 @@ O monorepo tem duas superficies:
 - `apps/admin`: painel interno da plataforma.
 
 O admin deve ser um projeto/deploy separado na Vercel, apontando o root para `apps/admin` e usando subdominio dedicado, por exemplo `admin.seu-dominio.com`. Nao publique o admin na mesma origem do app cliente.
+
+Configuracao esperada do projeto Vercel admin:
+
+1. Importe o mesmo repositorio como um segundo projeto Vercel.
+2. Configure **Root Directory** como `apps/admin`.
+3. Use o `apps/admin/vercel.json` versionado como configuracao do projeto. Nao use `vercel.admin.json` na raiz; esse arquivo foi removido para evitar deploys escondidos ou divergentes.
+4. Mantenha **Include source files outside of the Root Directory in the Build Step** habilitado para que os packages compartilhados do monorepo sejam incluidos no build.
 
 Protecao obrigatoria antes de promover:
 
@@ -117,8 +125,19 @@ Valide antes de promover:
 bun run check:admin
 bun run build:admin
 E2E_DATABASE_URL="postgres://..." bun run test:e2e:admin
+ADMIN_DEPLOYMENT_SMOKE_URL=https://admin.seu-dominio.com bun run deploy:smoke:admin
 vercel env run -e production -- bun run prod:preflight
 ```
+
+Se a URL estiver protegida por Vercel Authentication e o smoke estiver rodando sem sessao/autenticacao da Vercel, valide a barreira de protecao explicitamente:
+
+```bash
+ADMIN_DEPLOYMENT_SMOKE_URL=https://admin.seu-dominio.com \
+ADMIN_DEPLOYMENT_SMOKE_PROTECTED=true \
+bun run deploy:smoke:admin
+```
+
+Esse modo aceita `401` ou `403` como evidencia de protecao no perimetro. Para validar o health route da aplicacao, rode o smoke contra uma URL/autenticacao que consiga atravessar a Vercel Authentication.
 
 `bun run test:e2e:admin` roda Playwright headless contra `apps/admin` e usa `/api/dev/bootstrap-platform-admin` apenas quando `ALLOW_PLAYWRIGHT_BOOTSTRAP=true`, `NODE_ENV=production`, host local e `DATABASE_URL === E2E_DATABASE_URL`. Esse endpoint deve responder `403` fora de E2E local/CI isolado.
 
@@ -146,11 +165,29 @@ Nao misture `localhost` no navegador com `BETTER_AUTH_URL` apontando para tunnel
 As migracoes nao rodam automaticamente no deploy por padrao.
 
 1. Aponte `DATABASE_URL_DIRECT` para a branch correta com role de migration.
-2. Rode `bun run db:migrate`.
-3. Configure `DATABASE_URL` do runtime com role nao proprietaria sem `BYPASSRLS`.
-4. Rode `bun run db:smoke:rls` no ambiente apontado para a branch promovida.
-5. Rode `bun run platform-admin:bootstrap` uma unica vez para o primeiro operador interno aprovado, usando `DATABASE_URL_DIRECT`.
-6. Confira o runbook em `docs/saas-organization-migration-runbook.md`.
+2. Confirme que `DATABASE_URL_DIRECT` e `DATABASE_URL` nao sao a mesma connection string.
+3. Rode `bun run db:migrate`. O script falha antes do Drizzle se `DATABASE_URL_DIRECT` estiver ausente, invalida ou igual a `DATABASE_URL`; nao existe mais fallback para a URL runtime.
+4. Configure `DATABASE_URL` do runtime com role nao proprietaria sem `BYPASSRLS`.
+5. Rode `bun run db:smoke:rls` no ambiente apontado para a branch promovida.
+6. Rode `bun run platform-admin:bootstrap` uma unica vez para o primeiro operador interno aprovado, usando `DATABASE_URL_DIRECT`.
+7. Confira o runbook em `docs/saas-organization-migration-runbook.md`.
+
+Antes de migrations sensiveis, registre evidencia de restore drill recente em variables do GitHub e rode o job manual `restore-drill-checklist`:
+
+- `RESTORE_DRILL_CONFIRMED_AT`: timestamp ISO do drill validado.
+- `RESTORE_DRILL_SOURCE_BRANCH`: branch/base original.
+- `RESTORE_DRILL_RESTORE_BRANCH`: branch restaurada usada para validacao.
+- `RESTORE_DRILL_VALIDATED_BY`: operador responsavel.
+
+Localmente, a mesma validacao roda com:
+
+```bash
+RESTORE_DRILL_CONFIRMED_AT=2026-07-10T12:00:00.000Z \
+RESTORE_DRILL_SOURCE_BRANCH=production \
+RESTORE_DRILL_RESTORE_BRANCH=production-restore-drill-20260710 \
+RESTORE_DRILL_VALIDATED_BY=ops@example.com \
+bun run ops:restore-drill:checklist
+```
 
 Antes de promover producao:
 
@@ -173,24 +210,24 @@ As imagens finais sao servidas por rota autenticada:
 
 Nao exponha imagens de produto via URL publica direta de CDN/R2 em SaaS multi-tenant.
 
-## Cron
+## Rotinas agendadas
 
-O `vercel.json` agenda `/api/internal/product-images/reconcile`.
+O reconcile diario de imagens de produto roda como funcao agendada do Inngest (`reconcile-product-images`, cron `0 4 * * *`). O `vercel.json` nao agenda mais essa rota via Vercel Cron.
 
-Cron jobs configurados em `vercel.json` passam a rodar no deploy de producao da Vercel. Confirme que `CRON_SECRET` existe no ambiente Production antes de promover.
+Depois de promover, confirme no Inngest que a app sincronizou a funcao agendada e que `INNGEST_EVENT_KEY`/`INNGEST_SIGNING_KEY` estao configuradas no ambiente.
 
-Teste manual:
+Disparo manual protegido, apenas para diagnostico operacional:
 
 ```bash
 curl -X POST "https://SEU_DOMINIO/api/internal/product-images/reconcile" \
-  -H "Authorization: Bearer $CRON_SECRET"
+  -H "Authorization: Bearer $PRODUCT_IMAGE_RECONCILE_SECRET"
 ```
 
 Teste de saude R2:
 
 ```bash
 curl "https://SEU_DOMINIO/api/internal/health/r2" \
-  -H "Authorization: Bearer $CRON_SECRET"
+  -H "Authorization: Bearer $INTERNAL_R2_HEALTH_SECRET"
 ```
 
 ## Fluxo de deploy
@@ -201,14 +238,18 @@ Fluxo manual recomendado:
 vercel link
 vercel env pull .env.local
 bun run check
+bun run check:all
 bun run check:admin
 bun run typecheck
+bun run typecheck:all
 bun run typecheck:admin
 bun run test
+bun run test:all
 vercel env run -e production -- bun run prod:preflight
 bun run db:smoke:rls
 bun run db:analyze:listings
 DEPLOYMENT_SMOKE_URL=https://SEU_DOMINIO bun run deploy:smoke
+ADMIN_DEPLOYMENT_SMOKE_URL=https://ADMIN_SEU_DOMINIO bun run deploy:smoke:admin
 bun run build
 bun run build:admin
 vercel env run -e production -- bun run build
@@ -226,19 +267,20 @@ Depois do deploy:
 
 1. `GET /api/health` retorna `200` e `checks.database.ok=true`.
 2. `bun run db:smoke:rls` passa contra o `DATABASE_URL` do ambiente promovido.
-3. `DEPLOYMENT_SMOKE_URL=https://SEU_DOMINIO bun run deploy:smoke` confirma health HTTP, `/sign-in` 200, redirect do Google OAuth para `accounts.google.com` e bootstrap interno bloqueado com 403; com `CRON_SECRET`, tambem valida `/api/internal/health/r2`.
-4. Opcional: `bun run db:analyze:listings` passa para uma organizacao com dataset representativo ou retorna `skipped-small-dataset` explicitamente para bases pequenas.
-5. `/sign-in` com Google redireciona para `accounts.google.com`.
-6. Usuario novo criado pelo Google vai para onboarding.
-7. Onboarding cria organizacao, owner, categoria `Outros` e settings.
-8. Dashboard carrega vazio para tenant novo.
-9. Produto, estoque, venda e cancelamento funcionam.
-10. Upload de imagem funciona e bytes saem por rota autenticada.
-11. Reconcile de imagens retorna contagens, nao chaves completas; uploads recentes nao devem ser removidos imediatamente.
-12. `/api/internal/health/r2` retorna diagnostico sem segredos.
-13. Better Auth Dashboard conecta e Sentinel nao bloqueia login legitimo.
-14. Sentry recebe erro de teste controlado em preview, tracing aparece com sampling configurado e replay so aparece conforme as taxas.
-15. Logs de producao sem erros recorrentes apos 5 minutos.
+3. `DEPLOYMENT_SMOKE_URL=https://SEU_DOMINIO bun run deploy:smoke` confirma health HTTP, `/sign-in` 200, redirect do Google OAuth para `accounts.google.com` e bootstrap interno bloqueado com 403; com `INTERNAL_R2_HEALTH_SECRET`, tambem valida `/api/internal/health/r2`.
+4. `ADMIN_DEPLOYMENT_SMOKE_URL=https://ADMIN_SEU_DOMINIO bun run deploy:smoke:admin` confirma `/api/health` do admin quando a URL estiver acessivel, ou `ADMIN_DEPLOYMENT_SMOKE_PROTECTED=true` confirma que a Vercel Authentication bloqueia acesso anonimo.
+5. Opcional: `bun run db:analyze:listings` passa para uma organizacao com dataset representativo ou retorna `skipped-small-dataset` explicitamente para bases pequenas.
+6. `/sign-in` com Google redireciona para `accounts.google.com`.
+7. Usuario novo criado pelo Google vai para onboarding.
+8. Onboarding cria organizacao, owner, categoria `Outros` e settings.
+9. Dashboard carrega vazio para tenant novo.
+10. Produto, estoque, venda e cancelamento funcionam.
+11. Upload de imagem funciona e bytes saem por rota autenticada.
+12. Reconcile de imagens retorna contagens, nao chaves completas; uploads recentes nao devem ser removidos imediatamente.
+13. `/api/internal/health/r2` retorna diagnostico sem segredos.
+14. Better Auth Dashboard conecta e Sentinel nao bloqueia login legitimo.
+15. Sentry recebe erro de teste controlado em preview, tracing aparece com sampling configurado e replay so aparece conforme as taxas.
+16. Logs de producao sem erros recorrentes apos 5 minutos.
 
 ## CI
 
@@ -255,13 +297,26 @@ O workflow `.github/workflows/ci.yml` roda:
 - `bun run test:e2e` no job `e2e`, dependente de `E2E_DATABASE_URL`
 - `bun run test:e2e:admin` no job `admin-e2e`, dependente de `E2E_DATABASE_URL`
 - `bun run db:smoke:rls` no job manual `rls-smoke`, dependente de `RLS_DATABASE_URL`
-- `bun run deploy:smoke` no job manual `deployment-smoke`, dependente de `DEPLOYMENT_SMOKE_URL` e `CRON_SECRET`
-- `bun run prod:preflight` no job manual `production-preflight`, dependente de `PRODUCTION_DATABASE_URL`, `PRODUCTION_DATABASE_URL_DIRECT`, `PRODUCTION_BETTER_AUTH_URL`, `PRODUCTION_NEXT_PUBLIC_APP_URL`, `DEPLOYMENT_SMOKE_URL`, `E2E_DATABASE_URL`, `RLS_DATABASE_URL`, Google OAuth, R2, Upstash, Inngest, Sentry, `BETTER_AUTH_SECRET` e `CRON_SECRET`
+- `bun run ops:restore-drill:checklist` no job manual `restore-drill-checklist`, dependente de variables `RESTORE_DRILL_CONFIRMED_AT`, `RESTORE_DRILL_SOURCE_BRANCH`, `RESTORE_DRILL_RESTORE_BRANCH` e `RESTORE_DRILL_VALIDATED_BY`
+- `bun run deploy:smoke` no job manual `deployment-smoke`, dependente de `DEPLOYMENT_SMOKE_URL` e opcionalmente `INTERNAL_R2_HEALTH_SECRET`
+- `bun run deploy:smoke:admin` no job manual `admin-deployment-smoke`, dependente de `ADMIN_DEPLOYMENT_SMOKE_URL` e opcionalmente `ADMIN_DEPLOYMENT_SMOKE_PROTECTED=true` quando a meta for validar o bloqueio da Vercel Authentication
+- `bun run prod:preflight` no job manual `production-preflight`, dependente de `PRODUCTION_DATABASE_URL`, `PRODUCTION_DATABASE_URL_DIRECT`, `PRODUCTION_BETTER_AUTH_URL`, `PRODUCTION_NEXT_PUBLIC_APP_URL`, `DEPLOYMENT_SMOKE_URL`, `E2E_DATABASE_URL`, `RLS_DATABASE_URL`, Google OAuth, R2, Upstash, Inngest, Sentry, `BETTER_AUTH_SECRET`, `INTERNAL_R2_HEALTH_SECRET` e `PRODUCT_IMAGE_RECONCILE_SECRET`
+
+Comandos agregados disponiveis para gates locais ou jobs dedicados:
+
+- `bun run build:all`
+- `bun run check:all`
+- `bun run typecheck:all`
+- `bun run test:all`
 
 Antes de promover producao, confira se o secret `E2E_DATABASE_URL` aponta para uma branch Neon isolada.
 
 O job `rls-smoke` so roda por `workflow_dispatch`. Use `RLS_DATABASE_URL` apontando para o ambiente que sera promovido e confirme que ele usa uma role runtime sem `BYPASSRLS`; nao reutilize `DATABASE_URL_DIRECT` nem a role de migration.
 
-O job `deployment-smoke` so roda por `workflow_dispatch`. Configure `DEPLOYMENT_SMOKE_URL` com a URL publica do preview/producao que sera promovido; ele valida `/api/health`, `/sign-in`, redirect do Google OAuth para `accounts.google.com` e confirma que `/api/auth/dev/bootstrap-session` esta bloqueado com 403. Se `CRON_SECRET` estiver configurado, tambem valida `/api/internal/health/r2`.
+O job `restore-drill-checklist` so roda por `workflow_dispatch`. Ele nao restaura banco automaticamente; ele falha se nao houver evidencia minima de drill validado em branch restaurada separada. Use isso como gate operacional antes de migrations com risco material.
+
+O job `deployment-smoke` so roda por `workflow_dispatch`. Configure `DEPLOYMENT_SMOKE_URL` com a URL publica do preview/producao que sera promovido; ele valida `/api/health`, `/sign-in`, redirect do Google OAuth para `accounts.google.com` e confirma que `/api/auth/dev/bootstrap-session` esta bloqueado com 403. Se `INTERNAL_R2_HEALTH_SECRET` estiver configurado, tambem valida `/api/internal/health/r2`.
+
+O job `admin-deployment-smoke` so roda por `workflow_dispatch`. Configure `ADMIN_DEPLOYMENT_SMOKE_URL` com a URL do preview/producao admin. Use `ADMIN_DEPLOYMENT_SMOKE_PROTECTED=true` como variable do GitHub quando quiser confirmar que Vercel Authentication/deployment protection esta bloqueando acesso anonimo; sem essa flag, o job espera acessar `/api/health` e receber payload `polaris-admin`.
 
 O job `production-preflight` tambem so roda por `workflow_dispatch`. Ele valida wiring de secrets antes de deploy real, incluindo que `E2E_DATABASE_URL` usa role runtime, nao compartilha banco com runtime ou `RLS_DATABASE_URL`, e que `DEPLOYMENT_SMOKE_URL` aponta para a mesma origem de `NEXT_PUBLIC_APP_URL`. Ele nao substitui `rls-smoke`, smoke funcional ou validacao R2/Upstash em preview/producao.

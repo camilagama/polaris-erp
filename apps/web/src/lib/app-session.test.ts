@@ -26,6 +26,9 @@ const { dbMock, sessionMock, txMock } = vi.hoisted(() => {
   return { dbMock, sessionMock, txMock };
 });
 
+const TECHNICAL_TENANT_NAME_PATTERN = /^Tenant [a-f0-9-]{8}$/;
+const TECHNICAL_TENANT_SLUG_PATTERN = /^tenant-[a-f0-9-]{8}$/;
+
 vi.mock("server-only", () => ({}));
 
 vi.mock("next/navigation", () => ({
@@ -79,7 +82,6 @@ const selectDefaultBillingPlanOnce = (planId: string | null) => {
 const selectAppContextMembershipOnce = (
   membership: {
     organizationId: string;
-    organizationName: string;
     organizationStatus: string;
     role: string;
   } | null
@@ -155,7 +157,6 @@ describe("createInitialOrganizationForUser", () => {
     selectMembershipOnce("org-existing");
 
     const organizationId = await createInitialOrganizationForUser({
-      name: "Polaris Brasil",
       userId: "user-1",
     });
 
@@ -172,7 +173,6 @@ describe("createInitialOrganizationForUser", () => {
     selectMembershipOnce("org-existing");
 
     await createInitialOrganizationForUser({
-      name: "Polaris Brasil",
       userId: "user-1",
     });
 
@@ -193,10 +193,15 @@ describe("createInitialOrganizationForUser", () => {
 
     await createInitialOrganizationForUser({
       billingEmail: "user@example.com",
-      name: "Polaris Brasil",
       userId: "user-1",
     });
 
+    expect(insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: expect.stringMatching(TECHNICAL_TENANT_NAME_PATTERN),
+        slug: expect.stringMatching(TECHNICAL_TENANT_SLUG_PATTERN),
+      })
+    );
     expect(insertValues).toHaveBeenCalledWith(
       expect.objectContaining({
         billingEmail: "user@example.com",
@@ -223,7 +228,6 @@ describe("createInitialOrganizationForUser", () => {
     const insertValues = mockInsertValues();
 
     await createInitialOrganizationForUser({
-      name: "Polaris Brasil",
       userId: "user-1",
     });
 
@@ -241,7 +245,6 @@ describe("createInitialOrganizationForUser", () => {
 
     await expect(
       createInitialOrganizationForUser({
-        name: "Polaris Brasil",
         userId: "user-1",
       })
     ).rejects.toThrow("Plano de billing ativo nao encontrado.");
@@ -257,7 +260,6 @@ describe("getAppContext", () => {
     mockSession({ activeOrganizationId: "org-inactive" });
     selectAppContextMembershipOnce({
       organizationId: "org-inactive",
-      organizationName: "Polaris Pausado",
       organizationStatus: "inactive",
       role: "owner",
     });
@@ -284,7 +286,6 @@ describe("getAppContext", () => {
     mockSession();
     selectAppContextMembershipOnce({
       organizationId: "org-active",
-      organizationName: "Polaris",
       organizationStatus: "active",
       role: "owner",
     });
@@ -297,7 +298,6 @@ describe("getAppContext", () => {
       billingStatus: "active",
       hasBillableAccess: true,
       organizationId: "org-active",
-      organizationName: "Polaris",
       role: "owner",
       userId: "user-1",
     });
@@ -313,7 +313,6 @@ describe("getAppContext", () => {
     mockSession({ activeOrganizationId: "org-active" });
     selectAppContextMembershipOnce({
       organizationId: "org-active",
-      organizationName: "Polaris",
       organizationStatus: "active",
       role: "owner",
     });
@@ -325,7 +324,6 @@ describe("getAppContext", () => {
       billingStatus: "incomplete",
       hasBillableAccess: false,
       organizationId: "org-active",
-      organizationName: "Polaris",
       role: "owner",
       userId: "user-1",
     });
@@ -335,7 +333,6 @@ describe("getAppContext", () => {
     mockSession({ activeOrganizationId: "org-active" });
     selectAppContextMembershipOnce({
       organizationId: "org-active",
-      organizationName: "Polaris",
       organizationStatus: "active",
       role: "owner",
     });
@@ -352,7 +349,6 @@ describe("getAppContext", () => {
     mockSession({ activeOrganizationId: "org-active" });
     selectAppContextMembershipOnce({
       organizationId: "org-active",
-      organizationName: "Polaris",
       organizationStatus: "active",
       role: "owner",
     });

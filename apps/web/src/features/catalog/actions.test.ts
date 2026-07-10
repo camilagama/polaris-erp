@@ -84,10 +84,14 @@ describe("configuration server actions", () => {
       name: "Roupas",
     });
 
-    expect(mockCreateCategory).toHaveBeenCalledWith("org_dg_imports", {
-      description: "Moda",
-      name: "Roupas",
-    });
+    expect(mockCreateCategory).toHaveBeenCalledWith(
+      "org_dg_imports",
+      "user-1",
+      {
+        description: "Moda",
+        name: "Roupas",
+      }
+    );
     expect(mockUpdateTag).toHaveBeenCalledWith(
       buildOrganizationCacheTags("org_dg_imports").catalog
     );

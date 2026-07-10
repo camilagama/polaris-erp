@@ -128,7 +128,7 @@ export const login = async (page: Page) => {
   await page
     .waitForFunction(
       () =>
-        document.body.innerText.includes("Criar organizacao") ||
+        document.body.innerText.includes("Ativar Polaris") ||
         document.body.innerText.includes("Assinatura necessaria") ||
         document.body.innerText.includes("Dashboard"),
       undefined,
@@ -137,14 +137,11 @@ export const login = async (page: Page) => {
     .catch(() => undefined);
 
   const onboardingHeading = page.getByRole("heading", {
-    name: "Criar organizacao",
+    name: "Ativar Polaris",
   });
   const needsOnboarding = await onboardingHeading.isVisible();
 
   if (needsOnboarding) {
-    await page
-      .getByLabel("Nome da organizacao")
-      .fill(createRunLabel("Organizacao E2E"));
     await page.getByRole("button", { name: "Comecar" }).click();
     await page.waitForFunction(
       () =>

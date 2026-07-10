@@ -50,7 +50,7 @@ O workflow tambem possui o job manual `production-preflight`, que executa `bun r
 - `PRODUCTION_BETTER_AUTH_URL` e `PRODUCTION_NEXT_PUBLIC_APP_URL`: origem canonica de producao; as duas devem ter a mesma origem.
 - `DEPLOYMENT_SMOKE_URL`: URL publica que sera validada por `deploy:smoke`; deve ter a mesma origem de `PRODUCTION_NEXT_PUBLIC_APP_URL`.
 - `E2E_DATABASE_URL` e `RLS_DATABASE_URL`: branches/roles isoladas conforme descrito acima, ambas com role runtime sem `BYPASSRLS`.
-- `BETTER_AUTH_SECRET` e `CRON_SECRET`: secrets fortes, com pelo menos 32 caracteres.
+- `BETTER_AUTH_SECRET`, `INTERNAL_R2_HEALTH_SECRET` e `PRODUCT_IMAGE_RECONCILE_SECRET`: secrets fortes, com pelo menos 32 caracteres.
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` e `NEXT_PUBLIC_GOOGLE_CLIENT_ID`.
 - `UPSTASH_REDIS_REST_URL` e `UPSTASH_REDIS_REST_TOKEN`.
 - `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_STAGING` e `R2_BUCKET_PUBLIC`.
@@ -61,10 +61,10 @@ O workflow tambem possui o job manual `deployment-smoke`, que executa `bun run d
 
 ```yaml
 DEPLOYMENT_SMOKE_URL: ${{ secrets.DEPLOYMENT_SMOKE_URL }}
-CRON_SECRET: ${{ secrets.CRON_SECRET }}
+INTERNAL_R2_HEALTH_SECRET: ${{ secrets.INTERNAL_R2_HEALTH_SECRET }}
 ```
 
-Use `DEPLOYMENT_SMOKE_URL` para apontar para a URL publica do deploy promovido. Esse smoke nao acessa o banco diretamente; ele valida o health HTTP, a pagina publica `/sign-in`, o redirect do Google OAuth e confirma que o bootstrap interno esta bloqueado no deploy. Se `CRON_SECRET` existir, tambem valida o health interno do R2.
+Use `DEPLOYMENT_SMOKE_URL` para apontar para a URL publica do deploy promovido. Esse smoke nao acessa o banco diretamente; ele valida o health HTTP, a pagina publica `/sign-in`, o redirect do Google OAuth e confirma que o bootstrap interno esta bloqueado no deploy. Se `INTERNAL_R2_HEALTH_SECRET` existir, tambem valida o health interno do R2.
 
 ## Playwright
 
@@ -75,7 +75,7 @@ Variaveis uteis:
 - `E2E_DATABASE_URL`: connection string do banco somente para E2E (obrigatorio em CI).
 - `RLS_DATABASE_URL`: connection string runtime do ambiente promovido, usada somente no job manual `rls-smoke`.
 - `PRODUCTION_DATABASE_URL` / `PRODUCTION_DATABASE_URL_DIRECT`: aliases de GitHub Secrets para o job manual `production-preflight`; nao sao nomes esperados pelo runtime da aplicacao.
-- `E2E_CRON_SECRET` / `E2E_INTERNAL_BOOTSTRAP_SECRET`: segredos locais ao servidor E2E (opcional; padroes seguros se omitidos).
+- `E2E_INTERNAL_BOOTSTRAP_SECRET`: segredo local ao servidor E2E (opcional; padrao seguro se omitido).
 - `ALLOW_E2E_SHARED_DATABASE=true`: nao use em CI; apenas para desenvolvedor que aceita conscientemente usar o mesmo `DATABASE_URL` do `.env.local` nos E2E.
 
 ## Smoke RLS

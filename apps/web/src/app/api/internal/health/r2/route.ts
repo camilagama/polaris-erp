@@ -23,10 +23,9 @@ async function handleHealth(request: Request): Promise<Response> {
     );
   }
 
-  const internalSecret =
-    serverEnv.INTERNAL_R2_HEALTH_SECRET ?? serverEnv.CRON_SECRET;
-
-  if (!isAuthorizedBearerRequest(request, internalSecret)) {
+  if (
+    !isAuthorizedBearerRequest(request, serverEnv.INTERNAL_R2_HEALTH_SECRET)
+  ) {
     return Response.json({ error: "Nao autorizado." }, { status: 401 });
   }
 

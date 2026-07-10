@@ -68,6 +68,7 @@
         "@polaris/events": "workspace:*",
         "@polaris/platform": "workspace:*",
         "@polaris/platform-auth": "workspace:*",
+        "@sentry/nextjs": "^10.63.0",
       },
     },
     "apps/web": {

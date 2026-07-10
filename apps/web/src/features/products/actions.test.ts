@@ -942,8 +942,8 @@ describe("product server actions", () => {
     expect(source).toContain("addProductStock");
     expect(source).toContain("writeOffProductStock");
     expect(source).toContain('from "@/features/products/server"');
-    expect(source).not.toContain('from "@/db"');
-    expect(source).not.toContain('from "@/db/schema"');
+    expect(source).not.toContain('from "@polaris/db"');
+    expect(source).not.toContain('from "@polaris/db/schema"');
     expect(source).not.toContain("productStockEntries");
     expect(source).not.toContain("productStockWriteOffs");
   });

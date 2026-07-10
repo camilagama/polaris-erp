@@ -10,10 +10,10 @@ const {
   markProcessedMock,
 } = vi.hoisted(() => ({
   claimOutboxEventMock: vi.fn(),
-  createFunctionMock: vi.fn((options, trigger, handler) => ({
-    handler,
+  createFunctionMock: vi.fn((options, triggerOrHandler, handler) => ({
+    handler: handler ?? triggerOrHandler,
     options,
-    trigger,
+    trigger: options.triggers ?? triggerOrHandler,
   })),
   markFailedMock: vi.fn(),
   markProcessedMock: vi.fn(),
@@ -85,6 +85,19 @@ describe("inngest outbox functions", () => {
       "resend.webhook",
       "woovi.webhook",
     ]);
+  });
+
+  it("registers the outbox processor as an Inngest function", async () => {
+    const { inngestFunctions } = await import("@/lib/inngest-functions");
+
+    expect(inngestFunctions).toHaveLength(1);
+    expect(createFunctionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "process-outbox-event",
+        triggers: [{ event: "outbox/event.pending" }],
+      }),
+      expect.any(Function)
+    );
   });
 
   it("runs a registered dispatcher and marks the event processed", async () => {

@@ -1,5 +1,7 @@
 import "server-only";
 
+import { products, saleItems, sales } from "@polaris/db/schema";
+import { withTenantContext } from "@polaris/db/tenant-context";
 import {
   and,
   asc,
@@ -14,8 +16,6 @@ import {
   sql,
 } from "drizzle-orm";
 import { z } from "zod";
-import { products, saleItems, sales } from "@/db/schema";
-import { withTenantContext } from "@/db/tenant-context";
 import type {
   SaleDetail,
   SaleListItem,
@@ -25,6 +25,15 @@ import type {
 import { decodeOpaqueCursor, encodeOpaqueCursor } from "@/lib/opaque-cursor";
 
 const DEFAULT_PAGE_SIZE = 15;
+const DEFAULT_PRODUCT_OPTIONS_PAGE_SIZE = 20;
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const saleProductOptionsCursorSchema = z.object({
+  createdAt: z.string().min(1),
+  id: z.string().min(1),
+  name: z.string(),
+  version: z.literal(1),
+});
 const salesCursorSchema = z.object({
   createdAt: z.string().min(1),
   id: z.string().min(1),
@@ -38,6 +47,13 @@ interface SalesQueryInput {
   pageSize?: number;
   query?: string;
   status?: SaleStatusFilter;
+}
+
+interface SaleProductOptionsQueryInput {
+  cursor?: string;
+  organizationId: string;
+  pageSize?: number;
+  query?: string;
 }
 
 const buildSalesCursor = (row: {
@@ -65,8 +81,38 @@ const parseSalesCursor = (cursor: string) => {
   };
 };
 
+const buildSaleProductOptionsCursor = (row: {
+  createdAt: Date;
+  id: string;
+  name: string;
+}) =>
+  encodeOpaqueCursor({
+    createdAt: row.createdAt.toISOString(),
+    id: row.id,
+    name: row.name,
+    version: 1,
+  });
+
+const parseSaleProductOptionsCursor = (cursor: string) => {
+  const parsedCursor = decodeOpaqueCursor(
+    cursor,
+    saleProductOptionsCursorSchema,
+    "Cursor de produtos da venda invalido."
+  );
+
+  return {
+    ...parsedCursor,
+    createdAt: new Date(parsedCursor.createdAt),
+  };
+};
+
 export interface PaginatedSalesList {
   items: SaleListItem[];
+  nextCursor: string | null;
+}
+
+export interface PaginatedSaleProductOptions {
+  items: SaleProductOption[];
   nextCursor: string | null;
 }
 
@@ -79,11 +125,9 @@ export async function getSalesQuery({
 }: SalesQueryInput): Promise<PaginatedSalesList> {
   const limit = pageSize + 1;
   const parsedCursor = cursor ? parseSalesCursor(cursor) : null;
-  const normalizedQuery = query?.trim();
+  const normalizedQuery = query?.trim() ?? "";
   const searchPattern =
-    normalizedQuery && normalizedQuery.length > 0
-      ? `%${normalizedQuery}%`
-      : null;
+    normalizedQuery.length > 0 ? `%${normalizedQuery}%` : null;
   const filters: SQL[] = [eq(sales.organizationId, organizationId)];
 
   if (status !== "all") {
@@ -91,10 +135,12 @@ export async function getSalesQuery({
   }
 
   if (searchPattern) {
-    const searchFilter = or(
-      ilike(sql<string>`${sales.id}::text`, searchPattern),
-      ilike(sql<string>`coalesce(${sales.customerName}, '')`, searchPattern)
-    );
+    const searchFilter = UUID_PATTERN.test(normalizedQuery)
+      ? or(
+          eq(sales.id, normalizedQuery),
+          ilike(sales.customerName, searchPattern)
+        )
+      : ilike(sales.customerName, searchPattern);
 
     if (searchFilter) {
       filters.push(searchFilter);
@@ -168,27 +214,70 @@ export async function getSalesQuery({
   };
 }
 
-export function getSaleProductsQuery(
-  organizationId: string
-): Promise<SaleProductOption[]> {
-  return withTenantContext(organizationId, (tx) =>
+export async function getSaleProductsQuery({
+  cursor,
+  organizationId,
+  pageSize = DEFAULT_PRODUCT_OPTIONS_PAGE_SIZE,
+  query,
+}: SaleProductOptionsQueryInput): Promise<PaginatedSaleProductOptions> {
+  const limit = pageSize + 1;
+  const parsedCursor = cursor ? parseSaleProductOptionsCursor(cursor) : null;
+  const normalizedQuery = query?.trim() ?? "";
+  const searchPattern =
+    normalizedQuery.length > 0 ? `%${normalizedQuery}%` : null;
+  const filters: SQL[] = [
+    eq(products.organizationId, organizationId),
+    isNull(products.archivedAt),
+    gt(products.stock, 0),
+  ];
+
+  if (searchPattern) {
+    filters.push(ilike(products.name, searchPattern));
+  }
+
+  if (parsedCursor) {
+    const cursorFilter = or(
+      gt(products.name, parsedCursor.name),
+      and(
+        eq(products.name, parsedCursor.name),
+        gt(products.createdAt, parsedCursor.createdAt)
+      ),
+      and(
+        eq(products.name, parsedCursor.name),
+        eq(products.createdAt, parsedCursor.createdAt),
+        gt(products.id, parsedCursor.id)
+      )
+    );
+
+    if (cursorFilter) {
+      filters.push(cursorFilter);
+    }
+  }
+
+  const rows = await withTenantContext(organizationId, (tx) =>
     tx
       .select({
+        createdAt: products.createdAt,
         id: products.id,
         name: products.name,
         price: products.price,
         stock: products.stock,
       })
       .from(products)
-      .where(
-        and(
-          eq(products.organizationId, organizationId),
-          isNull(products.archivedAt),
-          gt(products.stock, 0)
-        )
-      )
+      .where(and(...filters))
       .orderBy(asc(products.name), asc(products.createdAt), asc(products.id))
+      .limit(limit)
   );
+
+  const hasMore = rows.length > pageSize;
+  const items = hasMore ? rows.slice(0, pageSize) : rows;
+  const lastItem = items.at(-1);
+
+  return {
+    items: items.map(({ createdAt: _createdAt, ...item }) => item),
+    nextCursor:
+      hasMore && lastItem ? buildSaleProductOptionsCursor(lastItem) : null,
+  };
 }
 
 export async function getSaleByIdQuery(

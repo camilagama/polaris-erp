@@ -1,7 +1,7 @@
-import { runDeploymentSmoke } from "../apps/web/src/lib/deployment-smoke";
+import { runDeploymentSmoke } from "../apps/web/src/ops/deployment-smoke";
 
 const deploymentSmokeUrl = process.env.DEPLOYMENT_SMOKE_URL;
-const cronSecret = process.env.CRON_SECRET;
+const r2HealthSecret = process.env.INTERNAL_R2_HEALTH_SECRET;
 
 const main = async () => {
   if (!deploymentSmokeUrl) {
@@ -10,8 +10,8 @@ const main = async () => {
 
   const result = await runDeploymentSmoke({
     appUrl: deploymentSmokeUrl,
-    cronSecret,
     fetcher: fetch,
+    r2HealthSecret,
   });
 
   console.log(JSON.stringify(result, null, 2));

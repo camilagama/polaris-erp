@@ -1,3 +1,3 @@
-import { handleAsaasWebhook } from "@/lib/asaas-webhook";
+import { handleAsaasWebhook } from "@/integrations/asaas/webhook";
 
 export const POST = handleAsaasWebhook;

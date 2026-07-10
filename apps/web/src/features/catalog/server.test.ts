@@ -145,6 +145,30 @@ describe("catalog server caching", () => {
     ]);
   });
 
+  it("propagates audit failures from the same category creation transaction", async () => {
+    const { createCategory } = await import("@/features/catalog/server");
+    const { mockDb } = await resolveMocks();
+    const categoryReturning = vi.fn().mockResolvedValue([{ id: "category-1" }]);
+    const categoryValues = vi.fn(() => ({ returning: categoryReturning }));
+    const auditValues = vi.fn().mockRejectedValue(new Error("audit failed"));
+
+    mockDb.transaction.mockImplementation(async (callback) => callback(mockDb));
+    mockDb.insert
+      .mockReturnValueOnce({ values: categoryValues })
+      .mockReturnValueOnce({ values: auditValues });
+
+    await expect(
+      createCategory("org_dg_imports", "user-1", {
+        description: "Moda",
+        name: "Roupas",
+      })
+    ).rejects.toThrow("audit failed");
+
+    expect(mockDb.transaction).toHaveBeenCalledOnce();
+    expect(categoryValues).toHaveBeenCalled();
+    expect(auditValues).toHaveBeenCalled();
+  });
+
   it("does not treat a lost category update race as success", async () => {
     const { updateCategory } = await import("@/features/catalog/server");
     const { mockDb } = await resolveMocks();
@@ -165,7 +189,7 @@ describe("catalog server caching", () => {
     });
 
     await expect(
-      updateCategory("org_dg_imports", "category-1", {
+      updateCategory("org_dg_imports", "user-1", "category-1", {
         description: "Nova descricao",
         name: "Nova",
       })
@@ -195,7 +219,7 @@ describe("catalog server caching", () => {
     });
 
     await expect(
-      deleteCategory("org_dg_imports", "category-1")
+      deleteCategory("org_dg_imports", "user-1", "category-1")
     ).rejects.toThrow("Categoria nao encontrada.");
   });
 });

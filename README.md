@@ -97,7 +97,7 @@ Upstash e preferivel aqui porque o app roda em ambiente serverless/multiplas ins
 
 - CI em `.github/workflows/ci.yml`: `bun run check`, `bun run test`, `bun run knip`, `bun run build`, E2E isolado e jobs manuais `production-preflight`/`rls-smoke`/`deployment-smoke`.
 - Healthcheck: `GET /api/health` retorna status sanitizado com `checks.database.ok`.
-- Diagnostico R2: `GET /api/internal/health/r2` com `Authorization: Bearer $CRON_SECRET`.
+- Diagnostico R2: `GET /api/internal/health/r2` com `Authorization: Bearer $INTERNAL_R2_HEALTH_SECRET`.
 - Sentry baseline: `@sentry/nextjs` com `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN`, e opcionalmente `SENTRY_ORG` / `SENTRY_PROJECT` / `SENTRY_AUTH_TOKEN`.
 - Deploy passo a passo: `docs/deploy-vercel.md`.
 
@@ -105,7 +105,7 @@ Upstash e preferivel aqui porque o app roda em ambiente serverless/multiplas ins
 
 - Modelo de branches, roles, `E2E_DATABASE_URL` e `RLS_DATABASE_URL`: `docs/database-environments.md`.
 - Antes de deploy real, rode `bun run prod:preflight` com envs de producao ou acione o job manual `production-preflight`.
-- Para smoke HTTP do deploy promovido, defina `DEPLOYMENT_SMOKE_URL` e rode `bun run deploy:smoke`; ele valida `/api/health`, `/sign-in`, redirect do Google OAuth e bootstrap interno 403. Com `CRON_SECRET`, tambem valida o health interno do R2.
+- Para smoke HTTP do deploy promovido, defina `DEPLOYMENT_SMOKE_URL` e rode `bun run deploy:smoke`; ele valida `/api/health`, `/sign-in`, redirect do Google OAuth e bootstrap interno 403. Com `INTERNAL_R2_HEALTH_SECRET`, tambem valida o health interno do R2.
 - Opcional: para validar planos de listagem em dataset representativo, defina `PERFORMANCE_ORGANIZATION_ID` e rode `bun run db:analyze:listings`.
 - Migracao SaaS e rollback: `docs/saas-organization-migration-runbook.md`.
 - Limpeza destrutiva de producao: `docs/production-database-cleanup.md` e `docs/production-database-cleanup.sql`.

@@ -5,8 +5,6 @@ import {
   hasBillableAccess,
   normalizeBillingStatus,
 } from "@polaris/billing";
-import { and, asc, desc, eq, sql } from "drizzle-orm";
-import { redirect } from "next/navigation";
 import {
   auditEvents,
   billingCustomers,
@@ -17,14 +15,15 @@ import {
   organization,
   sessions,
   systemSettings,
-} from "@/db/schema";
-import { setTenantContext, setUserContext } from "@/db/tenant-context";
+} from "@polaris/db/schema";
+import { setTenantContext, setUserContext } from "@polaris/db/tenant-context";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { redirect } from "next/navigation";
 import {
   type AppPermission,
   canRolePerform,
   ORGANIZATION_ROLES,
   type OrganizationRole,
-  resolveDefaultOrganizationSlug,
 } from "@/lib/app-context";
 import { OTHERS_CATEGORY_KEY } from "@/lib/catalog-defaults";
 
@@ -39,7 +38,6 @@ export interface AppContext {
   billingStatus: BillingSubscriptionStatus | null;
   hasBillableAccess: boolean;
   organizationId: string;
-  organizationName: string;
   role: OrganizationRole;
   userId: string;
 }
@@ -51,7 +49,7 @@ const normalizeRole = (value: string): OrganizationRole =>
   isOrganizationRole(value) ? value : "operator";
 
 const getDb = async () => {
-  const { db } = await import("@/db");
+  const { db } = await import("@polaris/db");
   return db;
 };
 
@@ -93,7 +91,6 @@ const resolveMembership = async ({
     const [row] = await tx
       .select({
         organizationId: member.organizationId,
-        organizationName: organization.name,
         organizationStatus: organization.status,
         role: member.role,
       })
@@ -186,7 +183,6 @@ const getAppContextFromSession = async (
     billingStatus,
     hasBillableAccess: billingStatus ? hasBillableAccess(billingStatus) : false,
     organizationId: membership.organizationId,
-    organizationName: membership.organizationName,
     role: normalizeRole(membership.role),
     userId,
   };
@@ -244,11 +240,9 @@ export const requirePageAppContext = async (): Promise<AppContext> => {
 
 export const createInitialOrganizationForUser = async ({
   billingEmail,
-  name,
   userId,
 }: {
   billingEmail?: string | null;
-  name: string;
   userId: string;
 }): Promise<string> => {
   const db = await getDb();
@@ -289,13 +283,14 @@ export const createInitialOrganizationForUser = async ({
     const billingCustomerId = crypto.randomUUID();
     await setTenantContext(tx, organizationId);
 
-    const slugBase = resolveDefaultOrganizationSlug(name);
-    const slug = `${slugBase}-${organizationId.slice(0, 8)}`;
+    const technicalTenantId = organizationId.slice(0, 8);
+    const technicalName = `Tenant ${technicalTenantId}`;
+    const technicalSlug = `tenant-${technicalTenantId}`;
 
     await tx.insert(organization).values({
       id: organizationId,
-      name: name.trim(),
-      slug,
+      name: technicalName,
+      slug: technicalSlug,
       status: "active",
     });
 

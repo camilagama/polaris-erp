@@ -1,3 +1,3 @@
-import { handleWooviWebhook } from "@/lib/woovi-webhook";
+import { handleWooviWebhook } from "@/integrations/woovi/webhook";
 
 export const POST = handleWooviWebhook;

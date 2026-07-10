@@ -1,7 +1,7 @@
 import "server-only";
 
-import { auditEvents } from "@/db/schema";
-import { withTenantContext } from "@/db/tenant-context";
+import { auditEvents } from "@polaris/db/schema";
+import { withTenantContext } from "@polaris/db/tenant-context";
 import type { AppContext } from "@/lib/app-session";
 
 const AUDIT_LOG_TIMEOUT_MS = 500;

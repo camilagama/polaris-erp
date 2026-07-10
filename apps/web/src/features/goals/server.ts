@@ -1,8 +1,11 @@
 import "server-only";
 
+import { goals } from "@polaris/db/schema";
+import {
+  type TenantTransaction,
+  withTenantContext,
+} from "@polaris/db/tenant-context";
 import { and, asc, count, desc, eq, inArray } from "drizzle-orm";
-import { goals } from "@/db/schema";
-import { type TenantTransaction, withTenantContext } from "@/db/tenant-context";
 import { getDashboardMetrics } from "@/features/dashboard/server";
 import {
   type DashboardGoalCard,

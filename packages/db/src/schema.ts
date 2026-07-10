@@ -752,6 +752,10 @@ export const categories = pgTable(
       table.organizationId,
       table.id
     ),
+    index("categories_name_trgm_idx").using(
+      "gin",
+      table.name.op("gin_trgm_ops")
+    ),
   ]
 );
 
@@ -865,6 +869,12 @@ export const products = pgTable(
     index("products_active_name_idx")
       .on(table.name)
       .where(sql`archived_at IS NULL`),
+    index("products_active_name_trgm_idx")
+      .using("gin", table.name.op("gin_trgm_ops"))
+      .where(sql`archived_at IS NULL`),
+    index("products_archived_name_trgm_idx")
+      .using("gin", table.name.op("gin_trgm_ops"))
+      .where(sql`archived_at IS NOT NULL`),
     index("products_archived_idx")
       .on(table.archivedAt)
       .where(sql`archived_at IS NOT NULL`),
@@ -1124,6 +1134,9 @@ export const sales = pgTable(
     uniqueIndex("sales_organization_idempotency_key_unique_idx")
       .on(table.organizationId, table.idempotencyKey)
       .where(sql`idempotency_key IS NOT NULL`),
+    index("sales_customer_name_trgm_idx")
+      .using("gin", table.customerName.op("gin_trgm_ops"))
+      .where(sql`customer_name IS NOT NULL`),
   ]
 );
 

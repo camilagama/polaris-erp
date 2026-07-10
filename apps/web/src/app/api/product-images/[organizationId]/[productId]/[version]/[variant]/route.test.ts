@@ -350,7 +350,7 @@ describe("GET /api/product-images/[organizationId]/[productId]/[version]/[varian
   it("keeps tenant authorization queries outside the route handler", () => {
     const source = readFileSync(join(import.meta.dirname, "route.ts"), "utf8");
 
-    expect(source).not.toContain('from "@/db"');
-    expect(source).not.toContain('from "@/db/schema"');
+    expect(source).not.toContain('from "@polaris/db"');
+    expect(source).not.toContain('from "@polaris/db/schema"');
   });
 });

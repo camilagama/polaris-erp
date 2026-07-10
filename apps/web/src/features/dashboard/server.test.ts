@@ -1,5 +1,11 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { buildOrganizationCacheTags } from "@/lib/cache-tags";
+
+const dashboardServerSourcePath = fileURLToPath(
+  new URL("./server.ts", import.meta.url)
+);
 
 vi.mock("server-only", () => ({}));
 
@@ -39,7 +45,7 @@ vi.mock("@polaris/db", () => ({
 
 vi.mock("@/features/dashboard/metrics", () => ({
   buildDashboardContributionGraph: vi.fn(),
-  buildDashboardMetrics: vi.fn(({ range }) => ({
+  buildDashboardMetricsFromAggregates: vi.fn(({ range }) => ({
     inventoryByCategory: [],
     periodComparison: [],
     periodGranularity: "day",
@@ -89,32 +95,22 @@ describe("dashboard server caching", () => {
     const { getDashboardMetrics } = await import("@/features/dashboard/server");
     const { mockDb } = await resolveMocks();
 
-    mockDb.select
-      .mockReturnValueOnce({
-        from: () => ({
-          where: async () => [],
-        }),
-      })
-      .mockReturnValueOnce({
-        from: () => ({
-          innerJoin: () => ({
-            innerJoin: () => ({
-              where: async () => [],
+    mockDb.execute
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] });
+    mockDb.select.mockReturnValueOnce({
+      from: () => ({
+        innerJoin: () => ({
+          where: () => ({
+            groupBy: () => ({
+              orderBy: async () => [],
             }),
           }),
         }),
-      })
-      .mockReturnValueOnce({
-        from: () => ({
-          innerJoin: () => ({
-            where: () => ({
-              groupBy: () => ({
-                orderBy: async () => [],
-              }),
-            }),
-          }),
-        }),
-      });
+      }),
+    });
 
     await getDashboardMetrics("org_dg_imports", {
       from: "2026-04-01",
@@ -122,6 +118,8 @@ describe("dashboard server caching", () => {
     });
 
     expect(mockDb.transaction).toHaveBeenCalledTimes(1);
+    expect(mockDb.execute).toHaveBeenCalledTimes(4);
+    expect(mockDb.select).toHaveBeenCalledTimes(1);
   });
 
   it("tags and caches dashboard date bounds with the shared analytics profile", async () => {
@@ -201,32 +199,22 @@ describe("dashboard server caching", () => {
     const { getDashboardMetrics } = await import("@/features/dashboard/server");
     const { mockDb } = await resolveMocks();
 
-    mockDb.select
-      .mockReturnValueOnce({
-        from: () => ({
-          where: async () => [],
-        }),
-      })
-      .mockReturnValueOnce({
-        from: () => ({
-          innerJoin: () => ({
-            innerJoin: () => ({
-              where: async () => [],
+    mockDb.execute
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] });
+    mockDb.select.mockReturnValueOnce({
+      from: () => ({
+        innerJoin: () => ({
+          where: () => ({
+            groupBy: () => ({
+              orderBy: async () => [],
             }),
           }),
         }),
-      })
-      .mockReturnValueOnce({
-        from: () => ({
-          innerJoin: () => ({
-            where: () => ({
-              groupBy: () => ({
-                orderBy: async () => [],
-              }),
-            }),
-          }),
-        }),
-      });
+      }),
+    });
 
     const first = await getDashboardMetrics("org_dg_imports", {
       from: "2026-03-01",
@@ -237,7 +225,17 @@ describe("dashboard server caching", () => {
       to: "2026-03-31",
     });
 
-    expect(mockDb.select).toHaveBeenCalledTimes(3);
+    expect(mockDb.execute).toHaveBeenCalledTimes(4);
+    expect(mockDb.select).toHaveBeenCalledTimes(1);
     expect(second).toBe(first);
+  });
+
+  it("keeps dashboard metric aggregation in SQL instead of raw row hydration", () => {
+    const source = readFileSync(dashboardServerSourcePath, "utf8");
+
+    expect(source).toContain("buildDashboardMetricsFromAggregates");
+    expect(source).toContain("sum(si.quantity * si.unit_cost_snapshot)");
+    expect(source).toContain('count(*)::int as "salesCount"');
+    expect(source).not.toContain("buildDashboardMetrics({");
   });
 });

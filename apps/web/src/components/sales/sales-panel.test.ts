@@ -113,7 +113,6 @@ describe("SalesPanel", () => {
           },
           initialCursor: "cursor-1",
           role: "operator",
-          saleProducts: [],
           sales: [sale],
           selectedRange: {
             from: "2026-03-01",
@@ -167,7 +166,6 @@ describe("SalesPanel", () => {
           },
           initialCursor: null,
           role: "operator",
-          saleProducts: [],
           sales: [sale],
           selectedRange: {
             from: "2026-03-01",

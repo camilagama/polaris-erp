@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { SalesPanel } from "@/components/sales/sales-panel";
 import { getCatalogSettings } from "@/features/catalog/server";
 import { resolveSalesDateRange } from "@/features/sales/date-range";
-import { getSaleProductsQuery, getSalesQuery } from "@/features/sales/queries";
+import { getSalesQuery } from "@/features/sales/queries";
 import { getSalesAnalytics, getSalesDateBounds } from "@/features/sales/server";
 import { requirePageAppContext } from "@/lib/app-session";
 
@@ -29,7 +29,6 @@ export default async function VendasPage(props: PageProps<"/vendas">) {
     query,
     status,
   });
-  const saleProducts = await getSaleProductsQuery(context.organizationId);
   const analytics = await getSalesAnalytics({
     from: selectedRange.from,
     organizationId: context.organizationId,
@@ -45,7 +44,6 @@ export default async function VendasPage(props: PageProps<"/vendas">) {
       dateBounds={bounds}
       initialCursor={salesResult.nextCursor}
       role={context.role}
-      saleProducts={saleProducts}
       sales={salesResult.items}
       selectedRange={selectedRange}
       status={status}

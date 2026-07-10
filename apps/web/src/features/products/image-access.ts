@@ -1,8 +1,11 @@
 import "server-only";
 
+import { member, organization, products } from "@polaris/db/schema";
+import {
+  withInternalJobContext,
+  withTenantContext,
+} from "@polaris/db/tenant-context";
 import { and, eq, isNull } from "drizzle-orm";
-import { member, organization, products } from "@/db/schema";
-import { withInternalJobContext, withTenantContext } from "@/db/tenant-context";
 import { getExpectedProductImageKeys } from "@/features/products/image-storage";
 
 export const getProductImageState = async (

@@ -53,7 +53,7 @@ vi.mock("@/lib/auth", () => ({
   },
 }));
 
-vi.mock("@/lib/e2e-bootstrap-billing", () => ({
+vi.mock("@/ops/e2e-bootstrap-billing", () => ({
   ensureE2EBillingPlan: billingBootstrapMock.ensureE2EBillingPlan,
 }));
 

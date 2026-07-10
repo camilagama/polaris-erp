@@ -5,13 +5,14 @@ import {
   collectPlanIndexNames,
   type PostgresExplainResult,
   planUsesAnyIndex,
-} from "@/lib/postgres-plan";
+} from "@/ops/postgres-plan";
 
 interface ListingPlanCheck {
   countSql: string;
   expectedIndexes: string[];
   explainSql: string;
   name: string;
+  usesSearchTerm?: boolean;
 }
 
 interface ListingPlanResult {
@@ -32,6 +33,7 @@ const env = { ...localEnv, ...process.env };
 
 const databaseUrl = env.DATABASE_URL;
 const organizationId = env.PERFORMANCE_ORGANIZATION_ID;
+const searchTerm = env.PERFORMANCE_SEARCH_TERM?.trim();
 const userId = env.PERFORMANCE_USER_ID;
 const minimumRows = Number(env.PERFORMANCE_MIN_ROWS ?? 500);
 
@@ -113,6 +115,62 @@ const listingPlanChecks: ListingPlanCheck[] = [
   },
 ];
 
+if (searchTerm) {
+  listingPlanChecks.push(
+    {
+      countSql: `
+        select count(*)::int as count
+        from products
+        where organization_id = $1
+          and archived_at is null
+          and name ilike $2
+      `,
+      expectedIndexes: ["products_active_name_trgm_idx"],
+      explainSql: `
+        select
+          products.id,
+          products.name,
+          products.created_at,
+          categories.name as category_name
+        from products
+        inner join categories
+          on products.category_id = categories.id
+         and categories.organization_id = $1
+        where products.organization_id = $1
+          and products.archived_at is null
+          and products.name ilike $2
+        order by products.name asc, products.created_at asc, products.id asc
+        limit 16
+      `,
+      name: "products-active-search",
+      usesSearchTerm: true,
+    },
+    {
+      countSql: `
+        select count(*)::int as count
+        from sales
+        where organization_id = $1
+          and customer_name ilike $2
+      `,
+      expectedIndexes: ["sales_customer_name_trgm_idx"],
+      explainSql: `
+        select
+          sales.id,
+          sales.customer_name,
+          sales.occurred_on,
+          sales.created_at
+        from sales
+        where sales.organization_id = $1
+          and sales.customer_name ilike $2
+        order by sales.occurred_on desc, sales.created_at desc, sales.id desc
+        limit 16
+      `,
+      name: "sales-customer-search",
+      usesSearchTerm: true,
+    }
+  );
+}
+
 function readExplainResult(rawPlan: unknown): PostgresExplainResult {
   if (typeof rawPlan === "string") {
     return JSON.parse(rawPlan)[0];
@@ -129,11 +187,14 @@ async function analyzeListingPlan(
   client: Client,
   check: ListingPlanCheck
 ): Promise<ListingPlanResult> {
-  const countResult = await client.query(check.countSql, [organizationId]);
+  const queryParams = check.usesSearchTerm
+    ? [organizationId, `%${searchTerm}%`]
+    : [organizationId];
+  const countResult = await client.query(check.countSql, queryParams);
   const measuredRows = Number(countResult.rows[0]?.count ?? 0);
   const explainResult = await client.query(
     `explain (analyze, buffers, format json) ${check.explainSql}`,
-    [organizationId]
+    queryParams
   );
   const explain = readExplainResult(explainResult.rows[0]?.["QUERY PLAN"]);
   const usedIndexes = collectPlanIndexNames(explain.Plan);

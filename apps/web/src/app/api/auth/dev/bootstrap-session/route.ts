@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { auth } from "@/lib/auth";
-import { ensureE2EBillingPlan } from "@/lib/e2e-bootstrap-billing";
 import { serverEnv } from "@/lib/env";
 import { checkRateLimit, getRateLimitKeyFromRequest } from "@/lib/rate-limit";
+import { ensureE2EBillingPlan } from "@/ops/e2e-bootstrap-billing";
 
 const bootstrapSessionSchema = z.object({
   email: z.string().trim().email(),

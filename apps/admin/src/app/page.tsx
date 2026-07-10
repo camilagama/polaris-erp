@@ -131,23 +131,37 @@ const AdminDashboard = async () => {
         </div>
 
         <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
-          {summaryCards.map((card) => (
-            <Link
-              aria-disabled={!card.href}
-              className="rounded-lg border border-zinc-800 bg-zinc-900 p-4 transition-colors hover:border-zinc-700 hover:bg-zinc-900/80"
-              href={card.href ?? "/"}
-              key={card.label}
-              prefetch={false}
-            >
-              <h2 className="font-medium text-sm text-zinc-400 tracking-normal">
-                {card.label}
-              </h2>
-              <p className="mt-3 font-semibold text-3xl tracking-normal">
-                {formatNumber(card.value)}
-              </p>
-              <p className="mt-2 text-sm text-zinc-500">{card.detail}</p>
-            </Link>
-          ))}
+          {summaryCards.map((card) => {
+            const cardContent = (
+              <>
+                <h2 className="font-medium text-sm text-zinc-400 tracking-normal">
+                  {card.label}
+                </h2>
+                <p className="mt-3 font-semibold text-3xl tracking-normal">
+                  {formatNumber(card.value)}
+                </p>
+                <p className="mt-2 text-sm text-zinc-500">{card.detail}</p>
+              </>
+            );
+
+            return card.href ? (
+              <Link
+                className="rounded-lg border border-zinc-800 bg-zinc-900 p-4 transition-colors hover:border-zinc-700 hover:bg-zinc-900/80"
+                href={card.href}
+                key={card.label}
+                prefetch={false}
+              >
+                {cardContent}
+              </Link>
+            ) : (
+              <article
+                className="rounded-lg border border-zinc-800 bg-zinc-900/70 p-4"
+                key={card.label}
+              >
+                {cardContent}
+              </article>
+            );
+          })}
         </div>
 
         <div className="grid gap-4 lg:grid-cols-[0.8fr_1.2fr]">

@@ -1,10 +1,7 @@
 import { loadEnvConfig } from "@next/env";
 import { defineConfig } from "@playwright/test";
 import { validateE2eDatabaseEnv } from "../web/src/lib/playwright-env";
-import {
-  E2E_DEFAULT_CRON_SECRET,
-  E2E_DEFAULT_INTERNAL_BOOTSTRAP_SECRET,
-} from "../web/tests/e2e/constants";
+import { E2E_DEFAULT_INTERNAL_BOOTSTRAP_SECRET } from "../web/tests/e2e/constants";
 
 loadEnvConfig("../..");
 loadEnvConfig(process.cwd());
@@ -47,7 +44,6 @@ const toPlaywrightStringEnv = (
 const webServerEnv = toPlaywrightStringEnv({
   ...process.env,
   ALLOW_PLAYWRIGHT_BOOTSTRAP: "true",
-  CRON_SECRET: process.env.E2E_CRON_SECRET ?? E2E_DEFAULT_CRON_SECRET,
   DATABASE_URL: e2eDatabaseUrl ?? process.env.DATABASE_URL,
   INTERNAL_BOOTSTRAP_SECRET:
     process.env.E2E_INTERNAL_BOOTSTRAP_SECRET ??

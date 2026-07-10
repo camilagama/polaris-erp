@@ -34,10 +34,10 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           <SidebarTrigger />
           <div className="ml-3 min-w-0 sm:ml-4">
             <p className="truncate font-semibold text-sm sm:text-base">
-              {context.organizationName}
+              Polaris
             </p>
             <p className="truncate text-[11px] text-muted-foreground sm:text-xs">
-              Operacao protegida e isolada por organizacao
+              Operacao protegida e isolada por conta
             </p>
           </div>
         </header>

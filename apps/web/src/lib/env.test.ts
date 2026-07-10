@@ -11,7 +11,6 @@ const stubRequiredEnv = (
     "ASAAS_API_KEY",
     "ASAAS_WEBHOOK_TOKEN",
     "BETTER_AUTH_API_KEY",
-    "CRON_SECRET",
     "DATABASE_URL_DIRECT",
     "GOOGLE_CLIENT_ID",
     "GOOGLE_CLIENT_SECRET",
@@ -79,7 +78,6 @@ describe("serverEnv", () => {
   it("accepts strong Better Auth secrets in production", async () => {
     stubRequiredEnv({
       BETTER_AUTH_SECRET: "a".repeat(32),
-      CRON_SECRET: "c".repeat(32),
       NODE_ENV: "production",
     });
 
@@ -92,7 +90,6 @@ describe("serverEnv", () => {
 
   it("rejects weak internal secrets in production", async () => {
     stubRequiredEnv({
-      CRON_SECRET: "short-cron-secret",
       INTERNAL_BOOTSTRAP_SECRET: "short-bootstrap-secret",
       INTERNAL_R2_HEALTH_SECRET: "short-r2-secret",
       NODE_ENV: "production",
@@ -104,7 +101,6 @@ describe("serverEnv", () => {
 
   it("requires internal route secrets in Vercel production", async () => {
     stubRequiredEnv({
-      CRON_SECRET: undefined,
       INTERNAL_R2_HEALTH_SECRET: undefined,
       NODE_ENV: "production",
       PRODUCT_IMAGE_RECONCILE_SECRET: undefined,
@@ -114,30 +110,34 @@ describe("serverEnv", () => {
     await expect(import("@/lib/env")).rejects.toThrow();
   });
 
-  it("allows local production builds without cron secret", async () => {
+  it("allows local production builds without internal route secrets", async () => {
     stubRequiredEnv({
-      CRON_SECRET: undefined,
+      INTERNAL_R2_HEALTH_SECRET: undefined,
       NODE_ENV: "production",
+      PRODUCT_IMAGE_RECONCILE_SECRET: undefined,
     });
 
     await expect(import("@/lib/env")).resolves.toMatchObject({
       serverEnv: expect.objectContaining({
-        CRON_SECRET: undefined,
+        INTERNAL_R2_HEALTH_SECRET: undefined,
+        PRODUCT_IMAGE_RECONCILE_SECRET: undefined,
         VERCEL_ENV: undefined,
       }),
     });
   });
 
-  it("allows Vercel preview builds without cron secret", async () => {
+  it("allows Vercel preview builds without internal route secrets", async () => {
     stubRequiredEnv({
-      CRON_SECRET: undefined,
+      INTERNAL_R2_HEALTH_SECRET: undefined,
       NODE_ENV: "production",
+      PRODUCT_IMAGE_RECONCILE_SECRET: undefined,
       VERCEL_ENV: "preview",
     });
 
     await expect(import("@/lib/env")).resolves.toMatchObject({
       serverEnv: expect.objectContaining({
-        CRON_SECRET: undefined,
+        INTERNAL_R2_HEALTH_SECRET: undefined,
+        PRODUCT_IMAGE_RECONCILE_SECRET: undefined,
         VERCEL_ENV: "preview",
       }),
     });

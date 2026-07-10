@@ -7,7 +7,7 @@ import { OnboardingForm } from "./onboarding-form";
 
 export const metadata: Metadata = {
   title: "Onboarding | Polaris",
-  description: "Crie sua organizacao para comecar a usar o Polaris.",
+  description: "Prepare sua conta para comecar a usar o Polaris.",
 };
 
 export default async function OnboardingPage() {
@@ -23,9 +23,6 @@ export default async function OnboardingPage() {
     redirect("/");
   }
 
-  const defaultOrganizationName =
-    session.user.name?.trim() || session.user.email.split("@")[0] || "";
-
   return (
     <main className="flex min-h-screen items-center justify-center px-6 py-10">
       <div className="w-full max-w-sm">
@@ -35,14 +32,14 @@ export default async function OnboardingPage() {
             Polaris.
           </div>
           <h1 className="font-heading text-3xl tracking-tight">
-            Criar organizacao
+            Ativar Polaris
           </h1>
           <p className="mt-2 text-muted-foreground text-sm">
-            Sua conta sera owner deste workspace.
+            Sua conta sera preparada para uso individual.
           </p>
         </div>
 
-        <OnboardingForm defaultOrganizationName={defaultOrganizationName} />
+        <OnboardingForm />
       </div>
     </main>
   );
