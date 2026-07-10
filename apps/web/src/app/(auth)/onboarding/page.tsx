@@ -32,10 +32,10 @@ export default async function OnboardingPage() {
             Polaris.
           </div>
           <h1 className="font-heading text-3xl tracking-tight">
-            Ativar Polaris
+            Criar workspace
           </h1>
           <p className="mt-2 text-muted-foreground text-sm">
-            Sua conta sera preparada para uso individual.
+            Escolha o nome que identifica sua operacao no Polaris.
           </p>
         </div>
 

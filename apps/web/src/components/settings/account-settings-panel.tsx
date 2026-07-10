@@ -16,6 +16,7 @@ interface AccountSettingsPanelProps {
     name: string;
     role: OrganizationRole;
   };
+  workspaceName: string;
 }
 
 const roleLabel: Record<OrganizationRole, string> = {
@@ -65,6 +66,7 @@ const getPlanLine = (billing: AccountBillingSummary): string => {
 export function AccountSettingsPanel({
   billing,
   user,
+  workspaceName,
 }: AccountSettingsPanelProps) {
   const renewalText = billing.currentPeriodEnd
     ? formatDateTime(billing.currentPeriodEnd)
@@ -87,6 +89,7 @@ export function AccountSettingsPanel({
             </p>
           </div>
           <div className="mt-4 flex flex-col gap-1">
+            <p className="truncate font-semibold text-sm">{workspaceName}</p>
             <p className="truncate font-semibold text-sm">{user.name}</p>
             <p className="truncate text-muted-foreground text-xs">
               {user.email}

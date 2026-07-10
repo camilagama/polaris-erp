@@ -24,6 +24,7 @@ import {
   canRolePerform,
   ORGANIZATION_ROLES,
   type OrganizationRole,
+  resolveDefaultOrganizationSlug,
 } from "@/lib/app-context";
 import { OTHERS_CATEGORY_KEY } from "@/lib/catalog-defaults";
 
@@ -38,6 +39,7 @@ export interface AppContext {
   billingStatus: BillingSubscriptionStatus | null;
   hasBillableAccess: boolean;
   organizationId: string;
+  organizationName: string;
   role: OrganizationRole;
   userId: string;
 }
@@ -91,6 +93,7 @@ const resolveMembership = async ({
     const [row] = await tx
       .select({
         organizationId: member.organizationId,
+        organizationName: organization.name,
         organizationStatus: organization.status,
         role: member.role,
       })
@@ -183,6 +186,7 @@ const getAppContextFromSession = async (
     billingStatus,
     hasBillableAccess: billingStatus ? hasBillableAccess(billingStatus) : false,
     organizationId: membership.organizationId,
+    organizationName: membership.organizationName,
     role: normalizeRole(membership.role),
     userId,
   };
@@ -240,11 +244,19 @@ export const requirePageAppContext = async (): Promise<AppContext> => {
 
 export const createInitialOrganizationForUser = async ({
   billingEmail,
+  organizationName,
   userId,
 }: {
   billingEmail?: string | null;
+  organizationName: string;
   userId: string;
 }): Promise<string> => {
+  const normalizedOrganizationName = organizationName.trim();
+
+  if (!normalizedOrganizationName) {
+    throw new Error("Nome da workspace e obrigatorio.");
+  }
+
   const db = await getDb();
 
   const organizationId = await db.transaction(async (tx) => {
@@ -283,14 +295,20 @@ export const createInitialOrganizationForUser = async ({
     const billingCustomerId = crypto.randomUUID();
     await setTenantContext(tx, organizationId);
 
-    const technicalTenantId = organizationId.slice(0, 8);
-    const technicalName = `Tenant ${technicalTenantId}`;
-    const technicalSlug = `tenant-${technicalTenantId}`;
+    const baseSlug = resolveDefaultOrganizationSlug(normalizedOrganizationName);
+    const [existingSlug] = await tx
+      .select({ id: organization.id })
+      .from(organization)
+      .where(eq(organization.slug, baseSlug))
+      .limit(1);
+    const organizationSlug = existingSlug
+      ? `${baseSlug}-${organizationId.slice(0, 8)}`
+      : baseSlug;
 
     await tx.insert(organization).values({
       id: organizationId,
-      name: technicalName,
-      slug: technicalSlug,
+      name: normalizedOrganizationName,
+      slug: organizationSlug,
       status: "active",
     });
 

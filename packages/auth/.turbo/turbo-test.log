@@ -1,11 +1,11 @@
 $ vitest run
 
-[1m[30m[46m RUN [49m[39m[22m [36mv4.1.9 [39m[90mC:/Users/Junior/Documents/0 - Dev/Hub Imports/packages/auth[39m
+ RUN  v4.1.9 C:/Users/Junior/Documents/0 - Dev/Hub Imports/packages/auth
 
- [32m✓[39m src/workspace-management-policy.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ ✓ src/workspace-management-policy.test.ts (3 tests) 10ms
 
-[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
-[2m      Tests [22m [1m[32m3 passed[39m[22m[90m (3)[39m
-[2m   Start at [22m 12:57:24
-[2m   Duration [22m 1.38s[2m (transform 39ms, setup 0ms, import 1.07s, tests 9ms, environment 0ms)[22m
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+   Start at  13:54:19
+   Duration  1.59s (transform 35ms, setup 0ms, import 969ms, tests 10ms, environment 0ms)
 

@@ -10,14 +10,14 @@
 
 ## Global Constraints
 
-- Do not implement during this planning PR.
+- Implement only after explicit user approval and keep this plan updated after each PR/reversal.
 - Keep PRs small, reviewable, and independently shippable.
 - Run narrow tests first, then broader gates.
 - Do not run destructive migrations against shared or production databases.
 - Use `E2E_DATABASE_URL` isolated for every E2E run.
 - Billing is required from day one: no free/beta assumption in production.
 - Platform admin must be able to view/manage billing.
-- Customers must not name organizations/workspaces; onboarding should not ask for organization name.
+- Customers name the workspace during onboarding, while the app remains one-user-per-tenant for the MVP.
 - Remove Cloudflare Access from the admin app and replace perimeter protection with Vercel Authentication/deployment protection plus in-app platform admin grants.
 
 ---
@@ -42,10 +42,10 @@
    - Reason: schema, admin event UI, retry helpers, and Inngest processor already exist.
    - Fix by registering real dispatchers or converting currently unsupported events into explicit synchronous effects plus non-dispatched audit records.
 
-5. **Organization naming:** remove customer-controlled organization naming.
-   - If Better Auth organization plugin still requires `name`/`slug`, generate hidden technical values from user/tenant ID until the auth model is replaced.
-   - Remove the user-facing field and remove domain reliance on organization name.
-   - Plan DB migration only after confirming Better Auth table constraints and adapter requirements.
+5. **Organization/workspace naming:** keep customer-controlled workspace naming in onboarding.
+   - Better Auth organization `name`/`slug` stay as product-facing tenant identity fields.
+   - Keep the operating model one-user-per-tenant for the MVP; do not add invitations or workspace switching in this stack.
+   - No Neon migration is needed for this reversal because the required columns already exist and remain useful.
 
 ---
 
@@ -406,32 +406,37 @@
 
 ### PR 07 - Remove Customer-Controlled Organization Naming
 
-**Status:** Concluida em 2026-07-10 para produto web, onboarding e testes locais.
+**Status:** Revertida funcionalmente em 2026-07-10 por decisao de produto. A workspace voltou a ser nomeada no onboarding.
 
-**Resultado:** Removed the customer-controlled organization name field from onboarding, changed onboarding into a one-button account activation flow, stopped exposing `organizationName` through `AppContext`, and removed the organization name from the authenticated app header. Tenant creation now generates hidden Better Auth-compatible technical values (`Tenant <id>` / `tenant-<id>`) server-side.
+**Resultado anterior:** Removed the customer-controlled organization name field from onboarding, changed onboarding into a one-button account activation flow, stopped exposing `organizationName` through `AppContext`, and removed the organization name from the authenticated app header. Tenant creation generated hidden Better Auth-compatible technical values (`Tenant <id>` / `tenant-<id>`) server-side.
+
+**Resultado da reversao:** Onboarding now asks for `workspaceName` again, validates it as required, and passes it into tenant creation. `createInitialOrganizationForUser` stores the chosen name in Better Auth `organization.name`, derives a slug from the workspace name, and appends the generated tenant id prefix if the base slug already exists. `AppContext` exposes `organizationName` again, the authenticated app header displays the workspace name, and the account/settings surface shows the workspace alongside the user/billing details.
 
 **Verificacao executada:**
 - Context7 Better Auth docs confirmed the organization plugin still requires `name` and `slug` in create/schema, so the DB columns were not dropped in this PR.
-- `bun --cwd apps/web vitest run src/features/onboarding/actions.test.ts 'src/app/(auth)/onboarding/onboarding-form.test.ts' src/lib/app-session.test.ts src/app/api/product-images/presign/route.test.ts 'src/app/(app)/page.test.ts'` passed: 5 files, 20 tests.
-- `bun run test` passed: 109 files, 393 tests.
+- `bun --cwd apps/web vitest run src/features/onboarding/actions.test.ts "src/app/(auth)/onboarding/onboarding-form.test.ts" src/lib/app-session.test.ts "src/app/(app)/configuracoes/page.test.ts" src/components/settings/account-settings-panel.test.ts` passed: 5 files, 17 tests.
+- `bun --cwd apps/web vitest run src/lib/app-session.test.ts` passed: 1 file, 12 tests.
+- `bun run test` passed: 105 web test files, 396 web tests, plus package dependency tests.
 - `bun run typecheck` passed.
-- `bun x ultracite check` passed.
+- `bun run check` passed after `bun x ultracite fix` formatted `apps/web/src/lib/app-session.test.ts`.
 - `bun run build` passed.
-- `bun run test:e2e` passed: 9 tests using 1 worker.
+- Final source search found no active technical tenant name generation (`Tenant <id>` / `tenant-<id>`) in app code; remaining `tenant` references are isolation/context terminology.
 
-**Decisao de escopo:** Better Auth still models organizations with required `name` and unique `slug`, so this PR removes customer naming and product reliance on the name, but keeps DB fields populated with non-customer technical values. Dropping or remapping those columns would require a later auth-model migration away from the current plugin contract.
+**Decisao de escopo anterior:** Better Auth still models organizations with required `name` and unique `slug`, so the original PR07 removed customer naming and product reliance on the name, but kept DB fields populated with non-customer technical values. That product decision has been superseded by the current reversal.
 
-**Risco residual:** Admin/platform billing still has `organizationName` as an internal listing label because the platform billing query joins the Better Auth organization table. That label is now technical and should be replaced by customer email/account identifier in a later admin UX/refactor PR if needed.
+**Decisao atual:** Organization/workspace naming is product-relevant now and likely important for future multi-workspace or admin workflows. The DB columns are already required by Better Auth and remain the source of truth; no Neon migration is needed for this reversal.
 
-**Objetivo:** Remove organization naming from onboarding, UI, and domain behavior for the one-user-per-tenant model.
+**Risco residual:** Slug collision handling is intentionally conservative: it preserves the requested display name and suffixes only the slug when the base slug is already taken. Existing tenants created while PR07 was active may still have technical names until renamed by a future workspace settings flow or data repair.
 
-**Escopo exato:**
-- Remove organization name input from onboarding.
-- Auto-create tenant/workspace after successful auth or with one-button onboarding.
-- Remove `organizationName` from app context UI usage.
-- Replace generated org name/slug with hidden technical identifiers if Better Auth requires them.
-- Investigate whether Better Auth organization table can drop `name`/`slug`; if not, keep generated hidden values and document constraint.
-- If safe, add migration removing unused customer-facing organization name fields or moving technical tenant metadata to a separate table.
+**Objetivo atualizado:** Restore organization/workspace naming in onboarding, UI, and app context while preserving the one-user-per-tenant operating model.
+
+**Escopo exato atualizado:**
+- Reintroduce workspace name input in onboarding.
+- Create tenant/workspace with the chosen display name.
+- Derive Better Auth organization slug from workspace name and handle slug collisions conservatively.
+- Restore `organizationName` in app context and authenticated UI.
+- Keep Better Auth `organization.name`/`slug` columns as product-facing fields.
+- Do not add multi-user invitations or workspace switching in this reversal.
 
 **Achados endereçados:** user request, onboarding simplification, product readiness.
 
@@ -451,14 +456,14 @@
 - Do not remove `organization_id` from domain tables.
 - Do not remove Better Auth session organization linkage unless replaced safely.
 
-**Testes necessários:**
-- New user completes onboarding without entering organization name.
+**Testes necessários atualizados:**
+- New user must enter workspace name during onboarding.
 - Tenant is created with owner membership, default category, settings, audit event.
-- No UI asks for or displays customer organization name.
-- DB migration tests for removed/hidden fields.
+- App context exposes organization name and app shell displays it.
+- DB migration is not required because Better Auth organization fields already exist.
 
-**Critério de aceite:**
-- Customer cannot name workspace.
+**Critério de aceite atualizado:**
+- Customer can name workspace during onboarding.
 - Existing tenants migrate safely.
 - Tenant isolation still works.
 
@@ -1282,7 +1287,7 @@
 
 **Status:** Concluido em 2026-07-10.
 
-**Resultado:** The existing `Configuracoes` page now includes a minimal one-user account surface before operational settings. It shows authenticated user name/email/role, billing status/plan/next cycle, billing email fallback, and support/data-request guidance. Billing details are loaded through `features/account/server.ts` with tenant context; `src/app` and UI components still avoid direct DB access. No organization naming field, organization display name, invitations, or multi-user management was added.
+**Resultado:** The existing `Configuracoes` page now includes a minimal one-user account surface before operational settings. It shows workspace name, authenticated user name/email/role, billing status/plan/next cycle, billing email fallback, and support/data-request guidance. Billing details are loaded through `features/account/server.ts` with tenant context; `src/app` and UI components still avoid direct DB access. No invitations or multi-user management were added.
 
 **Verificacao:**
 - Next local docs checked for App Router pages and Server Components.
@@ -1296,11 +1301,11 @@
 
 **Risco residual:** Support contact is still generic because no dedicated support email/config exists in env schema. A future support/billing portal PR can replace the guidance with provider-specific self-service links.
 
-**Objetivo:** Give a one-user customer a minimal account surface without organization naming.
+**Objetivo:** Give a one-user customer a minimal account/workspace surface.
 
 **Escopo exato:**
 - Show current user email/name, subscription status, support contact, export/delete request instructions.
-- Do not allow organization naming.
+- Show workspace name as account context without adding workspace switching or invitations.
 
 **Achados endereçados:** product account/workspace gap.
 
