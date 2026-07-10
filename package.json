@@ -23,7 +23,7 @@
     "typecheck": "turbo run typecheck --filter=@polaris/web",
     "typecheck:admin": "turbo run typecheck --filter=@polaris/admin",
     "fix": "turbo run fix --filter=@polaris/web",
-    "prepare": "lefthook install",
+    "prepare": "node scripts/install-git-hooks.mjs",
     "knip": "turbo run knip --filter=@polaris/web",
     "db:generate": "turbo run db:generate --filter=@polaris/db",
     "db:migrate": "turbo run db:migrate --filter=@polaris/db",

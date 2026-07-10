@@ -1,0 +1,11 @@
+.git
+.next
+.turbo
+node_modules
+test-results
+apps/*/.next
+apps/*/.turbo
+apps/*/node_modules
+apps/*/test-results
+packages/*/node_modules
+*.tsbuildinfo
