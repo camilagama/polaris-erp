@@ -1,5 +1,5 @@
-import { existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
 
 if (process.env.CI === "true" || process.env.VERCEL === "1") {
   process.exit(0);
