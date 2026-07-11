@@ -49,6 +49,30 @@
 
 ---
 
+## Post-Implementation Dev Review Certification
+
+**Status:** Added em 2026-07-10 apos analise do parecer externo.
+
+**Relatorio:** See `docs/reports/post-pr-dev-review-analysis-2026-07-10.md`.
+
+**Conclusao:** The PR stack improved architecture, security boundaries, RLS scaffolding, admin separation, Inngest scheduling, and operational gates, but the project remains **no-go for public paid launch** until the following evidence/fixes exist:
+
+- Self-service billing activation from `/billing-required`, or a formally documented controlled-pilot/manual activation mode.
+- Explicit subscription policy for `trialing`, `past_due`, `canceled`, and any grace-period window.
+- Billing RLS migration applied to an approved Neon branch and live smoke proving `forcedTables = 18/18`.
+- Capture-only outbox rows represented by an explicit non-retryable status such as `observed`, instead of remaining operationally pending.
+- Inngest cloud sync/schedule proof for `reconcile-product-images` cron `0 4 * * *`.
+- Vercel Authentication/deployment protection proof on the real `apps/admin` Vercel project.
+- Real restore/PITR drill evidence, not only checklist variable validation.
+- Transactional audit expansion for sales, stock, price changes, and billing/admin status changes.
+- `bun audit` triage/baseline/risk acceptance with CI guard against new advisories.
+- Postgres pool/serverless connection review after E2E connection pressure.
+- Representative query-plan validation through `bun run db:analyze:listings`.
+
+**Recommended next PR:** implement subscription entitlement policy first if launch remains paid from day one. It is smaller and safer than checkout, removes unlimited `past_due` access, and sets the contract that checkout/webhooks must satisfy.
+
+---
+
 ## P0 Blockers
 
 ### PR 01 - Patch Critical Dependency Advisories
