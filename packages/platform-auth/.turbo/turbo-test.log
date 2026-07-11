@@ -1,12 +1,12 @@
 $ vitest run
 
- RUN  v4.1.9 C:/Users/Junior/Documents/0 - Dev/Hub Imports/packages/platform-auth
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.9 [39m[90mC:/Users/Junior/Documents/0 - Dev/Hub Imports/packages/platform-auth[39m
 
- ✓ src/admin-rate-limit.test.ts (2 tests) 73ms
- ✓ src/platform-admin-auth.test.ts (4 tests) 12ms
+ [32m✓[39m src/admin-rate-limit.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 73[2mms[22m[39m
+ [32m✓[39m src/platform-admin-auth.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 12[2mms[22m[39m
 
- Test Files  2 passed (2)
-      Tests  6 passed (6)
-   Start at  13:54:19
-   Duration  1.15s (transform 225ms, setup 0ms, import 824ms, tests 84ms, environment 30ms)
+[2m Test Files [22m [1m[32m2 passed[39m[22m[90m (2)[39m
+[2m      Tests [22m [1m[32m6 passed[39m[22m[90m (6)[39m
+[2m   Start at [22m 01:42:55
+[2m   Duration [22m 1.16s[2m (transform 216ms, setup 0ms, import 919ms, tests 85ms, environment 0ms)[22m
 
