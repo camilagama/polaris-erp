@@ -121,7 +121,7 @@ const resolveBillingStatus = async (organizationId: string) => {
       .from(billingSubscriptions)
       .where(eq(billingSubscriptions.organizationId, organizationId))
       .orderBy(
-        sql`case when ${billingSubscriptions.status} in ('trialing', 'active', 'past_due') then 0 when ${billingSubscriptions.status} = 'incomplete' then 1 else 2 end`,
+        sql`case when ${billingSubscriptions.status} = 'active' then 0 when ${billingSubscriptions.status} = 'incomplete' then 1 else 2 end`,
         desc(billingSubscriptions.createdAt)
       )
       .limit(1);

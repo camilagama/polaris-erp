@@ -74,6 +74,7 @@ export const handleResendWebhook = async (request: Request) => {
       eventType: toStringPayloadValue(payload.type, "unknown"),
       idempotencyKey: `resend-webhook:${webhookHeaders.id}`,
       payload,
+      status: "observed",
       topic: "resend.webhook",
     });
 

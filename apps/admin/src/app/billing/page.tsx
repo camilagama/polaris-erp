@@ -4,6 +4,7 @@ import { forbidden } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { requirePlatformAdmin } from "@/lib/platform-admin-auth";
+import { changeBillingSubscriptionStatusAction } from "./actions";
 
 const guardPlatformAdmin = async () => {
   try {
@@ -91,7 +92,7 @@ const BillingContent = async () => {
         ) : (
           overview.subscriptions.map((subscription) => (
             <div
-              className="grid gap-3 border-zinc-800 border-b px-4 py-3 text-sm md:grid-cols-[1fr_0.8fr_0.6fr_0.7fr]"
+              className="grid gap-3 border-zinc-800 border-b px-4 py-3 text-sm md:grid-cols-[1fr_0.6fr_0.6fr_0.7fr_1.3fr]"
               key={subscription.organizationId}
             >
               <span className="min-w-0">
@@ -115,6 +116,47 @@ const BillingContent = async () => {
               <span className="text-zinc-400">
                 {formatDateTime(subscription.currentPeriodEnd)}
               </span>
+              <form
+                action={changeBillingSubscriptionStatusAction}
+                className="grid gap-2"
+              >
+                <input
+                  name="subscriptionId"
+                  type="hidden"
+                  value={subscription.subscriptionId}
+                />
+                <input
+                  name="status"
+                  type="hidden"
+                  value={subscription.hasAccess ? "past_due" : "active"}
+                />
+                <input
+                  aria-label="Motivo da alteracao de billing"
+                  className="min-h-9 rounded-md border border-zinc-700 bg-zinc-950 px-3 text-xs text-zinc-100 outline-none placeholder:text-zinc-600"
+                  name="reason"
+                  placeholder={
+                    subscription.hasAccess
+                      ? "Motivo para bloquear"
+                      : "Motivo para ativar"
+                  }
+                  required
+                />
+                <label className="flex items-center gap-2 text-xs text-zinc-500">
+                  <input
+                    className="size-3"
+                    name="confirm"
+                    required
+                    type="checkbox"
+                  />
+                  Confirmo a alteracao manual
+                </label>
+                <button
+                  className="inline-flex min-h-9 items-center justify-center rounded-md border border-zinc-700 px-3 font-medium text-xs text-zinc-100 hover:bg-zinc-800"
+                  type="submit"
+                >
+                  {subscription.hasAccess ? "Bloquear acesso" : "Ativar acesso"}
+                </button>
+              </form>
             </div>
           ))
         )}

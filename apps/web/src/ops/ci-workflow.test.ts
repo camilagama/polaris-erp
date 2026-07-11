@@ -126,6 +126,8 @@ describe("CI workflow", () => {
   it("runs admin checks, build and E2E as release gates", () => {
     const workflow = readCiWorkflow();
 
+    expect(workflow).toContain("bun run audit:baseline");
+    expect(workflow).toContain("bun run audit:boundaries");
     expect(workflow).toContain("bun run check:admin");
     expect(workflow).toContain("bun run typecheck");
     expect(workflow).toContain("bun run typecheck:admin");
@@ -142,6 +144,7 @@ describe("CI workflow", () => {
       "ADMIN_APP_URL",
       "ADMIN_DEPLOYMENT_SMOKE_URL",
       "ADMIN_DEPLOYMENT_SMOKE_PROTECTED",
+      "DATABASE_POOL_MAX",
       "DEPLOYMENT_SMOKE_URL",
       "E2E_DATABASE_URL",
       "RESTORE_DRILL_CONFIRMED_AT",
@@ -166,6 +169,7 @@ describe("CI workflow", () => {
     for (const envName of [
       "ADMIN_DEPLOYMENT_SMOKE_URL",
       "ADMIN_DEPLOYMENT_SMOKE_PROTECTED",
+      "DATABASE_POOL_MAX",
     ]) {
       expect(envExample).toContain(`${envName}=`);
       expect(turboConfig).toContain(envName);
@@ -189,6 +193,12 @@ describe("CI workflow", () => {
     };
 
     expect(packageJson.scripts?.["build:all"]).toBe("turbo run build");
+    expect(packageJson.scripts?.["audit:baseline"]).toBe(
+      "bun scripts/check-bun-audit-baseline.ts"
+    );
+    expect(packageJson.scripts?.["audit:boundaries"]).toBe(
+      "bun scripts/check-core-audit-boundaries.ts"
+    );
     expect(packageJson.scripts?.["check:all"]).toBe("turbo run check");
     expect(packageJson.scripts?.["typecheck:all"]).toBe("turbo run typecheck");
     expect(packageJson.scripts?.["test:all"]).toBe("turbo run test");

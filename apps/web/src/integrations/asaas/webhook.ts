@@ -140,6 +140,7 @@ export const handleAsaasWebhook = async (request: Request) => {
     eventType: getString(payload, "event") ?? "unknown",
     idempotencyKey: `asaas-webhook:${eventId}`,
     payload: redactedPayload,
+    status: "observed",
     topic: "asaas.webhook",
   });
 

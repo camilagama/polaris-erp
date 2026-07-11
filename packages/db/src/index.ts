@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
+import { resolveDatabasePoolMax } from "./pool-config";
 // biome-ignore lint/performance/noNamespaceImport: needed for drizzle schema
 import * as schema from "./schema";
 
@@ -21,7 +22,7 @@ const getPool = () => {
       connectionString,
       connectionTimeoutMillis: 10_000,
       idleTimeoutMillis: 30_000,
-      max: 10,
+      max: resolveDatabasePoolMax(),
       ssl: true,
     });
   }

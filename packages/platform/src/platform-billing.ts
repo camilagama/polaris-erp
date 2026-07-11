@@ -2,8 +2,10 @@ import "server-only";
 
 import { hasBillableAccess, normalizeBillingStatus } from "@polaris/billing";
 import { db } from "@polaris/db";
+import { billingSubscriptions } from "@polaris/db/schema";
 import { withPlatformAdminContext } from "@polaris/db/tenant-context";
-import { type SQL, sql } from "drizzle-orm";
+import { eq, type SQL, sql } from "drizzle-orm";
+import { recordPlatformAuditEvent } from "./platform-admin";
 
 interface QueryableDb {
   execute: (query: SQL) => Promise<unknown>;
@@ -16,6 +18,7 @@ interface PlatformBillingSubscriptionListItem {
   organizationName: string;
   planName: string;
   status: string;
+  subscriptionId: string;
 }
 
 interface PlatformBillingInvoiceListItem {
@@ -33,6 +36,38 @@ export interface PlatformBillingOverview {
     openInvoices: number;
     subscriptions: number;
   };
+}
+
+type ManualPlatformBillingStatus = "active" | "past_due";
+type MutationReturningRow = Record<string, unknown>;
+
+export interface UpdatePlatformBillingSubscriptionStatusInput {
+  actorPlatformAdminId: string;
+  actorUserId: string;
+  reason: string;
+  status: ManualPlatformBillingStatus;
+  subscriptionId: string;
+}
+
+interface PlatformBillingMutationTx {
+  insert: (table: unknown) => {
+    values: (value: Record<string, unknown>) => Promise<unknown> | unknown;
+  };
+  update: (table: unknown) => {
+    set: (value: Record<string, unknown>) => {
+      where: (condition: unknown) => {
+        returning: (
+          value: Record<string, unknown>
+        ) => Promise<MutationReturningRow[]> | MutationReturningRow[];
+      };
+    };
+  };
+}
+
+interface PlatformBillingMutationDb {
+  transaction: <Result>(
+    callback: (tx: PlatformBillingMutationTx) => Result | Promise<Result>
+  ) => Promise<Result>;
 }
 
 const toRows = (result: unknown): Record<string, unknown>[] => {
@@ -96,6 +131,7 @@ const listSubscriptions = async (
     await queryableDb.execute(sql`
       select
         s.organization_id,
+        s.id as subscription_id,
         organization.name as organization_name,
         p.name as plan_name,
         s.status,
@@ -118,6 +154,7 @@ const listSubscriptions = async (
       organizationName: toStringValue(row.organization_name, "Sem nome"),
       planName: toStringValue(row.plan_name, "Sem plano"),
       status,
+      subscriptionId: toStringValue(row.subscription_id),
     };
   });
 };
@@ -154,7 +191,7 @@ const getTotals = async (
     await queryableDb.execute(sql`
       select
         (select count(*) from billing_subscriptions) as subscriptions,
-        (select count(*) from billing_subscriptions where status in ('trialing', 'active', 'past_due')) as active_access_subscriptions,
+        (select count(*) from billing_subscriptions where status = 'active') as active_access_subscriptions,
         (select count(*) from billing_invoices where status = 'open') as open_invoices
     `)
   );
@@ -182,3 +219,58 @@ export const getPlatformBillingOverviewForAdmin = async (
   platformAdminId: string
 ): Promise<PlatformBillingOverview> =>
   withPlatformAdminContext(platformAdminId, getPlatformBillingOverview);
+
+const getDefaultMutationDb = (): PlatformBillingMutationDb =>
+  db as unknown as PlatformBillingMutationDb;
+
+const isManualPlatformBillingStatus = (
+  value: string
+): value is ManualPlatformBillingStatus =>
+  value === "active" || value === "past_due";
+
+export const updatePlatformBillingSubscriptionStatus = async (
+  input: UpdatePlatformBillingSubscriptionStatusInput,
+  mutationDb: PlatformBillingMutationDb = getDefaultMutationDb()
+): Promise<void> => {
+  const reason = input.reason.trim();
+
+  if (reason.length === 0) {
+    throw new Error("Billing subscription status change requires a reason.");
+  }
+
+  if (!isManualPlatformBillingStatus(input.status)) {
+    throw new Error("Unsupported billing subscription status.");
+  }
+
+  await mutationDb.transaction(async (tx) => {
+    const updatedSubscriptions = await tx
+      .update(billingSubscriptions)
+      .set({
+        status: input.status,
+        updatedAt: new Date(),
+      })
+      .where(eq(billingSubscriptions.id, input.subscriptionId))
+      .returning({
+        id: billingSubscriptions.id,
+        organizationId: billingSubscriptions.organizationId,
+      });
+
+    const [subscription] = updatedSubscriptions;
+
+    if (!subscription) {
+      throw new Error("Billing subscription not found for status change.");
+    }
+
+    await recordPlatformAuditEvent(tx, {
+      action: "billing.subscription.status_changed",
+      actorPlatformAdminId: input.actorPlatformAdminId,
+      actorUserId: input.actorUserId,
+      metadata: {
+        reason,
+        status: input.status,
+      },
+      subjectId: toStringValue(subscription.id, input.subscriptionId),
+      subjectType: "billing_subscription",
+    });
+  });
+};

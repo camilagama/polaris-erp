@@ -49,6 +49,7 @@ vi.mock("@polaris/db", () => ({
 const ISO_DATE_ERROR_REGEX = /ISO YYYY-MM-DD/;
 
 interface InventoryHarness {
+  auditLog: Record<string, unknown>[];
   entryLog: Record<string, unknown>[];
   state: {
     archivedAt: Date | null;
@@ -60,6 +61,7 @@ interface InventoryHarness {
 }
 
 interface ProductUpdateHarness {
+  auditLog: Record<string, unknown>[];
   executeLog: string[];
   priceChangeLog: Record<string, unknown>[];
   productUpdateLog: Record<string, unknown>[];
@@ -101,12 +103,16 @@ const resolveMocks = async () => {
   };
 };
 
-const createInventoryHarness = (initialState: {
-  archivedAt?: Date | null;
-  costPrice: number;
-  stock: number;
-}): InventoryHarness => {
+const createInventoryHarness = (
+  initialState: {
+    archivedAt?: Date | null;
+    costPrice: number;
+    stock: number;
+  },
+  options: { loseProductUpdate?: boolean } = {}
+): InventoryHarness => {
   const state = { archivedAt: null, ...initialState };
+  const auditLog: Record<string, unknown>[] = [];
   const entryLog: Record<string, unknown>[] = [];
   const writeOffLog: Record<string, unknown>[] = [];
   let queue = Promise.resolve();
@@ -145,6 +151,7 @@ const createInventoryHarness = (initialState: {
           }
 
           if ("subjectType" in payload) {
+            auditLog.push(payload);
             return Promise.resolve([]);
           }
 
@@ -153,26 +160,34 @@ const createInventoryHarness = (initialState: {
       }),
       update: (_table: unknown) => ({
         set: (payload: Record<string, unknown>) => ({
-          where: (_whereExpression: unknown) => {
-            if (!("stock" in payload || "costPrice" in payload)) {
-              throw new Error("Tabela de update nao suportada no teste.");
-            }
+          where: (_whereExpression: unknown) => ({
+            returning: () => {
+              if (options.loseProductUpdate) {
+                return Promise.resolve([]);
+              }
 
-            if (typeof payload.stock === "number") {
-              state.stock = payload.stock;
-            }
+              if (!("stock" in payload || "costPrice" in payload)) {
+                throw new Error("Tabela de update nao suportada no teste.");
+              }
 
-            if (typeof payload.costPrice === "string") {
-              state.costPrice = Number(payload.costPrice);
-            }
+              if (typeof payload.stock === "number") {
+                state.stock = payload.stock;
+              }
 
-            if ("archivedAt" in payload) {
-              state.archivedAt =
-                payload.archivedAt instanceof Date ? payload.archivedAt : null;
-            }
+              if (typeof payload.costPrice === "string") {
+                state.costPrice = Number(payload.costPrice);
+              }
 
-            return Promise.resolve([]);
-          },
+              if ("archivedAt" in payload) {
+                state.archivedAt =
+                  payload.archivedAt instanceof Date
+                    ? payload.archivedAt
+                    : null;
+              }
+
+              return Promise.resolve([{ id: "product-1" }]);
+            },
+          }),
         }),
       }),
     };
@@ -185,6 +200,7 @@ const createInventoryHarness = (initialState: {
   };
 
   return {
+    auditLog,
     entryLog,
     state,
     transaction,
@@ -192,13 +208,17 @@ const createInventoryHarness = (initialState: {
   };
 };
 
-const createProductUpdateHarness = (initialState: {
-  categoryId: string;
-  description: string | null;
-  name: string;
-  price: number;
-}): ProductUpdateHarness => {
+const createProductUpdateHarness = (
+  initialState: {
+    categoryId: string;
+    description: string | null;
+    name: string;
+    price: number;
+  },
+  options: { loseProductUpdate?: boolean } = {}
+): ProductUpdateHarness => {
   const state = { ...initialState };
+  const auditLog: Record<string, unknown>[] = [];
   const executeLog: string[] = [];
   const productUpdateLog: Record<string, unknown>[] = [];
   const priceChangeLog: Record<string, unknown>[] = [];
@@ -224,6 +244,7 @@ const createProductUpdateHarness = (initialState: {
         values: (payload: Record<string, unknown>) => {
           if (!("previousPrice" in payload && "nextPrice" in payload)) {
             if ("subjectType" in payload) {
+              auditLog.push(payload);
               return Promise.resolve([]);
             }
 
@@ -236,37 +257,43 @@ const createProductUpdateHarness = (initialState: {
       }),
       update: (_table: unknown) => ({
         set: (payload: Record<string, unknown>) => ({
-          where: (_whereExpression: unknown) => {
-            if (
-              !(
-                "categoryId" in payload ||
-                "description" in payload ||
-                "name" in payload ||
-                "price" in payload
-              )
-            ) {
-              throw new Error("Tabela de update nao suportada no teste.");
-            }
+          where: (_whereExpression: unknown) => ({
+            returning: () => {
+              if (options.loseProductUpdate) {
+                return Promise.resolve([]);
+              }
 
-            productUpdateLog.push(payload);
-            state.categoryId =
-              typeof payload.categoryId === "string"
-                ? payload.categoryId
-                : state.categoryId;
-            state.description =
-              typeof payload.description === "string" ||
-              payload.description === undefined
-                ? (payload.description ?? null)
-                : state.description;
-            state.name =
-              typeof payload.name === "string" ? payload.name : state.name;
-            state.price =
-              typeof payload.price === "string"
-                ? Number(payload.price)
-                : state.price;
+              if (
+                !(
+                  "categoryId" in payload ||
+                  "description" in payload ||
+                  "name" in payload ||
+                  "price" in payload
+                )
+              ) {
+                throw new Error("Tabela de update nao suportada no teste.");
+              }
 
-            return Promise.resolve([]);
-          },
+              productUpdateLog.push(payload);
+              state.categoryId =
+                typeof payload.categoryId === "string"
+                  ? payload.categoryId
+                  : state.categoryId;
+              state.description =
+                typeof payload.description === "string" ||
+                payload.description === undefined
+                  ? (payload.description ?? null)
+                  : state.description;
+              state.name =
+                typeof payload.name === "string" ? payload.name : state.name;
+              state.price =
+                typeof payload.price === "string"
+                  ? Number(payload.price)
+                  : state.price;
+
+              return Promise.resolve([{ id: "product-1" }]);
+            },
+          }),
         }),
       }),
     };
@@ -275,6 +302,7 @@ const createProductUpdateHarness = (initialState: {
   };
 
   return {
+    auditLog,
     executeLog,
     priceChangeLog,
     productUpdateLog,
@@ -438,6 +466,63 @@ describe("product server actions", () => {
     expect(harness.state.stock).toBe(2);
   });
 
+  it("does not audit or revalidate when stock addition loses the product update", async () => {
+    const { addProductStockAction } = await import(
+      "@/features/products/actions"
+    );
+    const { mockDb, mockUpdateTag } = await resolveMocks();
+
+    const harness = createInventoryHarness(
+      {
+        costPrice: 10,
+        stock: 0,
+      },
+      { loseProductUpdate: true }
+    );
+
+    mockDb.transaction.mockImplementation(harness.transaction as never);
+
+    await expect(
+      addProductStockAction("product-1", {
+        quantity: 2,
+        stockedOn: "2026-03-31",
+        unitCost: "14.00",
+      })
+    ).rejects.toThrow("Produto nao encontrado.");
+
+    expect(harness.auditLog).toHaveLength(0);
+    expect(mockUpdateTag).not.toHaveBeenCalled();
+  });
+
+  it("does not audit or revalidate when stock write-off loses the product update", async () => {
+    const { writeOffProductStockAction } = await import(
+      "@/features/products/actions"
+    );
+    const { mockDb, mockUpdateTag } = await resolveMocks();
+
+    const harness = createInventoryHarness(
+      {
+        costPrice: 10,
+        stock: 5,
+      },
+      { loseProductUpdate: true }
+    );
+
+    mockDb.transaction.mockImplementation(harness.transaction as never);
+
+    await expect(
+      writeOffProductStockAction("product-1", {
+        happenedOn: "2026-03-31",
+        notes: "baixa operacional",
+        quantity: 2,
+        reason: "operational",
+      })
+    ).rejects.toThrow("Produto nao encontrado.");
+
+    expect(harness.auditLog).toHaveLength(0);
+    expect(mockUpdateTag).not.toHaveBeenCalled();
+  });
+
   it("creates a product with processed image metadata when a staged image is provided", async () => {
     const { createProductAction } = await import("@/features/products/actions");
     const { mockDb, mockStoreProductImageFromStage, mockUpdateTag } =
@@ -575,6 +660,35 @@ describe("product server actions", () => {
       price: "20.00",
     });
     expect(harness.priceChangeLog).toEqual([]);
+  });
+
+  it("does not audit or revalidate when a price update loses the product row", async () => {
+    const { updateProductAction } = await import("@/features/products/actions");
+    const { mockDb, mockUpdateTag } = await resolveMocks();
+
+    const harness = createProductUpdateHarness(
+      {
+        categoryId: "category-1",
+        description: "Descricao antiga",
+        name: "Produto teste",
+        price: 20,
+      },
+      { loseProductUpdate: true }
+    );
+
+    mockDb.transaction.mockImplementation(harness.transaction as never);
+
+    await expect(
+      updateProductAction("product-1", {
+        categoryId: "category-2",
+        description: "Descricao nova",
+        name: "Produto atualizado",
+        price: "35",
+      })
+    ).rejects.toThrow("Produto nao encontrado.");
+
+    expect(harness.auditLog).toHaveLength(0);
+    expect(mockUpdateTag).not.toHaveBeenCalled();
   });
 
   it("rejects negative product price updates at the action boundary", async () => {

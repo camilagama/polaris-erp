@@ -35,6 +35,7 @@ describe("validateProductionPreflight", () => {
       BETTER_AUTH_SECRET: strongSecret,
       DATABASE_URL: runtimeUrl,
       DATABASE_URL_DIRECT: ownerUrl,
+      DATABASE_POOL_MAX: "3",
       E2E_DATABASE_URL: e2eUrl,
       INTERNAL_R2_HEALTH_SECRET: strongSecret,
       PRODUCT_IMAGE_RECONCILE_SECRET: strongSecret,
@@ -55,6 +56,7 @@ describe("validateProductionPreflight", () => {
       BETTER_AUTH_SECRET: "short",
       DATABASE_URL: ownerUrl,
       DATABASE_URL_DIRECT: ownerUrl,
+      DATABASE_POOL_MAX: "100",
       E2E_DATABASE_URL: ownerUrl,
       INTERNAL_R2_HEALTH_SECRET: "short",
       PRODUCT_IMAGE_RECONCILE_SECRET: "short",
@@ -66,6 +68,7 @@ describe("validateProductionPreflight", () => {
     expect(result.errors).toEqual(
       expect.arrayContaining([
         "DATABASE_URL must not equal DATABASE_URL_DIRECT.",
+        "DATABASE_POOL_MAX must be an integer between 1 and 20.",
         "DATABASE_URL must use a runtime role, not neondb_owner.",
         "E2E_DATABASE_URL must not equal DATABASE_URL.",
         "E2E_DATABASE_URL must not equal RLS_DATABASE_URL.",

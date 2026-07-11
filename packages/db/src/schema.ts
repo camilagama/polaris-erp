@@ -352,7 +352,7 @@ export const eventOutbox = pgTable(
     index("event_outbox_correlation_id_idx").on(table.correlationId),
     check(
       "event_outbox_status_known_check",
-      sql`${table.status} in ('pending', 'processing', 'processed', 'failed', 'dead_letter')`
+      sql`${table.status} in ('pending', 'processing', 'processed', 'observed', 'failed', 'dead_letter')`
     ),
     check("event_outbox_attempts_non_negative", sql`${table.attempts} >= 0`),
   ]

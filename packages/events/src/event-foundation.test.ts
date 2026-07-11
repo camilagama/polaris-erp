@@ -5,6 +5,7 @@ import {
   enqueueOutboxEvent,
   hashRawBody,
   markOutboxEventFailed,
+  markOutboxEventObserved,
   markOutboxEventProcessed,
   redactWebhookHeaders,
 } from "@polaris/events";
@@ -128,23 +129,45 @@ describe("event foundation helpers", () => {
     expect(execute).toHaveBeenCalledOnce();
   });
 
+  it("can record capture-only outbox events as observed", async () => {
+    const execute = vi.fn().mockResolvedValueOnce({
+      rows: [{ id: "event-1" }],
+    });
+
+    await expect(
+      enqueueOutboxEvent(
+        { execute },
+        {
+          correlationId: "corr-1",
+          eventType: "email.delivered",
+          idempotencyKey: "resend-webhook:evt_123",
+          payload: { type: "email.delivered" },
+          status: "observed",
+          topic: "resend.webhook",
+        }
+      )
+    ).resolves.toBe("event-1");
+    expect(execute).toHaveBeenCalledOnce();
+  });
+
   it("returns null when an outbox event cannot be claimed", async () => {
     const execute = vi.fn().mockResolvedValueOnce({ rows: [] });
 
     await expect(claimOutboxEvent({ execute }, "event-1")).resolves.toBeNull();
   });
 
-  it("marks outbox events as processed or failed", async () => {
+  it("marks outbox events as processed, observed or failed", async () => {
     const execute = vi.fn().mockResolvedValue({});
     const db = { execute };
 
     await markOutboxEventProcessed(db, "event-1");
+    await markOutboxEventObserved(db, "event-2", "capture-only");
     await markOutboxEventFailed({
       db,
       error: "No dispatcher registered.",
-      eventId: "event-2",
+      eventId: "event-3",
     });
 
-    expect(execute).toHaveBeenCalledTimes(2);
+    expect(execute).toHaveBeenCalledTimes(3);
   });
 });

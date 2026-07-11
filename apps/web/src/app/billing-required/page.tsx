@@ -55,8 +55,9 @@ export default async function BillingRequiredPage() {
             Solicitar ativacao
           </Link>
           <p className="text-muted-foreground text-xs">
-            Checkout self-service entra no proximo corte de billing; por
-            enquanto a ativacao e concluida pelo time da plataforma.
+            A assinatura e obrigatoria desde o primeiro acesso. A ativacao
+            manual e concluida pelo time da plataforma apos confirmacao de
+            pagamento.
           </p>
         </div>
       </section>

@@ -1,3 +1,5 @@
+import { resolveDatabasePoolMax } from "@polaris/db/pool-config";
+
 const MINIMUM_PRODUCTION_SECRET_LENGTH = 32;
 const OWNER_ROLE_PATTERNS = [/neondb_owner/i, /postgres/i];
 
@@ -6,6 +8,7 @@ export interface ProductionPreflightEnv {
   ALLOW_PLAYWRIGHT_BOOTSTRAP?: string;
   BETTER_AUTH_SECRET?: string;
   BETTER_AUTH_URL?: string;
+  DATABASE_POOL_MAX?: string;
   DATABASE_URL?: string;
   DATABASE_URL_DIRECT?: string;
   DEPLOYMENT_SMOKE_URL?: string;
@@ -196,6 +199,14 @@ const appendIsolationErrors = (
 
   if (includesOwnerRole(env.RLS_DATABASE_URL)) {
     errors.push("RLS_DATABASE_URL must not use neondb_owner.");
+  }
+
+  try {
+    resolveDatabasePoolMax(env.DATABASE_POOL_MAX);
+  } catch (error) {
+    errors.push(
+      error instanceof Error ? error.message : "DATABASE_POOL_MAX is invalid."
+    );
   }
 };
 

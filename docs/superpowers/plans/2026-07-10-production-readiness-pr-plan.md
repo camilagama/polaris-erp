@@ -58,18 +58,154 @@
 **Conclusao:** The PR stack improved architecture, security boundaries, RLS scaffolding, admin separation, Inngest scheduling, and operational gates, but the project remains **no-go for public paid launch** until the following evidence/fixes exist:
 
 - Self-service billing activation from `/billing-required`, or a formally documented controlled-pilot/manual activation mode.
-- Explicit subscription policy for `trialing`, `past_due`, `canceled`, and any grace-period window.
+- Explicit subscription policy for `trialing`, `past_due`, `canceled`, and any grace-period window. Local policy implemented in PR 26: only `active` grants ERP access.
 - Billing RLS migration applied to an approved Neon branch and live smoke proving `forcedTables = 18/18`.
-- Capture-only outbox rows represented by an explicit non-retryable status such as `observed`, instead of remaining operationally pending.
+- Capture-only outbox rows represented by an explicit non-retryable status. Local policy implemented in PR 27 with `observed`; live migration application remains pending.
 - Inngest cloud sync/schedule proof for `reconcile-product-images` cron `0 4 * * *`.
 - Vercel Authentication/deployment protection proof on the real `apps/admin` Vercel project.
 - Real restore/PITR drill evidence, not only checklist variable validation.
-- Transactional audit expansion for sales, stock, price changes, and billing/admin status changes.
-- `bun audit` triage/baseline/risk acceptance with CI guard against new advisories.
+- Transactional audit guard for product stock/price changes is complete locally; continue reviewing external-side-effect audit flows.
+- Dependency advisory baseline must be reviewed by 2026-08-10 and must fail CI on new advisory URLs.
 - Postgres pool/serverless connection review after E2E connection pressure.
 - Representative query-plan validation through `bun run db:analyze:listings`.
 
-**Recommended next PR:** implement subscription entitlement policy first if launch remains paid from day one. It is smaller and safer than checkout, removes unlimited `past_due` access, and sets the contract that checkout/webhooks must satisfy.
+**Recommended next PR:** production evidence/certification pass for live Vercel Authentication, Neon RLS, Inngest schedule, restore drill, and provider sandbox; or representative query-plan validation if external production access remains unavailable. PR 26 set the entitlement contract, PR 27 resolved capture-only outbox semantics, PR 28 made controlled manual billing activation operable, PR 30 fixed Postgres pool defaults, PR 31 added dependency advisory baseline enforcement, and PR 32 closed product stock/price false-audit gaps.
+
+### PR 26 - Resolve Subscription Entitlement Policy Review
+
+**Status:** Concluida em 2026-07-10.
+
+**Resultado:** Subscription entitlement now follows the paid-from-day-one policy: only `active` grants operational ERP access. `trialing`, `past_due`, `paused`, `canceled`, and `incomplete` remain canonical statuses but do not grant access until a future trial or grace-period model is explicitly implemented. App context, account billing summary ordering, and platform billing active-access totals now rank/count only `active` as billable access.
+
+**Verificacao executada:**
+- `bun --cwd packages/billing test` passed: 3 files, 7 tests.
+- `bun --cwd apps/web vitest run src/lib/app-session.test.ts` passed: 1 file, 14 tests.
+- `bun --cwd packages/platform test` passed: 7 files, 19 tests.
+- `bun run typecheck` passed: 8 workspace tasks successful.
+- `bun run check` passed: 439 files checked, no fixes applied.
+- `bun run build` passed. It still emitted the existing local Postgres SSL warning for `sslmode=require`; production docs already require `sslmode=verify-full`.
+- `bun run test` found two unrelated auth timeout failures in the full concurrent run. Follow-up isolation with `bun --cwd apps/web vitest run src/features/products/actions.test.ts src/features/sales/actions.test.ts --maxWorkers=1` passed: 2 files, 42 tests.
+
+**Decisao de escopo:** No `grace_period_ends_at` column was added in this PR because the product decision is no trial/grace by default for launch. A future grace-period PR must add an explicit timestamp and time-aware entitlement instead of re-allowing `past_due` indefinitely.
+
+**Risco residual:** Provider reconciliation can still normalize late/failed payment states to `past_due`, but those tenants are now blocked from operational app access until status returns to `active`. Customer-facing self-service activation remains a separate P0 gap. The broad test suite showed existing concurrency-sensitive auth timeouts; the affected files passed in isolation with one worker.
+
+**Rollback:** Restore `trialing`/`past_due` in `ACTIVE_ACCESS_STATUSES` and revert the active-access SQL ordering/count changes, only if a documented trial/grace policy exists.
+
+### PR 27 - Resolve Capture-Only Outbox Observed Status Review
+
+**Status:** Concluida em 2026-07-10 para codigo, migracao e verificacoes locais. Aplicacao live da migracao pendente.
+
+**Resultado:** Capture-only webhook topics (`asaas.webhook`, `woovi.webhook`, `resend.webhook`) now enqueue outbox rows as `observed` instead of operational `pending`. The DB schema and forward migration allow the `observed` status and migrate existing pending capture-only rows to `observed` with `processed_at`. If a legacy capture-only row is still claimed by the Inngest processor, it is marked `observed` instead of being returned to retryable pending/failed flow. Retry remains limited to `failed` and `dead_letter`.
+
+**Verificacao executada:**
+- `bun --cwd packages/events test` passed: 1 file, 8 tests.
+- `bun --cwd apps/web vitest run src/lib/inngest-functions.test.ts src/app/api/webhooks/asaas/route.test.ts src/app/api/webhooks/woovi/route.test.ts src/app/api/webhooks/resend/route.test.ts src/db/event-foundation-schema.test.ts` passed: 5 files, 20 tests.
+- `bun run typecheck` passed: 8 workspace tasks successful.
+- `bun run check` passed: 439 files checked, no fixes applied.
+- `bun run build` passed. It still emitted the existing local Postgres SSL warning for `sslmode=require`; production docs already require `sslmode=verify-full`.
+
+**Decisao de escopo:** This PR did not add durable dispatchers for these webhook topics because their side effects already run synchronously in the handlers. `observed` is intentionally a terminal non-dispatch/audit state, not a substitute for future asynchronous dispatchers.
+
+**Risco residual:** The migration must still be applied to the approved Neon branch before production data benefits from the new check constraint/backfill. Any future capture-only topic must explicitly enqueue `status: "observed"` or register a real dispatcher.
+
+**Rollback:** Revert the schema/migration and handler status changes only before applying the migration. If already applied, use a forward migration that removes `observed` after first moving observed rows to an approved replacement status.
+
+### PR 28 - Resolve Controlled Manual Billing Activation Review
+
+**Status:** Concluida em 2026-07-10 para codigo, admin UI, copy e verificacoes locais.
+
+**Resultado:** Paid-from-day-one now has an explicit controlled-pilot activation path. Onboarding still creates `incomplete` subscriptions, operational access remains blocked until `active`, and the public block page no longer promises a checkout "next cut". Platform operators can activate or block subscriptions from the admin billing page with reason, confirmation, rate limit, transactional status update, and platform audit event `billing.subscription.status_changed`.
+
+**Verificacao executada:**
+- `bun --cwd packages/platform test` passed: 7 files, 22 tests.
+- `bun --cwd apps/admin vitest run src/app/billing/actions.test.ts` passed: 1 file, 2 tests.
+- `bun run typecheck` passed for the web-filtered workspace graph: 8 tasks successful.
+- `bun --cwd apps/admin typecheck` passed after fixing the stale admin Playwright import from `../web/src/lib/playwright-env` to `../web/src/ops/playwright-env`.
+- `bun run check` passed: 441 files checked, no fixes applied.
+- `bun --cwd apps/admin build` passed.
+- `bun run build` passed for web. It still emitted the existing local Postgres SSL warning for `sslmode=require`; production docs already require `sslmode=verify-full`.
+
+**Decisao de escopo:** This PR intentionally does not invent self-service checkout, provider customer creation, payment periods, or billing portal URLs because the current codebase has only billing domain status, webhook reconciliation, and admin overview. The MVP path is manual activation after payment confirmation, with audit trail.
+
+**Risco residual:** Broad public paid launch still needs a real self-service checkout/portal or an explicit business decision to operate manually. Manual activation depends on operator process and payment evidence outside this code change.
+
+**Rollback:** Remove the admin billing action/form and revert the block-page copy. Existing subscription statuses remain canonical; if any manual activations happened, reverse them with the same admin action to `past_due` and audit the reason.
+
+### PR 29 - Production Evidence Certification Attempt
+
+**Status:** Nao concluida em 2026-07-10. Bloqueada por acesso/confirmacao externa.
+
+**Resultado parcial:** The Vercel plugin can access team `team_qrwuUvtcEwiZeaFbrvTWhYVk` (`Summit Studio's projects`), but `list_projects` returns an empty project list and `apps/web/.vercel/project.json` project `prj_v2Hd8B75Q0ozFsu8h2fjtXQAgy5i` returns `404 Not Found` through the plugin. There is no `apps/admin/.vercel/project.json`, so live admin Vercel Authentication/protection evidence cannot be collected from this session. The Neon plugin can find project `polaris-erp` (`autumn-feather-14038163`), but applying PR 27 migration or running live RLS/PITR checks against real branches requires explicit operator approval.
+
+**Verificacao executada:**
+- Vercel `list_teams` returned team `team_qrwuUvtcEwiZeaFbrvTWhYVk`.
+- Vercel `list_projects` for that team returned `[]`.
+- Vercel `get_project` for `apps/web/.vercel/project.json` project `prj_v2Hd8B75Q0ozFsu8h2fjtXQAgy5i` returned `404 Not Found`.
+- Local file check found `apps/web/.vercel/project.json`, root `.vercel/project.json`, and no `apps/admin/.vercel/project.json`.
+- Neon search for `polaris` found project `polaris-erp` (`autumn-feather-14038163`).
+
+**Decisao de escopo:** No production migration, deployment mutation, or live database check was executed without explicit approval. This PR is an evidence-gathering attempt only.
+
+**Risco residual:** Production readiness remains externally unproven for Vercel Authentication/deployment protection, Neon RLS/migration application, Inngest cloud schedule, restore drill, audit baseline, and provider sandbox.
+
+**Para retomar:** Provide or fix Vercel project access/linking for both `apps/web` and `apps/admin`, then approve the exact Neon migration/smoke steps for project `autumn-feather-14038163`.
+
+### PR 30 - Resolve Serverless Postgres Pool Configuration Review
+
+**Status:** Concluida em 2026-07-10 para codigo, docs/env e verificacoes locais.
+
+**Resultado:** Runtime DB pooling now has a conservative serverless default and explicit override. `@polaris/db` resolves `DATABASE_POOL_MAX` through `packages/db/src/pool-config.ts`, defaults to `3`, and rejects invalid values outside `1..20`; the singleton `pg.Pool` uses that value instead of fixed `max: 10`. Production preflight validates the same rule, `.env.example` documents the variable, and `turbo.json` passes it through task environments.
+
+**Verificacao executada:**
+- `bun --cwd packages/db test` passed: 1 file, 3 tests.
+- `bun --cwd apps/web vitest run src/ops/production-preflight.test.ts src/ops/ci-workflow.test.ts` passed: 2 files, 17 tests.
+- `bun run typecheck` passed: 8 workspace tasks successful.
+- `bun run check` passed: 443 files checked, no fixes applied.
+
+**Decisao de escopo:** This PR does not change pooling providers, Neon branch limits, or E2E worker count. It removes the hard-coded runtime multiplier and gives production a documented knob with validation.
+
+**Risco residual:** Real Vercel/Neon concurrency still needs deploy observation. Production must continue using a pooled Neon `DATABASE_URL`; this PR only controls per-instance pool size.
+
+**Rollback:** Remove `DATABASE_POOL_MAX` handling and restore the previous `pg.Pool` fixed `max`, only if runtime evidence shows the configured default is too restrictive.
+
+### PR 31 - Add Dependency Advisory Baseline Guard
+
+**Status:** Concluida em 2026-07-11 para baseline, CI guard, testes e docs.
+
+**Resultado:** The current `bun audit --json` output is captured in `docs/security/dependency-advisory-baseline.json` with owner, review date, exposure notes, and temporary acceptance decisions. `bun run audit:baseline` now runs `scripts/check-bun-audit-baseline.ts`, accepts only the known 14 advisory URLs, and fails if any new advisory appears. CI runs this gate before lint/typecheck/test/build, and ops tests cover parsing, deterministic flattening, comparison behavior, package script wiring, and workflow wiring.
+
+**Verificacao executada:**
+- `bun run audit:baseline` passed: accepted 14 current advisories.
+- `bun --cwd apps/web vitest run src/ops/audit-baseline.test.ts src/ops/ci-workflow.test.ts` passed: 2 files, 14 tests.
+- `bun run typecheck` passed: 8 tasks successful.
+- `bun run check` passed: 446 files checked, no fixes applied.
+
+**Decisao de escopo:** This PR intentionally does not upgrade or override every transitive dependency because several advisories are pinned behind upstream-compatible releases. The baseline is temporary risk acceptance with a review deadline, not a permanent waiver.
+
+**Risco residual:** `bun audit` itself still exits non-zero for the accepted advisories. Runtime-sensitive items, especially `defu`, `fast-uri`, and `@opentelemetry/core`, must be revisited before broad paid launch or explicitly re-signed by the owner.
+
+**Rollback:** Remove the CI workflow step, root `audit:baseline` script, baseline JSON/MD, and guard script. This restores the previous state where `bun audit` was visible manually but did not prevent new advisories from entering CI.
+
+### PR 32 - Guard Product Stock and Price Audit Against Lost Updates
+
+**Status:** Concluida em 2026-07-11 para produto/estoque/preco, testes e verificacoes locais.
+
+**Resultado:** Product update, stock addition, and stock write-off mutations now require `returning({ id })` from the `products` update before continuing to price history or audit insertion. If the product row is lost between lock and update, the mutation throws `Produto nao encontrado.`, does not write an audit event, and the action does not revalidate cache. Sales cancellation/creation and platform billing were inspected and already had `returning`/transactional audit coverage from prior PRs.
+
+**Verificacao executada:**
+- `bun --cwd apps/web vitest run src/features/products/actions.test.ts -t "stock addition loses"` failed first with `promise resolved "undefined" instead of rejecting`.
+- `bun --cwd apps/web vitest run src/features/products/actions.test.ts` passed: 1 file, 27 tests.
+- `bun --cwd apps/web vitest run src/features/products/actions.test.ts src/features/sales/actions.test.ts` passed: 2 files, 45 tests.
+- `bun --cwd packages/platform test` passed: 7 files, 22 tests.
+- `bun run typecheck` passed: 8 tasks successful.
+- `bun run check` passed: 446 files checked, no fixes applied.
+
+**Decisao de escopo:** This PR only fixes core ERP product row writes. Product image audit remains a separate external-side-effect problem because object storage operations cannot be made atomic with the Postgres transaction by `returning`.
+
+**Risco residual:** Real rollback semantics still need live Neon/E2E evidence after migrations are applied. Future domain actions can still reintroduce best-effort audit if they call `recordAuditEvent` outside a transaction for core ERP writes.
+
+**Rollback:** Revert the `returning({ id })` checks in `apps/web/src/features/products/server.ts` and remove the three lost-update regression tests. This restores previous behavior but reopens false audit/revalidation risk when a product update touches zero rows.
 
 ---
 
@@ -195,7 +331,7 @@
 
 **Decisao de escopo:** No real dispatcher was registered in this PR because every currently enqueued production webhook topic already performs its side effect synchronously (`reconcileAsaasBillingEvent`, `reconcileWooviBillingEvent`, `recordResendEmailEvent`). Registering dispatchers now would duplicate side effects.
 
-**Risco residual:** `event_outbox` rows for capture-only topics remain pending for operational visibility until a future PR either adds a completed/audit-only status model or moves these side effects fully into durable dispatchers.
+**Risco residual:** Superseded by PR 27. Capture-only topics now use explicit `observed` records locally; production still needs the PR 27 migration applied on Neon.
 
 **Objetivo:** Convert outbox from partially wired durable mechanism into a safe production mechanism.
 
@@ -371,7 +507,9 @@
 
 **Status:** Concluida em 2026-07-10 para codigo, migracao e testes locais.
 
-**Resultado:** Added the initial active production billing plan seed migration (`polaris-start-monthly`), made onboarding create billing customer/subscription records, and made operational app access require billable subscription status (`trialing`, `active`, or `past_due`). New tenants created through the normal onboarding path start with `incomplete` billing and are redirected to `/billing-required` until activation; isolated local Playwright bootstrap can create an active subscription only when `DATABASE_URL === E2E_DATABASE_URL`, `ALLOW_PLAYWRIGHT_BOOTSTRAP=true`, and the request is loopback. The app shell now forces dynamic session/billing evaluation before rendering protected pages.
+**Resultado:** Added the initial active production billing plan seed migration (`polaris-start-monthly`), made onboarding create billing customer/subscription records, and made operational app access require billable subscription status. New tenants created through the normal onboarding path start with `incomplete` billing and are redirected to `/billing-required` until activation; isolated local Playwright bootstrap can create an active subscription only when `DATABASE_URL === E2E_DATABASE_URL`, `ALLOW_PLAYWRIGHT_BOOTSTRAP=true`, and the request is loopback. The app shell now forces dynamic session/billing evaluation before rendering protected pages.
+
+**Nota supersedida por PR 26:** The original PR 06 allowed `trialing`, `active`, or `past_due`; PR 26 tightened this to `active` only.
 
 **Verificacao executada:**
 - `bun --cwd apps/web vitest run src/lib/feature-boundary.test.ts src/app/api/auth/dev/bootstrap-session/route.test.ts` passed: 2 files, 15 tests.
@@ -390,7 +528,7 @@
 **Escopo exato:**
 - Define initial production plan(s).
 - During onboarding/first-login flow, create or require a billing customer/subscription state.
-- Block app access when organization has no active/trialing subscription.
+- Block app access when organization has no active subscription.
 - Add user-facing billing state page or checkout handoff.
 - Keep platform admin able to inspect and manage billing.
 
@@ -414,7 +552,7 @@
 
 **Testes necessários:**
 - New user without subscription cannot enter operational app.
-- Active/trialing subscription allows access.
+- Active subscription allows access.
 - Past due/canceled blocks or shows configured restricted state.
 - Platform admin can view subscription/invoice records.
 
@@ -1408,4 +1546,4 @@
 
 Reason: it is the safest, smallest, and most urgent blocker. It reduces known security exposure before touching auth, billing, RLS, cron, or monorepo structure. After PR 01 passes, implement PR 02 and PR 03 before broader architecture changes.
 
-Next implementation target: none. PR 01 through PR 25 are marked complete in this plan.
+Next implementation target: transactional audit expansion for sales/stock/price/billing while external production access remains unresolved. PR 01 through PR 28, PR 30, and PR 31 are marked complete; PR 29 remains not completed because Vercel project access/linking and explicit Neon live-smoke approval are still missing.

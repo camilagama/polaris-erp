@@ -138,6 +138,7 @@ describe("POST /api/webhooks/asaas", () => {
       expect.anything(),
       expect.objectContaining({
         idempotencyKey: "asaas-webhook:evt_123",
+        status: "observed",
         topic: "asaas.webhook",
       })
     );

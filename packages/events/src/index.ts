@@ -31,6 +31,7 @@ export interface EnqueueOutboxEventInput {
   eventType: string;
   idempotencyKey: string;
   payload: Record<string, unknown>;
+  status?: "pending" | "observed";
   topic: string;
 }
 
@@ -129,6 +130,8 @@ export const enqueueOutboxEvent = async (
   db: QueryableDb,
   input: EnqueueOutboxEventInput
 ): Promise<string> => {
+  const status = input.status ?? "pending";
+
   const rows = toRows(
     await db.execute(sql`
       insert into event_outbox (
@@ -138,7 +141,8 @@ export const enqueueOutboxEvent = async (
         idempotency_key,
         payload,
         status,
-        available_at
+        available_at,
+        processed_at
       )
       values (
         ${input.topic},
@@ -146,11 +150,29 @@ export const enqueueOutboxEvent = async (
         ${input.correlationId},
         ${input.idempotencyKey},
         ${JSON.stringify(input.payload)}::jsonb,
-        'pending',
-        now()
+        ${status},
+        now(),
+        case when ${status} = 'observed' then now() else null end
       )
       on conflict (idempotency_key) do update
-      set idempotency_key = excluded.idempotency_key
+      set status = case
+            when event_outbox.status = 'pending'
+              and excluded.status = 'observed'
+              then 'observed'
+            else event_outbox.status
+          end,
+          processed_at = case
+            when event_outbox.status = 'pending'
+              and excluded.status = 'observed'
+              then coalesce(event_outbox.processed_at, now())
+            else event_outbox.processed_at
+          end,
+          updated_at = case
+            when event_outbox.status = 'pending'
+              and excluded.status = 'observed'
+              then now()
+            else event_outbox.updated_at
+          end
       returning id
     `)
   );
@@ -279,6 +301,22 @@ export const markOutboxEventProcessed = async (
     set status = 'processed',
         processed_at = now(),
         last_error = null,
+        updated_at = now()
+    where id = ${eventId}
+      and status = 'processing'
+  `);
+};
+
+export const markOutboxEventObserved = async (
+  db: QueryableDb,
+  eventId: string,
+  reason: string | null = null
+): Promise<void> => {
+  await db.execute(sql`
+    update event_outbox
+    set status = 'observed',
+        processed_at = now(),
+        last_error = ${reason},
         updated_at = now()
     where id = ${eventId}
       and status = 'processing'

@@ -144,6 +144,7 @@ describe("POST /api/webhooks/resend", () => {
       expect.anything(),
       expect.objectContaining({
         idempotencyKey: "resend-webhook:msg_123",
+        status: "observed",
         topic: "resend.webhook",
       })
     );

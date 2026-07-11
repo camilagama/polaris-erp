@@ -152,6 +152,7 @@ describe("POST /api/webhooks/woovi", () => {
       expect.anything(),
       expect.objectContaining({
         idempotencyKey: "woovi-webhook:evt_123",
+        status: "observed",
         topic: "woovi.webhook",
       })
     );

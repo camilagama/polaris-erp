@@ -168,6 +168,7 @@ export const handleWooviWebhook = async (request: Request) => {
     eventType: getString(payload, "event") ?? "unknown",
     idempotencyKey: `woovi-webhook:${eventId}`,
     payload: redactedPayload,
+    status: "observed",
     topic: "woovi.webhook",
   });
 

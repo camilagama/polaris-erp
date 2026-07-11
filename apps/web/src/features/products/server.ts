@@ -282,7 +282,7 @@ export const updateProductWithPriceHistory = async ({
       throw new Error("Produto nao encontrado.");
     }
 
-    await tx
+    const updatedProductRows = await tx
       .update(products)
       .set({
         categoryId,
@@ -296,7 +296,12 @@ export const updateProductWithPriceHistory = async ({
           eq(products.id, productId),
           eq(products.organizationId, organizationId)
         )
-      );
+      )
+      .returning({ id: products.id });
+
+    if (updatedProductRows.length === 0) {
+      throw new Error("Produto nao encontrado.");
+    }
 
     if (product.price !== price) {
       await tx.insert(productPriceChanges).values({
@@ -355,7 +360,7 @@ export const addProductStock = async ({
       unitCost: toCurrencyString(unitCost),
     });
 
-    await tx
+    const updatedProductRows = await tx
       .update(products)
       .set({
         archivedAt: null,
@@ -368,7 +373,12 @@ export const addProductStock = async ({
           eq(products.id, productId),
           eq(products.organizationId, organizationId)
         )
-      );
+      )
+      .returning({ id: products.id });
+
+    if (updatedProductRows.length === 0) {
+      throw new Error("Produto nao encontrado.");
+    }
 
     await tx.insert(auditEvents).values({
       actorUserId,
@@ -420,7 +430,7 @@ export const writeOffProductStock = async ({
       unitCostSnapshot: product.costPrice,
     });
 
-    await tx
+    const updatedProductRows = await tx
       .update(products)
       .set({ stock: nextStock, updatedAt: new Date() })
       .where(
@@ -428,7 +438,12 @@ export const writeOffProductStock = async ({
           eq(products.id, productId),
           eq(products.organizationId, organizationId)
         )
-      );
+      )
+      .returning({ id: products.id });
+
+    if (updatedProductRows.length === 0) {
+      throw new Error("Produto nao encontrado.");
+    }
 
     await tx.insert(auditEvents).values({
       actorUserId,

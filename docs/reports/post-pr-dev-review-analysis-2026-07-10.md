@@ -8,35 +8,35 @@ Do not treat local tests as proof for platform state. Vercel Authentication, Neo
 
 ## Item-by-item analysis
 
-### 1. Paid flow is not self-service
+### 1. Paid flow now has controlled manual activation
 
-Status: confirmed gap.
+Status: controlled-pilot path resolved locally by PR 28 on 2026-07-10. Public self-service checkout remains unimplemented.
 
 Evidence:
-- `apps/web/src/app/billing-required/page.tsx` shows a manual mailto activation handoff.
-- The page copy says checkout self-service comes in a later billing cut.
+- `apps/web/src/app/billing-required/page.tsx` now states subscription is required from first access and activation is manual after payment confirmation.
+- `apps/admin/src/app/billing/actions.ts` adds an operator-only, rate-limited status action for `active`/`past_due`.
+- `packages/platform/src/platform-billing.ts` updates billing subscription status transactionally and records `billing.subscription.status_changed` audit events.
 - Webhooks/reconciliation exist, but no customer-facing checkout creation flow exists from `/billing-required`.
 
-Impact: P0 before public paid launch. A new user can be blocked by billing without a way to pay inside the product.
+Impact: P0 reduced for controlled pilot. A new user remains blocked by billing until an operator activates the subscription after payment confirmation. Broad public paid launch still needs self-service checkout or an explicit decision to remain manual.
 
-Recommended PR: build a self-service billing activation flow from `/billing-required` for at least one provider/payment method, then add the second provider/method if required.
+Recommended PR: build a self-service billing activation flow from `/billing-required` before broad public launch, or keep the product explicitly in controlled manual activation mode with operator SLA and payment evidence process.
 
 ### 2. Subscription status policy contradicts day-one paid launch
 
-Status: confirmed gap.
+Status: resolved locally by PR 26 on 2026-07-10.
 
 Evidence:
-- `packages/billing/src/index.ts` grants access for `trialing`, `active`, and `past_due`.
-- `packages/billing/src/billing-domain.test.ts` expects `past_due` to be allowed.
-- The production plan says billing is required from day one and the PR acceptance text says past-due should block or show a configured restricted state.
+- `packages/billing/src/index.ts` now grants access only for `active`.
+- `packages/billing/src/billing-domain.test.ts` now proves `trialing`, `past_due`, `paused`, `canceled`, and `incomplete` do not grant access.
+- `apps/web/src/lib/app-session.test.ts` now proves `trialing` and `past_due` return active organization context but no billable ERP access.
+- `packages/platform/src/platform-billing.ts` now counts only `active` subscriptions as active-access subscriptions.
 
-Impact: P0/P1. `past_due` is currently unlimited access. `trialing` is enabled even though there is no explicit product decision for trial.
+Impact: immediate unlimited `past_due` access removed. Future trial/grace support must be explicit and time-aware.
 
-Recommended PR:
-- Decide policy: no trial unless intentionally launched.
-- Add `grace_period_ends_at` or equivalent if `past_due` gets temporary access.
-- Make entitlement evaluation time-aware.
-- Update platform billing counts and tests to match the policy.
+Follow-up:
+- Add `grace_period_ends_at` or equivalent only if `past_due` gets temporary access in a future product decision.
+- Keep launch policy as no trial unless intentionally launched.
 
 ### 3. Billing RLS is not proven on real Neon promoted branch
 
@@ -56,21 +56,20 @@ Required evidence:
 - Cross-tenant billing read/write probes fail for normal app role.
 - Platform/admin billing access works only via approved context.
 
-### 4. Outbox capture-only semantics are still problematic
+### 4. Outbox capture-only semantics are now explicit
 
-Status: confirmed code gap.
+Status: resolved locally by PR 27 on 2026-07-10. Live migration application remains pending.
 
 Evidence:
-- `packages/events/src/index.ts` inserts all outbox rows as `status = 'pending'`.
-- `apps/web/src/lib/inngest-functions.ts` classifies webhook topics as capture-only, but when claimed without dispatcher it calls `markOutboxEventFailed`, which returns status to `pending` unless attempts reach max.
-- `packages/db/src/schema.ts` allows only `pending`, `processing`, `processed`, `failed`, `dead_letter`.
+- `packages/events/src/index.ts` now supports explicit `status: "observed"` enqueue and `markOutboxEventObserved`.
+- `apps/web/src/integrations/{asaas,woovi,resend}/webhook.ts` enqueue capture-only webhook records as `observed`.
+- `apps/web/src/lib/inngest-functions.ts` marks any claimed legacy capture-only row as `observed` instead of retryable failure.
+- `packages/db/src/schema.ts` and migration `20260710233000_event_outbox_observed_status.sql` allow `observed` and migrate old pending capture-only rows.
 
-Impact: P1. Capture-only rows can look retryable/unfinished and pollute admin operations.
+Impact: P1 closed locally. Admin outbox views can distinguish non-dispatched observation records from retryable work after the migration is applied.
 
-Recommended PR:
-- Add an explicit terminal non-dispatch status, preferably `observed`.
-- Make capture-only enqueue or processor mark rows as `observed` with `processed_at`.
-- Keep retry available only for `failed`/`dead_letter` dispatchable events.
+Recommended follow-up:
+- Apply the migration on the approved Neon branch and confirm existing capture-only rows no longer appear as `pending`.
 
 ### 5. Inngest schedule is not proven in deploy
 
@@ -127,55 +126,60 @@ Required evidence:
 - App login and critical flows run against restored branch.
 - RTO/RPO recorded.
 
-### 8. Transactional audit is incomplete across critical domains
+### 8. Transactional audit coverage is improved for product stock/price
 
-Status: partially confirmed gap.
+Status: partially mitigated; PR 32 closed the product stock/price write-loss gap locally.
 
 Evidence:
 - Platform admin mutations and catalog/settings have transactional audit patterns.
 - Product images audit exists via `recordAuditEvent`, but not all product/sales/stock/billing mutations are proven transactional with the business write.
 - Plan PR12 notes broader domains retained older behavior.
+- PR 32 changed product update, stock addition, and stock write-off persistence to require `returning({ id })` before price-history/audit writes continue.
+- PR 32 tests prove lost product updates reject before audit/revalidation for stock addition, stock write-off, and price update.
+- Existing sales and platform billing tests cover lost stock/status updates and transactional platform audit behavior.
+- PR 33 added `bun run audit:boundaries`, an AST-based guard that fails CI if core ERP write actions call best-effort `recordAuditEvent` instead of delegating audit to the domain transaction.
 
-Impact: P1 for ERP trust. Sales cancellation, stock movements, price changes, and billing status changes are higher priority than settings audit.
+Impact: P1 reduced. Product stock movements and price changes now have stronger local proof against false audit success. Remaining audit work should focus on any domains still using best-effort `recordAuditEvent` after external side effects, and on live DB transaction evidence after migration/deploy.
 
-Recommended PRs:
-- Make sale creation/cancellation audit transactional with stock changes.
-- Make stock entry/write-off audit transactional.
-- Make price change audit transactional.
-- Make billing suspension/reactivation/status changes audit transactional.
+Recommended follow-up:
+- Keep product image audit as a separate external-side-effect review because object storage delete/upload cannot be rolled back by Postgres.
+- Expand `audit:boundaries` if new core ERP write action files are added.
+- Re-run representative E2E flows against a real Neon branch after migrations are applied.
 
-### 9. `bun audit` remains red
+### 9. `bun audit` remains red, now guarded by baseline
 
-Status: confirmed.
+Status: locally mitigated in PR 31; not fully eliminated.
 
 Evidence:
 - `bun audit` exits non-zero with 14 vulnerabilities: 6 high, 6 moderate, 2 low.
 - Advisories include `defu`, `vite`, `fast-uri`, `postcss`, `@opentelemetry/core`, `esbuild`, `@babel/core`, and `brace-expansion`.
+- `docs/security/dependency-advisory-baseline.json` records the accepted advisories with owner, exposure notes, and review date.
+- `bun run audit:baseline` accepts the current 14 advisories and fails on new advisory URLs beyond the baseline.
+- `.github/workflows/ci.yml` runs the baseline guard before lint/typecheck/test/build.
 
-Impact: P1. Not every advisory is runtime exploitable, but "out of scope" cannot be final launch posture.
+Impact: P1 reduced. Not every advisory is runtime exploitable, but the baseline is only temporary risk acceptance, not a final public-launch posture.
 
-Recommended PR:
-- Add dependency advisory baseline/risk acceptance document with owner and review date.
-- Classify each advisory as runtime/dev-only, direct/transitive, exploitable/non-exploitable in this repo.
-- Add CI guard that fails on new advisories beyond baseline.
+Recommended follow-up:
+- Revisit runtime-sensitive accepted advisories first: `defu`, `fast-uri`, `@opentelemetry/core`.
+- Remove resolved advisories from the baseline during the 2026-08-10 review.
 - Upgrade where a compatible fix exists.
 
-### 10. E2E database connection pressure needs investigation
+### 10. E2E database connection pressure now has configurable pool cap
 
-Status: confirmed signal, not necessarily blocker.
+Status: resolved locally by PR 30 on 2026-07-10 for runtime configurability. Deploy behavior still needs observation under real traffic.
 
 Evidence:
 - Prior E2E needed one worker after connection pressure.
-- `packages/db/src/index.ts` uses a singleton `pg.Pool`, which is good, but `max: 10` may be high for serverless multiplied by instances/workers.
+- `packages/db/src/index.ts` uses a singleton `pg.Pool`, which is good.
+- `packages/db/src/pool-config.ts` now defaults `DATABASE_POOL_MAX` to `3` and validates explicit values from `1` to `20`.
+- `apps/web/src/ops/production-preflight.ts`, `.env.example`, and `turbo.json` now document/pass `DATABASE_POOL_MAX`.
 - Runtime docs require pooled Neon URL; this still needs deploy evidence.
 
-Impact: P1/P2. Not a launch blocker by itself, but should be understood before traffic.
+Impact: P1/P2 reduced. The previous fixed `max: 10` multiplier risk is removed; real concurrency still needs deploy/runtime observation.
 
-Recommended PR:
-- Make pool max configurable with a conservative default for serverless.
-- Document pooled Neon URL requirement in preflight.
-- Add a lightweight pool config test.
-- Revisit E2E concurrency after DB branch/provider limits are known.
+Recommended follow-up:
+- Revisit E2E/runtime concurrency after DB branch/provider limits are known.
+- Confirm production uses pooled Neon `DATABASE_URL` with appropriate `DATABASE_POOL_MAX`.
 
 ### 11. Indexes need real query-plan validation
 
@@ -194,22 +198,20 @@ Required evidence:
 
 ## Recommended next PR order
 
-1. P0 - Self-service billing activation or explicit controlled-pilot mode.
-2. P0/P1 - Subscription entitlement policy: remove unlimited `past_due`, decide `trialing`, add grace-period model if needed.
-3. P1 - Outbox `observed` status for capture-only records.
+1. Done locally in PR 28 - Explicit controlled-pilot/manual billing activation mode.
+2. Done locally in PR 26 - Subscription entitlement policy: only `active` grants ERP access; no trial/grace by default.
+3. Done locally in PR 27 - Outbox `observed` status for capture-only records.
 4. P1 - Production Certification runbook/evidence checklist for Vercel Auth, Neon RLS 18/18, Inngest schedule, restore drill, R2/Upstash/Sentry, provider sandbox.
-5. P1 - Audit advisory baseline and CI guard.
-6. P1 - Transactional audit for sales/stock/price/billing.
-7. P1/P2 - DB pool config and E2E concurrency investigation.
+5. Done locally in PR 31 - Audit advisory baseline and CI guard.
+6. Done locally in PR 32 for product stock/price write-loss guard; continue watching external-side-effect audit flows.
+7. Done locally in PR 30 - DB pool max configurable with conservative serverless default.
 8. P1/P2 - Real query-plan validation on representative data.
 
 ## No-go criteria for public paid launch
 
-- No self-service checkout/activation or no documented controlled-pilot exception.
-- No explicit subscription access policy for `trialing` and `past_due`.
+- No self-service checkout/activation outside a documented controlled-pilot/manual activation exception.
 - No live Neon RLS proof with billing tables included.
 - No admin Vercel Authentication proof.
 - No Inngest schedule proof.
 - No restore drill evidence.
-- `bun audit` without baseline/risk acceptance.
-
+- New `bun audit` advisories beyond the accepted baseline, or expired baseline without owner re-review.

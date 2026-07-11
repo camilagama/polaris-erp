@@ -2,6 +2,7 @@ import { db } from "@polaris/db";
 import {
   claimOutboxEvent,
   markOutboxEventFailed,
+  markOutboxEventObserved,
   markOutboxEventProcessed,
   type QueryableDb,
 } from "@polaris/events";
@@ -38,7 +39,7 @@ export const registerOutboxDispatcher = ({
 export const processOutboxEvent = async (
   database: QueryableDb,
   outboxEventId: string
-): Promise<"failed" | "processed" | "skipped"> => {
+): Promise<"failed" | "observed" | "processed" | "skipped"> => {
   const event = await claimOutboxEvent(database, outboxEventId);
 
   if (!event) {
@@ -50,9 +51,17 @@ export const processOutboxEvent = async (
   );
 
   if (!dispatcher) {
-    const error = captureOnlyOutboxTopics.has(event.topic)
-      ? `Outbox topic ${event.topic} is capture-only and is not dispatched.`
-      : `No outbox dispatcher registered for ${event.topic}:${event.eventType}.`;
+    if (captureOnlyOutboxTopics.has(event.topic)) {
+      await markOutboxEventObserved(
+        database,
+        event.id,
+        `Outbox topic ${event.topic} is capture-only and is not dispatched.`
+      );
+
+      return "observed";
+    }
+
+    const error = `No outbox dispatcher registered for ${event.topic}:${event.eventType}.`;
 
     await markOutboxEventFailed({
       db: database,

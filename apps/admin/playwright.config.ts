@@ -1,6 +1,6 @@
 import { loadEnvConfig } from "@next/env";
 import { defineConfig } from "@playwright/test";
-import { validateE2eDatabaseEnv } from "../web/src/lib/playwright-env";
+import { validateE2eDatabaseEnv } from "../web/src/ops/playwright-env";
 import { E2E_DEFAULT_INTERNAL_BOOTSTRAP_SECRET } from "../web/tests/e2e/constants";
 
 loadEnvConfig("../..");

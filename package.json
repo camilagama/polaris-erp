@@ -33,6 +33,8 @@
     "db:generate": "turbo run db:generate --filter=@polaris/db",
     "db:migrate": "turbo run db:migrate --filter=@polaris/db",
     "db:push": "turbo run db:push --filter=@polaris/db",
+    "audit:baseline": "bun scripts/check-bun-audit-baseline.ts",
+    "audit:boundaries": "bun scripts/check-core-audit-boundaries.ts",
     "prod:preflight": "turbo run prod:preflight --filter=@polaris/web",
     "deploy:smoke": "turbo run deploy:smoke --filter=@polaris/web",
     "deploy:smoke:admin": "turbo run deploy:smoke --filter=@polaris/admin",

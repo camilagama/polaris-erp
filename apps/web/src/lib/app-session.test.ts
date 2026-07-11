@@ -370,6 +370,31 @@ describe("getAppContext", () => {
     });
   });
 
+  it.each([
+    "trialing",
+    "past_due",
+  ] as const)("returns active organization context without billable access for %s subscriptions", async (billingStatus) => {
+    mockSession({ activeOrganizationId: "org-active" });
+    selectAppContextMembershipOnce({
+      organizationId: "org-active",
+      organizationName: "DG Imports",
+      organizationStatus: "active",
+      role: "owner",
+    });
+    selectBillingStatusOnce(billingStatus);
+
+    const context = await getAppContext();
+
+    expect(context).toEqual({
+      billingStatus,
+      hasBillableAccess: false,
+      organizationId: "org-active",
+      organizationName: "DG Imports",
+      role: "owner",
+      userId: "user-1",
+    });
+  });
+
   it("blocks operational app actions without a billable subscription", async () => {
     mockSession({ activeOrganizationId: "org-active" });
     selectAppContextMembershipOnce({

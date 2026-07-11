@@ -7,6 +7,7 @@ const {
   claimOutboxEventMock,
   createFunctionMock,
   markFailedMock,
+  markObservedMock,
   markProcessedMock,
 } = vi.hoisted(() => ({
   claimOutboxEventMock: vi.fn(),
@@ -16,12 +17,14 @@ const {
     trigger: options.triggers ?? triggerOrHandler,
   })),
   markFailedMock: vi.fn(),
+  markObservedMock: vi.fn(),
   markProcessedMock: vi.fn(),
 }));
 
 vi.mock("@polaris/events", () => ({
   claimOutboxEvent: claimOutboxEventMock,
   markOutboxEventFailed: markFailedMock,
+  markOutboxEventObserved: markObservedMock,
   markOutboxEventProcessed: markProcessedMock,
 }));
 
@@ -37,6 +40,7 @@ describe("inngest outbox functions", () => {
     claimOutboxEventMock.mockReset();
     createFunctionMock.mockClear();
     markFailedMock.mockReset();
+    markObservedMock.mockReset();
     markProcessedMock.mockReset();
     vi.resetModules();
   });
@@ -50,6 +54,7 @@ describe("inngest outbox functions", () => {
       processOutboxEvent({ execute: vi.fn() }, "event-1")
     ).resolves.toBe("skipped");
     expect(markFailedMock).not.toHaveBeenCalled();
+    expect(markObservedMock).not.toHaveBeenCalled();
     expect(markProcessedMock).not.toHaveBeenCalled();
   });
 
@@ -85,6 +90,29 @@ describe("inngest outbox functions", () => {
       "resend.webhook",
       "woovi.webhook",
     ]);
+  });
+
+  it("marks legacy capture-only events as observed without retrying", async () => {
+    claimOutboxEventMock.mockResolvedValueOnce({
+      attempts: 1,
+      correlationId: "corr-1",
+      eventType: "PAYMENT_RECEIVED",
+      id: "event-1",
+      payload: {},
+      topic: "asaas.webhook",
+    });
+
+    const { processOutboxEvent } = await import("@/lib/inngest-functions");
+
+    await expect(
+      processOutboxEvent({ execute: vi.fn() }, "event-1")
+    ).resolves.toBe("observed");
+    expect(markObservedMock).toHaveBeenCalledWith(
+      { execute: expect.any(Function) },
+      "event-1",
+      "Outbox topic asaas.webhook is capture-only and is not dispatched."
+    );
+    expect(markFailedMock).not.toHaveBeenCalled();
   });
 
   it("registers the outbox processor as an Inngest function", async () => {

@@ -40,11 +40,7 @@ const isBillingSubscriptionStatus = (
 ): value is BillingSubscriptionStatus =>
   BILLING_SUBSCRIPTION_STATUSES.some((status) => status === value);
 
-const ACTIVE_ACCESS_STATUSES = new Set<BillingSubscriptionStatus>([
-  "trialing",
-  "active",
-  "past_due",
-]);
+const ACTIVE_ACCESS_STATUSES = new Set<BillingSubscriptionStatus>(["active"]);
 
 export const hasBillableAccess = (status: BillingSubscriptionStatus): boolean =>
   ACTIVE_ACCESS_STATUSES.has(status);

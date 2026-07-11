@@ -7,11 +7,12 @@ import { describe, expect, it } from "vitest";
 
 describe("@polaris/billing", () => {
   it("evaluates canonical subscription access without provider fields", () => {
-    expect(hasBillableAccess("trialing")).toBe(true);
+    expect(hasBillableAccess("trialing")).toBe(false);
     expect(hasBillableAccess("active")).toBe(true);
-    expect(hasBillableAccess("past_due")).toBe(true);
+    expect(hasBillableAccess("past_due")).toBe(false);
     expect(hasBillableAccess("paused")).toBe(false);
     expect(hasBillableAccess("canceled")).toBe(false);
+    expect(hasBillableAccess("incomplete")).toBe(false);
   });
 
   it("normalizes unknown statuses to an explicit incomplete state", () => {

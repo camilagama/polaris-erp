@@ -1,4 +1,7 @@
-import { getPlatformBillingOverview } from "@polaris/platform/billing";
+import {
+  getPlatformBillingOverview,
+  updatePlatformBillingSubscriptionStatus,
+} from "@polaris/platform/billing";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
@@ -15,6 +18,22 @@ const createDb = (results: unknown[]) => {
   const execute = vi.fn(async () => results.shift());
 
   return { execute };
+};
+
+const createTxMock = () => {
+  const returning = vi.fn().mockResolvedValue([
+    {
+      id: "subscription-1",
+      organizationId: "org-1",
+    },
+  ]);
+  const where = vi.fn(() => ({ returning }));
+  const set = vi.fn(() => ({ where }));
+  const update = vi.fn(() => ({ set }));
+  const values = vi.fn();
+  const insert = vi.fn(() => ({ values }));
+
+  return { insert, returning, set, update, values, where };
 };
 
 describe("platform billing overview", () => {
@@ -51,6 +70,7 @@ describe("platform billing overview", () => {
             organization_name: "Importadora Azul",
             plan_name: "Pro",
             status: "ACTIVE",
+            subscription_id: "subscription-1",
           },
           {
             current_period_end: null,
@@ -58,6 +78,7 @@ describe("platform billing overview", () => {
             organization_name: "Importadora Cinza",
             plan_name: "Starter",
             status: "provider_weird",
+            subscription_id: "subscription-2",
           },
         ],
       },
@@ -95,11 +116,13 @@ describe("platform billing overview", () => {
           hasAccess: true,
           organizationId: "org_1",
           status: "active",
+          subscriptionId: "subscription-1",
         },
         {
           hasAccess: false,
           organizationId: "org_2",
           status: "incomplete",
+          subscriptionId: "subscription-2",
         },
       ],
       totals: {
@@ -109,5 +132,89 @@ describe("platform billing overview", () => {
       },
     });
     expect(db.execute).toHaveBeenCalledTimes(3);
+  });
+
+  it("requires a non-empty reason before changing subscription status", async () => {
+    const tx = createTxMock();
+    const db = {
+      transaction: vi.fn(async (callback) => callback(tx)),
+    };
+
+    await expect(
+      updatePlatformBillingSubscriptionStatus(
+        {
+          actorPlatformAdminId: "platform-admin-1",
+          actorUserId: "user-1",
+          reason: " ",
+          status: "active",
+          subscriptionId: "subscription-1",
+        },
+        db as never
+      )
+    ).rejects.toThrow("requires a reason");
+
+    expect(db.transaction).not.toHaveBeenCalled();
+  });
+
+  it("updates subscription status and writes platform audit in one transaction", async () => {
+    const tx = createTxMock();
+    const db = {
+      transaction: vi.fn(async (callback) => callback(tx)),
+    };
+
+    await updatePlatformBillingSubscriptionStatus(
+      {
+        actorPlatformAdminId: "platform-admin-1",
+        actorUserId: "user-1",
+        reason: "payment confirmed manually",
+        status: "active",
+        subscriptionId: "subscription-1",
+      },
+      db as never
+    );
+
+    expect(db.transaction).toHaveBeenCalledOnce();
+    expect(tx.set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "active",
+      })
+    );
+    expect(tx.values).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "billing.subscription.status_changed",
+        actorPlatformAdminId: "platform-admin-1",
+        actorUserId: "user-1",
+        metadata: {
+          reason: "payment confirmed manually",
+          status: "active",
+        },
+        subjectId: "subscription-1",
+        subjectType: "billing_subscription",
+      })
+    );
+  });
+
+  it("rejects missing subscriptions without writing audit", async () => {
+    const tx = createTxMock();
+    tx.returning.mockResolvedValueOnce([]);
+    const db = {
+      transaction: vi.fn(async (callback) => callback(tx)),
+    };
+
+    await expect(
+      updatePlatformBillingSubscriptionStatus(
+        {
+          actorPlatformAdminId: "platform-admin-1",
+          actorUserId: "user-1",
+          reason: "payment reversed",
+          status: "past_due",
+          subscriptionId: "subscription-missing",
+        },
+        db as never
+      )
+    ).rejects.toThrow("Billing subscription not found for status change.");
+
+    expect(db.transaction).toHaveBeenCalledOnce();
+    expect(tx.values).not.toHaveBeenCalled();
   });
 });
