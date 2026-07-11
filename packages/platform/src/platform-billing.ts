@@ -44,6 +44,7 @@ type MutationReturningRow = Record<string, unknown>;
 export interface UpdatePlatformBillingSubscriptionStatusInput {
   actorPlatformAdminId: string;
   actorUserId: string;
+  paymentEvidenceReference?: string;
   reason: string;
   status: ManualPlatformBillingStatus;
   subscriptionId: string;
@@ -233,6 +234,7 @@ export const updatePlatformBillingSubscriptionStatus = async (
   mutationDb: PlatformBillingMutationDb = getDefaultMutationDb()
 ): Promise<void> => {
   const reason = input.reason.trim();
+  const paymentEvidenceReference = input.paymentEvidenceReference?.trim();
 
   if (reason.length === 0) {
     throw new Error("Billing subscription status change requires a reason.");
@@ -240,6 +242,12 @@ export const updatePlatformBillingSubscriptionStatus = async (
 
   if (!isManualPlatformBillingStatus(input.status)) {
     throw new Error("Unsupported billing subscription status.");
+  }
+
+  if (input.status === "active" && !paymentEvidenceReference) {
+    throw new Error(
+      "Manual billing activation requires payment evidence reference."
+    );
   }
 
   await mutationDb.transaction(async (tx) => {
@@ -266,6 +274,7 @@ export const updatePlatformBillingSubscriptionStatus = async (
       actorPlatformAdminId: input.actorPlatformAdminId,
       actorUserId: input.actorUserId,
       metadata: {
+        ...(paymentEvidenceReference ? { paymentEvidenceReference } : {}),
         reason,
         status: input.status,
       },

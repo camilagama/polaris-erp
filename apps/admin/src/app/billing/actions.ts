@@ -41,6 +41,11 @@ export async function changeBillingSubscriptionStatusAction(
     );
   }
 
+  const paymentEvidenceReference =
+    status === "active"
+      ? getRequiredFormValue(formData, "paymentEvidenceReference")
+      : undefined;
+
   await assertAdminRateLimit({
     action: "billing.subscription.status.change",
     actorUserId: context.userId,
@@ -50,6 +55,7 @@ export async function changeBillingSubscriptionStatusAction(
   await updatePlatformBillingSubscriptionStatus({
     actorPlatformAdminId: context.platformAdminId,
     actorUserId: context.userId,
+    paymentEvidenceReference,
     reason,
     status,
     subscriptionId,

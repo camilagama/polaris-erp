@@ -11,6 +11,7 @@ import {
 import { getDashboardDateBounds } from "@/features/dashboard/server";
 import { getGoalsSettingsData } from "@/features/goals/server";
 import { requireAppContext } from "@/lib/app-session";
+import { serverEnv } from "@/lib/env";
 import { requireSession } from "@/lib/session";
 
 export const metadata: Metadata = {
@@ -48,6 +49,7 @@ export default async function ConfiguracoesPage() {
       <div className="grid gap-4 lg:grid-cols-2">
         <AccountSettingsPanel
           billing={accountBilling}
+          supportEmail={serverEnv.SUPPORT_EMAIL}
           user={{
             email: session.user.email,
             name: session.user.name,

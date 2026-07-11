@@ -36,6 +36,8 @@ const BASELINE_PATH = join(
   "dependency-advisory-baseline.json"
 );
 
+const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
 export const parseAuditJsonFromOutput = (output: string): BunAuditJson => {
   const jsonStart = output.indexOf("{");
 
@@ -79,6 +81,31 @@ export const compareAuditToBaseline = (
   };
 };
 
+export const assertBaselineReviewCurrent = (
+  baseline: AdvisoryBaseline,
+  now = new Date()
+): void => {
+  if (!ISO_DATE_PATTERN.test(baseline.reviewBy)) {
+    throw new Error(
+      "Dependency advisory baseline reviewBy must be an ISO date."
+    );
+  }
+
+  const reviewDeadline = new Date(`${baseline.reviewBy}T23:59:59.999Z`);
+
+  if (Number.isNaN(reviewDeadline.getTime())) {
+    throw new Error(
+      "Dependency advisory baseline reviewBy must be an ISO date."
+    );
+  }
+
+  if (now.getTime() > reviewDeadline.getTime()) {
+    throw new Error(
+      `Dependency advisory baseline review expired on ${baseline.reviewBy}.`
+    );
+  }
+};
+
 const loadBaseline = (): AdvisoryBaseline =>
   JSON.parse(readFileSync(BASELINE_PATH, "utf8")) as AdvisoryBaseline;
 
@@ -93,6 +120,7 @@ const runBunAuditJson = (): string => {
 
 const main = (): void => {
   const baseline = loadBaseline();
+  assertBaselineReviewCurrent(baseline);
   const auditJson = parseAuditJsonFromOutput(runBunAuditJson());
   const current = flattenAuditAdvisories(auditJson);
   const comparison = compareAuditToBaseline(current, baseline);

@@ -1,6 +1,11 @@
 import "server-only";
 
-import { member, organization, products } from "@polaris/db/schema";
+import {
+  auditEvents,
+  member,
+  organization,
+  products,
+} from "@polaris/db/schema";
 import {
   withInternalJobContext,
   withTenantContext,
@@ -35,6 +40,7 @@ export const getProductImageState = async (
 };
 
 export const replaceProductImageMetadata = async ({
+  actorUserId,
   blurDataURL,
   height,
   newVersion,
@@ -43,6 +49,7 @@ export const replaceProductImageMetadata = async ({
   productId,
   width,
 }: {
+  actorUserId: string;
   blurDataURL: string;
   height: number;
   newVersion: number;
@@ -51,60 +58,103 @@ export const replaceProductImageMetadata = async ({
   productId: string;
   width: number;
 }): Promise<boolean> => {
-  const updatedProducts = await withTenantContext(organizationId, (tx) =>
-    tx
-      .update(products)
-      .set({
-        imageBlurDataUrl: blurDataURL,
-        imageHeight: height,
-        imageUploadedAt: new Date(),
-        imageVersion: newVersion,
-        imageWidth: width,
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(products.id, productId),
-          eq(products.organizationId, organizationId),
-          oldVersion === null
-            ? isNull(products.imageVersion)
-            : eq(products.imageVersion, oldVersion)
+  const updatedProducts = await withTenantContext(
+    organizationId,
+    async (tx) => {
+      const updatedRows = await tx
+        .update(products)
+        .set({
+          imageBlurDataUrl: blurDataURL,
+          imageHeight: height,
+          imageUploadedAt: new Date(),
+          imageVersion: newVersion,
+          imageWidth: width,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(products.id, productId),
+            eq(products.organizationId, organizationId),
+            oldVersion === null
+              ? isNull(products.imageVersion)
+              : eq(products.imageVersion, oldVersion)
+          )
         )
-      )
-      .returning({ id: products.id })
+        .returning({ id: products.id });
+
+      if (updatedRows.length === 0) {
+        return updatedRows;
+      }
+
+      await tx.insert(auditEvents).values({
+        actorUserId,
+        metadata: {
+          newVersion,
+          oldVersion,
+        },
+        organizationId,
+        subjectId: productId,
+        subjectType: "product_image",
+        type: "product_image.replaced",
+      });
+
+      return updatedRows;
+    }
   );
 
   return updatedProducts.length > 0;
 };
 
 export const clearProductImageMetadata = async ({
+  actorUserId,
   currentVersion,
   organizationId,
   productId,
 }: {
+  actorUserId: string;
   currentVersion: number;
   organizationId: string;
   productId: string;
 }): Promise<boolean> => {
-  const updatedProducts = await withTenantContext(organizationId, (tx) =>
-    tx
-      .update(products)
-      .set({
-        imageBlurDataUrl: null,
-        imageHeight: null,
-        imageUploadedAt: null,
-        imageVersion: null,
-        imageWidth: null,
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(products.id, productId),
-          eq(products.organizationId, organizationId),
-          eq(products.imageVersion, currentVersion)
+  const updatedProducts = await withTenantContext(
+    organizationId,
+    async (tx) => {
+      const updatedRows = await tx
+        .update(products)
+        .set({
+          imageBlurDataUrl: null,
+          imageHeight: null,
+          imageUploadedAt: null,
+          imageVersion: null,
+          imageWidth: null,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(products.id, productId),
+            eq(products.organizationId, organizationId),
+            eq(products.imageVersion, currentVersion)
+          )
         )
-      )
-      .returning({ id: products.id })
+        .returning({ id: products.id });
+
+      if (updatedRows.length === 0) {
+        return updatedRows;
+      }
+
+      await tx.insert(auditEvents).values({
+        actorUserId,
+        metadata: {
+          removedVersion: currentVersion,
+        },
+        organizationId,
+        subjectId: productId,
+        subjectType: "product_image",
+        type: "product_image.removed",
+      });
+
+      return updatedRows;
+    }
   );
 
   return updatedProducts.length > 0;

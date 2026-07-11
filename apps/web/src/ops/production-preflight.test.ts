@@ -25,6 +25,7 @@ const productionIntegrationEnv = {
   R2_SECRET_ACCESS_KEY: "r2-secret-key",
   NEXT_PUBLIC_SENTRY_DSN: "https://public@example.ingest.sentry.io/1",
   SENTRY_DSN: "https://server@example.ingest.sentry.io/1",
+  SUPPORT_EMAIL: "support@example.com",
   UPSTASH_REDIS_REST_TOKEN: "upstash-token",
   UPSTASH_REDIS_REST_URL: "https://upstash.example.com",
 } as const;
@@ -96,6 +97,7 @@ describe("validateProductionPreflight", () => {
         "R2_BUCKET_PUBLIC is required in production preflight.",
         "SENTRY_DSN is required in production preflight.",
         "NEXT_PUBLIC_SENTRY_DSN is required in production preflight.",
+        "SUPPORT_EMAIL is required in production preflight.",
       ])
     );
   });

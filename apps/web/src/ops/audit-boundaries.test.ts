@@ -1,6 +1,7 @@
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
+  CORE_AUDIT_BOUNDARIES,
   checkCoreAuditBoundaries,
   findBestEffortAuditCallsInCoreFunctions,
 } from "../../../../scripts/check-core-audit-boundaries";
@@ -27,10 +28,23 @@ describe("core audit boundary guard", () => {
     ]);
   });
 
-  it("ignores best-effort audit calls in external-side-effect actions outside the monitored core set", () => {
+  it("monitors product image metadata actions after audit moved into the image transaction", () => {
+    const productBoundary = CORE_AUDIT_BOUNDARIES.find((boundary) =>
+      boundary.filePath.replaceAll("\\", "/").endsWith("products/actions.ts")
+    );
+
+    expect(productBoundary?.functionNames).toEqual(
+      expect.arrayContaining([
+        "replaceProductImageAction",
+        "removeProductImageAction",
+      ])
+    );
+  });
+
+  it("detects best-effort audit calls inside monitored product image metadata actions", () => {
     const findings = findBestEffortAuditCallsInCoreFunctions({
       filePath: "apps/web/src/features/products/actions.ts",
-      functionNames: ["updateProductAction"],
+      functionNames: ["replaceProductImageAction"],
       sourceText: `
         export async function replaceProductImageAction() {
           await recordAuditEvent({ type: "product_image.replaced" });
@@ -38,7 +52,12 @@ describe("core audit boundary guard", () => {
       `,
     });
 
-    expect(findings).toEqual([]);
+    expect(findings).toEqual([
+      expect.objectContaining({
+        filePath: "apps/web/src/features/products/actions.ts",
+        functionName: "replaceProductImageAction",
+      }),
+    ]);
   });
 
   it("passes for the current core ERP write actions", () => {

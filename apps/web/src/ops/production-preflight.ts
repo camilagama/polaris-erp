@@ -29,6 +29,7 @@ export interface ProductionPreflightEnv {
   R2_SECRET_ACCESS_KEY?: string;
   RLS_DATABASE_URL?: string;
   SENTRY_DSN?: string;
+  SUPPORT_EMAIL?: string;
   UPSTASH_REDIS_REST_TOKEN?: string;
   UPSTASH_REDIS_REST_URL?: string;
   VERCEL_ENV?: string;
@@ -108,6 +109,7 @@ const REQUIRED_PRODUCTION_INTEGRATION_ENV = [
   "R2_BUCKET_PUBLIC",
   "SENTRY_DSN",
   "NEXT_PUBLIC_SENTRY_DSN",
+  "SUPPORT_EMAIL",
 ] as const satisfies ReadonlyArray<keyof ProductionPreflightEnv>;
 
 const REQUIRED_VERIFY_FULL_DATABASE_URLS = [

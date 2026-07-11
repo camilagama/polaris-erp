@@ -4,23 +4,25 @@
 
 Verdict: the dev review is mostly correct. The repo is much stronger after the PR stack, but it is not ready for paid public launch yet. The largest gaps are product/commercial activation, production proof against real Vercel/Neon/Inngest state, and a few semantics that should not stay ambiguous.
 
-Do not treat local tests as proof for platform state. Vercel Authentication, Neon RLS on the promoted branch, Inngest cloud schedules, restore drills, R2/Upstash/Sentry alerts, and provider sandbox flows still need live evidence.
+Do not treat local tests as proof for platform state. Vercel Authentication, Neon RLS on the promoted branch, Inngest cloud schedules, restore drills, R2/Upstash/Sentry alerts, and provider sandbox flows still need live evidence. PR 39 makes that observability evidence mandatory in the production certification checklist, but it does not collect the live artifacts.
 
 ## Item-by-item analysis
 
 ### 1. Paid flow now has controlled manual activation
 
-Status: controlled-pilot path resolved locally by PR 28 on 2026-07-10. Public self-service checkout remains unimplemented.
+Status: controlled-pilot path resolved locally by PR 28 on 2026-07-10, with explicit support/billing contact added by PR 37 on 2026-07-11 and payment evidence required for manual activation in PR 40 on 2026-07-11. Public self-service checkout remains unimplemented.
 
 Evidence:
 - `apps/web/src/app/billing-required/page.tsx` now states subscription is required from first access and activation is manual after payment confirmation.
+- `SUPPORT_EMAIL` now drives the activation/support mailto on `/billing-required` and account settings; Vercel production env/preflight rejects missing support contact.
 - `apps/admin/src/app/billing/actions.ts` adds an operator-only, rate-limited status action for `active`/`past_due`.
-- `packages/platform/src/platform-billing.ts` updates billing subscription status transactionally and records `billing.subscription.status_changed` audit events.
+- `apps/admin/src/app/billing/actions.ts` now requires `paymentEvidenceReference` before an operator can manually activate access.
+- `packages/platform/src/platform-billing.ts` updates billing subscription status transactionally and records `billing.subscription.status_changed` audit events, including payment evidence metadata for manual activation.
 - Webhooks/reconciliation exist, but no customer-facing checkout creation flow exists from `/billing-required`.
 
-Impact: P0 reduced for controlled pilot. A new user remains blocked by billing until an operator activates the subscription after payment confirmation. Broad public paid launch still needs self-service checkout or an explicit decision to remain manual.
+Impact: P0 reduced for controlled pilot. A new user remains blocked by billing until an operator activates the subscription after payment confirmation, and the activation now requires an auditable external evidence reference plus a configured contact path. Broad public paid launch still needs self-service checkout or an explicit decision to remain manual.
 
-Recommended PR: build a self-service billing activation flow from `/billing-required` before broad public launch, or keep the product explicitly in controlled manual activation mode with operator SLA and payment evidence process.
+Recommended PR: build a self-service billing activation flow from `/billing-required` before broad public launch, or keep the product explicitly in controlled manual activation mode with operator SLA, configured `SUPPORT_EMAIL`, and the PR 40 payment evidence requirement.
 
 ### 2. Subscription status policy contradicts day-one paid launch
 
@@ -132,17 +134,18 @@ Status: partially mitigated; PR 32 closed the product stock/price write-loss gap
 
 Evidence:
 - Platform admin mutations and catalog/settings have transactional audit patterns.
-- Product images audit exists via `recordAuditEvent`, but not all product/sales/stock/billing mutations are proven transactional with the business write.
+- Product image metadata audit now lives in the same tenant transaction as the metadata write after PR 38; R2 object operations remain external side effects.
 - Plan PR12 notes broader domains retained older behavior.
 - PR 32 changed product update, stock addition, and stock write-off persistence to require `returning({ id })` before price-history/audit writes continue.
 - PR 32 tests prove lost product updates reject before audit/revalidation for stock addition, stock write-off, and price update.
 - Existing sales and platform billing tests cover lost stock/status updates and transactional platform audit behavior.
 - PR 33 added `bun run audit:boundaries`, an AST-based guard that fails CI if core ERP write actions call best-effort `recordAuditEvent` instead of delegating audit to the domain transaction.
+- PR 38 moved `product_image.replaced` / `product_image.removed` audit rows into `replaceProductImageMetadata` and `clearProductImageMetadata`, and expanded the boundary guard to cover `replaceProductImageAction` and `removeProductImageAction`.
 
-Impact: P1 reduced. Product stock movements and price changes now have stronger local proof against false audit success. Remaining audit work should focus on any domains still using best-effort `recordAuditEvent` after external side effects, and on live DB transaction evidence after migration/deploy.
+Impact: P1 reduced. Product stock movements, price changes, and product image metadata changes now have stronger local proof against false audit success. Remaining audit work should focus on any future domains that use best-effort `recordAuditEvent` after committed business writes, plus live DB transaction evidence after migration/deploy.
 
 Recommended follow-up:
-- Keep product image audit as a separate external-side-effect review because object storage delete/upload cannot be rolled back by Postgres.
+- Keep R2 object cleanup as a separate external-side-effect review because object storage delete/upload cannot be rolled back by Postgres.
 - Expand `audit:boundaries` if new core ERP write action files are added.
 - Re-run representative E2E flows against a real Neon branch after migrations are applied.
 
@@ -156,12 +159,14 @@ Evidence:
 - `docs/security/dependency-advisory-baseline.json` records the accepted advisories with owner, exposure notes, and review date.
 - `bun run audit:baseline` accepts the current 14 advisories and fails on new advisory URLs beyond the baseline.
 - `.github/workflows/ci.yml` runs the baseline guard before lint/typecheck/test/build.
+- PR 36 makes the same guard fail when `reviewBy` is invalid or expired, so the temporary acceptance cannot silently age out.
+- PR 37 adds `SUPPORT_EMAIL` env/preflight/CI wiring so manual billing activation and data/support requests no longer depend on a placeholder contact.
 
 Impact: P1 reduced. Not every advisory is runtime exploitable, but the baseline is only temporary risk acceptance, not a final public-launch posture.
 
 Recommended follow-up:
 - Revisit runtime-sensitive accepted advisories first: `defu`, `fast-uri`, `@opentelemetry/core`.
-- Remove resolved advisories from the baseline during the 2026-08-10 review.
+- Remove resolved advisories from the baseline before or during the 2026-08-10 review; CI now fails after that date if the baseline is not renewed.
 - Upgrade where a compatible fix exists.
 
 ### 10. E2E database connection pressure now has configurable pool cap
@@ -174,6 +179,7 @@ Evidence:
 - `packages/db/src/pool-config.ts` now defaults `DATABASE_POOL_MAX` to `3` and validates explicit values from `1` to `20`.
 - `apps/web/src/ops/production-preflight.ts`, `.env.example`, and `turbo.json` now document/pass `DATABASE_POOL_MAX`.
 - Runtime docs require pooled Neon URL; this still needs deploy evidence.
+- PR 39 expanded production certification to require R2 health, Upstash rate-limit, Sentry event id, and Sentry alert evidence before signoff.
 
 Impact: P1/P2 reduced. The previous fixed `max: 10` multiplier risk is removed; real concurrency still needs deploy/runtime observation.
 
@@ -183,17 +189,19 @@ Recommended follow-up:
 
 ### 11. Indexes need real query-plan validation
 
-Status: confirmed external validation gap.
+Status: external validation still pending; local certification guard added in PR 34.
 
 Evidence:
 - `apps/web/package.json` exposes `db:analyze:listings`.
 - Plan PR16 says the representative Neon dataset analysis was not run.
 - `docs/architecture/database-environments.md` documents `PERFORMANCE_ORGANIZATION_ID=... bun run db:analyze:listings`.
+- PR 34 added `PERFORMANCE_REQUIRE_REPRESENTATIVE=true`, which fails `db:analyze:listings` if any check returns `skipped-small-dataset`.
+- PR 34 documents/pass-throughs `PERFORMANCE_*` variables in `.env.example` and `turbo.json`.
 
-Impact: P1/P2. Queries may be fine, but index creation and query plans need real data.
+Impact: P1/P2 reduced but not closed. Queries may be fine, and certification mode now prevents weak small-dataset evidence, but index creation and query plans still need a real representative Neon run.
 
 Required evidence:
-- `PERFORMANCE_ORGANIZATION_ID=... PERFORMANCE_SEARCH_TERM=... bun run db:analyze:listings` against representative staging/production-like dataset.
+- `PERFORMANCE_ORGANIZATION_ID=... PERFORMANCE_SEARCH_TERM=... PERFORMANCE_REQUIRE_REPRESENTATIVE=true bun run db:analyze:listings` against representative staging/production-like dataset.
 - Review of GIN/trigram index creation strategy for current table size.
 
 ## Recommended next PR order
@@ -201,17 +209,22 @@ Required evidence:
 1. Done locally in PR 28 - Explicit controlled-pilot/manual billing activation mode.
 2. Done locally in PR 26 - Subscription entitlement policy: only `active` grants ERP access; no trial/grace by default.
 3. Done locally in PR 27 - Outbox `observed` status for capture-only records.
-4. P1 - Production Certification runbook/evidence checklist for Vercel Auth, Neon RLS 18/18, Inngest schedule, restore drill, R2/Upstash/Sentry, provider sandbox.
+4. PR 35 added production certification evidence checklist; real external evidence for Vercel Auth, Neon RLS 18/18, Inngest schedule, restore drill, R2/Upstash/Sentry, provider sandbox still must be recorded.
 5. Done locally in PR 31 - Audit advisory baseline and CI guard.
 6. Done locally in PR 32 for product stock/price write-loss guard; continue watching external-side-effect audit flows.
 7. Done locally in PR 30 - DB pool max configurable with conservative serverless default.
-8. P1/P2 - Real query-plan validation on representative data.
+8. PR 34 added representative-data certification mode; real Neon query-plan run remains pending.
+9. Done locally in PR 37 - Explicit support/billing contact env and UI wiring.
+10. Done locally in PR 38 - Product image metadata audit moved into the image metadata transaction.
+11. Done locally in PR 39 - Observability evidence required in production certification checklist.
+12. Done locally in PR 40 - Manual billing activation requires an auditable payment evidence reference.
 
 ## No-go criteria for public paid launch
 
-- No self-service checkout/activation outside a documented controlled-pilot/manual activation exception.
+- No self-service checkout/activation outside the documented controlled-pilot/manual activation exception with operator SLA, `SUPPORT_EMAIL`, and payment evidence reference.
 - No live Neon RLS proof with billing tables included.
 - No admin Vercel Authentication proof.
 - No Inngest schedule proof.
 - No restore drill evidence.
+- No R2 health, Upstash rate-limit, Sentry event, and Sentry alert evidence in the production certification checklist.
 - New `bun audit` advisories beyond the accepted baseline, or expired baseline without owner re-review.

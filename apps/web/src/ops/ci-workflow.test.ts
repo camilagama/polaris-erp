@@ -65,6 +65,7 @@ describe("CI workflow", () => {
     expect(workflow).toContain("secrets.PRODUCTION_DATABASE_URL");
     expect(workflow).toContain("secrets.PRODUCTION_DATABASE_URL_DIRECT");
     expect(workflow).toContain("secrets.ADMIN_APP_URL");
+    expect(workflow).toContain("vars.SUPPORT_EMAIL");
     expect(workflow).not.toMatch(REMOVED_ADMIN_PERIMETER_ENV_PATTERN);
     expect(workflow).toContain("secrets.PRODUCTION_BETTER_AUTH_URL");
     expect(workflow).toContain("secrets.PRODUCTION_NEXT_PUBLIC_APP_URL");
@@ -123,6 +124,35 @@ describe("CI workflow", () => {
     expect(workflow).toContain("vars.RESTORE_DRILL_VALIDATED_BY");
   });
 
+  it("exposes production certification evidence as a manual checklist job", () => {
+    const workflow = readCiWorkflow();
+    const packageJson = JSON.parse(readPackageJson()) as {
+      scripts?: Record<string, string>;
+    };
+
+    expect(
+      packageJson.scripts?.["ops:production-certification:checklist"]
+    ).toBe("bun scripts/check-production-certification.ts");
+    expect(workflow).toContain("production-certification-checklist:");
+    expect(workflow).toContain(
+      "bun run ops:production-certification:checklist"
+    );
+    expect(workflow).toContain("vars.PRODUCTION_CERT_ADMIN_VERCEL_AUTH_AT");
+    expect(workflow).toContain("vars.PRODUCTION_CERT_INNGEST_SYNC_AT");
+    expect(workflow).toContain("vars.PRODUCTION_CERT_INNGEST_RECONCILE_CRON");
+    expect(workflow).toContain("vars.PRODUCTION_CERT_MANUAL_BILLING_SLA_HOURS");
+    expect(workflow).toContain("vars.PRODUCTION_CERT_MANUAL_BILLING_SOP_AT");
+    expect(workflow).toContain("vars.PRODUCTION_CERT_PROVIDER_SANDBOX_AT");
+    expect(workflow).toContain("vars.PRODUCTION_CERT_QUERY_PLAN_AT");
+    expect(workflow).toContain("vars.PRODUCTION_CERT_R2_HEALTH_AT");
+    expect(workflow).toContain("vars.PRODUCTION_CERT_RESTORE_DRILL_AT");
+    expect(workflow).toContain("vars.PRODUCTION_CERT_RLS_FORCED_TABLES");
+    expect(workflow).toContain("vars.PRODUCTION_CERT_SENTRY_ALERT_AT");
+    expect(workflow).toContain("vars.PRODUCTION_CERT_SENTRY_EVENT_ID");
+    expect(workflow).toContain("vars.PRODUCTION_CERT_UPSTASH_RATE_LIMIT_AT");
+    expect(workflow).toContain("vars.PRODUCTION_CERT_VALIDATED_BY");
+  });
+
   it("runs admin checks, build and E2E as release gates", () => {
     const workflow = readCiWorkflow();
 
@@ -147,11 +177,31 @@ describe("CI workflow", () => {
       "DATABASE_POOL_MAX",
       "DEPLOYMENT_SMOKE_URL",
       "E2E_DATABASE_URL",
+      "PERFORMANCE_MIN_ROWS",
+      "PERFORMANCE_ORGANIZATION_ID",
+      "PERFORMANCE_REQUIRE_REPRESENTATIVE",
+      "PERFORMANCE_SEARCH_TERM",
+      "PERFORMANCE_USER_ID",
+      "PRODUCTION_CERT_ADMIN_VERCEL_AUTH_AT",
+      "PRODUCTION_CERT_INNGEST_RECONCILE_CRON",
+      "PRODUCTION_CERT_INNGEST_SYNC_AT",
+      "PRODUCTION_CERT_MANUAL_BILLING_SLA_HOURS",
+      "PRODUCTION_CERT_MANUAL_BILLING_SOP_AT",
+      "PRODUCTION_CERT_PROVIDER_SANDBOX_AT",
+      "PRODUCTION_CERT_QUERY_PLAN_AT",
+      "PRODUCTION_CERT_R2_HEALTH_AT",
+      "PRODUCTION_CERT_RESTORE_DRILL_AT",
+      "PRODUCTION_CERT_RLS_FORCED_TABLES",
+      "PRODUCTION_CERT_SENTRY_ALERT_AT",
+      "PRODUCTION_CERT_SENTRY_EVENT_ID",
+      "PRODUCTION_CERT_UPSTASH_RATE_LIMIT_AT",
+      "PRODUCTION_CERT_VALIDATED_BY",
       "RESTORE_DRILL_CONFIRMED_AT",
       "RESTORE_DRILL_SOURCE_BRANCH",
       "RESTORE_DRILL_RESTORE_BRANCH",
       "RESTORE_DRILL_VALIDATED_BY",
       "RLS_DATABASE_URL",
+      "SUPPORT_EMAIL",
     ]) {
       expect(envExample).toContain(`${envName}=`);
     }
@@ -170,6 +220,12 @@ describe("CI workflow", () => {
       "ADMIN_DEPLOYMENT_SMOKE_URL",
       "ADMIN_DEPLOYMENT_SMOKE_PROTECTED",
       "DATABASE_POOL_MAX",
+      "PERFORMANCE_MIN_ROWS",
+      "PERFORMANCE_ORGANIZATION_ID",
+      "PERFORMANCE_REQUIRE_REPRESENTATIVE",
+      "PERFORMANCE_SEARCH_TERM",
+      "PERFORMANCE_USER_ID",
+      "SUPPORT_EMAIL",
     ]) {
       expect(envExample).toContain(`${envName}=`);
       expect(turboConfig).toContain(envName);

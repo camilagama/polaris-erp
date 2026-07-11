@@ -37,6 +37,8 @@ export const CORE_AUDIT_BOUNDARIES: CoreAuditBoundary[] = [
       "updateProductAction",
       "addProductStockAction",
       "writeOffProductStockAction",
+      "replaceProductImageAction",
+      "removeProductImageAction",
       "archiveProductAction",
       "unarchiveProductAction",
     ],

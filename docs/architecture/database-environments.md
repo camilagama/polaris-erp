@@ -103,6 +103,12 @@ Rode em uma branch/ambiente com dados representativos antes de considerar perfor
 PERFORMANCE_ORGANIZATION_ID=org_real bun run db:analyze:listings
 ```
 
+Para usar como evidencia de certificacao, exija dataset representativo:
+
+```bash
+PERFORMANCE_ORGANIZATION_ID=org_real PERFORMANCE_REQUIRE_REPRESENTATIVE=true bun run db:analyze:listings
+```
+
 O comando usa `DATABASE_URL`, abre uma transacao read-only, configura `app.organization_id` via RLS e executa `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)` para:
 
 - produtos ativos por `products_active_list_idx`;
@@ -110,6 +116,8 @@ O comando usa `DATABASE_URL`, abre uma transacao read-only, configura `app.organ
 - vendas por `sales_organization_occurred_on_created_at_id_idx`.
 
 Por padrao, cada check so exige o indice esperado quando a consulta tem pelo menos `PERFORMANCE_MIN_ROWS=500` linhas no tenant. Com dataset menor, o resultado fica `skipped-small-dataset`, porque o planner pode escolher scan pequeno sem representar risco real.
+
+Com `PERFORMANCE_REQUIRE_REPRESENTATIVE=true`, qualquer `skipped-small-dataset` falha o comando. Use esse modo para fechar evidencia de performance; use o modo padrao apenas para diagnostico local/branch pequena.
 
 ## Auditoria de dados de teste (somente leitura)
 

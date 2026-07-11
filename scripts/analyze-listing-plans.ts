@@ -7,7 +7,7 @@ import {
   planUsesAnyIndex,
 } from "@/ops/postgres-plan";
 
-interface ListingPlanCheck {
+export interface ListingPlanCheck {
   countSql: string;
   expectedIndexes: string[];
   explainSql: string;
@@ -15,7 +15,7 @@ interface ListingPlanCheck {
   usesSearchTerm?: boolean;
 }
 
-interface ListingPlanResult {
+export interface ListingPlanResult {
   executionMs: number | null;
   expectedIndexes: string[];
   measuredRows: number;
@@ -36,17 +36,21 @@ const organizationId = env.PERFORMANCE_ORGANIZATION_ID;
 const searchTerm = env.PERFORMANCE_SEARCH_TERM?.trim();
 const userId = env.PERFORMANCE_USER_ID;
 const minimumRows = Number(env.PERFORMANCE_MIN_ROWS ?? 500);
+const requireRepresentative = env.PERFORMANCE_REQUIRE_REPRESENTATIVE === "true";
 
-const listingPlanChecks: ListingPlanCheck[] = [
-  {
-    countSql: `
+export const buildListingPlanChecks = (
+  requestedSearchTerm: string | undefined
+): ListingPlanCheck[] => {
+  const checks: ListingPlanCheck[] = [
+    {
+      countSql: `
       select count(*)::int as count
       from products
       where organization_id = $1
         and archived_at is null
     `,
-    expectedIndexes: ["products_active_list_idx"],
-    explainSql: `
+      expectedIndexes: ["products_active_list_idx"],
+      explainSql: `
       select
         products.id,
         products.name,
@@ -61,17 +65,17 @@ const listingPlanChecks: ListingPlanCheck[] = [
       order by products.name asc, products.created_at asc, products.id asc
       limit 16
     `,
-    name: "products-active-list",
-  },
-  {
-    countSql: `
+      name: "products-active-list",
+    },
+    {
+      countSql: `
       select count(*)::int as count
       from products
       where organization_id = $1
         and archived_at is not null
     `,
-    expectedIndexes: ["products_archived_list_idx"],
-    explainSql: `
+      expectedIndexes: ["products_archived_list_idx"],
+      explainSql: `
       select
         products.id,
         products.name,
@@ -86,16 +90,16 @@ const listingPlanChecks: ListingPlanCheck[] = [
       order by products.name asc, products.created_at asc, products.id asc
       limit 16
     `,
-    name: "products-archived-list",
-  },
-  {
-    countSql: `
+      name: "products-archived-list",
+    },
+    {
+      countSql: `
       select count(*)::int as count
       from sales
       where organization_id = $1
     `,
-    expectedIndexes: ["sales_organization_occurred_on_created_at_id_idx"],
-    explainSql: `
+      expectedIndexes: ["sales_organization_occurred_on_created_at_id_idx"],
+      explainSql: `
       select
         sales.id,
         sales.occurred_on,
@@ -111,12 +115,15 @@ const listingPlanChecks: ListingPlanCheck[] = [
       order by sales.occurred_on desc, sales.created_at desc, sales.id desc
       limit 16
     `,
-    name: "sales-list",
-  },
-];
+      name: "sales-list",
+    },
+  ];
 
-if (searchTerm) {
-  listingPlanChecks.push(
+  if (!requestedSearchTerm) {
+    return checks;
+  }
+
+  checks.push(
     {
       countSql: `
         select count(*)::int as count
@@ -169,9 +176,11 @@ if (searchTerm) {
       usesSearchTerm: true,
     }
   );
-}
 
-function readExplainResult(rawPlan: unknown): PostgresExplainResult {
+  return checks;
+};
+
+export const readExplainResult = (rawPlan: unknown): PostgresExplainResult => {
   if (typeof rawPlan === "string") {
     return JSON.parse(rawPlan)[0];
   }
@@ -181,7 +190,30 @@ function readExplainResult(rawPlan: unknown): PostgresExplainResult {
   }
 
   throw new Error("Formato inesperado do EXPLAIN JSON.");
-}
+};
+
+export const validateListingPlanResults = (
+  checks: ListingPlanResult[],
+  {
+    requireRepresentative: representativeRequired,
+  }: { requireRepresentative: boolean }
+): void => {
+  if (!representativeRequired) {
+    return;
+  }
+
+  const skippedChecks = checks
+    .filter((check) => !check.representative)
+    .map((check) => check.name);
+
+  if (skippedChecks.length > 0) {
+    throw new Error(
+      `Representative listing-plan evidence required, but these checks used small datasets: ${skippedChecks.join(
+        ", "
+      )}`
+    );
+  }
+};
 
 async function analyzeListingPlan(
   client: Client,
@@ -266,9 +298,11 @@ const main = async () => {
 
       const checks: ListingPlanResult[] = [];
 
-      for (const check of listingPlanChecks) {
+      for (const check of buildListingPlanChecks(searchTerm)) {
         checks.push(await analyzeListingPlan(client, check));
       }
+
+      validateListingPlanResults(checks, { requireRepresentative });
 
       console.log(
         JSON.stringify(
@@ -276,6 +310,7 @@ const main = async () => {
             checks,
             currentUser: currentUser.current_user,
             minimumRows,
+            representativeRequired: requireRepresentative,
             result: "listing-plan-analysis-ok",
             runtimeRoleBypassRls: currentUser.bypassrls,
           },
@@ -291,7 +326,9 @@ const main = async () => {
   }
 };
 
-main().catch((error: unknown) => {
-  console.error(error instanceof Error ? error.message : error);
-  process.exit(1);
-});
+if (import.meta.main) {
+  main().catch((error: unknown) => {
+    console.error(error instanceof Error ? error.message : error);
+    process.exit(1);
+  });
+}

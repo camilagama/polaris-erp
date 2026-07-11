@@ -166,6 +166,7 @@ describe("platform billing overview", () => {
       {
         actorPlatformAdminId: "platform-admin-1",
         actorUserId: "user-1",
+        paymentEvidenceReference: "asaas-pay-1",
         reason: "payment confirmed manually",
         status: "active",
         subscriptionId: "subscription-1",
@@ -185,6 +186,7 @@ describe("platform billing overview", () => {
         actorPlatformAdminId: "platform-admin-1",
         actorUserId: "user-1",
         metadata: {
+          paymentEvidenceReference: "asaas-pay-1",
           reason: "payment confirmed manually",
           status: "active",
         },
@@ -192,6 +194,29 @@ describe("platform billing overview", () => {
         subjectType: "billing_subscription",
       })
     );
+  });
+
+  it("requires payment evidence before manually activating a subscription", async () => {
+    const tx = createTxMock();
+    const db = {
+      transaction: vi.fn(async (callback) => callback(tx)),
+    };
+
+    await expect(
+      updatePlatformBillingSubscriptionStatus(
+        {
+          actorPlatformAdminId: "platform-admin-1",
+          actorUserId: "user-1",
+          paymentEvidenceReference: " ",
+          reason: "payment confirmed manually",
+          status: "active",
+          subscriptionId: "subscription-1",
+        },
+        db as never
+      )
+    ).rejects.toThrow("requires payment evidence");
+
+    expect(db.transaction).not.toHaveBeenCalled();
   });
 
   it("rejects missing subscriptions without writing audit", async () => {

@@ -22,6 +22,7 @@ const stubRequiredEnv = (
     "RESEND_API_KEY",
     "RESEND_FROM_EMAIL",
     "RESEND_WEBHOOK_SECRET",
+    "SUPPORT_EMAIL",
     "R2_ACCESS_KEY_ID",
     "R2_ACCOUNT_ID",
     "R2_BUCKET_PUBLIC",
@@ -104,10 +105,35 @@ describe("serverEnv", () => {
       INTERNAL_R2_HEALTH_SECRET: undefined,
       NODE_ENV: "production",
       PRODUCT_IMAGE_RECONCILE_SECRET: undefined,
+      SUPPORT_EMAIL: "support@example.com",
       VERCEL_ENV: "production",
     });
 
     await expect(import("@/lib/env")).rejects.toThrow();
+  });
+
+  it("requires support email in Vercel production", async () => {
+    stubRequiredEnv({
+      INTERNAL_R2_HEALTH_SECRET: "a".repeat(32),
+      NODE_ENV: "production",
+      PRODUCT_IMAGE_RECONCILE_SECRET: "b".repeat(32),
+      SUPPORT_EMAIL: undefined,
+      VERCEL_ENV: "production",
+    });
+
+    await expect(import("@/lib/env")).rejects.toThrow();
+  });
+
+  it("accepts support email when configured", async () => {
+    stubRequiredEnv({
+      SUPPORT_EMAIL: "support@example.com",
+    });
+
+    await expect(import("@/lib/env")).resolves.toMatchObject({
+      serverEnv: expect.objectContaining({
+        SUPPORT_EMAIL: "support@example.com",
+      }),
+    });
   });
 
   it("allows local production builds without internal route secrets", async () => {

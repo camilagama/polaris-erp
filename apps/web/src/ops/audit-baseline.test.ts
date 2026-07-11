@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  assertBaselineReviewCurrent,
   compareAuditToBaseline,
   flattenAuditAdvisories,
   parseAuditJsonFromOutput,
@@ -95,5 +96,47 @@ describe("dependency advisory baseline guard", () => {
         url: "https://github.com/advisories/GHSA-resolved",
       },
     ]);
+  });
+
+  it("rejects an expired advisory baseline review date", () => {
+    expect(() =>
+      assertBaselineReviewCurrent(
+        {
+          acceptedAdvisories: [],
+          generatedAt: "2026-07-10",
+          owner: "Platform engineering",
+          reviewBy: "2026-07-10",
+        },
+        new Date("2026-07-11T12:00:00.000Z")
+      )
+    ).toThrow("Dependency advisory baseline review expired on 2026-07-10.");
+  });
+
+  it("rejects an invalid advisory baseline review date", () => {
+    expect(() =>
+      assertBaselineReviewCurrent(
+        {
+          acceptedAdvisories: [],
+          generatedAt: "2026-07-10",
+          owner: "Platform engineering",
+          reviewBy: "not-a-date",
+        },
+        new Date("2026-07-11T12:00:00.000Z")
+      )
+    ).toThrow("Dependency advisory baseline reviewBy must be an ISO date.");
+  });
+
+  it("accepts an advisory baseline through the review date", () => {
+    expect(() =>
+      assertBaselineReviewCurrent(
+        {
+          acceptedAdvisories: [],
+          generatedAt: "2026-07-10",
+          owner: "Platform engineering",
+          reviewBy: "2026-07-11",
+        },
+        new Date("2026-07-11T23:59:59.000Z")
+      )
+    ).not.toThrow();
   });
 });

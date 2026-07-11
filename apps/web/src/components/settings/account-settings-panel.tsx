@@ -11,6 +11,7 @@ import { formatCurrency, formatDateTime } from "@/lib/formatters";
 
 interface AccountSettingsPanelProps {
   billing: AccountBillingSummary;
+  supportEmail?: string | null;
   user: {
     email: string;
     name: string;
@@ -65,6 +66,7 @@ const getPlanLine = (billing: AccountBillingSummary): string => {
 
 export function AccountSettingsPanel({
   billing,
+  supportEmail,
   user,
   workspaceName,
 }: AccountSettingsPanelProps) {
@@ -131,7 +133,21 @@ export function AccountSettingsPanel({
           </div>
           <div className="mt-4 flex flex-col gap-1 text-muted-foreground text-xs">
             <p>Email de cobranca: {billing.billingEmail ?? user.email}</p>
-            <p>Para exportacao ou exclusao, solicite pelo canal de suporte.</p>
+            {supportEmail ? (
+              <p>
+                Suporte:{" "}
+                <a
+                  className="font-medium text-foreground underline-offset-4 hover:underline"
+                  href={`mailto:${supportEmail}?subject=${encodeURIComponent("Suporte Polaris")}`}
+                >
+                  {supportEmail}
+                </a>
+              </p>
+            ) : (
+              <p>
+                Para exportacao ou exclusao, solicite ao time da plataforma.
+              </p>
+            )}
             <p>Convites multiusuario permanecem fora do escopo do MVP.</p>
           </div>
         </section>

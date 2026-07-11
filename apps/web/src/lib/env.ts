@@ -59,6 +59,14 @@ const serverEnvSchema = z
     RESEND_API_KEY: optionalNonEmptyString,
     RESEND_FROM_EMAIL: optionalNonEmptyString,
     RESEND_WEBHOOK_SECRET: optionalNonEmptyString,
+    SUPPORT_EMAIL: z.preprocess((value) => {
+      if (typeof value !== "string") {
+        return value;
+      }
+
+      const trimmedValue = value.trim();
+      return trimmedValue.length === 0 ? undefined : trimmedValue;
+    }, z.string().email().optional()),
     GOOGLE_CLIENT_ID: optionalNonEmptyString,
     GOOGLE_CLIENT_SECRET: optionalNonEmptyString,
     NEXT_PUBLIC_APP_URL: z.string().url(),
@@ -157,6 +165,14 @@ const serverEnvSchema = z
         });
       }
     }
+
+    if (env.VERCEL_ENV === "production" && !env.SUPPORT_EMAIL) {
+      context.addIssue({
+        code: "custom",
+        message: "SUPPORT_EMAIL is required in Vercel production.",
+        path: ["SUPPORT_EMAIL"],
+      });
+    }
   });
 
 export const serverEnv = serverEnvSchema.parse({
@@ -175,6 +191,7 @@ export const serverEnv = serverEnvSchema.parse({
   RESEND_API_KEY: process.env.RESEND_API_KEY,
   RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL,
   RESEND_WEBHOOK_SECRET: process.env.RESEND_WEBHOOK_SECRET,
+  SUPPORT_EMAIL: process.env.SUPPORT_EMAIL,
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
   GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
   NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,

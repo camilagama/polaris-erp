@@ -20,6 +20,7 @@ describe("AccountSettingsPanel", () => {
           name: "Junior",
           role: "owner",
         },
+        supportEmail: "billing-support@example.com",
         workspaceName: "DG Imports",
       })
     );
@@ -32,6 +33,11 @@ describe("AccountSettingsPanel", () => {
     expect(markup).toContain("Polaris Start");
     expect(markup).toContain("199,00");
     expect(markup).toContain("billing@example.com");
+    expect(markup).toContain("billing-support@example.com");
+    expect(markup).toContain(
+      "mailto:billing-support@example.com?subject=Suporte%20Polaris"
+    );
     expect(markup).not.toContain("organizationName");
+    expect(markup).not.toContain("canal de suporte");
   });
 });

@@ -39,6 +39,7 @@
     "deploy:smoke": "turbo run deploy:smoke --filter=@polaris/web",
     "deploy:smoke:admin": "turbo run deploy:smoke --filter=@polaris/admin",
     "platform-admin:bootstrap": "bun scripts/bootstrap-platform-admin.ts",
+    "ops:production-certification:checklist": "bun scripts/check-production-certification.ts",
     "ops:restore-drill:checklist": "bun scripts/check-restore-drill.ts",
     "db:smoke:rls": "turbo run db:smoke:rls --filter=@polaris/web",
     "db:analyze:listings": "turbo run db:analyze:listings --filter=@polaris/web",

@@ -27,7 +27,6 @@ import {
   writeOffProductStock,
 } from "@/features/products/server";
 import { requireAppContext } from "@/lib/app-session";
-import { recordAuditEvent } from "@/lib/audit-log";
 import { buildOrganizationCacheTags } from "@/lib/cache-tags";
 import { toCurrencyString } from "@/lib/domain/currency";
 
@@ -193,6 +192,7 @@ export async function replaceProductImageAction(
   }
 
   const imageMetadataReplaced = await replaceProductImageMetadata({
+    actorUserId: context.userId,
     blurDataURL: storedImage.blurDataURL,
     height: storedImage.height,
     newVersion: storedImage.version,
@@ -221,12 +221,6 @@ export async function replaceProductImageAction(
     });
   }
 
-  await recordAuditEvent({
-    context,
-    subjectId: id,
-    subjectType: "product_image",
-    type: "product_image.replaced",
-  });
   revalidateCatalogViews(context.organizationId);
   revalidateProductDetail(id);
   return { success: true } as const;
@@ -245,6 +239,7 @@ export async function removeProductImageAction(id: string) {
   }
 
   const imageMetadataCleared = await clearProductImageMetadata({
+    actorUserId: context.userId,
     currentVersion: product.imageVersion,
     organizationId: context.organizationId,
     productId: id,
@@ -262,12 +257,6 @@ export async function removeProductImageAction(id: string) {
     version: product.imageVersion,
   });
 
-  await recordAuditEvent({
-    context,
-    subjectId: id,
-    subjectType: "product_image",
-    type: "product_image.removed",
-  });
   revalidateCatalogViews(context.organizationId);
   revalidateProductDetail(id);
   return { success: true } as const;

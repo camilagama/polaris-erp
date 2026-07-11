@@ -57,19 +57,20 @@
 
 **Conclusao:** The PR stack improved architecture, security boundaries, RLS scaffolding, admin separation, Inngest scheduling, and operational gates, but the project remains **no-go for public paid launch** until the following evidence/fixes exist:
 
-- Self-service billing activation from `/billing-required`, or a formally documented controlled-pilot/manual activation mode.
+- Self-service billing activation from `/billing-required`, or a formally documented controlled-pilot/manual activation mode. Local controlled manual activation now requires a payment evidence reference in PR 40.
 - Explicit subscription policy for `trialing`, `past_due`, `canceled`, and any grace-period window. Local policy implemented in PR 26: only `active` grants ERP access.
 - Billing RLS migration applied to an approved Neon branch and live smoke proving `forcedTables = 18/18`.
 - Capture-only outbox rows represented by an explicit non-retryable status. Local policy implemented in PR 27 with `observed`; live migration application remains pending.
 - Inngest cloud sync/schedule proof for `reconcile-product-images` cron `0 4 * * *`.
 - Vercel Authentication/deployment protection proof on the real `apps/admin` Vercel project.
 - Real restore/PITR drill evidence, not only checklist variable validation.
-- Transactional audit guard for product stock/price changes is complete locally; continue reviewing external-side-effect audit flows.
-- Dependency advisory baseline must be reviewed by 2026-08-10 and must fail CI on new advisory URLs.
+- R2 health, Upstash rate-limit, Sentry event, and Sentry alert evidence. Local checklist enforcement added in PR 39; live evidence remains pending.
+- Transactional audit guard for product stock/price changes and product image metadata changes is complete locally; R2 object operations remain external side effects with compensating cleanup/reconcile.
+- Dependency advisory baseline must be reviewed by 2026-08-10 and now fails CI on new advisory URLs or expired review date.
 - Postgres pool/serverless connection review after E2E connection pressure.
-- Representative query-plan validation through `bun run db:analyze:listings`.
+- Representative query-plan validation now has a strict local certification mode; live Neon execution remains pending.
 
-**Recommended next PR:** production evidence/certification pass for live Vercel Authentication, Neon RLS, Inngest schedule, restore drill, and provider sandbox; or representative query-plan validation if external production access remains unavailable. PR 26 set the entitlement contract, PR 27 resolved capture-only outbox semantics, PR 28 made controlled manual billing activation operable, PR 30 fixed Postgres pool defaults, PR 31 added dependency advisory baseline enforcement, and PR 32 closed product stock/price false-audit gaps.
+**Recommended next PR:** production evidence/certification pass for live Vercel Authentication, Neon RLS, Inngest schedule, restore drill, query-plan execution, provider sandbox, and observability; or continue local hardening while external production access remains unavailable. PR 26 set the entitlement contract, PR 27 resolved capture-only outbox semantics, PR 28 made controlled manual billing activation operable, PR 30 fixed Postgres pool defaults, PR 31 added dependency advisory baseline enforcement, PR 32 closed product stock/price false-audit gaps, PR 33 added a CI guard against best-effort audit in core ERP write actions, PR 34 added strict query-plan certification mode, PR 35 added a production certification evidence checklist, PR 36 made advisory baseline review expiry enforceable, PR 37 made the support/billing contact explicit, PR 38 moved product image metadata audit into the metadata transaction, PR 39 expanded production certification to require observability evidence, and PR 40 made manual billing activation require an auditable payment evidence reference.
 
 ### PR 26 - Resolve Subscription Entitlement Policy Review
 
@@ -206,6 +207,161 @@
 **Risco residual:** Real rollback semantics still need live Neon/E2E evidence after migrations are applied. Future domain actions can still reintroduce best-effort audit if they call `recordAuditEvent` outside a transaction for core ERP writes.
 
 **Rollback:** Revert the `returning({ id })` checks in `apps/web/src/features/products/server.ts` and remove the three lost-update regression tests. This restores previous behavior but reopens false audit/revalidation risk when a product update touches zero rows.
+
+### PR 33 - Add Core ERP Audit Boundary Guard
+
+**Status:** Concluida em 2026-07-11 para script, CI, testes e docs.
+
+**Resultado:** `bun run audit:boundaries` now runs `scripts/check-core-audit-boundaries.ts`, which uses the TypeScript AST to inspect monitored core ERP write actions and fail if they call best-effort `recordAuditEvent`. The guard currently covers product create/update/stock/archive actions and sales create/cancel actions, while intentionally allowing product image actions to remain outside the core DB-transaction guard because they coordinate external object-storage side effects. CI runs the guard immediately after the dependency advisory baseline.
+
+**Verificacao executada:**
+- `bun --cwd apps/web vitest run src/ops/ci-workflow.test.ts -t "release gates|aggregate commands"` failed first because `audit:boundaries` script and CI step were missing.
+- `bun run audit:boundaries` passed: `Core ERP audit boundary guard passed.`
+- `bun --cwd apps/web vitest run src/ops/audit-boundaries.test.ts src/ops/ci-workflow.test.ts` passed: 2 files, 14 tests.
+- `bun run typecheck` passed: 8 tasks successful.
+- `bun run check` passed: 448 files checked, no fixes applied.
+
+**Decisao de escopo:** This PR prevents source-level regression for core actions; it does not claim product image audit is transactional with object storage, and it does not replace live database rollback/E2E evidence.
+
+**Risco residual:** New core ERP write files must be added to `CORE_AUDIT_BOUNDARIES`; otherwise the guard cannot inspect them. Live deployment evidence is still required for production certification.
+
+**Rollback:** Remove the CI step, root `audit:boundaries` script, AST guard, and ops tests. This restores previous CI behavior but allows future best-effort audit regressions in core write actions.
+
+### PR 34 - Add Strict Representative Query-Plan Certification Mode
+
+**Status:** Concluida em 2026-07-11 para script, env/docs, testes e verificacoes locais.
+
+**Resultado:** `scripts/analyze-listing-plans.ts` now exports pure helpers for tests, only runs `main()` under `import.meta.main`, and supports `PERFORMANCE_REQUIRE_REPRESENTATIVE=true`. In that mode, `bun run db:analyze:listings` fails if any check returns `skipped-small-dataset`, preventing weak small-tenant evidence from being treated as production performance certification. `.env.example`, `turbo.json`, and database environment docs now document/pass through all `PERFORMANCE_*` variables.
+
+**Verificacao executada:**
+- `bun --cwd apps/web vitest run src/ops/listing-plan-analysis.test.ts` failed first because importing the script executed `main()` and the desired exports did not exist.
+- `bun --cwd apps/web vitest run src/ops/listing-plan-analysis.test.ts` passed: 1 file, 3 tests.
+- `bun --cwd apps/web vitest run src/ops/listing-plan-analysis.test.ts src/ops/ci-workflow.test.ts src/ops/postgres-plan.test.ts` passed: 3 files, 16 tests.
+- `bun run typecheck` passed: 8 tasks successful.
+- `bun run check` passed: 449 files checked, no fixes applied.
+
+**Decisao de escopo:** This PR does not run against Neon because PR 29 remains blocked by external project access/approval. It makes the eventual run stricter and auditable.
+
+**Risco residual:** Query-plan readiness is still externally unproven until the strict command is executed against a representative Neon branch with real `PERFORMANCE_ORGANIZATION_ID` and useful `PERFORMANCE_SEARCH_TERM`.
+
+**Rollback:** Remove `PERFORMANCE_REQUIRE_REPRESENTATIVE`, undo the exported helper refactor/tests, and remove the new env/docs entries. This restores diagnostic-only behavior where small datasets can produce non-failing `skipped-small-dataset` results.
+
+### PR 35 - Add Production Certification Evidence Checklist
+
+**Status:** Concluida em 2026-07-11 para script, job manual, docs, testes e verificacoes locais.
+
+**Resultado:** `bun run ops:production-certification:checklist` now validates explicit operator evidence for the remaining external launch gates: admin Vercel Authentication, Inngest sync and cron `0 4 * * *`, provider sandbox validation, strict query-plan run, restore drill, RLS forced tables `18/18`, and responsible operator. CI exposes this as a manual `production-certification-checklist` workflow job using GitHub variables, and the deploy runbook documents each required evidence variable.
+
+**Verificacao executada:**
+- `bun --cwd apps/web vitest run src/ops/operations-gates.test.ts` failed first because `scripts/check-production-certification.ts` did not exist.
+- `bun --cwd apps/web vitest run src/ops/operations-gates.test.ts src/ops/ci-workflow.test.ts` passed: 2 files, 21 tests.
+- `bun run ops:production-certification:checklist` passed with representative placeholder evidence variables.
+- `bun run typecheck` passed: 8 tasks successful.
+- `bun run check` passed: 450 files checked, no fixes applied.
+
+**Decisao de escopo:** This PR does not fetch live evidence from Vercel, Neon, Inngest, or payment providers. It turns required evidence into a repeatable manual gate so PR 29 can be resumed with concrete variables and a failing CI job when evidence is incomplete.
+
+**Risco residual:** Operators can still enter inaccurate timestamps/values. Real launch readiness still depends on actually running the external checks and preserving their supporting artifacts/logs.
+
+**Rollback:** Remove the root script, CI manual job, `.env.example` entries, runbook section, and tests. This restores the previous runbook-only evidence process.
+
+### PR 36 - Enforce Dependency Advisory Baseline Review Expiry
+
+**Status:** Concluida em 2026-07-11 para script, testes e verificacoes locais.
+
+**Resultado:** `bun run audit:baseline` now validates `dependency-advisory-baseline.json.reviewBy` before accepting known advisories. The guard rejects invalid `reviewBy` values and fails after the review date expires, so the temporary risk acceptance cannot silently persist beyond its owner-reviewed window.
+
+**Verificacao executada:**
+- `bun --cwd apps/web vitest run src/ops/audit-baseline.test.ts` failed first because `assertBaselineReviewCurrent` did not exist.
+- `bun --cwd apps/web vitest run src/ops/audit-baseline.test.ts` passed: 1 file, 6 tests.
+- `bun run audit:baseline` passed: accepted 14 current advisories.
+- `bun run typecheck` passed: 8 tasks successful.
+- `bun run check` passed: 450 files checked, no fixes applied.
+
+**Decisao de escopo:** This PR enforces the review deadline only; it does not update or remove any accepted advisory. The current baseline remains valid until `2026-08-10`.
+
+**Risco residual:** The runtime-sensitive advisories still need upgrade/removal or owner re-approval before/at the review date.
+
+**Rollback:** Remove `assertBaselineReviewCurrent` and its tests. This restores new-advisory detection but allows expired baselines to keep passing.
+
+### PR 37 - Configure Support and Billing Contact
+
+**Status:** Concluida em 2026-07-11 para UI, env, CI/preflight, docs e verificacoes locais.
+
+**Resultado:** The manual paid-from-day-one path no longer renders the placeholder `suporte@polaris.local` or a generic support channel. `SUPPORT_EMAIL` is now part of the web env schema, `.env.example`, Turbo pass-through, production preflight, GitHub manual preflight job, and deployment runbook. `/billing-required` renders the configured support email in the activation mailto, and the account settings panel shows the same contact for support/data requests. Vercel production env validation now rejects a missing support email.
+
+**Verificacao executada:**
+- `bun --cwd apps/web vitest run src/app/billing-required/page.test.ts src/components/settings/account-settings-panel.test.ts src/lib/env.test.ts src/ops/production-preflight.test.ts src/ops/ci-workflow.test.ts` failed first on the two new UI assertions because the old placeholder/generic support text was still rendered.
+- `bun --cwd apps/web vitest run src/app/billing-required/page.test.ts src/components/settings/account-settings-panel.test.ts src/lib/env.test.ts src/ops/production-preflight.test.ts src/ops/ci-workflow.test.ts` passed: 5 files, 28 tests.
+- `bun run typecheck` passed: 8 tasks successful.
+- `bun run check` passed: 451 files checked, no fixes applied.
+
+**Decisao de escopo:** This PR intentionally does not implement provider self-service checkout, billing portal URLs, or automated payment confirmation. It only makes the controlled-pilot/manual support path publishable and prevents production from deploying without a real contact.
+
+**Risco residual:** Broad paid launch still needs either self-service checkout/portal or an explicit operational decision to keep manual activation. The support address must be configured in Vercel/GitHub Variables before production preflight.
+
+**Rollback:** Remove `SUPPORT_EMAIL` validation/pass-through/docs, restore the previous billing-required link/copy, and remove the two UI tests plus env/preflight wiring assertions. This restores the generic support path and should only be done if another production contact mechanism replaces it.
+
+### PR 38 - Move Product Image Metadata Audit Into Domain Transaction
+
+**Status:** Concluida em 2026-07-11 para metadata de imagem, guard de auditoria, testes e verificacoes locais.
+
+**Resultado:** `replaceProductImageMetadata` and `clearProductImageMetadata` now write the `product_image.replaced` / `product_image.removed` audit event inside the same tenant transaction that updates product image metadata. `replaceProductImageAction` and `removeProductImageAction` no longer call best-effort `recordAuditEvent`; they pass `actorUserId` into the image domain operation instead. The core audit boundary guard now monitors `replaceProductImageAction` and `removeProductImageAction`, so reintroducing best-effort audit in those actions fails CI.
+
+**Verificacao executada:**
+- `bun --cwd apps/web vitest run src/features/products/image-access.test.ts` failed first because successful metadata updates did not insert audit rows.
+- `bun --cwd apps/web vitest run src/ops/audit-boundaries.test.ts` failed first because product image actions were not listed in `CORE_AUDIT_BOUNDARIES`.
+- `bun --cwd apps/web vitest run src/features/products/image-access.test.ts src/features/products/actions.test.ts src/ops/audit-boundaries.test.ts` passed: 3 files, 35 tests.
+- `bun run audit:boundaries` passed.
+- `bun run typecheck` passed: 8 tasks successful.
+- `bun run check` passed: 451 files checked, no fixes applied.
+
+**Decisao de escopo:** This PR does not try to make R2 object writes/deletes transactional with Postgres. The invariant hardened here is narrower and real: product image metadata cannot commit without its audit row in the same DB transaction. R2 cleanup remains handled by explicit rollback on failed metadata replace and by image reconciliation for orphaned objects.
+
+**Risco residual:** If R2 deletion fails after a successful metadata/audit transaction, the product state and audit trail remain correct but an orphaned object may remain until reconciliation. Live deploy evidence for the Inngest reconciliation schedule is still part of PR 29.
+
+**Rollback:** Revert the `actorUserId` parameters and transactional `auditEvents` inserts in `image-access`, restore best-effort `recordAuditEvent` calls in image actions, and remove image actions from `CORE_AUDIT_BOUNDARIES`. This reopens the false/no-audit risk for committed image metadata changes.
+
+### PR 39 - Require Observability Evidence in Production Certification
+
+**Status:** Concluida em 2026-07-11 para checklist, CI/env, docs e verificacoes locais.
+
+**Resultado:** The manual production certification checklist now requires live observability evidence in addition to the previous Vercel/Neon/Inngest/provider/restore/query-plan gates. `scripts/check-production-certification.ts` requires ISO timestamps for R2 health, Upstash rate-limit validation, and Sentry alert verification, plus a concrete 32-character Sentry event id. `.env.example`, GitHub workflow variables, CI wiring tests, and deploy runbook now include `PRODUCTION_CERT_R2_HEALTH_AT`, `PRODUCTION_CERT_UPSTASH_RATE_LIMIT_AT`, `PRODUCTION_CERT_SENTRY_EVENT_ID`, and `PRODUCTION_CERT_SENTRY_ALERT_AT`.
+
+**Verificacao executada:**
+- `bun --cwd apps/web vitest run src/ops/operations-gates.test.ts` failed first because missing observability evidence and an invalid Sentry event id were accepted.
+- `bun --cwd apps/web vitest run src/ops/operations-gates.test.ts src/ops/ci-workflow.test.ts` passed: 2 files, 23 tests.
+- `bun run ops:production-certification:checklist` passed with representative placeholder evidence variables including R2, Upstash, Sentry event id, and Sentry alert timestamp.
+- `bun run typecheck` passed: 8 tasks successful.
+- `bun run check` passed: 451 files checked, no fixes applied.
+
+**Decisao de escopo:** This PR does not contact Sentry, Upstash, R2, Vercel, or Neon. It closes the local process gap by making observability evidence mandatory and auditable before production certification can pass.
+
+**Risco residual:** Operators can still enter inaccurate evidence variables. PR 29 remains responsible for collecting and preserving the real supporting artifacts/logs from deployed infrastructure.
+
+**Rollback:** Remove the four new `PRODUCTION_CERT_*` variables from the script, CI workflow, `.env.example`, runbook, and tests. This restores the previous certification checklist but allows production signoff without explicit observability proof.
+
+### PR 40 - Require Payment Evidence for Manual Billing Activation
+
+**Status:** Concluida em 2026-07-11 para admin, platform billing, runbook e verificacoes locais.
+
+**Resultado:** Controlled manual activation now has an enforceable payment evidence step. The admin billing action requires `paymentEvidenceReference` before changing a subscription to `active`, the platform billing service rejects manual activation without that reference, and `billing.subscription.status_changed` platform audit metadata records the reference together with reason/status. Blocking access back to `past_due` still requires reason and confirmation, but not payment evidence. The admin billing form exposes the evidence field only for activation.
+
+**Verificacao executada:**
+- `bun --cwd apps/admin vitest run src/app/billing/actions.test.ts` failed first because activation still accepted a blank payment evidence reference and did not pass it to platform billing.
+- `bun --cwd packages/platform test` failed first because activation did not require or audit payment evidence.
+- `bun --cwd apps/admin vitest run src/app/billing/actions.test.ts` passed: 1 file, 3 tests.
+- `bun --cwd packages/platform test` passed: 7 files, 23 tests.
+- `bun run typecheck` passed: 8 tasks successful.
+- `bun run typecheck:admin` passed: 7 tasks successful.
+- `bun run check` passed: 451 files checked, no fixes applied.
+- `bun run build:admin` passed.
+
+**Decisao de escopo:** This PR does not implement self-service checkout, provider receipt lookup, invoice creation, or automated payment verification. It makes the approved controlled-pilot/manual path auditable and harder to misuse while the checkout flow remains a future product/payment integration.
+
+**Risco residual:** The payment evidence reference is operator-entered text. It proves that an operator recorded an external artifact id/link/reference, but it does not cryptographically verify the provider payment. Public broad launch still benefits from self-service checkout or a provider-backed activation flow.
+
+**Rollback:** Remove the `paymentEvidenceReference` form field and validation, remove audit metadata for that reference, and revert the new tests/docs. If any activations happened with the field, retain existing audit rows; rolling back code should not mutate historical audit metadata.
 
 ---
 
@@ -1461,7 +1617,7 @@
 
 **Decisao de escopo:** This PR keeps account management intentionally informational. Export/delete requests point to support, subscription management stays read-only, and multi-user invitations remain outside MVP to preserve the one-user-per-tenant model.
 
-**Risco residual:** Support contact is still generic because no dedicated support email/config exists in env schema. A future support/billing portal PR can replace the guidance with provider-specific self-service links.
+**Risco residual:** Support contact is now explicit through `SUPPORT_EMAIL` after PR 37. A future support/billing portal PR can replace the mailto guidance with provider-specific self-service links.
 
 **Objetivo:** Give a one-user customer a minimal account/workspace surface.
 
@@ -1546,4 +1702,4 @@
 
 Reason: it is the safest, smallest, and most urgent blocker. It reduces known security exposure before touching auth, billing, RLS, cron, or monorepo structure. After PR 01 passes, implement PR 02 and PR 03 before broader architecture changes.
 
-Next implementation target: transactional audit expansion for sales/stock/price/billing while external production access remains unresolved. PR 01 through PR 28, PR 30, and PR 31 are marked complete; PR 29 remains not completed because Vercel project access/linking and explicit Neon live-smoke approval are still missing.
+Next implementation target: continue local hardening while external production access remains unresolved. PR 01 through PR 28 and PR 30 through PR 40 are marked complete; PR 29 remains not completed because Vercel project access/linking and explicit Neon live-smoke approval are still missing.

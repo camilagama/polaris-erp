@@ -141,6 +141,15 @@ const BillingContent = async () => {
                   }
                   required
                 />
+                {!subscription.hasAccess && (
+                  <input
+                    aria-label="Referencia da evidencia de pagamento"
+                    className="min-h-9 rounded-md border border-zinc-700 bg-zinc-950 px-3 text-xs text-zinc-100 outline-none placeholder:text-zinc-600"
+                    name="paymentEvidenceReference"
+                    placeholder="Referencia do pagamento"
+                    required
+                  />
+                )}
                 <label className="flex items-center gap-2 text-xs text-zinc-500">
                   <input
                     className="size-3"

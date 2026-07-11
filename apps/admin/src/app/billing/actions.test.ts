@@ -33,11 +33,13 @@ vi.mock("next/cache", () => ({
 
 const createFormData = ({
   confirm = "on",
+  paymentEvidenceReference = "asaas-pay-1",
   reason = "payment confirmed manually",
   status = "active",
   subscriptionId = "subscription-1",
 }: {
   confirm?: string | null;
+  paymentEvidenceReference?: string;
   reason?: string;
   status?: string;
   subscriptionId?: string;
@@ -46,6 +48,7 @@ const createFormData = ({
   formData.set("subscriptionId", subscriptionId);
   formData.set("status", status);
   formData.set("reason", reason);
+  formData.set("paymentEvidenceReference", paymentEvidenceReference);
 
   if (confirm !== null) {
     formData.set("confirm", confirm);
@@ -67,6 +70,24 @@ describe("changeBillingSubscriptionStatusAction", () => {
       changeBillingSubscriptionStatusAction(createFormData({ confirm: null }))
     ).rejects.toThrow("requires confirmation");
 
+    expect(updatePlatformBillingSubscriptionStatusMock).not.toHaveBeenCalled();
+  });
+
+  it("requires payment evidence before manually activating access", async () => {
+    requirePlatformAdminMock.mockResolvedValueOnce({
+      platformAdminId: "platform-admin-1",
+      userId: "user-1",
+    });
+
+    const { changeBillingSubscriptionStatusAction } = await import("./actions");
+
+    await expect(
+      changeBillingSubscriptionStatusAction(
+        createFormData({ paymentEvidenceReference: " " })
+      )
+    ).rejects.toThrow("Missing required field: paymentEvidenceReference");
+
+    expect(assertAdminRateLimitMock).not.toHaveBeenCalled();
     expect(updatePlatformBillingSubscriptionStatusMock).not.toHaveBeenCalled();
   });
 
@@ -97,6 +118,7 @@ describe("changeBillingSubscriptionStatusAction", () => {
     expect(updatePlatformBillingSubscriptionStatusMock).toHaveBeenCalledWith({
       actorPlatformAdminId: "platform-admin-1",
       actorUserId: "user-1",
+      paymentEvidenceReference: "asaas-pay-1",
       reason: "payment confirmed manually",
       status: "active",
       subscriptionId: "subscription-1",

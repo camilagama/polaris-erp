@@ -9,6 +9,7 @@ vi.mock("@/features/products/image-storage", () => ({
 vi.mock("@polaris/db", () => ({
   db: {
     execute: vi.fn(),
+    insert: vi.fn(),
     query: {
       member: {
         findFirst: vi.fn(),
@@ -32,12 +33,14 @@ const resolveMocks = async () => {
   return {
     mockDb: dbModule.db as unknown as {
       execute: MockFn;
+      insert: MockFn;
       query: {
         member: { findFirst: MockFn };
         organization: { findFirst: MockFn };
         products: { findFirst: MockFn };
       };
       transaction: MockFn;
+      update: MockFn;
     },
   };
 };
@@ -49,6 +52,9 @@ describe("product image access", () => {
     const { mockDb } = await resolveMocks();
 
     mockDb.transaction.mockImplementation(async (callback) => callback(mockDb));
+    mockDb.insert.mockReturnValue({
+      values: vi.fn(() => Promise.resolve([])),
+    });
     mockDb.query.products.findFirst.mockResolvedValue({ id: "product-1" });
     mockDb.query.member.findFirst.mockResolvedValue({ id: "member-1" });
     mockDb.query.organization.findFirst.mockResolvedValue({ id: "org-1" });
@@ -68,5 +74,118 @@ describe("product image access", () => {
     });
 
     expect(mockDb.transaction).toHaveBeenCalledOnce();
+  });
+
+  it("records image replacement audit in the same tenant transaction as metadata update", async () => {
+    const { replaceProductImageMetadata } = await import(
+      "@/features/products/image-access"
+    );
+    const { mockDb } = await resolveMocks();
+    const updateReturning = vi.fn(async () => [{ id: "product-1" }]);
+    const auditValues = vi.fn(async () => []);
+
+    mockDb.update = vi.fn(() => ({
+      set: vi.fn(() => ({
+        where: vi.fn(() => ({
+          returning: updateReturning,
+        })),
+      })),
+    }));
+    mockDb.insert.mockReturnValue({
+      values: auditValues,
+    });
+
+    const result = await replaceProductImageMetadata({
+      actorUserId: "user-1",
+      blurDataURL: "data:image/webp;base64,new",
+      height: 900,
+      newVersion: 4,
+      oldVersion: 3,
+      organizationId: "org_dg_imports",
+      productId: "product-1",
+      width: 1200,
+    });
+
+    expect(result).toBe(true);
+    expect(mockDb.transaction).toHaveBeenCalledOnce();
+    expect(auditValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actorUserId: "user-1",
+        organizationId: "org_dg_imports",
+        subjectId: "product-1",
+        subjectType: "product_image",
+        type: "product_image.replaced",
+      })
+    );
+  });
+
+  it("does not record image replacement audit when metadata update loses the version race", async () => {
+    const { replaceProductImageMetadata } = await import(
+      "@/features/products/image-access"
+    );
+    const { mockDb } = await resolveMocks();
+    const auditValues = vi.fn(async () => []);
+
+    mockDb.update = vi.fn(() => ({
+      set: vi.fn(() => ({
+        where: vi.fn(() => ({
+          returning: vi.fn(async () => []),
+        })),
+      })),
+    }));
+    mockDb.insert.mockReturnValue({
+      values: auditValues,
+    });
+
+    const result = await replaceProductImageMetadata({
+      actorUserId: "user-1",
+      blurDataURL: "data:image/webp;base64,new",
+      height: 900,
+      newVersion: 4,
+      oldVersion: 3,
+      organizationId: "org_dg_imports",
+      productId: "product-1",
+      width: 1200,
+    });
+
+    expect(result).toBe(false);
+    expect(auditValues).not.toHaveBeenCalled();
+  });
+
+  it("records image removal audit in the same tenant transaction as metadata clear", async () => {
+    const { clearProductImageMetadata } = await import(
+      "@/features/products/image-access"
+    );
+    const { mockDb } = await resolveMocks();
+    const auditValues = vi.fn(async () => []);
+
+    mockDb.update = vi.fn(() => ({
+      set: vi.fn(() => ({
+        where: vi.fn(() => ({
+          returning: vi.fn(async () => [{ id: "product-1" }]),
+        })),
+      })),
+    }));
+    mockDb.insert.mockReturnValue({
+      values: auditValues,
+    });
+
+    const result = await clearProductImageMetadata({
+      actorUserId: "user-1",
+      currentVersion: 3,
+      organizationId: "org_dg_imports",
+      productId: "product-1",
+    });
+
+    expect(result).toBe(true);
+    expect(auditValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actorUserId: "user-1",
+        organizationId: "org_dg_imports",
+        subjectId: "product-1",
+        subjectType: "product_image",
+        type: "product_image.removed",
+      })
+    );
   });
 });

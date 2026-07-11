@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { DGImportsLogo } from "@/components/ui/svgs/logo";
 import { getAppContext } from "@/lib/app-session";
+import { serverEnv } from "@/lib/env";
 import { getSession } from "@/lib/session";
 
 export const metadata: Metadata = {
@@ -30,6 +31,8 @@ export default async function BillingRequiredPage() {
     redirect("/");
   }
 
+  const supportEmail = serverEnv.SUPPORT_EMAIL;
+
   return (
     <main className="flex min-h-screen items-center justify-center px-6 py-10">
       <section className="w-full max-w-md">
@@ -48,16 +51,19 @@ export default async function BillingRequiredPage() {
           Status atual: {context.billingStatus ?? "sem assinatura"}
         </p>
         <div className="mt-6 flex flex-col gap-3">
-          <Link
-            className="inline-flex h-11 items-center justify-center rounded-md bg-primary px-4 font-medium text-primary-foreground text-sm"
-            href="mailto:suporte@polaris.local?subject=Ativar%20assinatura%20Polaris"
-          >
-            Solicitar ativacao
-          </Link>
+          {supportEmail ? (
+            <Link
+              className="inline-flex h-11 items-center justify-center rounded-md bg-primary px-4 font-medium text-primary-foreground text-sm"
+              href={`mailto:${supportEmail}?subject=${encodeURIComponent("Ativar assinatura Polaris")}`}
+            >
+              Solicitar ativacao
+            </Link>
+          ) : null}
           <p className="text-muted-foreground text-xs">
             A assinatura e obrigatoria desde o primeiro acesso. A ativacao
             manual e concluida pelo time da plataforma apos confirmacao de
-            pagamento.
+            pagamento
+            {supportEmail ? ` (${supportEmail}).` : "."}
           </p>
         </div>
       </section>
