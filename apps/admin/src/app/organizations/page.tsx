@@ -57,10 +57,10 @@ const OrganizationsContent = async ({
             Voltar
           </Link>
           <h1 className="mt-2 font-semibold text-2xl tracking-normal">
-            Organizacoes
+            Tenants
           </h1>
           <p className="mt-1 text-sm text-zinc-400">
-            Busca global read-only com contagens operacionais minimizadas.
+            Busca global read-only por ID tecnico ou email de membro.
           </p>
         </div>
         <search className="w-full max-w-md">
@@ -70,7 +70,7 @@ const OrganizationsContent = async ({
               className="min-w-0 flex-1 rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-zinc-600"
               defaultValue={query}
               name="q"
-              placeholder="Nome, slug ou ID"
+              placeholder="ID ou email"
             />
             <button
               className="rounded-md border border-zinc-700 px-4 py-2 font-medium text-sm text-zinc-100 hover:border-zinc-500"
@@ -84,7 +84,7 @@ const OrganizationsContent = async ({
 
       <section className="overflow-x-auto rounded-lg border border-zinc-800 bg-zinc-900">
         <div className="grid min-w-[720px] grid-cols-[1.5fr_0.8fr_0.7fr_0.7fr_0.7fr] gap-4 border-zinc-800 border-b px-4 py-3 text-xs text-zinc-500 uppercase">
-          <span>Organizacao</span>
+          <span>Tenant</span>
           <span>Status</span>
           <span>Membros</span>
           <span>Produtos</span>
@@ -92,7 +92,7 @@ const OrganizationsContent = async ({
         </div>
         {organizations.length === 0 ? (
           <p className="px-4 py-8 text-sm text-zinc-500">
-            Nenhuma organizacao encontrada.
+            Nenhum tenant encontrado.
           </p>
         ) : (
           organizations.map((organization) => (
@@ -104,10 +104,10 @@ const OrganizationsContent = async ({
             >
               <span className="min-w-0">
                 <span className="block truncate font-medium text-zinc-100">
-                  {organization.name}
+                  {organization.id}
                 </span>
                 <span className="block truncate text-zinc-500">
-                  {organization.slug}
+                  {organization.primaryMemberEmail ?? "Sem email principal"}
                 </span>
               </span>
               <span className="text-zinc-300">{organization.status}</span>

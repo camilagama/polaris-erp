@@ -55,7 +55,6 @@ export default async function ConfiguracoesPage() {
             name: session.user.name,
             role: context.role,
           }}
-          workspaceName={context.organizationName}
         />
         <GoalsSettingsPanel dateBounds={dateBounds} payload={goalsPayload} />
         <CatalogSettingsPanel categories={categories} settings={settings} />

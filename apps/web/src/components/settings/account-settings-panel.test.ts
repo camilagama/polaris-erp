@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { AccountSettingsPanel } from "@/components/settings/account-settings-panel";
 
 describe("AccountSettingsPanel", () => {
-  it("renders one-user account, workspace, billing, and support details", () => {
+  it("renders one-user account, billing, and support details without workspace naming", () => {
     const markup = renderToStaticMarkup(
       AccountSettingsPanel({
         billing: {
@@ -21,12 +21,10 @@ describe("AccountSettingsPanel", () => {
           role: "owner",
         },
         supportEmail: "billing-support@example.com",
-        workspaceName: "DG Imports",
       })
     );
 
     expect(markup).toContain("Minha conta");
-    expect(markup).toContain("DG Imports");
     expect(markup).toContain("Junior");
     expect(markup).toContain("owner@example.com");
     expect(markup).toContain("Ativa");
@@ -38,6 +36,7 @@ describe("AccountSettingsPanel", () => {
       "mailto:billing-support@example.com?subject=Suporte%20Polaris"
     );
     expect(markup).not.toContain("organizationName");
+    expect(markup).not.toContain("workspace");
     expect(markup).not.toContain("canal de suporte");
   });
 });

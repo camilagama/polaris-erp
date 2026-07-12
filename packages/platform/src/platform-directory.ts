@@ -20,8 +20,7 @@ export interface PlatformOrganizationListItem {
   counts: PlatformOrganizationCounts;
   createdAt: string | null;
   id: string;
-  name: string;
-  slug: string;
+  primaryMemberEmail: string | null;
   status: string;
   updatedAt: string | null;
 }
@@ -55,9 +54,7 @@ export interface PlatformUserListItem {
 interface PlatformUserOrganization {
   createdAt: string | null;
   id: string;
-  name: string;
   role: string;
-  slug: string;
   status: string;
 }
 
@@ -152,7 +149,13 @@ export const redactEmail = (email: string): string => {
 
 const getOrganizationSearchClause = (query: string | null): SQL =>
   query
-    ? sql`where o.name ilike ${`%${query}%`} or o.slug ilike ${`%${query}%`} or o.id = ${query}`
+    ? sql`where o.id = ${query} or exists (
+        select 1
+        from member search_member
+        join users search_user on search_user.id = search_member.user_id
+        where search_member.organization_id = o.id
+          and search_user.email ilike ${`%${query}%`}
+      )`
     : sql``;
 
 const getUserSearchClause = (query: string | null): SQL =>
@@ -170,8 +173,13 @@ const mapOrganizationRow = (
   },
   createdAt: toIsoString(row.created_at),
   id: toSafeString(row.id),
-  name: toSafeString(row.name, "Sem nome"),
-  slug: toSafeString(row.slug),
+  primaryMemberEmail:
+    toSafeString(row.owner_email) || toSafeString(row.fallback_member_email)
+      ? redactEmail(
+          toSafeString(row.owner_email) ||
+            toSafeString(row.fallback_member_email)
+        )
+      : null,
   status: toSafeString(row.status, "unknown"),
   updatedAt: toIsoString(row.updated_at),
 });
@@ -197,20 +205,21 @@ export const listPlatformOrganizations = async (
     await queryableDb.execute(sql`
       select
         o.id,
-        o.name,
-        o.slug,
         o.status,
         o.created_at,
         o.updated_at,
+        min(u.email) filter (where m.role = 'owner') as owner_email,
+        min(u.email) as fallback_member_email,
         count(distinct m.id) as member_count,
         count(distinct p.id) as product_count,
         count(distinct s.id) as sale_count
       from organization o
       left join member m on m.organization_id = o.id
+      left join users u on u.id = m.user_id
       left join products p on p.organization_id = o.id
       left join sales s on s.organization_id = o.id
       ${searchClause}
-      group by o.id, o.name, o.slug, o.status, o.created_at, o.updated_at
+      group by o.id, o.status, o.created_at, o.updated_at
       order by o.created_at desc
       limit ${LIST_LIMIT}
     `)
@@ -227,20 +236,21 @@ export const getPlatformOrganizationDetail = async (
     await queryableDb.execute(sql`
       select
         o.id,
-        o.name,
-        o.slug,
         o.status,
         o.created_at,
         o.updated_at,
+        min(u.email) filter (where m.role = 'owner') as owner_email,
+        min(u.email) as fallback_member_email,
         count(distinct m.id) as member_count,
         count(distinct p.id) as product_count,
         count(distinct s.id) as sale_count
       from organization o
       left join member m on m.organization_id = o.id
+      left join users u on u.id = m.user_id
       left join products p on p.organization_id = o.id
       left join sales s on s.organization_id = o.id
       where o.id = ${organizationId}
-      group by o.id, o.name, o.slug, o.status, o.created_at, o.updated_at
+      group by o.id, o.status, o.created_at, o.updated_at
     `)
   );
 
@@ -358,8 +368,6 @@ export const getPlatformUserDetail = async (
     queryableDb.execute(sql`
       select
         o.id,
-        o.name,
-        o.slug,
         o.status,
         m.role,
         m.created_at
@@ -385,9 +393,7 @@ export const getPlatformUserDetail = async (
     organizations: toRows(organizationRows).map((row) => ({
       createdAt: toIsoString(row.created_at),
       id: toSafeString(row.id),
-      name: toSafeString(row.name, "Sem nome"),
       role: toSafeString(row.role, "operator"),
-      slug: toSafeString(row.slug),
       status: toSafeString(row.status, "unknown"),
     })),
     sessionSummary: {

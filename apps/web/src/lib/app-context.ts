@@ -25,9 +25,6 @@ const permissionMinimumRole: Record<AppPermission, OrganizationRole> = {
   "settings:write": "admin",
 };
 
-const NON_SLUG_CHARACTERS_PATTERN = /[^a-z0-9]+/g;
-const SLUG_BOUNDARY_PATTERN = /^-|-$/g;
-
 export const getRoleRank = (role: OrganizationRole): number => roleRank[role];
 
 export const canRolePerform = (
@@ -35,15 +32,3 @@ export const canRolePerform = (
   permission: AppPermission
 ): boolean =>
   getRoleRank(role) >= getRoleRank(permissionMinimumRole[permission]);
-
-export const resolveDefaultOrganizationSlug = (name: string): string => {
-  const slug = name
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .replace(NON_SLUG_CHARACTERS_PATTERN, "-")
-    .replace(SLUG_BOUNDARY_PATTERN, "");
-
-  return slug || "organization";
-};

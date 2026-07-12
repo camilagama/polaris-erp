@@ -1,6 +1,7 @@
 import {
   getPlatformOrganizationDetail,
   getPlatformUserDetail,
+  listPlatformOrganizations,
   listPlatformUsers,
   redactEmail,
 } from "@polaris/platform/directory";
@@ -66,6 +67,49 @@ describe("platform directory redaction", () => {
     }
   });
 
+  it("lists organizations by tenant identity without returning customer names or slugs", async () => {
+    const execute = vi.fn().mockResolvedValueOnce({
+      rows: [
+        {
+          created_at: new Date("2026-07-09T10:00:00.000Z"),
+          fallback_member_email: "operator@example.com",
+          id: "org-1",
+          member_count: "1",
+          name: "Importadora",
+          owner_email: "owner@example.com",
+          product_count: "5",
+          sale_count: "8",
+          slug: "importadora",
+          status: "active",
+          updated_at: new Date("2026-07-09T11:00:00.000Z"),
+        },
+      ],
+    });
+
+    const organizations = await listPlatformOrganizations("owner@example.com", {
+      execute,
+    });
+    const serialized = JSON.stringify(organizations);
+
+    expect(organizations).toEqual([
+      {
+        counts: {
+          members: 1,
+          products: 5,
+          sales: 8,
+        },
+        createdAt: "2026-07-09T10:00:00.000Z",
+        id: "org-1",
+        primaryMemberEmail: "o***@example.com",
+        status: "active",
+        updatedAt: "2026-07-09T11:00:00.000Z",
+      },
+    ]);
+    expect(serialized).not.toContain("Importadora");
+    expect(serialized).not.toContain("importadora");
+    expect(serialized).not.toContain("owner@example.com");
+  });
+
   it("returns organization details with redacted members and session summary only", async () => {
     const execute = vi
       .fn()
@@ -73,9 +117,11 @@ describe("platform directory redaction", () => {
         rows: [
           {
             created_at: "2026-07-09T10:00:00.000Z",
+            fallback_member_email: "operator@example.com",
             id: "org-1",
             member_count: "1",
             name: "Importadora",
+            owner_email: "owner@example.com",
             product_count: "5",
             sale_count: "8",
             slug: "importadora",
@@ -124,6 +170,8 @@ describe("platform directory redaction", () => {
       latestExpiresAt: "2026-08-09T12:00:00.000Z",
     });
     expect(serialized).not.toContain("owner@example.com");
+    expect(serialized).not.toContain("Importadora");
+    expect(serialized).not.toContain("importadora");
     for (const value of sensitiveValues) {
       expect(serialized).not.toContain(value);
     }
@@ -176,6 +224,8 @@ describe("platform directory redaction", () => {
     expect(user?.providerIds).toEqual(["google", "github"]);
     expect(user?.organizations).toHaveLength(1);
     expect(serialized).not.toContain("operator@example.com");
+    expect(serialized).not.toContain("Importadora");
+    expect(serialized).not.toContain("importadora");
     for (const value of sensitiveValues) {
       expect(serialized).not.toContain(value);
     }

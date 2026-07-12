@@ -12,18 +12,19 @@ interface QueryableDb {
 }
 
 interface PlatformBillingSubscriptionListItem {
+  billingEmail: string | null;
   currentPeriodEnd: string | null;
   hasAccess: boolean;
   organizationId: string;
-  organizationName: string;
   planName: string;
   status: string;
   subscriptionId: string;
 }
 
 interface PlatformBillingInvoiceListItem {
+  billingEmail: string | null;
   createdAt: string | null;
-  organizationName: string;
+  organizationId: string;
   status: string;
   totalCents: number;
 }
@@ -125,6 +126,9 @@ const toIsoString = (value: unknown): string | null => {
 const toStringValue = (value: unknown, fallback = ""): string =>
   typeof value === "string" ? value : fallback;
 
+const toNullableString = (value: unknown): string | null =>
+  typeof value === "string" && value.length > 0 ? value : null;
+
 const listSubscriptions = async (
   queryableDb: QueryableDb
 ): Promise<PlatformBillingSubscriptionListItem[]> => {
@@ -133,13 +137,13 @@ const listSubscriptions = async (
       select
         s.organization_id,
         s.id as subscription_id,
-        organization.name as organization_name,
+        c.billing_email,
         p.name as plan_name,
         s.status,
         s.current_period_end
       from billing_subscriptions s
-      inner join organization on organization.id = s.organization_id
       inner join billing_plans p on p.id = s.plan_id
+      left join billing_customers c on c.organization_id = s.organization_id
       order by s.created_at desc
       limit 50
     `)
@@ -149,10 +153,10 @@ const listSubscriptions = async (
     const status = normalizeBillingStatus(toStringValue(row.status));
 
     return {
+      billingEmail: toNullableString(row.billing_email),
       currentPeriodEnd: toIsoString(row.current_period_end),
       hasAccess: hasBillableAccess(status),
       organizationId: toStringValue(row.organization_id),
-      organizationName: toStringValue(row.organization_name, "Sem nome"),
       planName: toStringValue(row.plan_name, "Sem plano"),
       status,
       subscriptionId: toStringValue(row.subscription_id),
@@ -166,20 +170,22 @@ const listInvoices = async (
   const rows = toRows(
     await queryableDb.execute(sql`
       select
-        organization.name as organization_name,
+        i.organization_id,
+        c.billing_email,
         i.status,
         i.total_cents,
         i.created_at
       from billing_invoices i
-      inner join organization on organization.id = i.organization_id
+      left join billing_customers c on c.organization_id = i.organization_id
       order by i.created_at desc
       limit 50
     `)
   );
 
   return rows.map((row) => ({
+    billingEmail: toNullableString(row.billing_email),
     createdAt: toIsoString(row.created_at),
-    organizationName: toStringValue(row.organization_name, "Sem nome"),
+    organizationId: toStringValue(row.organization_id),
     status: toStringValue(row.status, "unknown"),
     totalCents: toNumber(row.total_cents),
   }));

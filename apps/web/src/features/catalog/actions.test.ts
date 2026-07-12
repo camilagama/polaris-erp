@@ -19,15 +19,10 @@ vi.mock("@/features/catalog/server", () => ({
   updateCategory: vi.fn(),
 }));
 
-vi.mock("@/lib/audit-log", () => ({
-  recordAuditEvent: vi.fn(),
-}));
-
 type MockFn = ReturnType<typeof vi.fn>;
 
 const resolveMocks = async () => {
   const auth = await import("@/lib/app-session");
-  const auditLog = await import("@/lib/audit-log");
   const cache = await import("next/cache");
   const catalogServer = await import("@/features/catalog/server");
 
@@ -36,7 +31,6 @@ const resolveMocks = async () => {
     mockDeleteCategory: catalogServer.deleteCategory as MockFn,
     mockRefresh: cache.refresh as MockFn,
     mockRequireAppContext: auth.requireAppContext as MockFn,
-    mockRecordAuditEvent: auditLog.recordAuditEvent as MockFn,
     mockSaveCatalogSettings: catalogServer.saveCatalogSettings as MockFn,
     mockUpdateCategory: catalogServer.updateCategory as MockFn,
     mockUpdateTag: cache.updateTag as MockFn,
@@ -98,9 +92,8 @@ describe("configuration server actions", () => {
     expect(mockRefresh).toHaveBeenCalled();
   });
 
-  it("does not audit or revalidate when category update is rejected", async () => {
+  it("does not revalidate when category update is rejected", async () => {
     const {
-      mockRecordAuditEvent,
       mockRefresh,
       mockRequireAppContext,
       mockUpdateCategory,
@@ -127,13 +120,11 @@ describe("configuration server actions", () => {
 
     expect(mockUpdateTag).not.toHaveBeenCalled();
     expect(mockRefresh).not.toHaveBeenCalled();
-    expect(mockRecordAuditEvent).not.toHaveBeenCalled();
   });
 
-  it("does not audit or revalidate when category delete is rejected", async () => {
+  it("does not revalidate when category delete is rejected", async () => {
     const {
       mockDeleteCategory,
-      mockRecordAuditEvent,
       mockRefresh,
       mockRequireAppContext,
       mockUpdateTag,
@@ -156,7 +147,6 @@ describe("configuration server actions", () => {
 
     expect(mockUpdateTag).not.toHaveBeenCalled();
     expect(mockRefresh).not.toHaveBeenCalled();
-    expect(mockRecordAuditEvent).not.toHaveBeenCalled();
   });
 
   it("invalidates the catalog tag and refreshes after saving settings", async () => {

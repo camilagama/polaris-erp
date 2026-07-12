@@ -32,6 +32,14 @@ const formatDateTime = (value: string | null) => {
   }).format(new Date(value));
 };
 
+const formatTenantLabel = ({
+  billingEmail,
+  organizationId,
+}: {
+  billingEmail: string | null;
+  organizationId: string;
+}) => billingEmail ?? organizationId;
+
 const BillingContent = async () => {
   await connection();
   const platformAdmin = await guardPlatformAdmin();
@@ -97,10 +105,10 @@ const BillingContent = async () => {
             >
               <span className="min-w-0">
                 <span className="block truncate font-medium text-zinc-100">
-                  {subscription.organizationName}
+                  {formatTenantLabel(subscription)}
                 </span>
                 <span className="block truncate text-zinc-500">
-                  {subscription.planName}
+                  {subscription.organizationId} · {subscription.planName}
                 </span>
               </span>
               <span className="text-zinc-300">{subscription.status}</span>
@@ -185,10 +193,15 @@ const BillingContent = async () => {
           overview.invoices.map((invoice) => (
             <div
               className="grid gap-3 border-zinc-800 border-b px-4 py-3 text-sm md:grid-cols-[1fr_0.7fr_0.7fr_0.7fr]"
-              key={`${invoice.organizationName}-${invoice.createdAt}`}
+              key={`${invoice.organizationId}-${invoice.createdAt}`}
             >
-              <span className="font-medium text-zinc-100">
-                {invoice.organizationName}
+              <span className="min-w-0">
+                <span className="block truncate font-medium text-zinc-100">
+                  {formatTenantLabel(invoice)}
+                </span>
+                <span className="block truncate text-zinc-500">
+                  {invoice.organizationId}
+                </span>
               </span>
               <span className="text-zinc-300">{invoice.status}</span>
               <span className="text-zinc-300">

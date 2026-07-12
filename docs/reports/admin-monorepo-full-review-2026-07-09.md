@@ -1,5 +1,7 @@
 # Revisao Minuciosa - Monorepo e Admin Interno
 
+> Nota de supersessao, 2026-07-12: este relatorio e um snapshot historico. Qualquer recomendacao de Cloudflare Access para o admin foi substituida pelo plano atual em `docs/superpowers/plans/2026-07-10-production-readiness-pr-plan.md`: admin separado em Vercel com Vercel Authentication/deployment protection e guard in-app de platform admin.
+
 Data: 2026-07-09  
 Escopo: `docs/admin-monorepo-implementation-plan.md`, monorepo atual, `apps/admin`, `apps/web`, packages compartilhados, CI, Neon/Postgres, gates de producao, outbox/Inngest, Sentry, Upstash, R2 e operacao de release.
 

@@ -66,16 +66,16 @@ describe("platform billing overview", () => {
         rows: [
           {
             current_period_end: "2026-08-01T00:00:00.000Z",
+            billing_email: "billing-a@example.com",
             organization_id: "org_1",
-            organization_name: "Importadora Azul",
             plan_name: "Pro",
             status: "ACTIVE",
             subscription_id: "subscription-1",
           },
           {
             current_period_end: null,
+            billing_email: null,
             organization_id: "org_2",
-            organization_name: "Importadora Cinza",
             plan_name: "Starter",
             status: "provider_weird",
             subscription_id: "subscription-2",
@@ -85,8 +85,9 @@ describe("platform billing overview", () => {
       {
         rows: [
           {
+            billing_email: "billing-a@example.com",
             created_at: "2026-07-09T00:00:00.000Z",
-            organization_name: "Importadora Azul",
+            organization_id: "org_1",
             status: "open",
             total_cents: "4900",
           },
@@ -106,7 +107,8 @@ describe("platform billing overview", () => {
     await expect(getPlatformBillingOverview(db)).resolves.toMatchObject({
       invoices: [
         {
-          organizationName: "Importadora Azul",
+          billingEmail: "billing-a@example.com",
+          organizationId: "org_1",
           status: "open",
           totalCents: 4900,
         },
@@ -114,6 +116,7 @@ describe("platform billing overview", () => {
       subscriptions: [
         {
           hasAccess: true,
+          billingEmail: "billing-a@example.com",
           organizationId: "org_1",
           status: "active",
           subscriptionId: "subscription-1",

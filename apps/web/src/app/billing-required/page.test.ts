@@ -18,7 +18,6 @@ vi.mock("@/lib/app-session", () => ({
     billingStatus: "incomplete",
     hasBillableAccess: false,
     organizationId: "org_dg_imports",
-    organizationName: "DG Imports",
     role: "owner",
     userId: "user-1",
   })),
@@ -51,6 +50,7 @@ describe("BillingRequiredPage", () => {
     expect(markup).toContain(
       "mailto:billing-support@example.com?subject=Ativar%20assinatura%20Polaris"
     );
+    expect(markup).not.toContain("DG Imports");
     expect(markup).not.toContain("suporte@polaris.local");
   });
 });

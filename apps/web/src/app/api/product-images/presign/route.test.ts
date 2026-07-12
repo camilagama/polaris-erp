@@ -52,7 +52,6 @@ describe("POST /api/product-images/presign", () => {
       billingStatus: "active",
       hasBillableAccess: true,
       organizationId: "org_dg_imports",
-      organizationName: "DG Imports",
       role: "owner",
       userId: "user-1",
     });
@@ -159,7 +158,6 @@ describe("POST /api/product-images/presign", () => {
       billingStatus: "active",
       hasBillableAccess: true,
       organizationId: "org_dg_imports",
-      organizationName: "DG Imports",
       role: "owner",
       userId: "user-1",
     });
@@ -214,7 +212,6 @@ describe("POST /api/product-images/presign", () => {
         billingStatus: "active",
         hasBillableAccess: true,
         organizationId: "org_dg_imports",
-        organizationName: "DG Imports",
         role: "owner",
         userId: "user-1",
       },

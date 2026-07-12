@@ -31,7 +31,7 @@ describe("OnboardingForm", () => {
     reactMocks.useActionState.mockReset();
   });
 
-  it("shows recoverable errors and disables submit while pending", async () => {
+  it("shows recoverable errors without asking for a workspace name", async () => {
     const { OnboardingForm } = await import(
       "@/app/(auth)/onboarding/onboarding-form"
     );
@@ -45,8 +45,8 @@ describe("OnboardingForm", () => {
     const markup = renderToStaticMarkup(createElement(OnboardingForm));
 
     expect(markup).toContain('aria-live="polite"');
-    expect(markup).toContain('name="workspaceName"');
-    expect(markup).toContain("Nome da workspace");
+    expect(markup).not.toContain('name="workspaceName"');
+    expect(markup).not.toContain("Nome da workspace");
     expect(markup).toContain("Nao foi possivel iniciar sua conta.");
     expect(markup).toContain("Criando...");
     expect(markup).toMatch(DISABLED_BUTTON_ATTRIBUTE_PATTERN);

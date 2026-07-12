@@ -146,6 +146,8 @@ Esse modo aceita `401` ou `403` como evidencia de protecao no perimetro. Para va
 
 O produto e pago desde o primeiro acesso. Enquanto nao houver checkout self-service, a ativacao manual e permitida apenas como modo controlado de operacao.
 
+SOP operacional: `docs/runbooks/manual-billing-activation-sop.md`.
+
 Fluxo obrigatorio:
 
 1. Cliente bloqueado em `/billing-required` aciona o contato configurado em `SUPPORT_EMAIL`.
@@ -157,7 +159,7 @@ Fluxo obrigatorio:
 Regras de operacao:
 
 - Nao ative assinatura sem referencia de evidencia externa. A acao server e o pacote platform recusam ativacao `active` sem `paymentEvidenceReference`.
-- O SLA do modo manual deve estar documentado no processo interno de suporte antes de lancamento publico. Sem esse compromisso operacional, use o fluxo apenas em piloto controlado.
+- O SLA do modo manual deve seguir o SOP operacional antes de lancamento publico. Sem esse compromisso operacional, use o fluxo apenas em piloto controlado.
 - Guarde a evidencia fora do banco quando ela contiver dados sensiveis; no app, grave somente uma referencia curta e rastreavel.
 - Esse fluxo nao substitui checkout self-service para escala. Ele e uma excecao operacional auditavel ate a integracao de pagamento automatizada.
 
@@ -320,7 +322,7 @@ O workflow `.github/workflows/ci.yml` roda:
 - `bun run ops:restore-drill:checklist` no job manual `restore-drill-checklist`, dependente de variables `RESTORE_DRILL_CONFIRMED_AT`, `RESTORE_DRILL_SOURCE_BRANCH`, `RESTORE_DRILL_RESTORE_BRANCH` e `RESTORE_DRILL_VALIDATED_BY`
 - `bun run deploy:smoke` no job manual `deployment-smoke`, dependente de `DEPLOYMENT_SMOKE_URL` e opcionalmente `INTERNAL_R2_HEALTH_SECRET`
 - `bun run deploy:smoke:admin` no job manual `admin-deployment-smoke`, dependente de `ADMIN_DEPLOYMENT_SMOKE_URL` e opcionalmente `ADMIN_DEPLOYMENT_SMOKE_PROTECTED=true` quando a meta for validar o bloqueio da Vercel Authentication
-- `bun run ops:production-certification:checklist` no job manual `production-certification-checklist`, dependente de variables `PRODUCTION_CERT_*` para Vercel Auth admin, Inngest sync/cron, provider sandbox, query plan, restore drill, RLS `18/18`, R2 health, Upstash rate limit, evento/alerta Sentry e validador
+- `bun run ops:production-certification:checklist` no job manual `production-certification-checklist`, dependente de variables `PRODUCTION_CERT_*` para Vercel Auth admin, Root Directory `apps/admin`, source outside root habilitado, Inngest sync/cron/function id, SOP/SLA de billing manual, branch Neon production protegida, pooler Neon habilitado, sandbox Asaas/Woovi, provider sandbox geral, query plan, restore drill com branch origem/restaurada, RLS `18/18`, R2 health, Upstash rate limit, evento/alerta Sentry e validador
 - `bun run prod:preflight` no job manual `production-preflight`, dependente de `PRODUCTION_DATABASE_URL`, `PRODUCTION_DATABASE_URL_DIRECT`, `PRODUCTION_BETTER_AUTH_URL`, `PRODUCTION_NEXT_PUBLIC_APP_URL`, `SUPPORT_EMAIL`, `DEPLOYMENT_SMOKE_URL`, `E2E_DATABASE_URL`, `RLS_DATABASE_URL`, Google OAuth, R2, Upstash, Inngest, Sentry, `BETTER_AUTH_SECRET`, `INTERNAL_R2_HEALTH_SECRET` e `PRODUCT_IMAGE_RECONCILE_SECRET`
 
 Comandos agregados disponiveis para gates locais ou jobs dedicados:
@@ -339,12 +341,25 @@ O job `restore-drill-checklist` so roda por `workflow_dispatch`. Ele nao restaur
 O job `production-certification-checklist` so roda por `workflow_dispatch`. Ele nao consulta Vercel, Neon, Inngest ou providers automaticamente; ele falha se a evidencia operacional minima ainda nao tiver sido registrada como variables do GitHub:
 
 - `PRODUCTION_CERT_ADMIN_VERCEL_AUTH_AT`: timestamp ISO da verificacao de Vercel Authentication/deployment protection no admin.
+- `PRODUCTION_CERT_ADMIN_VERCEL_ROOT_DIRECTORY`: deve ser `apps/admin`.
+- `PRODUCTION_CERT_ADMIN_VERCEL_OUTSIDE_ROOT_INCLUDED`: deve ser `true` depois de conferir que o build do projeto admin inclui arquivos fora do Root Directory.
 - `PRODUCTION_CERT_INNGEST_SYNC_AT`: timestamp ISO da verificacao de app Inngest sincronizada.
 - `PRODUCTION_CERT_INNGEST_RECONCILE_CRON`: deve ser `0 4 * * *`.
+- `PRODUCTION_CERT_MANUAL_BILLING_SOP_AT`: timestamp ISO da revisao/aprovacao do SOP interno de ativacao manual controlada em `docs/runbooks/manual-billing-activation-sop.md`.
+- `PRODUCTION_CERT_MANUAL_BILLING_SLA_HOURS`: janela de SLA operacional para ativacao manual, inteiro de `1` a `48`; use `24` salvo decisao operacional documentada.
+- `PRODUCTION_CERT_NEON_PRODUCTION_BRANCH_PROTECTED`: deve ser `true` depois de conferir que a branch Neon `production` esta protegida.
+- `PRODUCTION_CERT_NEON_POOLER_ENABLED`: deve ser `true` depois de conferir que o compute/runtime Neon esta com pooler habilitado e que `DATABASE_URL` usa o host pooler.
 - `PRODUCTION_CERT_RLS_FORCED_TABLES`: deve ser `18/18`.
 - `PRODUCTION_CERT_QUERY_PLAN_AT`: timestamp ISO do `db:analyze:listings` com `PERFORMANCE_REQUIRE_REPRESENTATIVE=true`.
-- `PRODUCTION_CERT_PROVIDER_SANDBOX_AT`: timestamp ISO da validacao de sandbox dos providers de pagamento/webhook.
+- `PRODUCTION_CERT_QUERY_PLAN_MIN_ROWS`: inteiro maior ou igual a `500`, alinhado ao modo representativo estrito do `db:analyze:listings`.
+- `PRODUCTION_CERT_QUERY_PLAN_SEARCH_TERM`: termo de busca nao vazio usado no `db:analyze:listings`, para provar que a checagem de busca de produtos/clientes rodou.
+- `PRODUCTION_CERT_INNGEST_RECONCILE_FUNCTION_ID`: deve ser `reconcile-product-images`.
+- `PRODUCTION_CERT_ASAAS_SANDBOX_AT`: timestamp ISO da validacao do fluxo Asaas em sandbox, incluindo webhook/assinatura sem endpoint de producao.
+- `PRODUCTION_CERT_WOOVI_SANDBOX_AT`: timestamp ISO da validacao do fluxo Woovi em sandbox, incluindo webhook/Pix sem endpoint de producao.
+- `PRODUCTION_CERT_PROVIDER_SANDBOX_AT`: timestamp ISO da aprovacao operacional geral de sandbox dos providers de pagamento/webhook.
 - `PRODUCTION_CERT_RESTORE_DRILL_AT`: timestamp ISO do restore drill aceito.
+- `PRODUCTION_CERT_RESTORE_DRILL_SOURCE_BRANCH`: branch/base original do restore drill, normalmente `production`.
+- `PRODUCTION_CERT_RESTORE_DRILL_RESTORE_BRANCH`: branch restaurada usada para validacao; deve ser diferente da branch origem.
 - `PRODUCTION_CERT_VALIDATED_BY`: operador responsavel.
 
 O job `deployment-smoke` so roda por `workflow_dispatch`. Configure `DEPLOYMENT_SMOKE_URL` com a URL publica do preview/producao que sera promovido; ele valida `/api/health`, `/sign-in`, redirect do Google OAuth para `accounts.google.com` e confirma que `/api/auth/dev/bootstrap-session` esta bloqueado com 403. Se `INTERNAL_R2_HEALTH_SECRET` estiver configurado, tambem valida `/api/internal/health/r2`.

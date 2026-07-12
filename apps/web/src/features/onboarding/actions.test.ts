@@ -33,7 +33,7 @@ describe("completeOnboardingAction", () => {
     onboardingMocks.getAppContext.mockResolvedValue(null);
   });
 
-  it("creates the initial workspace with name and billing email before redirecting", async () => {
+  it("creates the initial tenant with billing email before redirecting", async () => {
     onboardingMocks.requireSession.mockResolvedValue({
       user: {
         email: "owner@example.com",
@@ -42,7 +42,7 @@ describe("completeOnboardingAction", () => {
       },
     });
     const formData = new FormData();
-    formData.set("workspaceName", "DG Imports");
+    formData.set("workspaceName", "Cliente nao deve controlar isso");
 
     await completeOnboardingAction({ error: null }, formData);
 
@@ -50,22 +50,24 @@ describe("completeOnboardingAction", () => {
       onboardingMocks.createInitialOrganizationForUser
     ).toHaveBeenCalledWith({
       billingEmail: "owner@example.com",
-      organizationName: "DG Imports",
       userId: "user-1",
     });
     expect(onboardingMocks.redirect).toHaveBeenCalledWith("/");
   });
 
-  it("returns a recoverable error when workspace name is missing", async () => {
+  it("does not require a workspace name", async () => {
     const result = await completeOnboardingAction(
       { error: null },
       new FormData()
     );
 
-    expect(result).toEqual({ error: "Informe o nome da workspace." });
     expect(
       onboardingMocks.createInitialOrganizationForUser
-    ).not.toHaveBeenCalled();
-    expect(onboardingMocks.redirect).not.toHaveBeenCalled();
+    ).toHaveBeenCalledWith({
+      billingEmail: undefined,
+      userId: "user-1",
+    });
+    expect(onboardingMocks.redirect).toHaveBeenCalledWith("/");
+    expect(result).toBeUndefined();
   });
 });

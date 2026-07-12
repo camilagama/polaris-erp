@@ -1,6 +1,6 @@
 import "server-only";
 
-import { goals } from "@polaris/db/schema";
+import { auditEvents, goals } from "@polaris/db/schema";
 import {
   type TenantTransaction,
   withTenantContext,
@@ -71,6 +71,31 @@ const countActiveGoals = async (
 
   return Number(rows[0]?.value ?? 0);
 };
+
+const writeGoalAuditEvent = (
+  tx: TenantTransaction,
+  {
+    actorUserId,
+    metadata,
+    organizationId,
+    subjectId,
+    type,
+  }: {
+    actorUserId: string;
+    metadata?: Record<string, unknown>;
+    organizationId: string;
+    subjectId?: string;
+    type: string;
+  }
+) =>
+  tx.insert(auditEvents).values({
+    actorUserId,
+    metadata,
+    organizationId,
+    subjectId,
+    subjectType: "goal",
+    type,
+  });
 
 const resolveActiveGoalTransitions = async (
   organizationId: string
@@ -280,12 +305,20 @@ export const createGoal = async (
       status: "active",
       targetValue: toTargetDecimalString(input.metric, input.targetValue),
     });
+
+    await writeGoalAuditEvent(tx, {
+      actorUserId: createdByUserId,
+      metadata: { metric: input.metric, name: input.name },
+      organizationId,
+      type: "goal.created",
+    });
   });
 };
 
 export const updateGoal = async (
   organizationId: string,
-  input: UpdateGoalInput
+  input: UpdateGoalInput,
+  actorUserId: string
 ): Promise<void> => {
   const today = formatDateInputValue();
 
@@ -333,12 +366,20 @@ export const updateGoal = async (
     if (updatedRows.length === 0) {
       throw new Error("Meta nao encontrada ou nao esta ativa.");
     }
+
+    await writeGoalAuditEvent(tx, {
+      actorUserId,
+      organizationId,
+      subjectId: input.id,
+      type: "goal.updated",
+    });
   });
 };
 
 export const archiveGoal = async (
   organizationId: string,
-  goalId: string
+  goalId: string,
+  actorUserId: string
 ): Promise<void> => {
   const row = await withTenantContext(organizationId, (tx) =>
     tx.query.goals.findFirst({
@@ -364,8 +405,8 @@ export const archiveGoal = async (
   });
   const actual = getGoalActualValue(metric, metrics);
 
-  const archivedRows = await withTenantContext(organizationId, (tx) =>
-    tx
+  await withTenantContext(organizationId, async (tx) => {
+    const archivedRows = await tx
       .update(goals)
       .set({
         resolvedAt: new Date(),
@@ -376,17 +417,25 @@ export const archiveGoal = async (
       .where(
         and(eq(goals.id, goalId), eq(goals.organizationId, organizationId))
       )
-      .returning({ id: goals.id })
-  );
+      .returning({ id: goals.id });
 
-  if (archivedRows.length === 0) {
-    throw new Error("Meta nao encontrada.");
-  }
+    if (archivedRows.length === 0) {
+      throw new Error("Meta nao encontrada.");
+    }
+
+    await writeGoalAuditEvent(tx, {
+      actorUserId,
+      organizationId,
+      subjectId: goalId,
+      type: "goal.archived",
+    });
+  });
 };
 
 export const unarchiveGoal = async (
   organizationId: string,
-  goalId: string
+  goalId: string,
+  actorUserId: string
 ): Promise<void> => {
   const row = await withTenantContext(organizationId, (tx) =>
     tx.query.goals.findFirst({
@@ -442,5 +491,12 @@ export const unarchiveGoal = async (
     if (unarchivedRows.length === 0) {
       throw new Error("Meta nao encontrada.");
     }
+
+    await writeGoalAuditEvent(tx, {
+      actorUserId,
+      organizationId,
+      subjectId: goalId,
+      type: "goal.unarchived",
+    });
   });
 };

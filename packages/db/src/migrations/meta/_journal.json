@@ -120,6 +120,27 @@
       "when": 1783660800000,
       "tag": "20260710052000_seed_initial_billing_plan",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1783684200000,
+      "tag": "20260710115000_add_trigram_search_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1783726200000,
+      "tag": "20260710233000_event_outbox_observed_status",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1783830600000,
+      "tag": "20260712043000_normalize_organization_technical_identity",
+      "breakpoints": true
     }
   ]
 }

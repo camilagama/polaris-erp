@@ -41,6 +41,36 @@ describe("core audit boundary guard", () => {
     );
   });
 
+  it("monitors goal write actions after audit moved into goal transactions", () => {
+    const goalsBoundary = CORE_AUDIT_BOUNDARIES.find((boundary) =>
+      boundary.filePath.replaceAll("\\", "/").endsWith("goals/actions.ts")
+    );
+
+    expect(goalsBoundary?.functionNames).toEqual(
+      expect.arrayContaining([
+        "archiveGoalAction",
+        "createGoalAction",
+        "unarchiveGoalAction",
+        "updateGoalAction",
+      ])
+    );
+  });
+
+  it("monitors catalog write actions after audit moved into catalog transactions", () => {
+    const catalogBoundary = CORE_AUDIT_BOUNDARIES.find((boundary) =>
+      boundary.filePath.replaceAll("\\", "/").endsWith("catalog/actions.ts")
+    );
+
+    expect(catalogBoundary?.functionNames).toEqual(
+      expect.arrayContaining([
+        "createCategoryAction",
+        "deleteCategoryAction",
+        "saveCatalogSettingsAction",
+        "updateCategoryAction",
+      ])
+    );
+  });
+
   it("detects best-effort audit calls inside monitored product image metadata actions", () => {
     const findings = findBestEffortAuditCallsInCoreFunctions({
       filePath: "apps/web/src/features/products/actions.ts",

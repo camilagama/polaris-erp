@@ -80,9 +80,11 @@ const OrganizationDetailContent = async ({
         <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="font-semibold text-2xl tracking-normal">
-              {organization.name}
+              {organization.id}
             </h1>
-            <p className="mt-1 text-sm text-zinc-500">{organization.slug}</p>
+            <p className="mt-1 text-sm text-zinc-500">
+              {organization.primaryMemberEmail ?? "Sem email principal"}
+            </p>
           </div>
           <span className="rounded-md border border-zinc-800 px-3 py-2 text-sm text-zinc-300">
             {organization.status}

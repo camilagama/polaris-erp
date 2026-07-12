@@ -1,5 +1,7 @@
 # Relatorio de Auditoria - Monorepo e Admin Interno
 
+> Nota de supersessao, 2026-07-12: este relatorio e um snapshot historico. Qualquer recomendacao de Cloudflare Access para o admin foi substituida pelo plano atual em `docs/superpowers/plans/2026-07-10-production-readiness-pr-plan.md`: admin separado em Vercel com Vercel Authentication/deployment protection e guard in-app de platform admin.
+
 Data: 2026-07-09  
 Escopo: revisao do estado atual do monorepo Polaris contra `docs/admin-monorepo-implementation-plan.md`, com foco em isolamento `apps/web` vs `apps/admin`, Neon/Postgres, gates de producao, outbox, rate limit admin, Vercel/Cloudflare/Sentry/R2/Upstash e riscos de release.
 

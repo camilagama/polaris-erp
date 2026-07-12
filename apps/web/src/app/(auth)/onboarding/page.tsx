@@ -31,11 +31,9 @@ export default async function OnboardingPage() {
             <DGImportsLogo className="size-6 shrink-0" />
             Polaris.
           </div>
-          <h1 className="font-heading text-3xl tracking-tight">
-            Criar workspace
-          </h1>
+          <h1 className="font-heading text-3xl tracking-tight">Ativar conta</h1>
           <p className="mt-2 text-muted-foreground text-sm">
-            Escolha o nome que identifica sua operacao no Polaris.
+            Conclua a configuracao inicial para acessar o Polaris.
           </p>
         </div>
 

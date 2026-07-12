@@ -17,7 +17,7 @@
 - Use `E2E_DATABASE_URL` isolated for every E2E run.
 - Billing is required from day one: no free/beta assumption in production.
 - Platform admin must be able to view/manage billing.
-- Customers name the workspace during onboarding, while the app remains one-user-per-tenant for the MVP.
+- Customers do not name the workspace/organization during onboarding; the app remains one-user-per-tenant for the MVP and uses hidden technical tenant identity.
 - Remove Cloudflare Access from the admin app and replace perimeter protection with Vercel Authentication/deployment protection plus in-app platform admin grants.
 
 ---
@@ -42,10 +42,10 @@
    - Reason: schema, admin event UI, retry helpers, and Inngest processor already exist.
    - Fix by registering real dispatchers or converting currently unsupported events into explicit synchronous effects plus non-dispatched audit records.
 
-5. **Organization/workspace naming:** keep customer-controlled workspace naming in onboarding.
-   - Better Auth organization `name`/`slug` stay as product-facing tenant identity fields.
+5. **Organization/workspace naming:** remove customer-controlled workspace naming from onboarding.
+   - Better Auth organization `name`/`slug` remain required technical columns, but they are hidden implementation identity, not product-facing customer fields.
    - Keep the operating model one-user-per-tenant for the MVP; do not add invitations or workspace switching in this stack.
-   - No Neon migration is needed for this reversal because the required columns already exist and remain useful.
+   - Existing customer-derived names/slugs are normalized by the PR49 data repair migration before production certification.
 
 ---
 
@@ -57,20 +57,20 @@
 
 **Conclusao:** The PR stack improved architecture, security boundaries, RLS scaffolding, admin separation, Inngest scheduling, and operational gates, but the project remains **no-go for public paid launch** until the following evidence/fixes exist:
 
-- Self-service billing activation from `/billing-required`, or a formally documented controlled-pilot/manual activation mode. Local controlled manual activation now requires a payment evidence reference in PR 40.
+- Self-service billing activation from `/billing-required`, or a formally documented controlled-pilot/manual activation mode. Local controlled manual activation now requires a payment evidence reference in PR 40, and production certification requires SOP/SLA evidence in PR 41.
 - Explicit subscription policy for `trialing`, `past_due`, `canceled`, and any grace-period window. Local policy implemented in PR 26: only `active` grants ERP access.
-- Billing RLS migration applied to an approved Neon branch and live smoke proving `forcedTables = 18/18`.
+- Billing RLS migration applied to an approved Neon branch and live smoke proving `forcedTables = 18/18`; production branch protection and pooler-enabled proof are now required by PR 42.
 - Capture-only outbox rows represented by an explicit non-retryable status. Local policy implemented in PR 27 with `observed`; live migration application remains pending.
 - Inngest cloud sync/schedule proof for `reconcile-product-images` cron `0 4 * * *`.
-- Vercel Authentication/deployment protection proof on the real `apps/admin` Vercel project.
+- Vercel Authentication/deployment protection proof on the real `apps/admin` Vercel project, including Root Directory `apps/admin` and source files outside root included. Local production certification requires these Vercel project config checks after PR 43.
 - Real restore/PITR drill evidence, not only checklist variable validation.
 - R2 health, Upstash rate-limit, Sentry event, and Sentry alert evidence. Local checklist enforcement added in PR 39; live evidence remains pending.
 - Transactional audit guard for product stock/price changes and product image metadata changes is complete locally; R2 object operations remain external side effects with compensating cleanup/reconcile.
 - Dependency advisory baseline must be reviewed by 2026-08-10 and now fails CI on new advisory URLs or expired review date.
-- Postgres pool/serverless connection review after E2E connection pressure.
+- Postgres pool/serverless connection review after E2E connection pressure. Read-only Neon evidence on 2026-07-11 showed production compute `pooler_enabled=false`; PR 42 now prevents production certification until pooler-enabled evidence is recorded.
 - Representative query-plan validation now has a strict local certification mode; live Neon execution remains pending.
 
-**Recommended next PR:** production evidence/certification pass for live Vercel Authentication, Neon RLS, Inngest schedule, restore drill, query-plan execution, provider sandbox, and observability; or continue local hardening while external production access remains unavailable. PR 26 set the entitlement contract, PR 27 resolved capture-only outbox semantics, PR 28 made controlled manual billing activation operable, PR 30 fixed Postgres pool defaults, PR 31 added dependency advisory baseline enforcement, PR 32 closed product stock/price false-audit gaps, PR 33 added a CI guard against best-effort audit in core ERP write actions, PR 34 added strict query-plan certification mode, PR 35 added a production certification evidence checklist, PR 36 made advisory baseline review expiry enforceable, PR 37 made the support/billing contact explicit, PR 38 moved product image metadata audit into the metadata transaction, PR 39 expanded production certification to require observability evidence, and PR 40 made manual billing activation require an auditable payment evidence reference.
+**Recommended next PR:** production evidence/certification pass for live Vercel Authentication/admin project config, Neon RLS, Neon branch protection/pooler, Inngest schedule, restore drill, query-plan execution, provider sandbox, observability, and manual billing SOP/SLA; or continue local hardening while external production access remains unavailable. PR 26 set the entitlement contract, PR 27 resolved capture-only outbox semantics, PR 28 made controlled manual billing activation operable, PR 30 fixed Postgres pool defaults, PR 31 added dependency advisory baseline enforcement, PR 32 closed product stock/price false-audit gaps, PR 33 added a CI guard against best-effort audit in core ERP write actions, PR 34 added strict query-plan certification mode, PR 35 added a production certification evidence checklist, PR 36 made advisory baseline review expiry enforceable, PR 37 made the support/billing contact explicit, PR 38 moved product image metadata audit into the metadata transaction, PR 39 expanded production certification to require observability evidence, PR 40 made manual billing activation require an auditable payment evidence reference, PR 41 added SOP/SLA evidence to production certification, PR 42 added Neon branch protection/pooler evidence to production certification, PR 43 added admin Vercel project config evidence to production certification, PR 44 added provider-specific Asaas/Woovi sandbox evidence to production certification, PR 45 added Inngest reconcile function-id evidence to production certification, PR 46 added restore drill branch evidence to production certification, PR 47 added representative query-plan row/search evidence to production certification, PR 48 restored one-user onboarding without customer-controlled organization naming, PR 49 added a DB data repair for technical organization identity plus migration journal coverage, PR 50 removed organization names from platform billing overview/admin billing UI, PR 51 removed organization-name/slug dependency from the platform admin directory, PR 52 removed the legacy customer-name-based organization slug helper, PR 53 removed stale `organizationName` from the billing-required test mock, PR 54 reconciled the plan's Decision Log with the one-user technical-tenant identity decision, PR 55 marked older Cloudflare Access admin reports as superseded by Vercel Authentication guidance, PR 56 added the controlled manual billing activation SOP with default 24-hour SLA, PR 57 added a source guard that keeps the SOP linked to certification docs, PR 58 corrected stale PR07 reversal text that still described customer workspace naming as current, PR 59 added a source guard against future tenant-identity documentation drift, PR 60 removed the leftover Vercel Cron config for product-image reconciliation, PR 61 added an active-source guard against reintroducing Cloudflare Access code/config, PR 62 added an active-source guard against reintroducing legacy Vercel Cron secrets/config, PR 63 moved goals audit into the goal write transactions, PR 64 added catalog actions to the core audit boundary guard, and PR 65 removed stale best-effort audit mocks from product/sale action tests.
 
 ### PR 26 - Resolve Subscription Entitlement Policy Review
 
@@ -137,7 +137,7 @@
 
 **Status:** Nao concluida em 2026-07-10. Bloqueada por acesso/confirmacao externa.
 
-**Resultado parcial:** The Vercel plugin can access team `team_qrwuUvtcEwiZeaFbrvTWhYVk` (`Summit Studio's projects`), but `list_projects` returns an empty project list and `apps/web/.vercel/project.json` project `prj_v2Hd8B75Q0ozFsu8h2fjtXQAgy5i` returns `404 Not Found` through the plugin. There is no `apps/admin/.vercel/project.json`, so live admin Vercel Authentication/protection evidence cannot be collected from this session. The Neon plugin can find project `polaris-erp` (`autumn-feather-14038163`), but applying PR 27 migration or running live RLS/PITR checks against real branches requires explicit operator approval.
+**Resultado parcial:** The Vercel plugin can access team `team_qrwuUvtcEwiZeaFbrvTWhYVk` (`Summit Studio's projects`), but `list_projects` returns an empty project list and `apps/web/.vercel/project.json` project `prj_v2Hd8B75Q0ozFsu8h2fjtXQAgy5i` returns `404 Not Found` through the plugin. There is no `apps/admin/.vercel/project.json`, so live admin Vercel Authentication/protection evidence cannot be collected from this session. The Neon plugin can find project `polaris-erp` (`autumn-feather-14038163`), but applying PR 27 migration or running live RLS/PITR checks against real branches requires explicit operator approval. Retomada read-only em 2026-07-11 confirmed the Neon project has branches `production` (`br-empty-frog-acrcn1aj`, primary/default), `dev` (`br-quiet-unit-ac8k3rxs`), and `e2e` (`br-flat-cherry-acbnuhz4`); it also showed `production.protected=false` and production compute `pooler_enabled=false`. Rechecagem read-only em 2026-07-12 found the same production posture: default branch `production` remains `protected=false`, production compute `ep-quiet-mode-acv41t95` remains `pooler_enabled=false`, and `list_shared_projects` returns no shared `polaris` project. Neon production is still not certifiable.
 
 **Verificacao executada:**
 - Vercel `list_teams` returned team `team_qrwuUvtcEwiZeaFbrvTWhYVk`.
@@ -145,10 +145,15 @@
 - Vercel `get_project` for `apps/web/.vercel/project.json` project `prj_v2Hd8B75Q0ozFsu8h2fjtXQAgy5i` returned `404 Not Found`.
 - Local file check found `apps/web/.vercel/project.json`, root `.vercel/project.json`, and no `apps/admin/.vercel/project.json`.
 - Neon search for `polaris` found project `polaris-erp` (`autumn-feather-14038163`).
+- Neon `describe_project` on 2026-07-11 found branches: `production` (`br-empty-frog-acrcn1aj`, primary/default, `protected=false`), `dev` (`br-quiet-unit-ac8k3rxs`), and `e2e` (`br-flat-cherry-acbnuhz4`), all `ready`.
+- Neon `list_branch_computes` on 2026-07-11 found production compute `ep-quiet-mode-acv41t95` in `aws-sa-east-1` with `pooler_enabled=false` and pooled host advertised but not enabled.
+- Neon `fetch project:autumn-feather-14038163` on 2026-07-12 reconfirmed `production` (`br-empty-frog-acrcn1aj`) as primary/default with `protected=false`.
+- Neon `list_branch_computes` on 2026-07-12 reconfirmed production compute `ep-quiet-mode-acv41t95` with `pooler_enabled=false`.
+- Neon `list_shared_projects search=polaris` on 2026-07-12 returned no shared projects.
 
 **Decisao de escopo:** No production migration, deployment mutation, or live database check was executed without explicit approval. This PR is an evidence-gathering attempt only.
 
-**Risco residual:** Production readiness remains externally unproven for Vercel Authentication/deployment protection, Neon RLS/migration application, Inngest cloud schedule, restore drill, audit baseline, and provider sandbox.
+**Risco residual:** Production readiness remains externally unproven for Vercel Authentication/deployment protection, Neon RLS/migration application, Neon production branch protection/pooler enablement, Inngest cloud schedule, restore drill, audit baseline, and provider sandbox.
 
 **Para retomar:** Provide or fix Vercel project access/linking for both `apps/web` and `apps/admin`, then approve the exact Neon migration/smoke steps for project `autumn-feather-14038163`.
 
@@ -362,6 +367,454 @@
 **Risco residual:** The payment evidence reference is operator-entered text. It proves that an operator recorded an external artifact id/link/reference, but it does not cryptographically verify the provider payment. Public broad launch still benefits from self-service checkout or a provider-backed activation flow.
 
 **Rollback:** Remove the `paymentEvidenceReference` form field and validation, remove audit metadata for that reference, and revert the new tests/docs. If any activations happened with the field, retain existing audit rows; rolling back code should not mutate historical audit metadata.
+
+### PR 41 - Require Manual Billing SOP/SLA Evidence in Production Certification
+
+**Status:** Concluida em 2026-07-11 para checklist, CI/env, docs e verificacoes locais.
+
+**Resultado:** The production certification checklist now treats the manual billing exception as a production gate. `scripts/check-production-certification.ts` requires `PRODUCTION_CERT_MANUAL_BILLING_SOP_AT` as an ISO timestamp and `PRODUCTION_CERT_MANUAL_BILLING_SLA_HOURS` as an integer from `1` to `48`. GitHub workflow env wiring, `.env.example`, CI workflow tests, operations gate tests, deploy runbook, and review report now include those variables.
+
+**Verificacao executada:**
+- `bun --cwd apps/web vitest run src/ops/operations-gates.test.ts src/ops/ci-workflow.test.ts` failed first because the checklist, workflow, and env example did not require manual billing SOP/SLA evidence.
+- `bun --cwd apps/web vitest run src/ops/operations-gates.test.ts src/ops/ci-workflow.test.ts` passed: 2 files, 25 tests.
+
+**Decisao de escopo:** This PR does not define the business SLA text or create a support ticketing integration. It ensures production signoff cannot pass without recording that the manual activation SOP was reviewed and that an activation SLA window exists.
+
+**Risco residual:** Operators can still enter inaccurate SOP/SLA evidence variables. PR 29 remains responsible for collecting real production evidence and preserving the supporting artifacts.
+
+**Rollback:** Remove the two `PRODUCTION_CERT_MANUAL_BILLING_*` variables from the script, CI workflow, `.env.example`, runbook, report, and tests. This restores the previous production checklist but allows production certification without explicit manual billing SOP/SLA signoff.
+
+### PR 42 - Require Neon Branch Protection and Pooler Evidence
+
+**Status:** Concluida em 2026-07-11 para checklist, CI/env, docs e verificacoes locais.
+
+**Resultado:** Production certification now requires explicit Neon production posture evidence in addition to RLS. `scripts/check-production-certification.ts` requires `PRODUCTION_CERT_NEON_PRODUCTION_BRANCH_PROTECTED=true` and `PRODUCTION_CERT_NEON_POOLER_ENABLED=true`. `.env.example`, GitHub workflow env wiring, operations gate tests, CI workflow tests, deploy runbook, plan, and review report now include those variables. A read-only PR29 follow-up found the current Neon `production` branch is not protected and the listed production compute has `pooler_enabled=false`, so those live states must be corrected before certification.
+
+**Verificacao executada:**
+- `bun --cwd apps/web vitest run src/ops/operations-gates.test.ts src/ops/ci-workflow.test.ts` failed first because the checklist, workflow, and env example did not require Neon production branch/pooler evidence.
+- `bun --cwd apps/web vitest run src/ops/operations-gates.test.ts src/ops/ci-workflow.test.ts` passed: 2 files, 27 tests.
+
+**Decisao de escopo:** This PR does not mutate Neon, enable branch protection, enable pooler, or run RLS smoke. It closes the local certification gap and records the read-only evidence that current Neon settings are not launch-ready.
+
+**Risco residual:** Operators can still enter inaccurate values. PR29 remains responsible for live correction, smoke, and evidence preservation after explicit approval.
+
+**Rollback:** Remove the two `PRODUCTION_CERT_NEON_*` variables from the script, CI workflow, `.env.example`, runbook, report, and tests. This restores the previous production checklist but allows production certification without explicit Neon production branch protection/pooler proof.
+
+### PR 43 - Require Admin Vercel Project Configuration Evidence
+
+**Status:** Concluida em 2026-07-11 para checklist, CI/env, docs e verificacoes locais.
+
+**Resultado:** Production certification now requires proof that the admin is deployed as the intended separate Vercel project configuration. `scripts/check-production-certification.ts` requires `PRODUCTION_CERT_ADMIN_VERCEL_ROOT_DIRECTORY=apps/admin` and `PRODUCTION_CERT_ADMIN_VERCEL_OUTSIDE_ROOT_INCLUDED=true`, alongside the existing admin Vercel Authentication timestamp. `.env.example`, GitHub workflow env wiring, operations gate tests, CI workflow tests, deploy runbook, plan, and review report now include those variables.
+
+**Verificacao executada:**
+- `bun --cwd apps/web vitest run src/ops/operations-gates.test.ts src/ops/ci-workflow.test.ts` failed first because the checklist, workflow, and env example did not require admin Vercel root/outside-root evidence.
+- `bun --cwd apps/web vitest run src/ops/operations-gates.test.ts src/ops/ci-workflow.test.ts` passed: 2 files, 29 tests.
+
+**Decisao de escopo:** This PR does not query or mutate Vercel. It closes the local certification gap for the admin deployment configuration that must be verified manually or by a future Vercel-accessible evidence pass.
+
+**Risco residual:** PR29 still must collect the real Vercel project evidence. Operators can still enter inaccurate checklist variables if they do not preserve supporting screenshots/API output.
+
+**Rollback:** Remove the two `PRODUCTION_CERT_ADMIN_VERCEL_*` config variables from the script, CI workflow, `.env.example`, runbook, report, and tests. This restores the previous production checklist but allows production certification without explicit admin project root/source inclusion proof.
+
+### PR 44 - Require Provider-Specific Sandbox Evidence
+
+**Status:** Concluida em 2026-07-11 para checklist, CI/env, docs e verificacoes locais.
+
+**Resultado:** Production certification now requires provider-specific sandbox evidence for both billing providers. `scripts/check-production-certification.ts` requires `PRODUCTION_CERT_ASAAS_SANDBOX_AT` and `PRODUCTION_CERT_WOOVI_SANDBOX_AT` as ISO timestamps, in addition to the existing generic `PRODUCTION_CERT_PROVIDER_SANDBOX_AT` operational signoff. `.env.example`, GitHub workflow env wiring, operations gate tests, CI workflow tests, deploy runbook, plan, and review report now include those variables.
+
+**Verificacao executada:**
+- `bun --cwd apps/web vitest run src/ops/operations-gates.test.ts src/ops/ci-workflow.test.ts` failed first because missing Asaas/Woovi sandbox evidence was accepted and CI/env did not expose the variables.
+- `bun --cwd apps/web vitest run src/ops/operations-gates.test.ts src/ops/ci-workflow.test.ts` passed: 2 files, 30 tests.
+- `bun run ops:production-certification:checklist` passed with representative placeholder evidence including provider-specific Asaas/Woovi sandbox timestamps.
+- `bun run typecheck` passed: 8 tasks.
+- `bun run check` passed: 451 files checked, no fixes applied.
+
+**Decisao de escopo:** This PR does not call Asaas or Woovi APIs, validate real sandbox URLs, or prove webhook delivery. It only prevents production certification from using one ambiguous provider sandbox timestamp for both payment integrations.
+
+**Risco residual:** Operators can still enter inaccurate timestamps. PR29 remains responsible for collecting the real provider sandbox artifacts/logs and preserving the exact evidence.
+
+**Rollback:** Remove `PRODUCTION_CERT_ASAAS_SANDBOX_AT` and `PRODUCTION_CERT_WOOVI_SANDBOX_AT` from the script, CI workflow, `.env.example`, runbook, report, and tests. This restores the previous checklist but allows production certification without separate provider sandbox proof.
+
+### PR 45 - Require Inngest Reconcile Function Evidence
+
+**Status:** Concluida em 2026-07-11 para checklist, CI/env, docs e verificacoes locais.
+
+**Resultado:** Production certification now requires evidence that the live Inngest schedule is attached to the intended function, not just any cron. `scripts/check-production-certification.ts` requires `PRODUCTION_CERT_INNGEST_RECONCILE_FUNCTION_ID=reconcile-product-images` alongside `PRODUCTION_CERT_INNGEST_RECONCILE_CRON=0 4 * * *`. `.env.example`, GitHub workflow env wiring, operations gate tests, CI workflow tests, deploy runbook, plan, and review report now include the function-id variable.
+
+**Verificacao executada:**
+- `bun --cwd apps/web vitest run src/ops/operations-gates.test.ts src/ops/ci-workflow.test.ts` failed first because missing Inngest reconcile function id was accepted and CI/env did not expose the variable.
+- `bun --cwd apps/web vitest run src/ops/operations-gates.test.ts src/ops/ci-workflow.test.ts` passed: 2 files, 31 tests.
+- `bun run ops:production-certification:checklist` passed with representative placeholder evidence including `PRODUCTION_CERT_INNGEST_RECONCILE_FUNCTION_ID=reconcile-product-images`.
+- `bun run typecheck` passed: 8 tasks.
+- `bun run check` passed: 451 files checked, no fixes applied.
+
+**Decisao de escopo:** This PR does not query Inngest Cloud or prove the schedule is live. It records the exact expected function id from `apps/web/src/features/products/image-reconcile-inngest.ts` so PR29 can compare live evidence against the deployed code.
+
+**Risco residual:** Operators can still enter inaccurate evidence variables. PR29 remains responsible for capturing Inngest Cloud/API proof that `reconcile-product-images` is synced and scheduled with cron `0 4 * * *`.
+
+**Rollback:** Remove `PRODUCTION_CERT_INNGEST_RECONCILE_FUNCTION_ID` from the script, CI workflow, `.env.example`, runbook, report, and tests. This restores the previous checklist but allows production certification with only a cron string and no function identity.
+
+### PR 46 - Require Restore Drill Branch Evidence
+
+**Status:** Concluida em 2026-07-11 para checklist, CI/env, docs e verificacoes locais.
+
+**Resultado:** Production certification now requires restore drill branch identity, not only a timestamp. `scripts/check-production-certification.ts` requires `PRODUCTION_CERT_RESTORE_DRILL_SOURCE_BRANCH` and `PRODUCTION_CERT_RESTORE_DRILL_RESTORE_BRANCH`, and rejects a restore branch equal to the source branch. `.env.example`, GitHub workflow env wiring, operations gate tests, CI workflow tests, deploy runbook, plan, and review report now include those variables.
+
+**Verificacao executada:**
+- `bun --cwd apps/web vitest run src/ops/operations-gates.test.ts src/ops/ci-workflow.test.ts` failed first because production certification accepted restore drill evidence with only `PRODUCTION_CERT_RESTORE_DRILL_AT`, and CI/env did not expose source/restored branch variables.
+- `bun --cwd apps/web vitest run src/ops/operations-gates.test.ts src/ops/ci-workflow.test.ts` passed: 2 files, 33 tests.
+- `bun run ops:production-certification:checklist` passed with representative placeholder restore drill source/restored branch evidence.
+- `bun run typecheck` passed: 8 tasks.
+- `bun run check` passed: 451 files checked, no fixes applied.
+
+**Decisao de escopo:** This PR does not execute a Neon PITR/restore. It mirrors the existing restore-drill checklist requirements inside the final production certification gate so PR29 cannot certify a restore drill with only an ambiguous timestamp.
+
+**Risco residual:** Operators can still enter inaccurate branch names. PR29 remains responsible for running the real restore/PITR drill and preserving the Neon artifact/log that proves the restored validation branch was used.
+
+**Rollback:** Remove `PRODUCTION_CERT_RESTORE_DRILL_SOURCE_BRANCH` and `PRODUCTION_CERT_RESTORE_DRILL_RESTORE_BRANCH` from the script, CI workflow, `.env.example`, runbook, report, and tests. This restores the previous checklist but allows production certification with timestamp-only restore drill evidence.
+
+### PR 47 - Require Representative Query-Plan Evidence Details
+
+**Status:** Concluida em 2026-07-12 para checklist, CI/env, docs e verificacoes locais.
+
+**Resultado:** Production certification now requires query-plan evidence details, not only a timestamp. `scripts/check-production-certification.ts` requires `PRODUCTION_CERT_QUERY_PLAN_MIN_ROWS` as an integer >= `500` and `PRODUCTION_CERT_QUERY_PLAN_SEARCH_TERM` as a non-empty value, alongside `PRODUCTION_CERT_QUERY_PLAN_AT`. `.env.example`, GitHub workflow env wiring, operations gate tests, CI workflow tests, deploy runbook, plan, and review report now include those variables.
+
+**Verificacao executada:**
+- `bun --cwd apps/web vitest run src/ops/operations-gates.test.ts src/ops/ci-workflow.test.ts` failed first because production certification accepted query-plan evidence with only `PRODUCTION_CERT_QUERY_PLAN_AT`, and CI/env did not expose min-row/search-term variables.
+- `bun --cwd apps/web vitest run src/ops/operations-gates.test.ts src/ops/ci-workflow.test.ts` passed: 2 files, 35 tests.
+- `bun run ops:production-certification:checklist` passed with representative placeholder query-plan min rows/search term evidence.
+- `bun run typecheck` passed: 8 tasks.
+- `bun run check` passed: 451 files checked, no fixes applied.
+
+**Decisao de escopo:** This PR does not run `db:analyze:listings` against Neon. It makes the final certification gate capture the representative row threshold and search term that PR29 must prove from the real command output.
+
+**Risco residual:** Operators can still enter inaccurate values. PR29 remains responsible for preserving the actual `db:analyze:listings` JSON/log output from a representative Neon branch.
+
+**Rollback:** Remove `PRODUCTION_CERT_QUERY_PLAN_MIN_ROWS` and `PRODUCTION_CERT_QUERY_PLAN_SEARCH_TERM` from the script, CI workflow, `.env.example`, runbook, report, and tests. This restores timestamp-only query-plan certification.
+
+### PR 48 - Restore One-User Onboarding Without Customer Organization Naming
+
+**Status:** Concluida em 2026-07-12 para onboarding, AppContext, UI de conta e verificacoes locais.
+
+**Resultado:** The onboarding flow no longer asks for `workspaceName` or accepts customer-controlled organization naming. `completeOnboardingAction` ignores any submitted `workspaceName` and calls `createInitialOrganizationForUser` with only `userId` and billing email. `createInitialOrganizationForUser` now generates hidden Better Auth-compatible technical values (`Tenant <id-prefix>` and `tenant-<uuid>`) server-side. `AppContext` no longer exposes `organizationName`, the authenticated header shows static Polaris/account copy, and account settings show the authenticated one-user account without workspace naming.
+
+**Verificacao executada:**
+- `bun --cwd apps/web vitest run 'src/app/(auth)/onboarding/onboarding-form.test.ts' src/features/onboarding/actions.test.ts src/lib/app-session.test.ts 'src/app/(app)/configuracoes/page.test.ts' src/components/settings/account-settings-panel.test.ts` failed first because onboarding still rendered `name="workspaceName"`, passed submitted workspace names into tenant creation, and `createInitialOrganizationForUser` still required `organizationName.trim()`.
+- `bun --cwd apps/web vitest run 'src/app/(auth)/onboarding/onboarding-form.test.ts' src/features/onboarding/actions.test.ts src/lib/app-session.test.ts 'src/app/(app)/configuracoes/page.test.ts' src/components/settings/account-settings-panel.test.ts src/app/api/product-images/presign/route.test.ts` passed: 6 files, 23 tests.
+- `bun run typecheck` passed: 8 tasks.
+- `bun run check` passed: 451 files checked, no fixes applied.
+
+**Decisao de escopo:** This PR does not drop Better Auth `organization.name`/`organization.slug` columns because the auth schema still requires them. It removes customer control and product reliance on those values while preserving tenant isolation and billing linkage.
+
+**Risco residual:** Platform/admin billing surfaces may still read the technical organization name as an internal identifier. That is acceptable for now because it is no longer customer-provided or customer-facing in the app onboarding/account flow.
+
+**Rollback:** Restore the `workspaceName` input, parser, `organizationName` argument, slug derivation from submitted name, `AppContext.organizationName`, header/account display, and related tests. This would reintroduce customer-controlled organization naming.
+
+### PR 49 - Normalize Existing Organization DB Identity
+
+**Status:** Concluida em 2026-07-12 para migration, journal e verificacoes locais.
+
+**Resultado:** Existing `organization` rows created during the reverted customer-naming window now have a forward data repair migration. `packages/db/src/migrations/20260712043000_normalize_organization_technical_identity.sql` normalizes every row to hidden technical values: `name = 'Tenant ' || left(id, 8)` and `slug = 'tenant-' || id`, updating only rows that differ. `apps/web/src/db/organization-technical-identity.test.ts` locks this invariant, and `apps/web/src/db/migration-journal.test.ts` ensures every SQL migration is tracked in `meta/_journal.json`. The journal now also includes the previously untracked manual SQL migrations for trigram indexes and observed outbox status so `db:migrate` sees all migration files.
+
+**Verificacao executada:**
+- `bun --cwd apps/web vitest run src/db/organization-technical-identity.test.ts` failed first because no migration normalized `organization.name`/`slug`.
+- `bun --cwd apps/web vitest run src/db/migration-journal.test.ts` failed first because three SQL migrations were not listed in `meta/_journal.json`.
+- `bun --cwd apps/web vitest run src/db/organization-technical-identity.test.ts src/db/migration-journal.test.ts` passed: 2 files, 2 tests.
+
+**Decisao de escopo:** This PR still does not drop Better Auth `organization.name`/`organization.slug` columns. It removes customer data from those fields by normalizing stored values and ensures the migration is discoverable by the existing Drizzle migration journal.
+
+**Risco residual:** Applying the data repair to production still depends on PR29/live migration approval. Any external admin tooling that relied on customer organization names will see technical identifiers after the migration.
+
+**Rollback:** Apply a forward migration that restores chosen organization names from a trusted backup/export if the product decision changes again. Do not roll back by reintroducing onboarding name input unless PR48 is intentionally reverted too.
+
+### PR 50 - Remove Organization Names from Platform Billing Overview
+
+**Status:** Concluida em 2026-07-12 para platform billing, admin billing UI e verificacoes locais.
+
+**Resultado:** Platform billing overview no longer selects or exposes `organization.name` as customer/business identity. `packages/platform/src/platform-billing.ts` now lists subscriptions and invoices with `organizationId` plus optional `billingEmail` from `billing_customers`, and the admin billing page renders billing email or organization id instead of organization name. Manual billing activation and audit behavior are unchanged.
+
+**Verificacao executada:**
+- `bun --cwd packages/platform vitest run src/platform-billing.test.ts` failed first because the overview did not return `billingEmail`/invoice `organizationId` and still depended on organization-name rows.
+- `bun --cwd packages/platform vitest run src/platform-billing.test.ts` passed: 1 file, 6 tests.
+- `bun run typecheck:admin` passed: 7 tasks.
+- `bun run typecheck` passed: 8 tasks.
+- `bun run check:admin` passed: 453 files checked, no fixes applied.
+- `bun run check` passed: 453 files checked, no fixes applied.
+
+**Decisao de escopo:** This PR removes organization naming from the billing/admin billing surface only. Admin organization directory/detail pages still display the Better Auth organization name/slug and should be handled in the next local hardening PR so this cut stays reviewable.
+
+**Risco residual:** Billing email can be absent for incomplete or malformed historical rows; in that case the admin UI intentionally falls back to `organizationId`.
+
+**Rollback:** Restore `organization.name` joins/projection in `getPlatformBillingOverview`, restore `organizationName` rendering in `apps/admin/src/app/billing/page.tsx`, and revert the platform billing test expectations.
+
+### PR 51 - Remove Organization Names from Platform Admin Directory
+
+**Status:** Concluida em 2026-07-12 para platform directory, admin organization/user UI e verificacoes locais.
+
+**Resultado:** Platform directory no longer selects, exposes, searches, or renders `organization.name`/`organization.slug` as customer/business identity in admin organization list, organization detail, or user membership views. `packages/platform/src/platform-directory.ts` now identifies tenants by `organization.id` and optional redacted primary member email, and organization search is limited to tenant id or member email. Existing member/user PII redaction behavior is preserved.
+
+**Verificacao executada:**
+- `bun --cwd packages/platform vitest run src/platform-directory.test.ts` failed first because organization list/detail and user memberships still serialized `Importadora`/`importadora`.
+- `bun --cwd packages/platform vitest run src/platform-directory.test.ts` passed: 1 file, 5 tests.
+- `bun run typecheck:admin` passed: 7 tasks.
+- `bun run check:admin` passed: 453 files checked, no fixes applied.
+
+**Decisao de escopo:** This PR removes name/slug from the admin directory contract and UI only. It does not drop Better Auth columns, rewrite platform support notes, or change organization status mutation/audit semantics.
+
+**Risco residual:** Admin organization search no longer supports historical customer names/slugs. Operators must search by tenant id or member email. Production rows still require PR49 migration application before stored Better Auth columns are normalized.
+
+**Rollback:** Restore `name`/`slug` projection/search in `platform-directory.ts`, restore admin organization/user rendering of those fields, and revert the directory test expectations.
+
+### PR 52 - Remove Legacy Customer-Name Slug Helper
+
+**Status:** Concluida em 2026-07-12 para app context e verificacoes locais.
+
+**Resultado:** Removed the dead `resolveDefaultOrganizationSlug(name)` helper and its normalization regexes from `apps/web/src/lib/app-context.ts`. The one-user tenant flow now has no reusable app-context API that derives organization slugs from customer-provided names. `apps/web/src/lib/app-context.test.ts` keeps a guard proving the export is absent.
+
+**Verificacao executada:**
+- `bun --cwd apps/web vitest run src/lib/app-context.test.ts` failed first because `resolveDefaultOrganizationSlug` was still exported.
+- `bun --cwd apps/web vitest run src/lib/app-context.test.ts` passed: 1 file, 5 tests.
+- Source search found no remaining `resolveDefaultOrganizationSlug`, `NON_SLUG_CHARACTERS_PATTERN`, or `SLUG_BOUNDARY_PATTERN` outside the guard test.
+- `bun run check` initially failed on the guard test namespace import, then passed after switching the guard to source inspection.
+- `bun run typecheck` passed: 8 tasks.
+
+**Decisao de escopo:** This PR removes only unused legacy slug-generation code. It does not alter Better Auth schema columns, the technical tenant slug generated from organization id in app-session creation, or the PR49 DB repair migration.
+
+**Risco residual:** The database still contains Better Auth `organization.slug` because the auth schema requires it; it is now technical and generated from tenant id, not customer input.
+
+**Rollback:** Reintroduce `resolveDefaultOrganizationSlug` and its previous test only if customer-controlled organization naming becomes an intentional product decision again.
+
+### PR 53 - Remove Stale OrganizationName Billing Test Mock
+
+**Status:** Concluida em 2026-07-12 para teste da tela de assinatura obrigatoria.
+
+**Resultado:** `apps/web/src/app/billing-required/page.test.ts` no longer injects the removed `organizationName` field into the mocked app context. The test now also asserts that the old customer organization name `DG Imports` is not rendered by the billing-required page.
+
+**Verificacao executada:**
+- `bun --cwd apps/web vitest run src/app/billing-required/page.test.ts` passed: 1 file, 1 test.
+- Source search for `organizationName`, `workspaceName`, and `Nome da organizacao` now returns only intentional negative guards/test inputs.
+
+**Decisao de escopo:** This PR is test cleanup only. It does not change billing-required runtime behavior or app-session context.
+
+**Risco residual:** None beyond the existing manual billing activation constraints tracked in production certification.
+
+**Rollback:** Reintroduce the mock field and remove the negative assertion only if the app context intentionally grows a public organization display name again.
+
+### PR 54 - Reconcile Plan Decision Log with Technical Tenant Identity
+
+**Status:** Concluida em 2026-07-12 para documentacao de auditoria.
+
+**Resultado:** The plan's global constraints and Decision Log now match the implemented PR48-53 direction: customers do not name workspaces/organizations during onboarding, Better Auth `organization.name`/`organization.slug` are hidden technical identity columns, and existing customer-derived values are normalized by PR49. This removes stale plan text that contradicted the technical one-user tenant identity decision.
+
+**Verificacao executada:**
+- Manual review of the plan header, Global Constraints, Decision Log, PR48-53 records, and review report.
+- `bun run check` passed after the documentation update.
+
+**Decisao de escopo:** Documentation-only PR. No runtime code, schema, migration, UI, or production evidence state changed.
+
+**Risco residual:** Older PR sections may still mention historical workspace-name behavior in their original context, but the active global decision and current PR records now point to technical one-user tenant identity.
+
+**Rollback:** Restore the previous plan wording only if customer-controlled workspace naming becomes an intentional product decision again and PR48-53 are reverted.
+
+### PR 55 - Mark Historical Cloudflare Access Admin Docs as Superseded
+
+**Status:** Concluida em 2026-07-12 para documentacao de auditoria.
+
+**Resultado:** Historical admin/monorepo reports that still mention Cloudflare Access now start with an explicit supersession note. The current admin perimeter decision remains the production-readiness plan: separate `apps/admin` Vercel project, Vercel Authentication/deployment protection, and in-app platform admin grants.
+
+**Arquivos atualizados:**
+- `docs/reports/admin-monorepo-audit-report.md`
+- `docs/reports/admin-monorepo-full-review-2026-07-09.md`
+- `docs/reports/admin-monorepo-implementation-plan.md`
+- `docs/reports/admin-monorepo-review-after-auth-extraction-2026-07-09.md`
+
+**Verificacao executada:**
+- Source search confirmed active app/package/script/workflow/env references to Cloudflare Access remain absent; remaining mentions are historical docs plus the current plan section documenting the removal decision.
+- `bun run check` passed after the documentation update.
+
+**Decisao de escopo:** Documentation-only PR. It does not change admin auth code, Vercel project state, or historical report bodies beyond a top-level supersession note.
+
+**Risco residual:** Historical details remain in the body for audit context; readers must follow the supersession note and current production-readiness plan for active guidance.
+
+**Rollback:** Remove the supersession notes only if Cloudflare Access becomes the intended admin perimeter again.
+
+### PR 56 - Document Controlled Manual Billing Activation SOP
+
+**Status:** Concluida em 2026-07-12 para documentacao operacional.
+
+**Resultado:** Added `docs/runbooks/manual-billing-activation-sop.md` as the formal SOP for the paid-from-day-one manual activation exception. It defines scope, responsibilities, accepted payment evidence references, activation/reversal procedures, prohibited actions, production evidence variables, and default launch SLA of 24 hours. The Vercel deploy runbook now links to the SOP and recommends `PRODUCTION_CERT_MANUAL_BILLING_SLA_HOURS=24` unless another approved value between `1` and `48` is documented.
+
+**Verificacao executada:**
+- Source search confirmed the deploy runbook links to `docs/runbooks/manual-billing-activation-sop.md`.
+- `bun run check` passed after the documentation update.
+
+**Decisao de escopo:** Documentation-only PR. It does not implement checkout, provider-backed activation, support ticketing, or runtime billing behavior.
+
+**Risco residual:** Operators still need to review/approve the SOP and set `PRODUCTION_CERT_MANUAL_BILLING_SOP_AT` plus `PRODUCTION_CERT_MANUAL_BILLING_SLA_HOURS` before production certification can pass.
+
+**Rollback:** Remove the SOP and deploy-runbook references only if manual activation is replaced by self-service checkout before launch.
+
+### PR 57 - Guard Manual Billing SOP Linkage
+
+**Status:** Concluida em 2026-07-12 para teste de docs operacionais.
+
+**Resultado:** `apps/web/src/ops/ci-workflow.test.ts` now verifies that the deploy runbook links to `docs/runbooks/manual-billing-activation-sop.md` and that the SOP documents `PRODUCTION_CERT_MANUAL_BILLING_SOP_AT`, `PRODUCTION_CERT_MANUAL_BILLING_SLA_HOURS`, and the default 24-hour SLA. This keeps the controlled manual billing exception tied to the production certification evidence surface.
+
+**Verificacao executada:**
+- `bun --cwd apps/web vitest run src/ops/ci-workflow.test.ts` passed: 1 file, 13 tests.
+- `bun run check` initially failed on formatter output, then passed after formatting the new assertion.
+
+**Decisao de escopo:** Test/docs guard only. It does not change runtime billing behavior, CI job structure, or production evidence values.
+
+**Risco residual:** The guard proves the SOP exists and is linked, not that an operator has approved it in production. PR29 still requires real `PRODUCTION_CERT_MANUAL_BILLING_SOP_AT` evidence.
+
+**Rollback:** Remove the test assertions only if the manual activation exception is removed or replaced by self-service checkout.
+
+### PR 58 - Correct Stale PR07 Naming Reversal Text
+
+**Status:** Concluida em 2026-07-12 para documentacao de auditoria.
+
+**Resultado:** The PR07 section no longer presents the temporary workspace-name reversal as current behavior. The stale text is explicitly labeled as historical and superseded by PR48, and the residual risk now reflects PR49 data repair plus PR50/PR51 removal of organization-name dependencies from billing/admin directory surfaces.
+
+**Verificacao executada:**
+- Source search found no remaining central-plan/report references that present customer workspace/organization naming as current behavior.
+- `bun run check` passed after the documentation update.
+
+**Decisao de escopo:** Documentation-only PR. It does not change onboarding, schema, migrations, or UI.
+
+**Risco residual:** Production still needs PR49 migration application through the PR29 live migration path before existing rows are guaranteed repaired outside local code.
+
+**Rollback:** Restore the old wording only if customer-controlled workspace naming becomes current product behavior again.
+
+### PR 59 - Guard Tenant Identity Documentation Drift
+
+**Status:** Concluida em 2026-07-12 para teste de documentacao operacional.
+
+**Resultado:** `apps/web/src/ops/ci-workflow.test.ts` now reads the production-readiness plan and the post-PR review report, rejects stale phrases that reintroduce customer-controlled organization/workspace naming as current behavior, and requires the docs to keep the one-user technical tenant identity decision visible.
+
+**Verificacao executada:**
+- `bun --cwd apps/web vitest run src/ops/ci-workflow.test.ts` passed: 1 file, 14 tests.
+- Source search found no stale tenant-identity phrases in the central plan/report.
+- `bun run typecheck` passed: 8 tasks.
+- `bun run check` passed.
+
+**Decisao de escopo:** This PR only guards the active plan/report against documentation drift. It does not edit historical review bodies beyond prior supersession/correction work, and it does not change runtime onboarding or database behavior.
+
+**Risco residual:** The guard covers the central plan and post-PR report only. Other historical docs can still mention old behavior when explicitly framed as historical context.
+
+**Rollback:** Remove the documentation-drift test and PR59 notes only if customer-controlled organization/workspace naming becomes an intentional product decision again.
+
+### PR 60 - Remove Legacy Vercel Cron Reconcile Config
+
+**Status:** Concluida em 2026-07-12 para DevOps local e guarda de configuracao.
+
+**Resultado:** Removed the leftover `apps/web/vercel.json` cron that still scheduled `/api/internal/product-images/reconcile` through Vercel Cron. Product image reconciliation remains scheduled by the existing Inngest function `reconcile-product-images` with cron `0 4 * * *`. `apps/web/src/ops/ci-workflow.test.ts` now fails if the web Vercel config reintroduces `"crons"` or the legacy reconcile endpoint.
+
+**Verificacao executada:**
+- Active source search showed no Cloudflare Access references in app/package/script/workflow files when generated artifacts are excluded.
+- Active source search found the residual `apps/web/vercel.json` cron plus the intended Inngest schedule.
+- `bun --cwd apps/web vitest run src/ops/ci-workflow.test.ts src/features/products/image-reconcile-inngest.test.ts` passed: 2 files, 16 tests.
+- `bun run typecheck` passed: 8 tasks.
+- `bun run check` passed.
+
+**Decisao de escopo:** This PR removes only the duplicate platform schedule. The manual reconcile endpoint remains available for diagnostics behind `PRODUCT_IMAGE_RECONCILE_SECRET`, and production certification still requires live Inngest sync/schedule evidence.
+
+**Risco residual:** Inngest cloud schedule is still external platform state. PR29 remains responsible for proving the deployed Inngest app has synced `reconcile-product-images` and exposes cron `0 4 * * *`.
+
+**Rollback:** Restore `apps/web/vercel.json` with the old cron only if Inngest scheduling is intentionally abandoned and the runbooks/certification variables are updated back to Vercel Cron.
+
+### PR 61 - Guard Removed Admin Perimeter in Active Source
+
+**Status:** Concluida em 2026-07-12 para teste de fonte ativa.
+
+**Resultado:** `apps/web/src/ops/ci-workflow.test.ts` now scans active app/package/script/workflow source roots (`apps`, `packages`, `scripts`, `.github`) while ignoring generated artifacts, and fails if removed Cloudflare Access tokens reappear in active code or config. Documentation remains intentionally out of scope so superseded historical reports can retain audit context.
+
+**Verificacao executada:**
+- `bun --cwd apps/web vitest run src/ops/ci-workflow.test.ts` passed: 1 file, 16 tests.
+- `bun run typecheck` passed: 8 tasks.
+- `bun run check` passed.
+
+**Decisao de escopo:** This PR adds a regression guard only. It does not change admin auth code, Vercel project state, or historical docs.
+
+**Risco residual:** The guard proves source/config absence, not Vercel Authentication platform enablement. PR29 remains responsible for live admin project protection evidence.
+
+**Rollback:** Remove the active-source guard only if Cloudflare Access becomes the intended admin perimeter again and PR05/PR55 are reversed.
+
+### PR 62 - Guard Removed Vercel Cron Secrets in Active Source
+
+**Status:** Concluida em 2026-07-12 para teste de fonte ativa.
+
+**Resultado:** `apps/web/src/ops/ci-workflow.test.ts` now scans active app/package/script/workflow source roots and fails if legacy Vercel Cron markers return outside the guard itself: `CRON_SECRET`, `E2E_CRON_SECRET`, or a Vercel `"crons"` config. This complements PR60's deletion of `apps/web/vercel.json` and keeps product-image reconciliation scheduled through Inngest.
+
+**Verificacao executada:**
+- Active source search found no `CRON_SECRET`, `E2E_CRON_SECRET`, or `"crons"` outside the operational guard itself.
+- `bun --cwd apps/web vitest run src/ops/ci-workflow.test.ts` passed: 1 file, 17 tests.
+- `bun run typecheck` passed: 8 tasks.
+- `bun run check` passed.
+
+**Decisao de escopo:** This PR adds a regression guard only. It does not remove the manual reconcile endpoint or alter `PRODUCT_IMAGE_RECONCILE_SECRET`.
+
+**Risco residual:** The guard proves legacy Vercel Cron markers are absent from active source/config, not that Inngest Cloud has synced the deployed schedule. PR29 remains responsible for live Inngest evidence.
+
+**Rollback:** Remove the legacy-cron active-source guard only if Vercel Cron becomes the intended scheduler again and PR19/PR60 are reversed.
+
+### PR 63 - Move Goals Audit into Domain Transactions
+
+**Status:** Concluida em 2026-07-12 para metas, auditoria transacional e guard de CI.
+
+**Resultado:** Goal create/update/archive/unarchive actions no longer call best-effort `recordAuditEvent` after the domain mutation. They pass the authenticated actor id into `features/goals/server.ts`, which now writes `goal.created`, `goal.updated`, `goal.archived`, and `goal.unarchived` audit rows inside the same tenant transaction as the goal write. The core audit boundary guard now monitors `goals/actions.ts` so reintroducing best-effort audit in goal actions fails CI.
+
+**Verificacao executada:**
+- `bun --cwd apps/web vitest run src/features/goals/actions.test.ts` first failed because update/archive/unarchive did not pass `userId`; it passed after the action change.
+- `bun --cwd apps/web vitest run src/features/goals/server.test.ts` first failed because create-goal did not propagate an audit insert failure; it passed after moving audit into the transaction.
+- `bun --cwd apps/web vitest run src/ops/audit-boundaries.test.ts` first failed because goals actions were not monitored by `CORE_AUDIT_BOUNDARIES`; it passed after adding the boundary.
+- `bun --cwd apps/web vitest run src/features/goals/actions.test.ts src/features/goals/server.test.ts src/ops/audit-boundaries.test.ts` passed: 3 files, 17 tests.
+- `bun run audit:boundaries` passed.
+- `bun run typecheck` passed: 8 tasks.
+- `bun run check` passed.
+
+**Decisao de escopo:** This PR hardens goal write audit only. It does not change goal progress calculation, automatic completion/expiration transitions, dashboard metrics, or external production evidence requirements.
+
+**Risco residual:** Automatic status transitions in dashboard/settings reads still update goals without explicit user audit because they are system-derived lifecycle transitions, not user write actions. If those need audit later, they should use a separate system actor/event policy.
+
+**Rollback:** Restore action-level `recordAuditEvent` calls and remove goals from `CORE_AUDIT_BOUNDARIES` only if goal audit is intentionally allowed to be best-effort again.
+
+### PR 64 - Guard Catalog Audit Boundary
+
+**Status:** Concluida em 2026-07-12 para guard de auditoria transacional de catalogo.
+
+**Resultado:** `CORE_AUDIT_BOUNDARIES` now monitors `catalog/actions.ts` for `createCategoryAction`, `updateCategoryAction`, `deleteCategoryAction`, and `saveCatalogSettingsAction`, matching PR09's decision that catalog audit belongs inside the domain transaction. `catalog/actions.test.ts` no longer mocks `recordAuditEvent`, so rejected category mutations assert only that cache revalidation is skipped after the server transaction fails.
+
+**Verificacao executada:**
+- `bun --cwd apps/web vitest run src/ops/audit-boundaries.test.ts` first failed because `catalog/actions.ts` was not in `CORE_AUDIT_BOUNDARIES`; it passed after adding the boundary.
+- `bun --cwd apps/web vitest run src/features/catalog/actions.test.ts src/ops/audit-boundaries.test.ts` passed: 2 files, 11 tests.
+- `bun run audit:boundaries` passed.
+
+**Decisao de escopo:** This PR adds regression coverage for existing transactional catalog audit behavior and removes a stale test mock. It does not change catalog server mutations, category validation, catalog settings semantics, or cache tag behavior.
+
+**Risco residual:** The guard only detects direct `recordAuditEvent` calls inside monitored catalog actions. It does not prove live production audit rows or cover unrelated catalog read-side effects.
+
+**Rollback:** Remove catalog from `CORE_AUDIT_BOUNDARIES` and restore the old test mock only if catalog audit is intentionally moved back to best-effort action-level logging.
+
+### PR 65 - Remove Stale Product/Sale Action Audit Mocks
+
+**Status:** Concluida em 2026-07-12 para higiene de testes de actions.
+
+**Resultado:** `products/actions.test.ts` and `sales/actions.test.ts` no longer mock `@/lib/audit-log` or assert `recordAuditEvent` behavior from action tests. Error-path tests now assert the behavior the actions still own: no cache invalidation/refresh after rejected domain mutations. Transactional audit guarantees remain covered by domain server tests plus `audit:boundaries`.
+
+**Verificacao executada:**
+- Source search found no remaining `recordAuditEvent`, `mockRecordAuditEvent`, `@/lib/audit-log`, or `does not audit` references in product/sale action tests after cleanup.
+- `bun --cwd apps/web vitest run src/features/products/actions.test.ts src/features/sales/actions.test.ts` passed: 2 files, 45 tests.
+- `bun --cwd apps/web vitest run src/features/products/actions.test.ts src/features/sales/actions.test.ts src/features/catalog/actions.test.ts src/ops/audit-boundaries.test.ts` passed: 4 files, 56 tests.
+- `bun run audit:boundaries` passed.
+- `bun run typecheck` passed: 8 tasks.
+- `bun run check` passed after formatting one destructuring in `sales/actions.test.ts`.
+
+**Decisao de escopo:** This PR is test cleanup only. It does not change product/sale action behavior, domain transactions, audit event inserts, cache tags, or external side-effect handling.
+
+**Risco residual:** Product and sale transactional audit correctness still depends on the domain server tests and `audit:boundaries`; action tests intentionally no longer pretend to observe audit internals they do not import.
+
+**Rollback:** Restore the action-level audit mocks only if product/sale actions intentionally start owning direct `recordAuditEvent` behavior again, which would also require revisiting `audit:boundaries`.
 
 ---
 
@@ -724,11 +1177,11 @@
 
 ### PR 07 - Remove Customer-Controlled Organization Naming
 
-**Status:** Revertida funcionalmente em 2026-07-10 por decisao de produto. A workspace voltou a ser nomeada no onboarding.
+**Status:** Revertida funcionalmente em 2026-07-10 por decisao de produto. Reaplicada em PR 48 em 2026-07-12 para cumprir a decisao atual de conta individual sem nomeacao pelo cliente.
 
 **Resultado anterior:** Removed the customer-controlled organization name field from onboarding, changed onboarding into a one-button account activation flow, stopped exposing `organizationName` through `AppContext`, and removed the organization name from the authenticated app header. Tenant creation generated hidden Better Auth-compatible technical values (`Tenant <id>` / `tenant-<id>`) server-side.
 
-**Resultado da reversao:** Onboarding now asks for `workspaceName` again, validates it as required, and passes it into tenant creation. `createInitialOrganizationForUser` stores the chosen name in Better Auth `organization.name`, derives a slug from the workspace name, and appends the generated tenant id prefix if the base slug already exists. `AppContext` exposes `organizationName` again, the authenticated app header displays the workspace name, and the account/settings surface shows the workspace alongside the user/billing details.
+**Resultado da reversao historica, superseded por PR 48:** Onboarding asked for `workspaceName` again, validated it as required, and passed it into tenant creation. `createInitialOrganizationForUser` stored the chosen name in Better Auth `organization.name`, derived a slug from the workspace name, and appended the generated tenant id prefix if the base slug already existed. `AppContext` exposed `organizationName` again, the authenticated app header displayed the workspace name, and the account/settings surface showed the workspace alongside the user/billing details. This behavior is no longer current after PR 48.
 
 **Verificacao executada:**
 - Context7 Better Auth docs confirmed the organization plugin still requires `name` and `slug` in create/schema, so the DB columns were not dropped in this PR.
@@ -742,19 +1195,20 @@
 
 **Decisao de escopo anterior:** Better Auth still models organizations with required `name` and unique `slug`, so the original PR07 removed customer naming and product reliance on the name, but kept DB fields populated with non-customer technical values. That product decision has been superseded by the current reversal.
 
-**Decisao atual:** Organization/workspace naming is product-relevant now and likely important for future multi-workspace or admin workflows. The DB columns are already required by Better Auth and remain the source of truth; no Neon migration is needed for this reversal.
+**Decisao da reversao historica, superseded por PR 48:** Organization/workspace naming was briefly treated as product-relevant for future multi-workspace/admin workflows. That decision is no longer current.
 
-**Risco residual:** Slug collision handling is intentionally conservative: it preserves the requested display name and suffixes only the slug when the base slug is already taken. Existing tenants created while PR07 was active may still have technical names until renamed by a future workspace settings flow or data repair.
+**Decisao atualizada em PR 48:** The product is one user at a time for MVP. Customers must not name the organization/workspace during onboarding. Better Auth-required DB fields stay populated with hidden technical values, but app onboarding, AppContext, header, and account settings no longer expose or depend on customer-controlled organization names.
 
-**Objetivo atualizado:** Restore organization/workspace naming in onboarding, UI, and app context while preserving the one-user-per-tenant operating model.
+**Risco residual atualizado:** PR 49 added the data repair that normalizes existing customer-derived Better Auth organization names/slugs to technical values. PR 50 and PR 51 removed organization-name dependency from platform billing and admin directory surfaces. Applying the PR49 migration to production still depends on PR29/live migration approval.
+
+**Objetivo atualizado:** Remove customer-controlled organization/workspace naming from onboarding, UI, and app context while preserving the one-user-per-tenant operating model.
 
 **Escopo exato atualizado:**
-- Reintroduce workspace name input in onboarding.
-- Create tenant/workspace with the chosen display name.
-- Derive Better Auth organization slug from workspace name and handle slug collisions conservatively.
-- Restore `organizationName` in app context and authenticated UI.
-- Keep Better Auth `organization.name`/`slug` columns as product-facing fields.
-- Do not add multi-user invitations or workspace switching in this reversal.
+- Remove workspace name input from onboarding.
+- Create tenant/workspace with hidden server-generated technical `name` and `slug`.
+- Remove `organizationName` from app context and authenticated customer-facing UI.
+- Keep Better Auth `organization.name`/`slug` columns populated for schema compatibility, but not customer-controlled.
+- Do not add multi-user invitations, workspace switching, or a workspace naming settings flow.
 
 **Achados endereçados:** user request, onboarding simplification, product readiness.
 
@@ -1319,7 +1773,7 @@
 
 **Status:** Concluido em 2026-07-10.
 
-**Resultado:** Moved the daily product-image reconcile schedule from Vercel Cron to an Inngest scheduled function (`reconcile-product-images`, cron `0 4 * * *`). Extracted reconcile domain logic into `features/products/image-reconcile.ts`, kept the manual HTTP endpoint for operational diagnostics only, removed the `vercel.json` cron entry, and replaced generic `CRON_SECRET` wiring with route-specific `PRODUCT_IMAGE_RECONCILE_SECRET` and `INTERNAL_R2_HEALTH_SECRET`.
+**Resultado:** Moved the daily product-image reconcile schedule from Vercel Cron to an Inngest scheduled function (`reconcile-product-images`, cron `0 4 * * *`). Extracted reconcile domain logic into `features/products/image-reconcile.ts`, kept the manual HTTP endpoint for operational diagnostics only, and replaced generic `CRON_SECRET` wiring with route-specific `PRODUCT_IMAGE_RECONCILE_SECRET` and `INTERNAL_R2_HEALTH_SECRET`. PR60 later removed the leftover `apps/web/vercel.json` cron entry that still existed after this migration.
 
 **Verificacao:**
 - Inngest docs checked with `ctx7`: scheduled functions support `createFunction` with cron triggers.
@@ -1328,7 +1782,7 @@
 - `bun run typecheck` passed.
 - `bun x ultracite check` passed.
 - `bun --cwd apps/web vitest run --maxWorkers=1` passed: 100 files, 375 tests.
-- Source search found no active `CRON_SECRET`/`E2E_CRON_SECRET` references in apps, scripts, workflows, `.env.example`, `turbo.json`, `vercel.json`, README, runbooks, or architecture docs.
+- Source search found no active `CRON_SECRET`/`E2E_CRON_SECRET` references in apps, scripts, workflows, `.env.example`, `turbo.json`, README, runbooks, or architecture docs. PR60 later found and removed a residual `apps/web/vercel.json` `crons` entry pointing at the legacy route.
 
 **Validacao nao executada:** Inngest cloud sync/schedule execution was not verified against a deployed app in this session. After deploy, confirm the Inngest app has synced `reconcile-product-images` and that the schedule appears in the Inngest dashboard.
 
@@ -1702,4 +2156,4 @@
 
 Reason: it is the safest, smallest, and most urgent blocker. It reduces known security exposure before touching auth, billing, RLS, cron, or monorepo structure. After PR 01 passes, implement PR 02 and PR 03 before broader architecture changes.
 
-Next implementation target: continue local hardening while external production access remains unresolved. PR 01 through PR 28 and PR 30 through PR 40 are marked complete; PR 29 remains not completed because Vercel project access/linking and explicit Neon live-smoke approval are still missing.
+Next implementation target: continue local hardening while external production access remains unresolved. PR 01 through PR 28 and PR 30 through PR 65 are marked complete; PR 29 remains not completed because Vercel project access/linking/config evidence, Neon production posture correction, and explicit Neon live-smoke approval are still missing.

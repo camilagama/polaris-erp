@@ -76,22 +76,9 @@ const selectDefaultBillingPlanOnce = (planId: string | null) => {
   });
 };
 
-const selectSlugOwnerOnce = (organizationId: string | null) => {
-  txMock.select.mockReturnValueOnce({
-    from: vi.fn().mockReturnValue({
-      where: vi.fn().mockReturnValue({
-        limit: vi
-          .fn()
-          .mockResolvedValue(organizationId ? [{ id: organizationId }] : []),
-      }),
-    }),
-  });
-};
-
 const selectAppContextMembershipOnce = (
   membership: {
     organizationId: string;
-    organizationName: string;
     organizationStatus: string;
     role: string;
   } | null
@@ -167,7 +154,6 @@ describe("createInitialOrganizationForUser", () => {
     selectMembershipOnce("org-existing");
 
     const organizationId = await createInitialOrganizationForUser({
-      organizationName: "DG Imports",
       userId: "user-1",
     });
 
@@ -184,7 +170,6 @@ describe("createInitialOrganizationForUser", () => {
     selectMembershipOnce("org-existing");
 
     await createInitialOrganizationForUser({
-      organizationName: "DG Imports",
       userId: "user-1",
     });
 
@@ -198,22 +183,20 @@ describe("createInitialOrganizationForUser", () => {
     ).toBeLessThan(txMock.select.mock.invocationCallOrder[0]);
   });
 
-  it("creates an incomplete subscription from the active billing plan during onboarding", async () => {
+  it("creates an incomplete subscription with a server-side technical tenant identity during onboarding", async () => {
     selectNoMembershipOnce();
     selectDefaultBillingPlanOnce("polaris-start-monthly");
-    selectSlugOwnerOnce(null);
     const insertValues = mockInsertValues();
 
-    await createInitialOrganizationForUser({
+    const organizationId = await createInitialOrganizationForUser({
       billingEmail: "user@example.com",
-      organizationName: "DG Imports",
       userId: "user-1",
     });
 
     expect(insertValues).toHaveBeenCalledWith(
       expect.objectContaining({
-        name: "DG Imports",
-        slug: "dg-imports",
+        name: `Tenant ${organizationId.slice(0, 8)}`,
+        slug: `tenant-${organizationId}`,
       })
     );
     expect(insertValues).toHaveBeenCalledWith(
@@ -229,25 +212,6 @@ describe("createInitialOrganizationForUser", () => {
     );
   });
 
-  it("keeps workspace display name and suffixes slug when the base slug already exists", async () => {
-    selectNoMembershipOnce();
-    selectDefaultBillingPlanOnce("polaris-start-monthly");
-    selectSlugOwnerOnce("org-existing");
-    const insertValues = mockInsertValues();
-
-    const organizationId = await createInitialOrganizationForUser({
-      organizationName: "DG Imports",
-      userId: "user-1",
-    });
-
-    expect(insertValues).toHaveBeenCalledWith(
-      expect.objectContaining({
-        name: "DG Imports",
-        slug: `dg-imports-${organizationId.slice(0, 8)}`,
-      })
-    );
-  });
-
   it("activates the initial subscription only for isolated local E2E bootstrap", async () => {
     const isolatedDatabaseUrl = "postgres://e2e:e2e@example.com/e2e";
 
@@ -258,11 +222,9 @@ describe("createInitialOrganizationForUser", () => {
     vi.stubEnv("VERCEL_ENV", "development");
     selectNoMembershipOnce();
     selectDefaultBillingPlanOnce("polaris-start-monthly");
-    selectSlugOwnerOnce(null);
     const insertValues = mockInsertValues();
 
     await createInitialOrganizationForUser({
-      organizationName: "DG Imports",
       userId: "user-1",
     });
 
@@ -280,7 +242,6 @@ describe("createInitialOrganizationForUser", () => {
 
     await expect(
       createInitialOrganizationForUser({
-        organizationName: "DG Imports",
         userId: "user-1",
       })
     ).rejects.toThrow("Plano de billing ativo nao encontrado.");
@@ -296,7 +257,6 @@ describe("getAppContext", () => {
     mockSession({ activeOrganizationId: "org-inactive" });
     selectAppContextMembershipOnce({
       organizationId: "org-inactive",
-      organizationName: "DG Imports",
       organizationStatus: "inactive",
       role: "owner",
     });
@@ -323,7 +283,6 @@ describe("getAppContext", () => {
     mockSession();
     selectAppContextMembershipOnce({
       organizationId: "org-active",
-      organizationName: "DG Imports",
       organizationStatus: "active",
       role: "owner",
     });
@@ -336,7 +295,6 @@ describe("getAppContext", () => {
       billingStatus: "active",
       hasBillableAccess: true,
       organizationId: "org-active",
-      organizationName: "DG Imports",
       role: "owner",
       userId: "user-1",
     });
@@ -352,7 +310,6 @@ describe("getAppContext", () => {
     mockSession({ activeOrganizationId: "org-active" });
     selectAppContextMembershipOnce({
       organizationId: "org-active",
-      organizationName: "DG Imports",
       organizationStatus: "active",
       role: "owner",
     });
@@ -364,7 +321,6 @@ describe("getAppContext", () => {
       billingStatus: "incomplete",
       hasBillableAccess: false,
       organizationId: "org-active",
-      organizationName: "DG Imports",
       role: "owner",
       userId: "user-1",
     });
@@ -377,7 +333,6 @@ describe("getAppContext", () => {
     mockSession({ activeOrganizationId: "org-active" });
     selectAppContextMembershipOnce({
       organizationId: "org-active",
-      organizationName: "DG Imports",
       organizationStatus: "active",
       role: "owner",
     });
@@ -389,7 +344,6 @@ describe("getAppContext", () => {
       billingStatus,
       hasBillableAccess: false,
       organizationId: "org-active",
-      organizationName: "DG Imports",
       role: "owner",
       userId: "user-1",
     });
@@ -399,7 +353,6 @@ describe("getAppContext", () => {
     mockSession({ activeOrganizationId: "org-active" });
     selectAppContextMembershipOnce({
       organizationId: "org-active",
-      organizationName: "DG Imports",
       organizationStatus: "active",
       role: "owner",
     });
@@ -416,7 +369,6 @@ describe("getAppContext", () => {
     mockSession({ activeOrganizationId: "org-active" });
     selectAppContextMembershipOnce({
       organizationId: "org-active",
-      organizationName: "DG Imports",
       organizationStatus: "active",
       role: "owner",
     });

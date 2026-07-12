@@ -111,14 +111,14 @@ const UserDetailContent = async ({ params }: UserDetailPageProps) => {
 
       <section className="overflow-x-auto rounded-lg border border-zinc-800 bg-zinc-900">
         <div className="grid min-w-[720px] grid-cols-[1.4fr_0.8fr_0.8fr_0.8fr] gap-4 border-zinc-800 border-b px-4 py-3 text-xs text-zinc-500 uppercase">
-          <span>Organizacao</span>
+          <span>Tenant</span>
           <span>Status</span>
           <span>Role</span>
           <span>Membro desde</span>
         </div>
         {user.organizations.length === 0 ? (
           <p className="px-4 py-8 text-sm text-zinc-500">
-            Nenhuma organizacao encontrada.
+            Nenhum tenant encontrado.
           </p>
         ) : (
           user.organizations.map((organization) => (
@@ -130,10 +130,7 @@ const UserDetailContent = async ({ params }: UserDetailPageProps) => {
             >
               <span className="min-w-0">
                 <span className="block truncate font-medium text-zinc-100">
-                  {organization.name}
-                </span>
-                <span className="block truncate text-zinc-500">
-                  {organization.slug}
+                  {organization.id}
                 </span>
               </span>
               <span className="text-zinc-300">{organization.status}</span>

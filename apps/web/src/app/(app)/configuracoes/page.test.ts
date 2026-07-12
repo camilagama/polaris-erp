@@ -55,7 +55,6 @@ vi.mock("@/lib/app-session", () => ({
     billingStatus: "active",
     hasBillableAccess: true,
     organizationId: "org_dg_imports",
-    organizationName: "DG Imports",
     role: "owner",
     userId: "user-1",
   })),
@@ -73,14 +72,14 @@ vi.mock("@/lib/session", () => ({
 import ConfiguracoesPage from "@/app/(app)/configuracoes/page";
 
 describe("ConfiguracoesPage", () => {
-  it("renders account, workspace, goals, and catalog settings without exposing internal context keys", async () => {
+  it("renders account, goals, and catalog settings without exposing internal organization names", async () => {
     const markup = renderToStaticMarkup(await ConfiguracoesPage());
 
     expect(markup).toContain("Minha conta");
-    expect(markup).toContain("DG Imports");
     expect(markup).toContain("owner@example.com");
     expect(markup).toContain("GoalsSettingsPanel");
     expect(markup).toContain("CatalogSettingsPanel");
     expect(markup).not.toContain("organizationName");
+    expect(markup).not.toContain("workspace");
   });
 });

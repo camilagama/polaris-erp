@@ -1,10 +1,10 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   type AppPermission,
   canRolePerform,
   getRoleRank,
   type OrganizationRole,
-  resolveDefaultOrganizationSlug,
 } from "@/lib/app-context";
 
 describe("organization roles", () => {
@@ -61,9 +61,11 @@ describe("organization roles", () => {
     }
   });
 
-  it("normalizes organization slugs from names", () => {
-    expect(resolveDefaultOrganizationSlug("  Polaris Brasil  ")).toBe(
-      "polaris-brasil"
-    );
+  it("does not expose customer-name-based organization slug generation", () => {
+    const source = readFileSync(new URL("./app-context.ts", import.meta.url), {
+      encoding: "utf8",
+    });
+
+    expect(source).not.toContain("resolveDefaultOrganizationSlug");
   });
 });

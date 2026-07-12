@@ -1,5 +1,7 @@
 # Plano de Implementacao - Monorepo e Admin Interno
 
+> Nota de supersessao, 2026-07-12: este plano historico antecede a decisao atual de remover Cloudflare Access do admin. Para protecao admin vigente, use `docs/superpowers/plans/2026-07-10-production-readiness-pr-plan.md`: admin separado em Vercel com Vercel Authentication/deployment protection e guard in-app de platform admin.
+
 ## 1. Objetivo
 
 Converter o Polaris de um app Next.js unico para uma arquitetura que possa suportar duas superficies sem misturar responsabilidades:

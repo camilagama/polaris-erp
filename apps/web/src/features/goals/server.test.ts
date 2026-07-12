@@ -96,6 +96,9 @@ describe("goals server writes", () => {
     const { mockDb } = await resolveMocks();
 
     mockDb.query.goals.findFirst.mockResolvedValue(activeGoalRow);
+    mockDb.insert.mockReturnValue({
+      values: vi.fn().mockResolvedValue(undefined),
+    });
     mockDb.update.mockReturnValue({
       set: () => ({
         where: () => ({
@@ -104,17 +107,51 @@ describe("goals server writes", () => {
       }),
     });
 
-    await updateGoal("org_dg_imports", {
-      displayMode: "absolute",
-      id: activeGoalRow.id,
-      metric: "profit",
-      name: "Meta atualizada",
-      periodEnd: "2099-12-31",
-      periodStart: "2099-01-01",
-      targetValue: 200,
-    });
+    await updateGoal(
+      "org_dg_imports",
+      {
+        displayMode: "absolute",
+        id: activeGoalRow.id,
+        metric: "profit",
+        name: "Meta atualizada",
+        periodEnd: "2099-12-31",
+        periodStart: "2099-01-01",
+        targetValue: 200,
+      },
+      "user-1"
+    );
 
     expect(mockDb.transaction).toHaveBeenCalledOnce();
+  });
+
+  it("propagates audit failures from the same goal creation transaction", async () => {
+    const { createGoal } = await import("@/features/goals/server");
+    const { mockDb } = await resolveMocks();
+    const goalValues = vi.fn().mockResolvedValue(undefined);
+    const auditValues = vi.fn().mockRejectedValue(new Error("audit failed"));
+
+    mockDb.insert
+      .mockReturnValueOnce({ values: goalValues })
+      .mockReturnValueOnce({ values: auditValues });
+
+    await expect(
+      createGoal(
+        "org_dg_imports",
+        {
+          displayMode: "absolute",
+          metric: "profit",
+          name: "Lucro abril",
+          periodEnd: "2099-12-31",
+          periodStart: "2099-01-01",
+          targetValue: 5000,
+        },
+        "user-1"
+      )
+    ).rejects.toThrow("audit failed");
+
+    expect(mockDb.transaction).toHaveBeenCalledOnce();
+    expect(goalValues).toHaveBeenCalled();
+    expect(auditValues).toHaveBeenCalled();
   });
 
   it("does not treat a lost active goal update race as success", async () => {
@@ -125,15 +162,19 @@ describe("goals server writes", () => {
     await mockLostGoalUpdate();
 
     await expect(
-      updateGoal("org_dg_imports", {
-        displayMode: "absolute",
-        id: activeGoalRow.id,
-        metric: "profit",
-        name: "Meta atualizada",
-        periodEnd: "2099-12-31",
-        periodStart: "2099-01-01",
-        targetValue: 200,
-      })
+      updateGoal(
+        "org_dg_imports",
+        {
+          displayMode: "absolute",
+          id: activeGoalRow.id,
+          metric: "profit",
+          name: "Meta atualizada",
+          periodEnd: "2099-12-31",
+          periodStart: "2099-01-01",
+          targetValue: 200,
+        },
+        "user-1"
+      )
     ).rejects.toThrow("Meta nao encontrada ou nao esta ativa.");
   });
 
@@ -145,7 +186,7 @@ describe("goals server writes", () => {
     await mockLostGoalUpdate();
 
     await expect(
-      archiveGoal("org_dg_imports", activeGoalRow.id)
+      archiveGoal("org_dg_imports", activeGoalRow.id, "user-1")
     ).rejects.toThrow("Meta nao encontrada.");
   });
 
@@ -157,7 +198,7 @@ describe("goals server writes", () => {
     await mockLostGoalUpdate();
 
     await expect(
-      unarchiveGoal("org_dg_imports", archivedGoalRow.id)
+      unarchiveGoal("org_dg_imports", archivedGoalRow.id, "user-1")
     ).rejects.toThrow("Meta nao encontrada.");
   });
 });

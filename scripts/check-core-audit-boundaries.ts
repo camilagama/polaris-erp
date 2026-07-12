@@ -47,6 +47,24 @@ export const CORE_AUDIT_BOUNDARIES: CoreAuditBoundary[] = [
     filePath: join("apps", "web", "src", "features", "sales", "actions.ts"),
     functionNames: ["createSaleAction", "cancelSaleAction"],
   },
+  {
+    filePath: join("apps", "web", "src", "features", "goals", "actions.ts"),
+    functionNames: [
+      "archiveGoalAction",
+      "createGoalAction",
+      "unarchiveGoalAction",
+      "updateGoalAction",
+    ],
+  },
+  {
+    filePath: join("apps", "web", "src", "features", "catalog", "actions.ts"),
+    functionNames: [
+      "createCategoryAction",
+      "deleteCategoryAction",
+      "saveCatalogSettingsAction",
+      "updateCategoryAction",
+    ],
+  },
 ];
 
 const isFunctionLike = (node: Node): boolean =>

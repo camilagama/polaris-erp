@@ -25,10 +25,6 @@ vi.mock("@/features/products/image-workflow", () => ({
   storeProductImageFromStage: vi.fn(),
 }));
 
-vi.mock("@/lib/audit-log", () => ({
-  recordAuditEvent: vi.fn(),
-}));
-
 vi.mock("next/cache", () => ({
   refresh: vi.fn(),
   revalidatePath: vi.fn(),
@@ -79,7 +75,6 @@ const resolveMocks = async () => {
   const imageWorkflowModule = await import(
     "@/features/products/image-workflow"
   );
-  const auditLogModule = await import("@/lib/audit-log");
   const cache = await import("next/cache");
 
   return {
@@ -95,7 +90,6 @@ const resolveMocks = async () => {
     mockGetProductCategoryById: catalogModule.getProductCategoryById as MockFn,
     mockRefresh: cache.refresh as MockFn,
     mockRequireAppContext: appSessionModule.requireAppContext as MockFn,
-    mockRecordAuditEvent: auditLogModule.recordAuditEvent as MockFn,
     mockSession: sessionModule.getSession as MockFn,
     mockStoreProductImageFromStage:
       imageWorkflowModule.storeProductImageFromStage as MockFn,
@@ -318,7 +312,6 @@ describe("product server actions", () => {
       mockDeleteProductImageVersion,
       mockDb,
       mockGetProductCategoryById,
-      mockRecordAuditEvent,
       mockRequireAppContext,
       mockSession,
       mockStoreProductImageFromStage,
@@ -341,7 +334,6 @@ describe("product server actions", () => {
     });
 
     mockDeleteProductImageVersion.mockResolvedValue(undefined);
-    mockRecordAuditEvent.mockResolvedValue(undefined);
     mockDb.insert.mockReturnValue({
       values: () => Promise.resolve([]),
     });
@@ -466,7 +458,7 @@ describe("product server actions", () => {
     expect(harness.state.stock).toBe(2);
   });
 
-  it("does not audit or revalidate when stock addition loses the product update", async () => {
+  it("does not revalidate when stock addition loses the product update", async () => {
     const { addProductStockAction } = await import(
       "@/features/products/actions"
     );
@@ -494,7 +486,7 @@ describe("product server actions", () => {
     expect(mockUpdateTag).not.toHaveBeenCalled();
   });
 
-  it("does not audit or revalidate when stock write-off loses the product update", async () => {
+  it("does not revalidate when stock write-off loses the product update", async () => {
     const { writeOffProductStockAction } = await import(
       "@/features/products/actions"
     );
@@ -662,7 +654,7 @@ describe("product server actions", () => {
     expect(harness.priceChangeLog).toEqual([]);
   });
 
-  it("does not audit or revalidate when a price update loses the product row", async () => {
+  it("does not revalidate when a price update loses the product row", async () => {
     const { updateProductAction } = await import("@/features/products/actions");
     const { mockDb, mockUpdateTag } = await resolveMocks();
 
@@ -761,7 +753,6 @@ describe("product server actions", () => {
     const {
       mockDb,
       mockDeleteProductImageVersion,
-      mockRecordAuditEvent,
       mockRefresh,
       mockUpdateTag,
     } = await resolveMocks();
@@ -794,7 +785,6 @@ describe("product server actions", () => {
     expect(mockDeleteProductImageVersion).not.toHaveBeenCalled();
     expect(mockUpdateTag).not.toHaveBeenCalled();
     expect(mockRefresh).not.toHaveBeenCalled();
-    expect(mockRecordAuditEvent).not.toHaveBeenCalled();
   });
 
   it("rolls back the new image when replace loses the version race", async () => {
@@ -804,7 +794,6 @@ describe("product server actions", () => {
     const {
       mockDb,
       mockDeleteProductImageVersion,
-      mockRecordAuditEvent,
       mockRefresh,
       mockStoreProductImageFromStage,
       mockUpdateTag,
@@ -854,7 +843,6 @@ describe("product server actions", () => {
     });
     expect(mockUpdateTag).not.toHaveBeenCalled();
     expect(mockRefresh).not.toHaveBeenCalled();
-    expect(mockRecordAuditEvent).not.toHaveBeenCalled();
   });
 
   it("does not treat another tenant product as image removal success", async () => {
@@ -864,7 +852,6 @@ describe("product server actions", () => {
     const {
       mockDb,
       mockDeleteProductImageVersion,
-      mockRecordAuditEvent,
       mockRefresh,
       mockUpdateTag,
     } = await resolveMocks();
@@ -884,7 +871,6 @@ describe("product server actions", () => {
     expect(mockDeleteProductImageVersion).not.toHaveBeenCalled();
     expect(mockUpdateTag).not.toHaveBeenCalled();
     expect(mockRefresh).not.toHaveBeenCalled();
-    expect(mockRecordAuditEvent).not.toHaveBeenCalled();
   });
 
   it("archives a product by stamping archivedAt", async () => {
@@ -910,12 +896,11 @@ describe("product server actions", () => {
     expect(updatePayloads[0]?.archivedAt).toBeInstanceOf(Date);
   });
 
-  it("does not audit or revalidate when archive targets another tenant", async () => {
+  it("does not revalidate when archive targets another tenant", async () => {
     const { archiveProductAction } = await import(
       "@/features/products/actions"
     );
-    const { mockDb, mockRecordAuditEvent, mockRefresh, mockUpdateTag } =
-      await resolveMocks();
+    const { mockDb, mockRefresh, mockUpdateTag } = await resolveMocks();
 
     mockDb.update.mockReturnValue({
       set: () => ({
@@ -931,7 +916,6 @@ describe("product server actions", () => {
 
     expect(mockUpdateTag).not.toHaveBeenCalled();
     expect(mockRefresh).not.toHaveBeenCalled();
-    expect(mockRecordAuditEvent).not.toHaveBeenCalled();
   });
 
   it("unarchives a product by clearing archivedAt", async () => {
@@ -959,12 +943,11 @@ describe("product server actions", () => {
     });
   });
 
-  it("does not audit or revalidate when unarchive targets another tenant", async () => {
+  it("does not revalidate when unarchive targets another tenant", async () => {
     const { unarchiveProductAction } = await import(
       "@/features/products/actions"
     );
-    const { mockDb, mockRecordAuditEvent, mockRefresh, mockUpdateTag } =
-      await resolveMocks();
+    const { mockDb, mockRefresh, mockUpdateTag } = await resolveMocks();
 
     mockDb.update.mockReturnValue({
       set: () => ({
@@ -980,7 +963,6 @@ describe("product server actions", () => {
 
     expect(mockUpdateTag).not.toHaveBeenCalled();
     expect(mockRefresh).not.toHaveBeenCalled();
-    expect(mockRecordAuditEvent).not.toHaveBeenCalled();
   });
 
   it("delegates product archive state writes to the product domain", () => {

@@ -13,10 +13,6 @@ vi.mock("@/lib/app-session", () => ({
   requireAppContext: vi.fn(),
 }));
 
-vi.mock("@/lib/audit-log", () => ({
-  recordAuditEvent: vi.fn(),
-}));
-
 vi.mock("next/cache", () => ({
   refresh: vi.fn(),
   revalidatePath: vi.fn(),
@@ -75,7 +71,6 @@ interface CancelSaleHarness {
 const resolveMocks = async () => {
   const sessionModule = await import("@/lib/session");
   const appSessionModule = await import("@/lib/app-session");
-  const auditLogModule = await import("@/lib/audit-log");
   const dbModule = await import("@polaris/db");
   const cache = await import("next/cache");
 
@@ -90,7 +85,6 @@ const resolveMocks = async () => {
       execute: MockFn;
       transaction: MockFn;
     },
-    mockRecordAuditEvent: auditLogModule.recordAuditEvent as MockFn,
     mockRefresh: cache.refresh as MockFn,
     mockRequireAppContext: appSessionModule.requireAppContext as MockFn,
     mockSession: sessionModule.getSession as MockFn,
@@ -369,13 +363,8 @@ describe("sales server actions", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
 
-    const {
-      mockCatalogSettings,
-      mockDb,
-      mockRecordAuditEvent,
-      mockRequireAppContext,
-      mockSession,
-    } = await resolveMocks();
+    const { mockCatalogSettings, mockDb, mockRequireAppContext, mockSession } =
+      await resolveMocks();
 
     mockRequireAppContext.mockResolvedValue({
       organizationId: "org_dg_imports",
@@ -397,7 +386,6 @@ describe("sales server actions", () => {
       idealMarkupPercent: 0,
       minimumMarkupPercent: 0,
     });
-    mockRecordAuditEvent.mockResolvedValue(undefined);
     mockDb.transaction.mockImplementation(async (callback) => callback(mockDb));
   });
 
@@ -484,8 +472,7 @@ describe("sales server actions", () => {
 
   it("returns the existing sale when a concurrent idempotency insert wins first", async () => {
     const { createSaleAction } = await import("@/features/sales/actions");
-    const { mockDb, mockRecordAuditEvent, mockRefresh, mockUpdateTag } =
-      await resolveMocks();
+    const { mockDb, mockRefresh, mockUpdateTag } = await resolveMocks();
 
     mockDb.query.sales.findFirst
       .mockResolvedValueOnce(null)
@@ -522,7 +509,6 @@ describe("sales server actions", () => {
 
     expect(mockUpdateTag).not.toHaveBeenCalled();
     expect(mockRefresh).not.toHaveBeenCalled();
-    expect(mockRecordAuditEvent).not.toHaveBeenCalled();
   });
 
   it("sets tenant database context before creating a sale", async () => {
@@ -832,10 +818,9 @@ describe("sales server actions", () => {
     expect(harness.productById.get("product-1")?.stock).toBe(10);
   });
 
-  it("does not audit or revalidate when sale stock update is lost", async () => {
+  it("does not revalidate when sale stock update is lost", async () => {
     const { createSaleAction } = await import("@/features/sales/actions");
-    const { mockDb, mockRecordAuditEvent, mockRefresh, mockUpdateTag } =
-      await resolveMocks();
+    const { mockDb, mockRefresh, mockUpdateTag } = await resolveMocks();
 
     const harness = createSalesHarness(
       [
@@ -872,7 +857,6 @@ describe("sales server actions", () => {
     expect(harness.productById.get("product-1")?.stock).toBe(5);
     expect(mockUpdateTag).not.toHaveBeenCalled();
     expect(mockRefresh).not.toHaveBeenCalled();
-    expect(mockRecordAuditEvent).not.toHaveBeenCalled();
   });
 
   it("cancels a sale and restores stock", async () => {
@@ -910,10 +894,9 @@ describe("sales server actions", () => {
     );
   });
 
-  it("does not audit or revalidate when cancellation targets another tenant", async () => {
+  it("does not revalidate when cancellation targets another tenant", async () => {
     const { cancelSaleAction } = await import("@/features/sales/actions");
-    const { mockDb, mockRecordAuditEvent, mockRefresh, mockUpdateTag } =
-      await resolveMocks();
+    const { mockDb, mockRefresh, mockUpdateTag } = await resolveMocks();
 
     const harness = createCancelSaleHarness({
       items: [
@@ -945,13 +928,11 @@ describe("sales server actions", () => {
     expect(harness.state.saleStatus).toBe("completed");
     expect(mockUpdateTag).not.toHaveBeenCalled();
     expect(mockRefresh).not.toHaveBeenCalled();
-    expect(mockRecordAuditEvent).not.toHaveBeenCalled();
   });
 
-  it("does not audit or revalidate when cancellation stock restore is lost", async () => {
+  it("does not revalidate when cancellation stock restore is lost", async () => {
     const { cancelSaleAction } = await import("@/features/sales/actions");
-    const { mockDb, mockRecordAuditEvent, mockRefresh, mockUpdateTag } =
-      await resolveMocks();
+    const { mockDb, mockRefresh, mockUpdateTag } = await resolveMocks();
 
     const harness = createCancelSaleHarness({
       items: [
@@ -983,13 +964,11 @@ describe("sales server actions", () => {
     expect(harness.state.saleStatus).toBe("completed");
     expect(mockUpdateTag).not.toHaveBeenCalled();
     expect(mockRefresh).not.toHaveBeenCalled();
-    expect(mockRecordAuditEvent).not.toHaveBeenCalled();
   });
 
-  it("does not audit or revalidate when the final sale cancellation update is lost", async () => {
+  it("does not revalidate when the final sale cancellation update is lost", async () => {
     const { cancelSaleAction } = await import("@/features/sales/actions");
-    const { mockDb, mockRecordAuditEvent, mockRefresh, mockUpdateTag } =
-      await resolveMocks();
+    const { mockDb, mockRefresh, mockUpdateTag } = await resolveMocks();
 
     const harness = createCancelSaleHarness({
       items: [
@@ -1020,7 +999,6 @@ describe("sales server actions", () => {
     expect(harness.state.saleStatus).toBe("completed");
     expect(mockUpdateTag).not.toHaveBeenCalled();
     expect(mockRefresh).not.toHaveBeenCalled();
-    expect(mockRecordAuditEvent).not.toHaveBeenCalled();
   });
 
   it("delegates idempotency lookup to the sales domain", () => {
