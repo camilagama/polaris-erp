@@ -20,7 +20,11 @@ const getOptionalUrl = (value: string | undefined): string | undefined => {
 };
 
 const getDefaultMode = (env: AppUrlEnv): AppUrlMode => {
-  if (env.VERCEL_ENV || env.NODE_ENV === "production") {
+  if (
+    env.VERCEL_ENV === "preview" ||
+    env.VERCEL_ENV === "production" ||
+    env.NODE_ENV === "production"
+  ) {
     return "public";
   }
 

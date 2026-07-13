@@ -12,6 +12,18 @@ describe("resolveCanonicalAppUrl", () => {
     ).toBe("http://localhost:3000");
   });
 
+  it("keeps Vercel development on localhost when public URL points to a tunnel", () => {
+    expect(
+      resolveCanonicalAppUrl({
+        APP_LOCAL_URL: "http://localhost:3000",
+        BETTER_AUTH_URL: "https://dev-tunnel.example.com",
+        NEXT_PUBLIC_APP_URL: "https://dev-tunnel.example.com",
+        NODE_ENV: "development",
+        VERCEL_ENV: "development",
+      })
+    ).toBe("http://localhost:3000");
+  });
+
   it("uses the public URL when development explicitly opts into public mode", () => {
     expect(
       resolveCanonicalAppUrl({
