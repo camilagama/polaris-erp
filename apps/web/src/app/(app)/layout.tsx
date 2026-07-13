@@ -1,11 +1,11 @@
-import { connection } from "next/server";
-import type { ReactNode } from "react";
-import { AppSidebar } from "@/components/app-sidebar";
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
-} from "@/components/ui/sidebar";
+} from "@polaris/ui/components/ui/sidebar";
+import { connection } from "next/server";
+import type { ReactNode } from "react";
+import { AppSidebar } from "@/components/app-sidebar";
 import { signOutAction } from "@/features/auth/actions";
 import { requirePageAppContext } from "@/lib/app-session";
 import { requireSession } from "@/lib/session";

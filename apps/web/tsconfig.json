@@ -2,7 +2,11 @@
   "extends": "../../packages/config/tsconfig/next.json",
   "compilerOptions": {
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@/components/ui/*": ["../../packages/ui/src/components/ui/*"],
+      "@/hooks/*": ["../../packages/ui/src/hooks/*"],
+      "@/lib/utils": ["../../packages/ui/src/lib/utils.ts"],
+      "@polaris/ui/*": ["../../packages/ui/*"]
     }
   },
   "include": [

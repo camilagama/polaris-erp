@@ -1,1 +1,4 @@
 @import "tailwindcss";
+@import "@polaris/ui/globals.css";
+
+@source "../../../../packages/ui/src";

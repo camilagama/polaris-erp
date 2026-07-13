@@ -9,7 +9,8 @@
     "@polaris/emails": "workspace:*",
     "@polaris/auth": "workspace:*",
     "@polaris/platform": "workspace:*",
-    "@polaris/platform-auth": "workspace:*"
+    "@polaris/platform-auth": "workspace:*",
+    "@polaris/ui": "workspace:*"
   },
   "scripts": {
     "dev": "bun --env-file=../../.env.local x next dev",
