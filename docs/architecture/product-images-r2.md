@@ -9,7 +9,7 @@ R2_ACCOUNT_ID=
 R2_ACCESS_KEY_ID=
 R2_SECRET_ACCESS_KEY=
 R2_BUCKET_STAGING=product-images-staging
-R2_BUCKET_PUBLIC=product-images-public
+R2_BUCKET_FINAL=product-images-final
 PRODUCT_IMAGE_RECONCILE_SECRET=
 ```
 
@@ -27,7 +27,7 @@ Esse modelo evita que uma URL de CDN/R2 exponha imagem de outro tenant para algu
 ## Buckets
 
 - `product-images-staging`: bucket privado para upload temporario.
-- `product-images-public`: bucket final para as variantes processadas. Apesar do nome historico, os bytes sao servidos pelo app.
+- `product-images-final`: bucket final privado para as variantes processadas. Os bytes sao servidos pelo app.
 
 ## CORS do bucket de staging
 
@@ -42,7 +42,7 @@ Use uma politica equivalente a esta no bucket de staging:
       "https://seu-app.com"
     ],
     "AllowedMethods": ["PUT", "HEAD"],
-    "AllowedHeaders": ["Content-Type", "Content-Length"],
+    "AllowedHeaders": ["Content-Type"],
     "ExposeHeaders": ["ETag"],
     "MaxAgeSeconds": 300
   }

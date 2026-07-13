@@ -143,7 +143,7 @@ const hasR2Config = (): boolean =>
     process.env.R2_ACCOUNT_ID &&
       process.env.R2_ACCESS_KEY_ID &&
       process.env.R2_SECRET_ACCESS_KEY &&
-      process.env.R2_BUCKET_PUBLIC &&
+      process.env.R2_BUCKET_FINAL &&
       process.env.R2_BUCKET_STAGING
   );
 

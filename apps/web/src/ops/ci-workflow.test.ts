@@ -186,7 +186,7 @@ describe("CI workflow", () => {
     expect(workflow).toContain("secrets.R2_ACCESS_KEY_ID");
     expect(workflow).toContain("secrets.R2_SECRET_ACCESS_KEY");
     expect(workflow).toContain("secrets.R2_BUCKET_STAGING");
-    expect(workflow).toContain("secrets.R2_BUCKET_PUBLIC");
+    expect(workflow).toContain("secrets.R2_BUCKET_FINAL");
     expect(workflow).toContain("secrets.SENTRY_DSN");
     expect(workflow).toContain("secrets.NEXT_PUBLIC_SENTRY_DSN");
     expect(workflow).toContain("secrets.DEPLOYMENT_SMOKE_URL");

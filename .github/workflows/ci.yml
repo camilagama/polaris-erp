@@ -278,7 +278,7 @@ jobs:
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           R2_BUCKET_STAGING: ${{ secrets.R2_BUCKET_STAGING }}
-          R2_BUCKET_PUBLIC: ${{ secrets.R2_BUCKET_PUBLIC }}
+          R2_BUCKET_FINAL: ${{ secrets.R2_BUCKET_FINAL }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
           SUPPORT_EMAIL: ${{ vars.SUPPORT_EMAIL }}

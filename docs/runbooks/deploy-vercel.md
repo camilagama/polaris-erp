@@ -34,7 +34,7 @@ Configure em Production e replique/adapte para Preview:
 | `R2_ACCESS_KEY_ID` | Cloudflare R2. |
 | `R2_SECRET_ACCESS_KEY` | Cloudflare R2. |
 | `R2_BUCKET_STAGING` | Upload temporario. |
-| `R2_BUCKET_PUBLIC` | Variantes finais. |
+| `R2_BUCKET_FINAL` | Variantes finais privadas. |
 | `INTERNAL_R2_HEALTH_SECRET` | Obrigatorio em Vercel Production. Protege `/api/internal/health/r2` e precisa ter pelo menos 32 caracteres. |
 | `PRODUCT_IMAGE_RECONCILE_SECRET` | Obrigatorio em Vercel Production. Protege o disparo manual de `/api/internal/product-images/reconcile` e precisa ter pelo menos 32 caracteres. |
 | `INTERNAL_BOOTSTRAP_SECRET` | Apenas para E2E/dev. Nunca habilite bootstrap em producao; se existir em producao, precisa ter pelo menos 32 caracteres. |

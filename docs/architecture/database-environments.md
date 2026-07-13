@@ -53,7 +53,7 @@ O workflow tambem possui o job manual `production-preflight`, que executa `bun r
 - `BETTER_AUTH_SECRET`, `INTERNAL_R2_HEALTH_SECRET` e `PRODUCT_IMAGE_RECONCILE_SECRET`: secrets fortes, com pelo menos 32 caracteres.
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` e `NEXT_PUBLIC_GOOGLE_CLIENT_ID`.
 - `UPSTASH_REDIS_REST_URL` e `UPSTASH_REDIS_REST_TOKEN`.
-- `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_STAGING` e `R2_BUCKET_PUBLIC`.
+- `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_STAGING` e `R2_BUCKET_FINAL`.
 
 O preflight valida wiring de secrets e separacao de URLs. `E2E_DATABASE_URL` deve ser diferente tanto de `PRODUCTION_DATABASE_URL` quanto de `RLS_DATABASE_URL`, porque E2E escreve dados de teste e o smoke RLS valida o ambiente promovido. O preflight nao substitui `rls-smoke`, E2E isolado nem smoke funcional em Vercel/R2/Upstash.
 

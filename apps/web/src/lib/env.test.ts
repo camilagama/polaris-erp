@@ -25,7 +25,7 @@ const stubRequiredEnv = (
     "SUPPORT_EMAIL",
     "R2_ACCESS_KEY_ID",
     "R2_ACCOUNT_ID",
-    "R2_BUCKET_PUBLIC",
+    "R2_BUCKET_FINAL",
     "R2_BUCKET_STAGING",
     "R2_PUBLIC_BASE_URL",
     "R2_SECRET_ACCESS_KEY",
@@ -132,6 +132,18 @@ describe("serverEnv", () => {
     await expect(import("@/lib/env")).resolves.toMatchObject({
       serverEnv: expect.objectContaining({
         SUPPORT_EMAIL: "support@example.com",
+      }),
+    });
+  });
+
+  it("accepts the final R2 bucket name", async () => {
+    stubRequiredEnv({
+      R2_BUCKET_FINAL: "product-images-final",
+    });
+
+    await expect(import("@/lib/env")).resolves.toMatchObject({
+      serverEnv: expect.objectContaining({
+        R2_BUCKET_FINAL: "product-images-final",
       }),
     });
   });

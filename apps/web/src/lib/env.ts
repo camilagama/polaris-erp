@@ -76,7 +76,7 @@ const serverEnvSchema = z
       .default("development"),
     R2_ACCESS_KEY_ID: optionalNonEmptyString,
     R2_ACCOUNT_ID: optionalNonEmptyString,
-    R2_BUCKET_PUBLIC: optionalNonEmptyString,
+    R2_BUCKET_FINAL: optionalNonEmptyString,
     R2_BUCKET_STAGING: optionalNonEmptyString,
     R2_PUBLIC_BASE_URL: z.preprocess((value) => {
       if (typeof value !== "string") {
@@ -199,7 +199,7 @@ export const serverEnv = serverEnvSchema.parse({
   NODE_ENV: process.env.NODE_ENV,
   R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID,
   R2_ACCOUNT_ID: process.env.R2_ACCOUNT_ID,
-  R2_BUCKET_PUBLIC: process.env.R2_BUCKET_PUBLIC,
+  R2_BUCKET_FINAL: process.env.R2_BUCKET_FINAL,
   R2_BUCKET_STAGING: process.env.R2_BUCKET_STAGING,
   R2_PUBLIC_BASE_URL: process.env.R2_PUBLIC_BASE_URL,
   R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY,

@@ -58,7 +58,7 @@ describe("getPlatformDashboardData", () => {
     process.env.PRODUCT_IMAGE_RECONCILE_SECRET = "reconcile-secret";
     process.env.R2_ACCESS_KEY_ID = "access-key";
     process.env.R2_ACCOUNT_ID = "account-id";
-    process.env.R2_BUCKET_PUBLIC = "public-bucket";
+    process.env.R2_BUCKET_FINAL = "final-bucket";
     process.env.R2_BUCKET_STAGING = "staging-bucket";
     process.env.R2_SECRET_ACCESS_KEY = "secret-key";
     healthMock.mockResolvedValue(true);

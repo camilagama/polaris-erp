@@ -29,7 +29,7 @@ const STAGING_IMAGE_PREFIX = "staging/";
 const getRequiredStorageEnv = () => {
   const accessKeyId = serverEnv.R2_ACCESS_KEY_ID;
   const accountId = serverEnv.R2_ACCOUNT_ID;
-  const publicBucket = serverEnv.R2_BUCKET_PUBLIC;
+  const finalBucket = serverEnv.R2_BUCKET_FINAL;
   const secretAccessKey = serverEnv.R2_SECRET_ACCESS_KEY;
   const stagingBucket = serverEnv.R2_BUCKET_STAGING;
 
@@ -38,7 +38,7 @@ const getRequiredStorageEnv = () => {
       isProductImageStorageConfigured() &&
       accessKeyId &&
       accountId &&
-      publicBucket &&
+      finalBucket &&
       secretAccessKey &&
       stagingBucket
     )
@@ -51,7 +51,7 @@ const getRequiredStorageEnv = () => {
   return {
     accessKeyId,
     accountId,
-    publicBucket,
+    finalBucket,
     secretAccessKey,
     stagingBucket,
   };
@@ -106,6 +106,22 @@ const readBodyToBuffer = async (
   }
 
   return Buffer.from(await body.transformToByteArray());
+};
+
+const readBodyToResponseBody = (
+  body:
+    | {
+        transformToWebStream?: () => ReadableStream;
+      }
+    | undefined
+): BodyInit => {
+  const stream = body?.transformToWebStream?.();
+
+  if (!stream) {
+    throw new Error("A imagem armazenada nao possui conteudo.");
+  }
+
+  return stream;
 };
 
 export const createStagingObjectKey = (
@@ -217,13 +233,13 @@ export const readPublicProductImageVariant = async ({
 
   const response = await getStorageClient().send(
     new GetObjectCommand({
-      Bucket: env.publicBucket,
+      Bucket: env.finalBucket,
       Key: key,
     })
   );
 
   return {
-    body: await readBodyToBuffer(response.Body),
+    body: readBodyToResponseBody(response.Body),
     cacheControl:
       response.CacheControl ?? "public, max-age=31536000, immutable",
     contentType: response.ContentType ?? "image/webp",
@@ -255,7 +271,7 @@ export const uploadProcessedProductImageVariant = async ({
   await getStorageClient().send(
     new PutObjectCommand({
       Body: body,
-      Bucket: env.publicBucket,
+      Bucket: env.finalBucket,
       CacheControl: "public, max-age=31536000, immutable",
       ContentType: "image/webp",
       Key: key,
@@ -292,7 +308,7 @@ export const deleteProductImageVersion = async ({
   const env = getRequiredStorageEnv();
   const result = await getStorageClient().send(
     new DeleteObjectsCommand({
-      Bucket: env.publicBucket,
+      Bucket: env.finalBucket,
       Delete: {
         Objects: (["detail", "table"] as const).map((variant) => ({
           Key: buildProductImageObjectKey(
@@ -325,7 +341,7 @@ export const listAllStoredProductImageObjects = async () => {
   do {
     const response = await getStorageClient().send(
       new ListObjectsV2Command({
-        Bucket: env.publicBucket,
+        Bucket: env.finalBucket,
         ContinuationToken: continuationToken,
         Prefix: PRODUCT_IMAGE_PREFIX,
       })
@@ -362,7 +378,7 @@ export const deleteManyProductImageKeys = async (keys: string[]) => {
 
     const result = await client.send(
       new DeleteObjectsCommand({
-        Bucket: env.publicBucket,
+        Bucket: env.finalBucket,
         Delete: {
           Objects: chunk.map((key) => ({ Key: key })),
           Quiet: true,
@@ -462,12 +478,38 @@ const readStagingCorsForHealth = async ({
   }
 };
 
-const hasCorsOriginsConfigured = (
+const includesCaseInsensitive = (values: string[], expected: string): boolean =>
+  values.some((value) => value.toLowerCase() === expected.toLowerCase());
+
+const includesHeader = (values: string[], expected: string): boolean =>
+  values.includes("*") || includesCaseInsensitive(values, expected);
+
+const getConfiguredAppOrigin = (): string => {
+  try {
+    return new URL(serverEnv.NEXT_PUBLIC_APP_URL).origin;
+  } catch {
+    return serverEnv.NEXT_PUBLIC_APP_URL;
+  }
+};
+
+const hasCompleteUploadCorsRule = (
   stagingCors: R2StagingHealthDiagnostics["stagingCors"]
-): boolean =>
-  stagingCors?.ok === true &&
-  stagingCors.rules.length > 0 &&
-  stagingCors.rules.some((rule) => rule.allowedOrigins.length > 0);
+): boolean => {
+  if (stagingCors?.ok !== true) {
+    return false;
+  }
+
+  const appOrigin = getConfiguredAppOrigin();
+
+  return stagingCors.rules.some(
+    (rule) =>
+      rule.allowedOrigins.includes(appOrigin) &&
+      includesCaseInsensitive(rule.allowedMethods, "PUT") &&
+      includesCaseInsensitive(rule.allowedMethods, "HEAD") &&
+      includesHeader(rule.allowedHeaders, "Content-Type") &&
+      includesHeader(rule.exposeHeaders, "ETag")
+  );
+};
 
 const buildR2StagingHealthSummary = ({
   stagingCors,
@@ -488,11 +530,11 @@ const buildR2StagingHealthSummary = ({
     return "CORS do bucket de staging sem regras.";
   }
 
-  if (stagingCors.rules.some((rule) => rule.allowedOrigins.length > 0)) {
-    return "R2 staging acessivel e CORS legivel; confira se AllowedOrigins inclui a origem exata do app.";
+  if (hasCompleteUploadCorsRule(stagingCors)) {
+    return "R2 staging acessivel e CORS permite uploads da origem configurada.";
   }
 
-  return "CORS do bucket de staging sem AllowedOrigins.";
+  return "CORS do bucket de staging nao permite upload completo da origem configurada.";
 };
 
 /**
@@ -526,14 +568,14 @@ export const getR2StagingHealthDiagnostics =
       client,
     });
 
-    const corsOk = hasCorsOriginsConfigured(stagingCors);
+    const corsOk = hasCompleteUploadCorsRule(stagingCors);
     const ok = stagingHead?.ok === true && corsOk;
     const summary = buildR2StagingHealthSummary({ stagingCors, stagingHead });
 
     return {
       configured: true,
       ok,
-      publicBucket: env.publicBucket,
+      publicBucket: env.finalBucket,
       r2EndpointHost,
       stagingBucket: env.stagingBucket,
       stagingCors,

@@ -6,7 +6,7 @@ export const isProductImageStorageConfigured = () =>
     serverEnv.R2_ACCOUNT_ID &&
       serverEnv.R2_ACCESS_KEY_ID &&
       serverEnv.R2_SECRET_ACCESS_KEY &&
-      serverEnv.R2_BUCKET_PUBLIC &&
+      serverEnv.R2_BUCKET_FINAL &&
       serverEnv.R2_BUCKET_STAGING
   );
 

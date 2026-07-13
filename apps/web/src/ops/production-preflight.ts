@@ -24,7 +24,7 @@ export interface ProductionPreflightEnv {
   PRODUCT_IMAGE_RECONCILE_SECRET?: string;
   R2_ACCESS_KEY_ID?: string;
   R2_ACCOUNT_ID?: string;
-  R2_BUCKET_PUBLIC?: string;
+  R2_BUCKET_FINAL?: string;
   R2_BUCKET_STAGING?: string;
   R2_SECRET_ACCESS_KEY?: string;
   RLS_DATABASE_URL?: string;
@@ -106,7 +106,6 @@ const REQUIRED_PRODUCTION_INTEGRATION_ENV = [
   "R2_ACCESS_KEY_ID",
   "R2_SECRET_ACCESS_KEY",
   "R2_BUCKET_STAGING",
-  "R2_BUCKET_PUBLIC",
   "SENTRY_DSN",
   "NEXT_PUBLIC_SENTRY_DSN",
   "SUPPORT_EMAIL",
@@ -232,6 +231,10 @@ const appendProductionEnvErrors = (
     if (!hasValue(env[key])) {
       errors.push(`${key} is required in production preflight.`);
     }
+  }
+
+  if (!hasValue(env.R2_BUCKET_FINAL)) {
+    errors.push("R2_BUCKET_FINAL is required in production preflight.");
   }
 
   for (const key of REQUIRED_VERIFY_FULL_DATABASE_URLS) {

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const serverEnvMock = vi.hoisted(() => ({
   R2_ACCESS_KEY_ID: "access" as string | undefined,
   R2_ACCOUNT_ID: "account" as string | undefined,
-  R2_BUCKET_PUBLIC: "public" as string | undefined,
+  R2_BUCKET_FINAL: "final" as string | undefined,
   R2_BUCKET_STAGING: "staging" as string | undefined,
   R2_SECRET_ACCESS_KEY: "secret" as string | undefined,
 }));
@@ -22,7 +22,7 @@ describe("buildProductImageUrl", () => {
   beforeEach(() => {
     serverEnvMock.R2_ACCESS_KEY_ID = "access";
     serverEnvMock.R2_ACCOUNT_ID = "account";
-    serverEnvMock.R2_BUCKET_PUBLIC = "public";
+    serverEnvMock.R2_BUCKET_FINAL = "final";
     serverEnvMock.R2_BUCKET_STAGING = "staging";
     serverEnvMock.R2_SECRET_ACCESS_KEY = "secret";
   });
@@ -35,6 +35,12 @@ describe("buildProductImageUrl", () => {
 
   it("does not require a public CDN base URL for storage readiness", () => {
     expect(isProductImageStorageConfigured()).toBe(true);
+  });
+
+  it("requires the final bucket name for storage readiness", () => {
+    serverEnvMock.R2_BUCKET_FINAL = undefined;
+
+    expect(isProductImageStorageConfigured()).toBe(false);
   });
 
   it("namespaces stored image keys by organization", () => {
