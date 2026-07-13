@@ -1,4 +1,5 @@
 import { loadEnvConfig } from "@next/env";
+import { resolveCanonicalAppUrl } from "@polaris/auth/app-url";
 import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 import { getSecurityHeaders } from "@/lib/security-headers";
@@ -29,11 +30,30 @@ const parseHostname = (value: string): string | null => {
 
 const getAllowedDevOrigins = () => {
   const hosts = new Set(["127.0.0.1", "localhost"]);
-
-  for (const value of [
+  const configuredAppUrls = [
+    process.env.APP_LOCAL_URL,
+    process.env.APP_PUBLIC_URL,
     process.env.BETTER_AUTH_URL,
     process.env.NEXT_PUBLIC_APP_URL,
-  ]) {
+  ];
+
+  try {
+    configuredAppUrls.push(
+      resolveCanonicalAppUrl({
+        APP_LOCAL_URL: process.env.APP_LOCAL_URL,
+        APP_PUBLIC_URL: process.env.APP_PUBLIC_URL,
+        APP_URL_MODE: process.env.APP_URL_MODE,
+        BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
+        NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+        NODE_ENV: process.env.NODE_ENV,
+        VERCEL_ENV: process.env.VERCEL_ENV,
+      })
+    );
+  } catch {
+    // Env validation reports the actionable app URL error at runtime/build time.
+  }
+
+  for (const value of configuredAppUrls) {
     if (!value) {
       continue;
     }

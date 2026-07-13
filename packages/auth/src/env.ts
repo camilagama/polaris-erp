@@ -1,6 +1,7 @@
 import "server-only";
 import { config } from "dotenv";
 import { z } from "zod";
+import { resolveCanonicalAppUrl } from "./app-url";
 
 config({ path: "../../.env.local", quiet: true });
 config({ path: ".env.local", quiet: true });
@@ -35,9 +36,22 @@ const optionalBooleanString = z.preprocess((value) => {
 const MINIMUM_AUTH_SECRET_LENGTH = 32;
 const MINIMUM_INTERNAL_SECRET_LENGTH = 32;
 
+const canonicalAppUrl = resolveCanonicalAppUrl({
+  APP_LOCAL_URL: process.env.APP_LOCAL_URL,
+  APP_PUBLIC_URL: process.env.APP_PUBLIC_URL,
+  APP_URL_MODE: process.env.APP_URL_MODE,
+  BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
+  NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+  NODE_ENV: process.env.NODE_ENV,
+  VERCEL_ENV: process.env.VERCEL_ENV,
+});
+
 const authEnvSchema = z
   .object({
     ALLOW_PLAYWRIGHT_BOOTSTRAP: optionalBooleanString,
+    APP_LOCAL_URL: optionalNonEmptyString,
+    APP_PUBLIC_URL: optionalNonEmptyString,
+    APP_URL_MODE: optionalNonEmptyString,
     BETTER_AUTH_API_KEY: optionalNonEmptyString,
     BETTER_AUTH_SECRET: z.string().min(1),
     BETTER_AUTH_URL: z.string().url(),
@@ -82,13 +96,16 @@ const authEnvSchema = z
 
 export const serverEnv = authEnvSchema.parse({
   ALLOW_PLAYWRIGHT_BOOTSTRAP: process.env.ALLOW_PLAYWRIGHT_BOOTSTRAP,
+  APP_LOCAL_URL: process.env.APP_LOCAL_URL,
+  APP_PUBLIC_URL: process.env.APP_PUBLIC_URL,
+  APP_URL_MODE: process.env.APP_URL_MODE,
   BETTER_AUTH_API_KEY: process.env.BETTER_AUTH_API_KEY,
   BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
-  BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
+  BETTER_AUTH_URL: canonicalAppUrl,
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
   GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
   INTERNAL_BOOTSTRAP_SECRET: process.env.INTERNAL_BOOTSTRAP_SECRET,
-  NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+  NEXT_PUBLIC_APP_URL: canonicalAppUrl,
   NEXT_PUBLIC_GOOGLE_CLIENT_ID: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
   NODE_ENV: process.env.NODE_ENV,
   VERCEL_ENV: process.env.VERCEL_ENV,

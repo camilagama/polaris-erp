@@ -79,7 +79,15 @@ export const createPlatformAdminAuth = ({
   const getPlatformAdminContext =
     async (): Promise<PlatformAdminContext | null> => {
       const session = await getSession();
-      const userId = session?.user?.id;
+      let userId = session?.user?.id;
+
+      if (
+        !userId &&
+        process.env.NODE_ENV === "development" &&
+        process.env.PLATFORM_ADMIN_DEV_USER_ID
+      ) {
+        userId = process.env.PLATFORM_ADMIN_DEV_USER_ID;
+      }
 
       if (!userId) {
         return null;

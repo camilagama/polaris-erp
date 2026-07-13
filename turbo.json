@@ -2,6 +2,9 @@
   "$schema": "https://turborepo.com/schema.json",
   "globalDependencies": [".env*", "knip.config.ts"],
   "globalEnv": [
+    "APP_LOCAL_URL",
+    "APP_PUBLIC_URL",
+    "APP_URL_MODE",
     "BETTER_AUTH_URL",
     "NEXT_PUBLIC_APP_URL",
     "NEXT_PUBLIC_GOOGLE_CLIENT_ID",

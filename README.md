@@ -32,6 +32,10 @@ bun run db:smoke:rls
 bun run db:analyze:listings
 ```
 
+## URL local e tunnel
+
+Em `development` e `test`, a origem canonica do app resolve para `APP_LOCAL_URL` ou `http://localhost:3000` por padrao, mesmo que `NEXT_PUBLIC_APP_URL` ou `BETTER_AUTH_URL` ainda apontem para um tunnel antigo. Para rodar dev por tunnel, defina `APP_URL_MODE="tunnel"` e `APP_PUBLIC_URL` com a URL publica atual.
+
 ## Modelo de acesso
 
 - Cadastro publico em `/register` com Google.

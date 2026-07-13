@@ -14,6 +14,7 @@
   },
   "exports": {
     ".": "./src/auth.ts",
+    "./app-url": "./src/app-url.ts",
     "./env": "./src/env.ts",
     "./session": "./src/session.ts",
     "./workspace-management-policy": "./src/workspace-management-policy.ts"

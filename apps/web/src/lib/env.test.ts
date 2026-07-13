@@ -89,6 +89,38 @@ describe("serverEnv", () => {
     });
   });
 
+  it("resolves development app URLs to localhost by default", async () => {
+    stubRequiredEnv({
+      BETTER_AUTH_URL: "https://dev-tunnel.example.com",
+      NEXT_PUBLIC_APP_URL: "https://dev-tunnel.example.com",
+      NODE_ENV: "development",
+    });
+
+    await expect(import("@/lib/env")).resolves.toMatchObject({
+      serverEnv: expect.objectContaining({
+        BETTER_AUTH_URL: "http://localhost:3000",
+        NEXT_PUBLIC_APP_URL: "http://localhost:3000",
+      }),
+    });
+  });
+
+  it("resolves development app URLs to the public tunnel when requested", async () => {
+    stubRequiredEnv({
+      APP_PUBLIC_URL: "https://dev-tunnel.example.com/",
+      APP_URL_MODE: "tunnel",
+      BETTER_AUTH_URL: "https://stale.example.com",
+      NEXT_PUBLIC_APP_URL: "https://stale.example.com",
+      NODE_ENV: "development",
+    });
+
+    await expect(import("@/lib/env")).resolves.toMatchObject({
+      serverEnv: expect.objectContaining({
+        BETTER_AUTH_URL: "https://dev-tunnel.example.com",
+        NEXT_PUBLIC_APP_URL: "https://dev-tunnel.example.com",
+      }),
+    });
+  });
+
   it("rejects weak internal secrets in production", async () => {
     stubRequiredEnv({
       INTERNAL_BOOTSTRAP_SECRET: "short-bootstrap-secret",
