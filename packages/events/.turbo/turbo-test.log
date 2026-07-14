@@ -1,11 +1,12 @@
 $ vitest run
 
-[1m[30m[46m RUN [49m[39m[22m [36mv4.1.9 [39m[90mC:/Users/Junior/Documents/0 - Dev/Hub Imports/packages/events[39m
+ RUN  v4.1.10 C:/Users/Junior/Documents/0 - Dev/Hub Imports/packages/events
 
- [32m✓[39m src/event-foundation.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ ✓ src/event-foundation.test.ts (12 tests) 16ms
+ ↓ src/event-outbox-lease.postgres.test.ts (2 tests | 2 skipped)
 
-[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
-[2m      Tests [22m [1m[32m8 passed[39m[22m[90m (8)[39m
-[2m   Start at [22m 01:47:30
-[2m   Duration [22m 1.09s[2m (transform 151ms, setup 0ms, import 784ms, tests 15ms, environment 0ms)[22m
+ Test Files  1 passed | 1 skipped (2)
+      Tests  12 passed | 2 skipped (14)
+   Start at  02:38:01
+   Duration  983ms (transform 249ms, setup 0ms, import 1.39s, tests 16ms, environment 0ms)
 

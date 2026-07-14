@@ -1,8 +1,8 @@
 # Dependency Advisory Baseline
 
-Generated: 2026-07-10
+Generated: 2026-07-14
 Owner: Platform engineering
-Review by: 2026-08-10
+Review by: 2026-08-14
 
 This baseline records the current `bun audit --json` advisories that are accepted temporarily for the MVP hardening branch. It is not a permanent waiver.
 
@@ -15,6 +15,6 @@ Rules:
 
 Current posture:
 
-- Runtime-sensitive: `defu`, `fast-uri`, `@opentelemetry/core`.
-- Mostly dev/build/test tooling: `vite`, `esbuild`, `postcss`, `brace-expansion`, `@babel/core`.
-- Public paid launch still requires either compatible dependency updates or explicit owner sign-off on the remaining runtime-sensitive items.
+- No runtime-sensitive advisory remains after compatible dependency updates and targeted overrides.
+- Remaining advisories are local build/tooling paths: `esbuild` through `drizzle-kit` and low-severity `@babel/core` through Sentry's bundler plugin.
+- Public paid launch requires the recorded owner review by 2026-08-14; no high-severity advisory remains in the current audit.

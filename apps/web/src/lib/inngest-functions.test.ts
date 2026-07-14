@@ -61,12 +61,14 @@ describe("inngest outbox functions", () => {
   it("marks claimed events without a dispatcher as observable but non-terminal", async () => {
     claimOutboxEventMock.mockResolvedValueOnce({
       attempts: 1,
+      claimToken: "claim-1",
       correlationId: "corr-1",
       eventType: "welcome.email",
       id: "event-1",
       payload: {},
       topic: "email",
     });
+    markFailedMock.mockResolvedValueOnce(true);
 
     const { processOutboxEvent } = await import("@/lib/inngest-functions");
 
@@ -74,6 +76,7 @@ describe("inngest outbox functions", () => {
       processOutboxEvent({ execute: vi.fn() }, "event-1")
     ).resolves.toBe("failed");
     expect(markFailedMock).toHaveBeenCalledWith({
+      claimToken: "claim-1",
       db: { execute: expect.any(Function) },
       error: "No outbox dispatcher registered for email:welcome.email.",
       eventId: "event-1",
@@ -95,12 +98,14 @@ describe("inngest outbox functions", () => {
   it("marks legacy capture-only events as observed without retrying", async () => {
     claimOutboxEventMock.mockResolvedValueOnce({
       attempts: 1,
+      claimToken: "claim-1",
       correlationId: "corr-1",
       eventType: "PAYMENT_RECEIVED",
       id: "event-1",
       payload: {},
       topic: "asaas.webhook",
     });
+    markObservedMock.mockResolvedValueOnce(true);
 
     const { processOutboxEvent } = await import("@/lib/inngest-functions");
 
@@ -110,6 +115,7 @@ describe("inngest outbox functions", () => {
     expect(markObservedMock).toHaveBeenCalledWith(
       { execute: expect.any(Function) },
       "event-1",
+      "claim-1",
       "Outbox topic asaas.webhook is capture-only and is not dispatched."
     );
     expect(markFailedMock).not.toHaveBeenCalled();
@@ -132,6 +138,7 @@ describe("inngest outbox functions", () => {
     const dispatcher = vi.fn().mockResolvedValue(undefined);
     const event = {
       attempts: 1,
+      claimToken: "claim-1",
       correlationId: "corr-1",
       eventType: "welcome.email",
       id: "event-1",
@@ -139,6 +146,7 @@ describe("inngest outbox functions", () => {
       topic: "email",
     };
     claimOutboxEventMock.mockResolvedValueOnce(event);
+    markProcessedMock.mockResolvedValueOnce(true);
 
     const { processOutboxEvent, registerOutboxDispatcher } = await import(
       "@/lib/inngest-functions"
@@ -155,14 +163,16 @@ describe("inngest outbox functions", () => {
     expect(dispatcher).toHaveBeenCalledWith(event);
     expect(markProcessedMock).toHaveBeenCalledWith(
       { execute: expect.any(Function) },
-      "event-1"
+      "event-1",
+      "claim-1"
     );
   });
 
-  it("marks dispatcher failures as retryable and rethrows for Inngest retry", async () => {
-    const dispatcher = vi.fn().mockRejectedValue(new Error("resend timeout"));
+  it("does not report processing when the outbox lease changed", async () => {
+    const dispatcher = vi.fn().mockResolvedValue(undefined);
     const event = {
       attempts: 1,
+      claimToken: "claim-1",
       correlationId: "corr-1",
       eventType: "welcome.email",
       id: "event-1",
@@ -170,6 +180,36 @@ describe("inngest outbox functions", () => {
       topic: "email",
     };
     claimOutboxEventMock.mockResolvedValueOnce(event);
+    markFailedMock.mockResolvedValueOnce(true);
+    markProcessedMock.mockResolvedValueOnce(false);
+
+    const { processOutboxEvent, registerOutboxDispatcher } = await import(
+      "@/lib/inngest-functions"
+    );
+    registerOutboxDispatcher({
+      dispatcher,
+      eventType: "welcome.email",
+      topic: "email",
+    });
+
+    await expect(
+      processOutboxEvent({ execute: vi.fn() }, "event-1")
+    ).resolves.toBe("skipped");
+  });
+
+  it("marks dispatcher failures as retryable and rethrows for Inngest retry", async () => {
+    const dispatcher = vi.fn().mockRejectedValue(new Error("resend timeout"));
+    const event = {
+      attempts: 1,
+      claimToken: "claim-1",
+      correlationId: "corr-1",
+      eventType: "welcome.email",
+      id: "event-1",
+      payload: {},
+      topic: "email",
+    };
+    claimOutboxEventMock.mockResolvedValueOnce(event);
+    markFailedMock.mockResolvedValueOnce(true);
 
     const { processOutboxEvent, registerOutboxDispatcher } = await import(
       "@/lib/inngest-functions"
@@ -184,6 +224,7 @@ describe("inngest outbox functions", () => {
       processOutboxEvent({ execute: vi.fn() }, "event-1")
     ).rejects.toThrow("resend timeout");
     expect(markFailedMock).toHaveBeenCalledWith({
+      claimToken: "claim-1",
       db: { execute: expect.any(Function) },
       error: "resend timeout",
       eventId: "event-1",

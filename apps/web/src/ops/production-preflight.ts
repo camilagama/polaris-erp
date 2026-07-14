@@ -118,6 +118,15 @@ const REQUIRED_VERIFY_FULL_DATABASE_URLS = [
   "RLS_DATABASE_URL",
 ] as const satisfies ReadonlyArray<keyof ProductionPreflightEnv>;
 
+export const REQUIRED_PRODUCTION_PREFLIGHT_ENV = [
+  ...REQUIRED_VERIFY_FULL_DATABASE_URLS,
+  ...REQUIRED_PRODUCTION_INTEGRATION_ENV,
+  "R2_BUCKET_FINAL",
+  "BETTER_AUTH_SECRET",
+  "INTERNAL_R2_HEALTH_SECRET",
+  "PRODUCT_IMAGE_RECONCILE_SECRET",
+] as const satisfies ReadonlyArray<keyof ProductionPreflightEnv>;
+
 const appendProductionSecretErrors = (
   env: ProductionPreflightEnv,
   errors: string[]

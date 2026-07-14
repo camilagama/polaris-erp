@@ -1,6 +1,7 @@
 import "server-only";
 
 import { db } from "@polaris/db";
+import { withPlatformAdminContext } from "@polaris/db/tenant-context";
 import { type SQL, sql } from "drizzle-orm";
 import {
   toIsoString,
@@ -93,3 +94,11 @@ export const listPlatformAuditEvents = async (
     subjectType: toNullableString(row.subject_type) ?? "unknown",
   }));
 };
+
+export const listPlatformAuditEventsForAdmin = async (
+  platformAdminId: string,
+  filters: PlatformAuditEventListFilters = {}
+): Promise<PlatformAuditEventListItem[]> =>
+  withPlatformAdminContext(platformAdminId, (queryableDb) =>
+    listPlatformAuditEvents(filters, queryableDb)
+  );

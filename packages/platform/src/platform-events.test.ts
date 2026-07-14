@@ -77,7 +77,7 @@ describe("platform events", () => {
     const db = {
       transaction: vi.fn(async (callback) => callback(tx)),
     };
-    retryOutboxEventMock.mockResolvedValueOnce(undefined);
+    retryOutboxEventMock.mockResolvedValueOnce(true);
 
     await retryPlatformOutboxEvent(
       {
@@ -102,6 +102,27 @@ describe("platform events", () => {
         subjectType: "event_outbox",
       })
     );
+  });
+
+  it("does not write audit when retry did not change an outbox event", async () => {
+    const tx = createTxMock();
+    const db = {
+      transaction: vi.fn(async (callback) => callback(tx)),
+    };
+    retryOutboxEventMock.mockResolvedValueOnce(false);
+
+    await expect(
+      retryPlatformOutboxEvent(
+        {
+          actorPlatformAdminId: "platform-admin-1",
+          actorUserId: "user-1",
+          eventId: "event-1",
+        },
+        db
+      )
+    ).resolves.toBe(false);
+
+    expect(tx.values).not.toHaveBeenCalled();
   });
 
   it("rejects empty event ids without writing audit", async () => {

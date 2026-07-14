@@ -2,12 +2,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-const { limitMock } = vi.hoisted(() => ({
+const { captureMessageMock, limitMock } = vi.hoisted(() => ({
+  captureMessageMock: vi.fn(),
   limitMock: vi.fn(),
 }));
 
 vi.mock("@upstash/redis", () => ({
   Redis: vi.fn(),
+}));
+
+vi.mock("@sentry/nextjs", () => ({
+  captureMessage: captureMessageMock,
 }));
 
 vi.mock("@upstash/ratelimit", () => {
@@ -48,7 +53,7 @@ describe("checkRateLimit", () => {
     vi.unstubAllEnvs();
   });
 
-  it("falls back to the local limiter when Upstash is temporarily unavailable", async () => {
+  it("fails closed when Upstash is temporarily unavailable in production", async () => {
     limitMock.mockRejectedValueOnce(new Error("upstash unavailable"));
 
     const { checkRateLimit } = await import("@/lib/rate-limit");
@@ -60,10 +65,16 @@ describe("checkRateLimit", () => {
         windowMs: 60_000,
       })
     ).resolves.toEqual({
-      ok: true,
-      remaining: 1,
+      ok: false,
       resetAt: Date.parse("2026-01-01T00:01:00.000Z"),
+      retryAfterSeconds: 60,
     });
+    expect(captureMessageMock).toHaveBeenCalledWith(
+      "rate_limit.provider_unavailable",
+      expect.objectContaining({
+        tags: { provider: "upstash", response: "fail_closed" },
+      })
+    );
   });
 });
 

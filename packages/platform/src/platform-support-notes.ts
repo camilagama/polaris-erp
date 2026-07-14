@@ -2,6 +2,7 @@ import "server-only";
 
 import { db } from "@polaris/db";
 import { platformSupportNotes } from "@polaris/db/schema";
+import { withPlatformAdminContext } from "@polaris/db/tenant-context";
 import { type SQL, sql } from "drizzle-orm";
 import {
   toIsoString,
@@ -185,3 +186,11 @@ export const listPlatformSupportNotes = async (
     updatedAt: toIsoString(row.updated_at),
   }));
 };
+
+export const listPlatformSupportNotesForAdmin = async (
+  platformAdminId: string,
+  input: ListPlatformSupportNotesInput
+): Promise<PlatformSupportNote[]> =>
+  withPlatformAdminContext(platformAdminId, (queryableDb) =>
+    listPlatformSupportNotes(input, queryableDb)
+  );

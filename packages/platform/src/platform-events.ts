@@ -1,6 +1,7 @@
 import "server-only";
 
 import { db } from "@polaris/db";
+import { withPlatformAdminContext } from "@polaris/db/tenant-context";
 import {
   type EventOutboxListItem,
   listEventOutbox,
@@ -48,18 +49,28 @@ export const getPlatformEventsOverview = async (
   return { outbox, webhooks };
 };
 
+export const getPlatformEventsOverviewForAdmin = async (
+  platformAdminId: string
+): Promise<PlatformEventsOverview> =>
+  withPlatformAdminContext(platformAdminId, getPlatformEventsOverview);
+
 export const retryPlatformOutboxEvent = async (
   input: RetryPlatformOutboxEventInput,
   mutationDb: PlatformOutboxMutationDb = getDefaultMutationDb()
-): Promise<void> => {
+): Promise<boolean> => {
   const eventId = input.eventId.trim();
 
   if (eventId.length === 0) {
     throw new Error("Outbox event retry requires an event id.");
   }
 
-  await mutationDb.transaction(async (tx) => {
-    await retryOutboxEvent(tx, eventId);
+  return await mutationDb.transaction(async (tx) => {
+    const retried = await retryOutboxEvent(tx, eventId);
+
+    if (!retried) {
+      return false;
+    }
+
     await recordPlatformAuditEvent(tx, {
       action: "outbox.retry_requested",
       actorPlatformAdminId: input.actorPlatformAdminId,
@@ -68,5 +79,7 @@ export const retryPlatformOutboxEvent = async (
       subjectId: eventId,
       subjectType: "event_outbox",
     });
+
+    return true;
   });
 };

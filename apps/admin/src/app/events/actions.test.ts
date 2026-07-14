@@ -59,7 +59,7 @@ describe("retryOutboxEventAction", () => {
       userId: "user-1",
     });
     assertAdminRateLimitMock.mockResolvedValueOnce(undefined);
-    retryPlatformOutboxEventMock.mockResolvedValueOnce(undefined);
+    retryPlatformOutboxEventMock.mockResolvedValueOnce(true);
 
     const { retryOutboxEventAction } = await import("./actions");
 
@@ -81,5 +81,23 @@ describe("retryOutboxEventAction", () => {
       eventId: "event-1",
     });
     expect(revalidatePathMock).toHaveBeenCalledWith("/events");
+  });
+
+  it("does not revalidate events when no outbox retry occurred", async () => {
+    revalidatePathMock.mockClear();
+    requirePlatformAdminMock.mockResolvedValueOnce({
+      platformAdminId: "platform-admin-1",
+      userId: "user-1",
+    });
+    assertAdminRateLimitMock.mockResolvedValueOnce(undefined);
+    retryPlatformOutboxEventMock.mockResolvedValueOnce(false);
+
+    const { retryOutboxEventAction } = await import("./actions");
+
+    await expect(
+      retryOutboxEventAction(createFormData())
+    ).resolves.toBeUndefined();
+
+    expect(revalidatePathMock).not.toHaveBeenCalled();
   });
 });

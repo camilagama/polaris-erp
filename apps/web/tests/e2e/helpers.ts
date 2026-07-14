@@ -4,61 +4,17 @@ import {
   type Locator,
   type Page,
 } from "@playwright/test";
-
-import { E2E_DEFAULT_INTERNAL_BOOTSTRAP_SECRET } from "./constants";
+import {
+  E2E_DEFAULT_INTERNAL_BOOTSTRAP_SECRET,
+  parseE2eSetCookie,
+} from "@polaris/e2e-support";
 
 const e2eBaseUrl = process.env.E2E_BASE_URL ?? "http://127.0.0.1:3001";
 const e2eUserName = process.env.E2E_NAME ?? "Polaris E2E";
 const e2eBootstrapSecret =
   process.env.E2E_INTERNAL_BOOTSTRAP_SECRET ??
   E2E_DEFAULT_INTERNAL_BOOTSTRAP_SECRET;
-
-const parseSetCookieHeader = (cookieHeader: string) => {
-  const [nameValue, ...attributeEntries] = cookieHeader.split("; ");
-  const separatorIndex = nameValue.indexOf("=");
-
-  if (separatorIndex === -1) {
-    throw new Error(`Set-Cookie invalido: ${cookieHeader}`);
-  }
-
-  const name = nameValue.slice(0, separatorIndex);
-  const value = nameValue.slice(separatorIndex + 1);
-  const attributes = new Map(
-    attributeEntries.map((entry) => {
-      const attributeSeparatorIndex = entry.indexOf("=");
-
-      if (attributeSeparatorIndex === -1) {
-        return [entry.toLowerCase(), "true"] as const;
-      }
-
-      return [
-        entry.slice(0, attributeSeparatorIndex).toLowerCase(),
-        entry.slice(attributeSeparatorIndex + 1),
-      ] as const;
-    })
-  );
-  const sameSite = attributes.get("samesite")?.toLowerCase();
-  let normalizedSameSite: "Lax" | "None" | "Strict" = "Lax";
-
-  if (sameSite === "strict") {
-    normalizedSameSite = "Strict";
-  } else if (sameSite === "none") {
-    normalizedSameSite = "None";
-  }
-
-  return {
-    domain: attributes.get("domain") ?? new URL(e2eBaseUrl).hostname,
-    expires: attributes.get("expires")
-      ? Math.floor(Date.parse(attributes.get("expires") ?? "") / 1000)
-      : undefined,
-    httpOnly: attributes.has("httponly"),
-    name,
-    path: attributes.get("path") ?? "/",
-    sameSite: normalizedSameSite,
-    secure: attributes.has("secure"),
-    value,
-  } as const;
-};
+const onboardingPathPattern = /\/onboarding$/;
 
 const createE2EUser = () => {
   const runId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -110,7 +66,9 @@ const applyBootstrapCookies = async (
   await page
     .context()
     .addCookies(
-      cookieHeaders.map((cookieHeader) => parseSetCookieHeader(cookieHeader))
+      cookieHeaders.map((cookieHeader) =>
+        parseE2eSetCookie(cookieHeader, e2eBaseUrl)
+      )
     );
 };
 
@@ -128,7 +86,7 @@ export const login = async (page: Page) => {
   await page
     .waitForFunction(
       () =>
-        document.body.innerText.includes("Ativar Polaris") ||
+        document.body.innerText.includes("Ativar conta") ||
         document.body.innerText.includes("Assinatura necessaria") ||
         document.body.innerText.includes("Dashboard"),
       undefined,
@@ -137,19 +95,15 @@ export const login = async (page: Page) => {
     .catch(() => undefined);
 
   const onboardingHeading = page.getByRole("heading", {
-    name: "Ativar Polaris",
+    name: "Ativar conta",
   });
   const needsOnboarding = await onboardingHeading.isVisible();
 
   if (needsOnboarding) {
-    await page.getByRole("button", { name: "Comecar" }).click();
-    await page.waitForFunction(
-      () =>
-        document.body.innerText.includes("Assinatura necessaria") ||
-        document.body.innerText.includes("Dashboard"),
-      undefined,
-      { timeout: 5000 }
-    );
+    await page.getByRole("button", { name: "Ativar conta" }).click();
+    await expect(page).not.toHaveURL(onboardingPathPattern, {
+      timeout: 30_000,
+    });
   }
 
   await expect(

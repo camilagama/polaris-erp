@@ -332,6 +332,9 @@ export const eventOutbox = pgTable(
     idempotencyKey: text("idempotency_key").notNull(),
     status: text("status").default("pending").notNull(),
     attempts: integer("attempts").default(0).notNull(),
+    claimToken: text("claim_token"),
+    claimedAt: timestamp("claimed_at", tz),
+    leaseExpiresAt: timestamp("lease_expires_at", tz),
     payload: jsonb("payload")
       .$type<Record<string, unknown>>()
       .notNull()
@@ -348,6 +351,10 @@ export const eventOutbox = pgTable(
     index("event_outbox_status_available_at_idx").on(
       table.status,
       table.availableAt
+    ),
+    index("event_outbox_status_lease_expires_at_idx").on(
+      table.status,
+      table.leaseExpiresAt
     ),
     index("event_outbox_correlation_id_idx").on(table.correlationId),
     check(

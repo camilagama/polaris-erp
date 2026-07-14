@@ -75,7 +75,7 @@ describe("Woovi webhook foundation", () => {
   it("keeps the route thin and validates raw body plus x-webhook-signature", () => {
     expect(routeSource).toContain("handleWooviWebhook");
     expect(routeSource).not.toContain('from "@polaris/db"');
-    expect(handlerSource).toContain("request.text()");
+    expect(handlerSource).toContain("readWebhookRequestBody");
     expect(handlerSource).not.toContain("request.json()");
     expect(handlerSource).toContain("x-webhook-signature");
     expect(handlerSource).toContain("observeWebhookIntake");

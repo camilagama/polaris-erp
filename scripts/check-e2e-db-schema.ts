@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { requireE2eDatabaseUrl } from "@polaris/e2e-support";
 import { parse } from "dotenv";
 import { Client } from "pg";
 import { assertE2eDatabaseSchema } from "../apps/web/src/ops/e2e-database-schema";
@@ -7,18 +8,12 @@ import { assertE2eDatabaseSchema } from "../apps/web/src/ops/e2e-database-schema
 const repoEnvPath = fileURLToPath(new URL("../.env.local", import.meta.url));
 
 const env = {
-  ...process.env,
   ...(existsSync(repoEnvPath) ? parse(readFileSync(repoEnvPath)) : {}),
   ...(existsSync(".env.local") ? parse(readFileSync(".env.local")) : {}),
+  ...process.env,
 };
 
-const e2eDatabaseUrl = env.E2E_DATABASE_URL;
-
-if (!e2eDatabaseUrl) {
-  throw new Error(
-    "E2E_DATABASE_URL is required before running Playwright against a database."
-  );
-}
+const e2eDatabaseUrl = requireE2eDatabaseUrl(env);
 
 if (e2eDatabaseUrl === env.DATABASE_URL) {
   throw new Error("E2E_DATABASE_URL must not equal DATABASE_URL.");

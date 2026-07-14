@@ -9,6 +9,7 @@ const LOCAL_E2E_HOSTS = new Set(["127.0.0.1", "::1", "localhost"]);
 const bootstrapPlatformAdminSchema = z.object({
   email: z.string().trim().email(),
   name: z.string().trim().min(1).optional(),
+  role: z.enum(["owner", "operator", "support"]).optional(),
 });
 
 const isLocalProductionE2eBootstrap = (request: Request) => {
@@ -157,7 +158,7 @@ export async function POST(request: Request) {
     return Response.json({ error: "Payload invalido." }, { status: 400 });
   }
 
-  const { email, name } = parsedPayload.data;
+  const { email, name, role = "owner" } = parsedPayload.data;
   const normalizedEmail = email.toLowerCase();
   const ctx = await auth.$context;
   const existingUser =
@@ -172,7 +173,7 @@ export async function POST(request: Request) {
 
   const platformAdminId = await bootstrapPlatformAdmin(db as never, {
     reason: "Playwright admin E2E bootstrap",
-    role: "owner",
+    role,
     userId: user.id,
   });
   const session = await ctx.internalAdapter.createSession(user.id);

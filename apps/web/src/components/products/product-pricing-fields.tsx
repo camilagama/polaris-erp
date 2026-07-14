@@ -140,5 +140,3 @@ export function ProductPriceMarkupIndicator({
     </InputGroupAddon>
   );
 }
-
-export const ProductPricingGuide = ProductPriceSuggestionGuide;

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { isIP } from "node:net";
+import { captureMessage } from "@sentry/nextjs";
 import { type Duration, Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import { headers } from "next/headers";
@@ -125,6 +126,18 @@ const checkLocalRateLimit = ({
   };
 };
 
+const reportRateLimitProviderFailure = (): void => {
+  if (process.env.SENTRY_DSN) {
+    captureMessage("rate_limit.provider_unavailable", {
+      level: "warning",
+      tags: {
+        provider: "upstash",
+        response: "fail_closed",
+      },
+    });
+  }
+};
+
 const checkRateLimit = async (
   input: RateLimitInput
 ): Promise<RateLimitResult> => {
@@ -147,6 +160,18 @@ const checkRateLimit = async (
   const result = await limiter.limit(input.key).catch(() => null);
 
   if (!result) {
+    reportRateLimitProviderFailure();
+
+    if (process.env.NODE_ENV === "production") {
+      const resetAt = Date.now() + input.windowMs;
+
+      return {
+        ok: false,
+        resetAt,
+        retryAfterSeconds: Math.ceil(input.windowMs / 1000),
+      };
+    }
+
     return checkLocalRateLimit(input);
   }
 

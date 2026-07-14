@@ -48,13 +48,13 @@ Em `development` e `test`, a origem canonica do app resolve para `APP_LOCAL_URL`
 - `owner` e `admin` gerenciam configuracoes quando houver mais de uma role ativa.
 - `operator` acessa operacao de catalogo, estoque e vendas.
 - Margens, parcelas e taxas ficam em `Configuracoes`, nao no onboarding.
-- Billing fica fora deste sprint.
+- Billing e o admin interno ja existem em estado parcial; checkout self-service e certificacao de providers ainda nao estao prontos para promocao.
 
 Em `development` e `test` existe bootstrap interno de sessao em `/api/auth/dev/bootstrap-session`, protegido por `INTERNAL_BOOTSTRAP_SECRET`. Em `production`, esse endpoint e sempre bloqueado, mesmo com `ALLOW_PLAYWRIGHT_BOOTSTRAP=true`.
 
 ## Tenancy
 
-O schema principal fica em `packages/db/src/schema.ts` e as migracoes em `packages/db/src/migrations/`. O app web mantem wrappers curtos em `apps/web/src/db/*` para compatibilidade de imports internos.
+O schema principal fica em `packages/db/src/schema.ts` e as migracoes em `packages/db/src/migrations/`.
 
 Tabelas SaaS:
 
@@ -95,7 +95,7 @@ Upstash e preferivel aqui porque o app roda em ambiente serverless/multiplas ins
 - Entrega sempre passa por `/api/product-images/{organizationId}/{productId}/{version}/{variant}`.
 - A rota valida sessao, membership da organizacao e posse do produto antes de servir bytes.
 - A reconciliacao diaria limpa objetos orfaos sem retornar chaves completas no payload.
-- Detalhes operacionais e de CORS: `docs/product-images-r2.md`.
+- Detalhes operacionais e de CORS: [docs/architecture/product-images-r2.md](docs/architecture/product-images-r2.md).
 
 ## CI, healthcheck e observabilidade
 
@@ -103,16 +103,16 @@ Upstash e preferivel aqui porque o app roda em ambiente serverless/multiplas ins
 - Healthcheck: `GET /api/health` retorna status sanitizado com `checks.database.ok`.
 - Diagnostico R2: `GET /api/internal/health/r2` com `Authorization: Bearer $INTERNAL_R2_HEALTH_SECRET`.
 - Sentry baseline: `@sentry/nextjs` com `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN`, e opcionalmente `SENTRY_ORG` / `SENTRY_PROJECT` / `SENTRY_AUTH_TOKEN`.
-- Deploy passo a passo: `docs/deploy-vercel.md`.
+- Deploy passo a passo: [docs/runbooks/deploy-vercel.md](docs/runbooks/deploy-vercel.md).
 
 ## Banco, E2E e producao
 
-- Modelo de branches, roles, `E2E_DATABASE_URL` e `RLS_DATABASE_URL`: `docs/database-environments.md`.
+- Modelo de branches, roles, `E2E_DATABASE_URL` e `RLS_DATABASE_URL`: [docs/architecture/database-environments.md](docs/architecture/database-environments.md).
 - Antes de deploy real, rode `bun run prod:preflight` com envs de producao ou acione o job manual `production-preflight`.
 - Para smoke HTTP do deploy promovido, defina `DEPLOYMENT_SMOKE_URL` e rode `bun run deploy:smoke`; ele valida `/api/health`, `/sign-in`, redirect do Google OAuth e bootstrap interno 403. Com `INTERNAL_R2_HEALTH_SECRET`, tambem valida o health interno do R2.
 - Opcional: para validar planos de listagem em dataset representativo, defina `PERFORMANCE_ORGANIZATION_ID` e rode `bun run db:analyze:listings`.
-- Migracao SaaS e rollback: `docs/saas-organization-migration-runbook.md`.
-- Limpeza destrutiva de producao: `docs/production-database-cleanup.md` e `docs/production-database-cleanup.sql`.
+- Migracao SaaS e rollback: [docs/runbooks/saas-organization-migration-runbook.md](docs/runbooks/saas-organization-migration-runbook.md).
+- Limpeza destrutiva de producao: [docs/runbooks/production-database-cleanup.md](docs/runbooks/production-database-cleanup.md) e [docs/runbooks/production-database-cleanup.sql](docs/runbooks/production-database-cleanup.sql).
 
 ## Qualidade atual
 

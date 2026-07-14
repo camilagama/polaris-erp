@@ -1,4 +1,4 @@
-import { listPlatformAuditEvents } from "@polaris/platform/audit-events";
+import { listPlatformAuditEventsForAdmin } from "@polaris/platform/audit-events";
 import Link from "next/link";
 import { forbidden } from "next/navigation";
 import { connection } from "next/server";
@@ -15,7 +15,7 @@ interface AuditPageProps {
 
 const guardPlatformAdmin = async () => {
   try {
-    await requirePlatformAdmin();
+    return await requirePlatformAdmin();
   } catch {
     forbidden();
   }
@@ -46,18 +46,17 @@ const formatDateTime = (value: string | null) => {
 
 const AuditContent = async ({ searchParams }: AuditPageProps) => {
   await connection();
-  await guardPlatformAdmin();
+  const platformAdmin = await guardPlatformAdmin();
 
   const [action, subjectType, subjectId] = await Promise.all([
     getFilter(searchParams, "action"),
     getFilter(searchParams, "subjectType"),
     getFilter(searchParams, "subjectId"),
   ]);
-  const events = await listPlatformAuditEvents({
-    action,
-    subjectId,
-    subjectType,
-  });
+  const events = await listPlatformAuditEventsForAdmin(
+    platformAdmin.platformAdminId,
+    { action, subjectId, subjectType }
+  );
 
   return (
     <section className="mx-auto grid w-full max-w-6xl gap-6 px-6 py-8">

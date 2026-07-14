@@ -5,10 +5,11 @@
   "type": "module",
   "dependencies": {
     "@polaris/db": "workspace:*",
+    "@sentry/nextjs": "^10.63.0",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.38.0",
     "drizzle-orm": "^0.45.2",
-    "next": "16.2.9",
+    "next": "16.2.10",
     "server-only": "^0.0.1"
   },
   "exports": {

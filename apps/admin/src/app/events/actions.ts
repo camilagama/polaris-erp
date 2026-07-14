@@ -25,10 +25,12 @@ export async function retryOutboxEventAction(formData: FormData) {
     targetId: eventId,
   });
 
-  await retryPlatformOutboxEvent({
+  const retried = await retryPlatformOutboxEvent({
     actorPlatformAdminId: context.platformAdminId,
     actorUserId: context.userId,
     eventId,
   });
-  revalidatePath("/events");
+  if (retried) {
+    revalidatePath("/events");
+  }
 }

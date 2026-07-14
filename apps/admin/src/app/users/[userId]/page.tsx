@@ -1,5 +1,5 @@
-import { getPlatformUserDetail } from "@polaris/platform/directory";
-import { listPlatformSupportNotes } from "@polaris/platform/support-notes";
+import { getPlatformUserDetailForAdmin } from "@polaris/platform/directory";
+import { listPlatformSupportNotesForAdmin } from "@polaris/platform/support-notes";
 import Link from "next/link";
 import { forbidden, notFound } from "next/navigation";
 import { connection } from "next/server";
@@ -13,7 +13,7 @@ interface UserDetailPageProps {
 
 const guardPlatformAdmin = async () => {
   try {
-    await requirePlatformAdmin();
+    return await requirePlatformAdmin();
   } catch {
     forbidden();
   }
@@ -38,12 +38,14 @@ const formatDateTime = (value: string | null) => {
 
 const UserDetailContent = async ({ params }: UserDetailPageProps) => {
   await connection();
-  await guardPlatformAdmin();
+  const platformAdmin = await guardPlatformAdmin();
 
   const { userId } = await params;
   const [user, supportNotes] = await Promise.all([
-    getPlatformUserDetail(userId),
-    listPlatformSupportNotes({ customerUserId: userId }),
+    getPlatformUserDetailForAdmin(platformAdmin.platformAdminId, userId),
+    listPlatformSupportNotesForAdmin(platformAdmin.platformAdminId, {
+      customerUserId: userId,
+    }),
   ]);
 
   if (!user) {

@@ -70,7 +70,7 @@ describe("Asaas webhook foundation", () => {
     expect(routeSource).not.toContain('from "@polaris/db"');
     expect(handlerSource).toContain("asaas-access-token");
     expect(handlerSource).toContain("ASAAS_WEBHOOK_TOKEN");
-    expect(handlerSource).toContain("request.text()");
+    expect(handlerSource).toContain("readWebhookRequestBody");
     expect(handlerSource).not.toContain("request.json()");
     expect(handlerSource).toContain("observeWebhookIntake");
     expect(handlerSource).not.toContain("sendOutboxEventToInngest");

@@ -7,7 +7,10 @@ import {
   markWebhookIntakeProcessed,
   observeWebhookIntake,
 } from "@/integrations/webhooks/intake";
-import { isWebhookRequestTooLarge } from "@/integrations/webhooks/request-limits";
+import {
+  isWebhookRequestTooLarge,
+  readWebhookRequestBody,
+} from "@/integrations/webhooks/request-limits";
 import { reconcileWooviBillingEvent } from "@/integrations/woovi/billing-reconciliation";
 import { serverEnv } from "@/lib/env";
 
@@ -119,7 +122,14 @@ export const handleWooviWebhook = async (request: Request) => {
     );
   }
 
-  const rawBody = await request.text();
+  const rawBody = await readWebhookRequestBody(request);
+
+  if (rawBody === null) {
+    return NextResponse.json(
+      { error: "Webhook payload is too large." },
+      { status: 413 }
+    );
+  }
 
   if (
     !verifyWooviWebhookSignature({
@@ -155,7 +165,7 @@ export const handleWooviWebhook = async (request: Request) => {
   const correlationId = getString(payload, "correlationID") ?? eventId;
   const redactedPayload = redactWooviWebhookPayload(payload);
 
-  await observeWebhookIntake({
+  const captureResult = await observeWebhookIntake({
     correlationId,
     eventId,
     eventType: getString(payload, "event") ?? "unknown",
@@ -164,6 +174,10 @@ export const handleWooviWebhook = async (request: Request) => {
     provider: "woovi",
     rawBody,
   });
+
+  if (captureResult === "duplicate") {
+    return NextResponse.json({ ok: true, duplicate: true });
+  }
 
   const reconciliationStatus = await withInternalJobContext(
     "billing_webhook_reconcile",

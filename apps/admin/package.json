@@ -5,7 +5,7 @@
   "dependencies": {
     "@polaris/auth": "workspace:*",
     "@polaris/db": "workspace:*",
-    "@polaris/events": "workspace:*",
+    "@polaris/e2e-support": "workspace:*",
     "@polaris/platform": "workspace:*",
     "@polaris/platform-auth": "workspace:*",
     "@polaris/ui": "workspace:*",

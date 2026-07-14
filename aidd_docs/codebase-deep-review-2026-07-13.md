@@ -323,27 +323,27 @@ Consequência: o defeito fica latente até o primeiro dispatcher real. Deve ser 
 
 | PR | Título | Prioridade | Esforço | Dependência | Status |
 | --- | --- | --- | --- | --- | --- |
-| PR-001 | Restaurar o contrato RLS do admin | P0 | L | nenhuma | TODO |
-| PR-002 | Corrigir o adaptador do preflight de produção | P0 | S | nenhuma | TODO |
-| PR-003 | Restaurar higiene de workspaces, Knip e gates do UI | P0 | M | nenhuma | TODO |
-| PR-004 | Reivindicar webhook financeiro antes da reconciliação | P1 | M | PR-008 recomendada | TODO |
-| PR-005 | Materializar invoices e tentativas Woovi | P1 | M | PR-004 | TODO |
-| PR-006 | Endurecer ingress de webhooks e semântica Resend | P1 | M | PR-004 | TODO |
-| PR-007 | Falhar fechado no rate limiter distribuído | P1 | S | nenhuma | TODO |
-| PR-008 | Criar harness PostgreSQL comportamental | P1 | L | PR-003 | TODO |
-| PR-009 | Cobrir grants e actions administrativas por comportamento | P1 | M | PR-001, PR-008 | TODO |
-| PR-010 | Adicionar lease e recuperação ao outbox | P2 | M | PR-008 | DEFERRED: executar antes do primeiro dispatcher pending |
-| PR-011 | Pré-agregar o diretório administrativo | P1 | M | PR-001 | TODO |
-| PR-012 | Agregar vendas e contribution graph no banco | P1 | M | nenhuma | TODO |
-| PR-013 | Agregar analytics de produto e remover waterfalls | P1 | M | nenhuma | TODO |
-| PR-014 | Unificar suporte E2E e contrato de banco isolado | P2 | M | PR-003 | TODO |
-| PR-015 | Alinhar README, runbooks, roadmap e envs | P1 | S | PR-001, PR-002, PR-014 | TODO |
-| PR-016 | Revisar e reduzir advisories aceitos | P1 | M | PR-003 | TODO |
-| PR-017 | Medir e lazy-load diálogos pesados | P3 | M | nenhuma | BLOCKED: requer baseline de bundle |
+| PR-001 | Restaurar o contrato RLS do admin | P0 | L | nenhuma | DONE |
+| PR-002 | Corrigir o adaptador do preflight de produção | P0 | S | nenhuma | DONE |
+| PR-003 | Restaurar higiene de workspaces, Knip e gates do UI | P0 | M | nenhuma | DONE |
+| PR-004 | Reivindicar webhook financeiro antes da reconciliação | P1 | M | PR-008 recomendada | IN PROGRESS: concorrência Asaas validada em Neon; cobertura Woovi permanece bloqueada pelo contrato monetário do provider |
+| PR-005 | Materializar invoices e tentativas Woovi | P1 | M | PR-004 | BLOCKED: documentação Woovi consultada não define a unidade monetária do campo value |
+| PR-006 | Endurecer ingress de webhooks e semântica Resend | P1 | M | PR-004 | DONE |
+| PR-007 | Falhar fechado no rate limiter distribuído | P1 | S | nenhuma | DONE |
+| PR-008 | Criar harness PostgreSQL comportamental | P1 | L | PR-003 | IN PROGRESS: migrations/RLS/constraints/concorrência passaram em Neon isolado; execução CI pendente |
+| PR-009 | Cobrir grants e actions administrativas por comportamento | P1 | M | PR-001, PR-008 | DONE |
+| PR-010 | Adicionar lease e recuperação ao outbox | P2 | M | PR-008 | DONE |
+| PR-011 | Pré-agregar o diretório administrativo | P1 | M | PR-001 | BLOCKED: Neon `polaris-erp` tem 1 organização e não representa escala para baseline do diretório |
+| PR-012 | Agregar vendas e contribution graph no banco | P1 | M | nenhuma | BLOCKED: Neon `polaris-erp` não contém vendas ou itens para medir rows e planos |
+| PR-013 | Agregar analytics de produto e remover waterfalls | P1 | M | nenhuma | BLOCKED: Neon `polaris-erp` não contém produtos, histórico de preço ou movimentos para medir latência |
+| PR-014 | Unificar suporte E2E e contrato de banco isolado | P2 | M | PR-003 | DONE |
+| PR-015 | Alinhar README, runbooks, roadmap e envs | P1 | S | PR-001, PR-002, PR-014 | DONE |
+| PR-016 | Revisar e reduzir advisories aceitos | P1 | M | PR-003 | DONE |
+| PR-017 | Medir e lazy-load diálogos pesados | P3 | M | nenhuma | IN PROGRESS: baseline confirmou custo material; desenho de separação pendente de aprovação |
 
 ### PR-001 — Restaurar o contrato RLS do admin
 
-- Status: `TODO`
+- Status: `DONE`
 - Categoria: bug, segurança, migration
 - Branch sugerida: `codex/pr-001-platform-admin-rls`
 - Risco: alto
@@ -380,7 +380,7 @@ STOP: interromper se a correção exigir `BYPASSRLS`, reutilizar a role de migra
 
 ### PR-002 — Corrigir o adaptador do preflight de produção
 
-- Status: `TODO`
+- Status: `DONE`
 - Categoria: bug, operação
 - Branch sugerida: `codex/pr-002-production-preflight-adapter`
 - Risco: baixo
@@ -405,7 +405,7 @@ STOP: não afrouxar a lista obrigatória para fazer o job passar.
 
 ### PR-003 — Restaurar higiene de workspaces, Knip e gates do UI
 
-- Status: `TODO`
+- Status: `DONE`
 - Categoria: CI, DX, arquitetura
 - Branch sugerida: `codex/pr-003-workspace-hygiene`
 - Risco: médio
@@ -435,7 +435,7 @@ STOP: não remover script operacional só porque Knip não detecta caller; não 
 
 ### PR-004 — Reivindicar webhook financeiro antes da reconciliação
 
-- Status: `TODO`
+- Status: `IN PROGRESS: concorrência Asaas validada em Neon; cobertura Woovi permanece bloqueada pelo contrato monetário do provider`
 - Categoria: bug, billing
 - Branch sugerida: `codex/pr-004-webhook-claim`
 - Risco: médio
@@ -462,7 +462,7 @@ STOP: não usar lock em memória; ele não é global em serverless.
 
 ### PR-005 — Materializar invoices e tentativas Woovi
 
-- Status: `TODO`
+- Status: `BLOCKED: documentação Woovi consultada não define a unidade monetária do campo value`
 - Categoria: bug, billing
 - Branch sugerida: `codex/pr-005-woovi-invoice-reconciliation`
 - Risco: médio
@@ -489,7 +489,7 @@ STOP: interromper se o contrato real Woovi não confirmar o significado de `glob
 
 ### PR-006 — Endurecer ingress de webhooks e semântica Resend
 
-- Status: `TODO`
+- Status: `DONE`
 - Categoria: bug, segurança
 - Branch sugerida: `codex/pr-006-webhook-ingress-hardening`
 - Risco: médio
@@ -517,7 +517,7 @@ STOP: não parsear JSON antes de verificar a assinatura quando o provider assina
 
 ### PR-007 — Falhar fechado no rate limiter distribuído
 
-- Status: `TODO`
+- Status: `DONE`
 - Categoria: segurança, disponibilidade
 - Branch sugerida: `codex/pr-007-rate-limit-failure-policy`
 - Risco: médio
@@ -544,7 +544,7 @@ STOP: não criar retry sem timeout curto que aumente a duração de todas as mut
 
 ### PR-008 — Criar harness PostgreSQL comportamental
 
-- Status: `TODO`
+- Status: `IN PROGRESS: migrations/RLS/constraints/concorrência passaram em Neon isolado; execução CI pendente`
 - Categoria: testes, segurança, arquitetura
 - Branch sugerida: `codex/pr-008-postgres-behavior-harness`
 - Risco: médio
@@ -572,7 +572,7 @@ STOP: não apontar o harness para `DATABASE_URL`, produção ou banco de desenvo
 
 ### PR-009 — Cobrir grants e actions administrativas por comportamento
 
-- Status: `TODO`
+- Status: `DONE`
 - Categoria: testes, segurança
 - Branch sugerida: `codex/pr-009-admin-behavior-tests`
 - Risco: médio
@@ -596,7 +596,7 @@ Critérios de aceite:
 
 ### PR-010 — Adicionar lease e recuperação ao outbox
 
-- Status: `DEFERRED: executar antes do primeiro dispatcher pending`
+- Status: `DONE`
 - Categoria: durabilidade
 - Branch sugerida: `codex/pr-010-outbox-leases`
 - Risco: médio
@@ -621,7 +621,7 @@ Critérios de aceite:
 
 ### PR-011 — Pré-agregar o diretório administrativo
 
-- Status: `TODO`
+- Status: `BLOCKED: exige baseline e medição PostgreSQL representativos`
 - Categoria: performance
 - Branch sugerida: `codex/pr-011-admin-directory-queries`
 - Risco: médio
@@ -648,7 +648,7 @@ STOP: não aceitar melhoria apenas teórica; medir antes/depois.
 
 ### PR-012 — Agregar vendas e contribution graph no banco
 
-- Status: `TODO`
+- Status: `BLOCKED: exige medição de rows e planos em PostgreSQL representativo`
 - Categoria: performance
 - Branch sugerida: `codex/pr-012-sales-sql-analytics`
 - Risco: médio
@@ -673,7 +673,7 @@ Critérios de aceite:
 
 ### PR-013 — Agregar analytics de produto e remover waterfalls
 
-- Status: `TODO`
+- Status: `BLOCKED: exige medição de rows e latência em PostgreSQL representativo`
 - Categoria: performance, refinamento
 - Branch sugerida: `codex/pr-013-product-sql-analytics`
 - Risco: médio
@@ -697,7 +697,7 @@ Critérios de aceite:
 
 ### PR-014 — Unificar suporte E2E e contrato de banco isolado
 
-- Status: `TODO`
+- Status: `DONE`
 - Categoria: testes, arquitetura, DX
 - Branch sugerida: `codex/pr-014-e2e-support-module`
 - Risco: baixo/médio
@@ -722,7 +722,7 @@ Critérios de aceite:
 
 ### PR-015 — Alinhar README, runbooks, roadmap e envs
 
-- Status: `TODO`
+- Status: `DONE`
 - Categoria: documentação, operação
 - Branch sugerida: `codex/pr-015-operational-docs`
 - Risco: baixo
@@ -747,7 +747,7 @@ Critérios de aceite:
 
 ### PR-016 — Revisar e reduzir advisories aceitos
 
-- Status: `TODO`
+- Status: `DONE`
 - Categoria: dependências, segurança
 - Branch sugerida: `codex/pr-016-dependency-advisories`
 - Risco: médio
@@ -773,7 +773,7 @@ STOP: não usar versão major ou override incompatível apenas para zerar o cont
 
 ### PR-017 — Medir e lazy-load diálogos pesados
 
-- Status: `BLOCKED: requer baseline de bundle`
+- Status: `IN PROGRESS: baseline confirmou custo material; desenho de separação pendente de aprovação`
 - Categoria: performance frontend
 - Branch sugerida: `codex/pr-017-lazy-dialog-chunks`
 - Risco: médio
@@ -840,7 +840,95 @@ Depois da estabilização:
 
 ## Registro de implementação
 
-Nenhuma PR deste backlog foi implementada nesta revisão. Somente este relatório foi criado.
+2026-07-13 — PR-002 — DONE
+Commit/PR: not committed (user did not request a commit)
+Arquivos: apps/web/src/ops/production-preflight-env.ts, apps/web/src/ops/production-preflight-env.test.ts, scripts/check-production-readiness.ts
+Verificações: focused Vitest, web typecheck, Ultracite => exit 0
+Risco residual: production credentials and external GitHub/Vercel wiring still require the manual production-preflight job.
+
+2026-07-13 — PR-003 — DONE
+Commit/PR: not committed (user did not request a commit)
+Arquivos: knip.config.ts, package manifests/lockfile, packages/ui, packages/db/src/tenant-context.test.ts, apps/web/src/db, .gitignore, packages/*/.turbo logs
+Verificações: bun run knip, bun install --frozen-lockfile, bun run test:all, bun run typecheck:all, bun run check:all, bun run build:all => exit 0
+Risco residual: testes E2E e o smoke RLS continuam dependentes de banco isolado e infraestrutura externa; warnings preexistentes de act(...) e sslmode não bloquearam os gates.
+
+2026-07-13 — PR-007 — DONE
+Commit/PR: not committed (user did not request a commit)
+Arquivos: apps/web/src/lib/rate-limit.ts, apps/web/src/lib/rate-limit.test.ts, packages/platform-auth/src/admin-rate-limit.ts, packages/platform-auth/src/admin-rate-limit.test.ts, packages/platform-auth/package.json, bun.lock
+Verificações: focused Vitest web/platform-auth e typecheck nos dois workspaces => exit 0
+Risco residual: alertas Sentry dependem de DSN configurado; sem DSN, a falha permanece fechada, sem telemetria externa.
+
+2026-07-13 — PR-006 — DONE
+Commit/PR: not committed (user did not request a commit)
+Arquivos: apps/web/src/integrations/webhooks/request-limits.ts, apps/web/src/integrations/webhooks/request-limits.test.ts, apps/web/src/integrations/{woovi,asaas,resend}/webhook.ts e testes associados
+Verificações: focused Vitest, bun run test:all, bun run typecheck:all, bun x ultracite check => exit 0
+Risco residual: a assinatura valida o corpo bruto lido com teto real; certificação em sandbox de cada provider permanece externa.
+
+2026-07-14 — PR-015 — DONE
+Commit/PR: not committed (user did not request a commit)
+Arquivos: README.md, docs/, .env.example, .github/workflows/ci.yml, apps/web/src/ops/production-preflight.ts, scripts/check-markdown-links.ts, scripts/check-production-env-contract.ts, package.json
+Verificações: bun run docs:check, bun run env:check e bun x ultracite check => exit 0
+Risco residual: o contrato verifica todas as variáveis obrigatórias do preflight entre `.env.example` e o job de produção; secrets e valores reais continuam sob gestão externa.
+
+2026-07-14 — PR-016 — DONE
+Commit/PR: not committed (user did not request a commit)
+Arquivos: package.json, packages/{auth,platform-auth,ui}/package.json, apps/admin/package.json, bun.lock, docs/security/dependency-advisory-baseline.{json,md}
+Verificações: bun audit --json (14 para 3 advisories, nenhum high), bun run audit:baseline, bun run test:all, bun run typecheck:all, bun run build:all, bun run check:all, bun run knip e bun install --frozen-lockfile => exit 0
+Risco residual: `@babel/core` e dois advisories de `esbuild` permanecem transitivos de build/tooling; baseline registra mitigação, owner e revisão até 2026-08-14.
+
+2026-07-14 — PR-008 — IN PROGRESS
+Commit/PR: not committed (user did not request a commit)
+Arquivos: packages/db/src/postgres-behavior.test.ts
+Verificações: bun run --filter @polaris/db test:postgres contra projeto Neon temporário isolado => 4 testes passaram; migrations aplicadas do zero, RLS, constraint e concorrência exercitados
+Risco residual: job GitHub Actions postgres-behavior ainda não foi executado; o warning futuro de sslmode do driver pg não bloqueou o teste.
+
+2026-07-14 — PR-004 — IN PROGRESS
+Commit/PR: not committed (user did not request a commit)
+Arquivos: apps/web/src/integrations/asaas/billing-reconciliation.{ts,test.ts}, apps/web/src/integrations/asaas/billing-reconciliation.postgres.test.ts, package.json, apps/web/package.json
+Verificações: teste focado Asaas (3), typecheck web e bun run test:postgres contra projeto Neon temporário isolado => 4 testes DB + 1 cenário Asaas concorrente passaram
+Risco residual: a prova concorrente agora confirma uma invoice, um link e uma tentativa para duas entregas; cobertura Woovi equivalente continua bloqueada pelo contrato monetário do provider.
+
+2026-07-14 — PR-014 — IN PROGRESS
+Commit/PR: not committed (user did not request a commit)
+Arquivos: package.json, bun.lock, apps/web/tests/e2e/helpers.ts, apps/web/tests/e2e/operations.e2e.ts
+Verificações: bun scripts/check-e2e-db-schema.ts e Playwright shell E2E => 4 testes passaram contra projeto Neon temporário isolado
+Risco residual: a suíte web completa ainda tem operações remotas em validação; E2E admin ainda não foi executado.
+
+2026-07-14 — PR-009/PR-014 — IN PROGRESS
+Commit/PR: not committed (user did not request a commit)
+Arquivos: apps/admin/tests/e2e/admin-access.e2e.ts, aidd_docs/codebase-deep-review-2026-07-13.md
+Verificações: bun run test:e2e:admin contra projeto Neon temporário isolado => 2 testes passaram (anônimo negado, owner com grant ativo autorizado)
+Risco residual: a matriz E2E ainda não cobre support/operator; a suíte web operacional completa continua pendente.
+
+2026-07-14 — PR-009 — DONE
+Commit/PR: not committed (user did not request a commit)
+Arquivos: packages/db/src/postgres-behavior.test.ts, apps/admin/src/app/{organizations,support-notes}/actions.test.ts, apps/admin/tests/e2e/admin-access.e2e.ts
+Verificações: bun run test:all => 10 pacotes passaram; harness Neon => 4 testes RLS, incluindo grants desativado/revogado/expirado; bun run test:e2e:admin => 4 cenários passaram (anônimo negado; owner, operator e support autorizados)
+Risco residual: certificação no GitHub Actions não foi disparada nesta sessão; a matriz comportamental não depende de banco compartilhado.
+
+2026-07-14 — PR-014 — DONE
+Commit/PR: not committed (user did not request a commit)
+Arquivos: packages/e2e-support/, apps/web/tests/e2e/{helpers,operations}.ts, apps/admin/tests/e2e/admin-access.e2e.ts, package.json, bun.lock
+Verificações: check-e2e-db-schema e Playwright contra projeto Neon temporário isolado => 9 cenários web passaram em execução focada por grupo; 4 cenários admin passaram; todos os fluxos usam E2E_DATABASE_URL e schema migrado do zero
+Risco residual: os fluxos web remotos podem levar até 30 s para renderizar após mutações; nenhuma URL local ou banco compartilhado foi usado.
+
+2026-07-14 — PR-011/PR-012/PR-013 — BLOCKED
+Commit/PR: not committed (user did not request a commit)
+Arquivos: aidd_docs/codebase-deep-review-2026-07-13.md
+Verificações: consulta somente leitura no Neon `polaris-erp` => 1 organização, 1 usuário, 0 produtos, 0 vendas, 0 itens, 0 histórico de preço e 0 movimentos de estoque; schema também não contém as tabelas administrativas/billing atuais
+Risco residual: criar agregações ou índices sem distribuição e plano representativos seria especulativo; é necessário um baseline anonimizado com volume realista antes de implementar essas PRs.
+
+2026-07-14 — PR-001 — DONE
+Commit/PR: not committed (user did not request a commit)
+Arquivos: scripts/smoke-rls-runtime.cjs, packages/db/src/postgres-behavior.test.ts, packages/db/src/migrations/20260713090000_platform_admin_rls_validation.sql, packages/platform/src/, apps/admin/src/app/
+Verificações: bun run test:all => 10 pacotes passaram; bun run build:admin => passou; bun run db:smoke:rls contra Neon temporário, com role runtime sem BYPASSRLS => 18/18 tabelas forçadas, tenant cross-check, platform-admin check e apenas as duas mutações permitidas validados
+Risco residual: a execução do job GitHub Actions postgres-behavior permanece externa; o smoke é transacional e não deixa fixtures no banco isolado.
+
+2026-07-14 — PR-010 — DONE
+Commit/PR: not committed (user did not request a commit)
+Arquivos: packages/db/src/{schema.ts,migrations/20260714090000_event_outbox_leases.sql,migrations/meta/_journal.json,postgres-behavior.test.ts}, packages/events/src/{index.ts,event-foundation.test.ts,event-outbox-lease.postgres.test.ts}, packages/events/package.json, packages/platform/src/{platform-events.ts,platform-events.test.ts}, apps/web/src/lib/{inngest-functions.ts,inngest-functions.test.ts}, apps/admin/src/app/events/{actions.ts,actions.test.ts}, package.json
+Verificações: bun run test:postgres => DB 5/5, eventos 2/2 e web passaram contra Neon temporário migrado; bun run test:all => 10 tarefas passaram, incluindo 483 testes web; bun run typecheck:all, bun x ultracite check e bun run build:admin => exit 0
+Risco residual: a recuperação depende da nova migration ser aplicada antes de ativar o dispatcher; a execução do job PostgreSQL no GitHub Actions continua externa.
 
 Formato obrigatório para futuras entradas:
 

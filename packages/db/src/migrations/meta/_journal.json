@@ -141,6 +141,20 @@
       "when": 1783830600000,
       "tag": "20260712043000_normalize_organization_technical_identity",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1783944000000,
+      "tag": "20260713090000_platform_admin_rls_validation",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1784030400000,
+      "tag": "20260714090000_event_outbox_leases",
+      "breakpoints": true
     }
   ]
 }

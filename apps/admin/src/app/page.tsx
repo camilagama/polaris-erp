@@ -1,4 +1,4 @@
-import { getPlatformDashboardData } from "@polaris/platform/dashboard";
+import { getPlatformDashboardDataForAdmin } from "@polaris/platform/dashboard";
 import Link from "next/link";
 import { forbidden } from "next/navigation";
 import { connection } from "next/server";
@@ -36,7 +36,9 @@ const AdminDashboard = async () => {
   await connection();
 
   const context = await getAdminContext();
-  const dashboard = await getPlatformDashboardData();
+  const dashboard = await getPlatformDashboardDataForAdmin(
+    context.platformAdminId
+  );
   const summaryCards = [
     {
       label: "Organizacoes",

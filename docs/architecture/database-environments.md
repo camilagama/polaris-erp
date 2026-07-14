@@ -35,6 +35,20 @@ Como o Playwright roda com `CI=true` no GitHub Actions, a ausencia do secret
 `E2E_DATABASE_URL` falha a suite antes de subir o servidor. Isso e intencional:
 nao use banco de producao, preview compartilhado ou `.env.local` para E2E em CI.
 
+O job `postgres-behavior` usa um container PostgreSQL efemero, aplica todas as
+migrations a partir de zero e executa os testes comportamentais de RLS e
+constraints. Ele nao usa secrets nem aceita `DATABASE_URL` como fallback. Para
+executar a mesma verificacao localmente, suba um PostgreSQL descartavel e use
+uma URL exclusiva:
+
+```bash
+POSTGRES_BEHAVIOR_DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/polaris_behavior bun run test:postgres
+```
+
+O banco indicado deve poder criar roles e ser descartado apos o teste. Nunca
+aponte essa variavel para producao, desenvolvimento compartilhado ou uma branch
+Neon reutilizada.
+
 O workflow tambem possui o job manual `rls-smoke`. Ele so roda por `workflow_dispatch` e executa `bun run db:smoke:rls` com:
 
 ```yaml
@@ -68,15 +82,15 @@ Use `DEPLOYMENT_SMOKE_URL` para apontar para a URL publica do deploy promovido. 
 
 ## Playwright
 
-O servidor de teste injeta `DATABASE_URL` a partir de `E2E_DATABASE_URL` quando definido (veja [playwright.config.ts](../playwright.config.ts)). Em `CI=true`, a suite falha se `E2E_DATABASE_URL` nao estiver definido.
+O servidor de teste injeta `DATABASE_URL` sempre a partir de `E2E_DATABASE_URL`; a suite falha antes de subir o servidor se a URL isolada estiver ausente. O job `admin-e2e` mapeia o secret independente `ADMIN_E2E_DATABASE_URL` para esse mesmo nome de runtime, evitando compartilhamento entre as suites.
 
 Variaveis uteis:
 
-- `E2E_DATABASE_URL`: connection string do banco somente para E2E (obrigatorio em CI).
+- `E2E_DATABASE_URL`: connection string do banco somente para E2E (obrigatorio local e em CI).
+- `ADMIN_E2E_DATABASE_URL`: secret do GitHub usado somente pelo job admin e mapeado para `E2E_DATABASE_URL` no processo.
 - `RLS_DATABASE_URL`: connection string runtime do ambiente promovido, usada somente no job manual `rls-smoke`.
 - `PRODUCTION_DATABASE_URL` / `PRODUCTION_DATABASE_URL_DIRECT`: aliases de GitHub Secrets para o job manual `production-preflight`; nao sao nomes esperados pelo runtime da aplicacao.
 - `E2E_INTERNAL_BOOTSTRAP_SECRET`: segredo local ao servidor E2E (opcional; padrao seguro se omitido).
-- `ALLOW_E2E_SHARED_DATABASE=true`: nao use em CI; apenas para desenvolvedor que aceita conscientemente usar o mesmo `DATABASE_URL` do `.env.local` nos E2E.
 
 ## Smoke RLS
 
@@ -166,4 +180,4 @@ Prefira limpar apenas na branch `e2e` e recriar a branch a partir de `production
 
 ## Limpeza destrutiva em producao
 
-Para um roteiro revisado com PITR, auditoria e SQL transacional (incluindo manter apenas dois e-mails operacionais), veja [production-database-cleanup.md](./production-database-cleanup.md) e [production-database-cleanup.sql](./production-database-cleanup.sql).
+Para um roteiro revisado com PITR, auditoria e SQL transacional (incluindo manter apenas dois e-mails operacionais), veja [production-database-cleanup.md](../runbooks/production-database-cleanup.md) e [production-database-cleanup.sql](../runbooks/production-database-cleanup.sql).

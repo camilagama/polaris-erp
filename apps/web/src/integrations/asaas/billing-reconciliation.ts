@@ -6,6 +6,12 @@ interface QueryableDb {
   execute: (query: SQL) => Promise<unknown>;
 }
 
+interface TransactionalDb extends QueryableDb {
+  transaction: <T>(
+    callback: (transaction: QueryableDb) => Promise<T>
+  ) => Promise<T>;
+}
+
 interface AsaasBillingEvent {
   billingType: string | null;
   cardBrand: string | null;
@@ -168,7 +174,7 @@ const mapAsaasAttemptStatus = (event: AsaasBillingEvent): string => {
 };
 
 export const reconcileAsaasBillingEvent = async (
-  db: QueryableDb,
+  db: TransactionalDb,
   payload: Record<string, unknown>,
   providerEventId: string
 ): Promise<"processed" | "review"> => {
@@ -178,28 +184,31 @@ export const reconcileAsaasBillingEvent = async (
     return "review";
   }
 
-  const subscription = await getSubscriptionByExternalReference(
-    db,
-    event.externalReference
-  );
+  const externalReference = event.externalReference;
 
-  if (!subscription) {
-    return "review";
-  }
+  return await db.transaction(async (transaction) => {
+    const subscription = await getSubscriptionByExternalReference(
+      transaction,
+      externalReference
+    );
 
-  const subscriptionStatus = mapAsaasSubscriptionStatus(event);
+    if (!subscription) {
+      return "review";
+    }
 
-  if (subscriptionStatus) {
-    await db.execute(sql`
+    const subscriptionStatus = mapAsaasSubscriptionStatus(event);
+
+    if (subscriptionStatus) {
+      await transaction.execute(sql`
       update billing_subscriptions
       set status = ${subscriptionStatus},
           updated_at = now()
       where id = ${subscription.id}
     `);
-  }
+    }
 
-  if (event.subscriptionId) {
-    await db.execute(sql`
+    if (event.subscriptionId) {
+      await transaction.execute(sql`
       insert into billing_provider_links (
         organization_id,
         provider,
@@ -216,10 +225,10 @@ export const reconcileAsaasBillingEvent = async (
       )
       on conflict (provider, entity_type, external_id) do nothing
     `);
-  }
+    }
 
-  if (event.cardBrand || event.cardLast4) {
-    await db.execute(sql`
+    if (event.cardBrand || event.cardLast4) {
+      await transaction.execute(sql`
       insert into billing_provider_links (
         organization_id,
         provider,
@@ -243,10 +252,14 @@ export const reconcileAsaasBillingEvent = async (
           card_last4 = excluded.card_last4,
           updated_at = now()
     `);
-  }
+    }
 
-  if (event.paymentId) {
-    await db.execute(sql`
+    if (event.paymentId) {
+      await transaction.execute(sql`
+      select pg_advisory_xact_lock(hashtext(${`asaas:invoice:${event.paymentId}`}))
+    `);
+
+      await transaction.execute(sql`
       with existing_invoice as (
         select billing_invoice_id as id
         from billing_provider_links
@@ -298,8 +311,17 @@ export const reconcileAsaasBillingEvent = async (
           ${subscription.id},
           id
         from target_invoice
-        on conflict (provider, entity_type, external_id) do nothing
-        returning billing_invoice_id
+        on conflict (provider, entity_type, external_id) do update
+        set billing_invoice_id = coalesce(
+              billing_provider_links.billing_invoice_id,
+              excluded.billing_invoice_id
+            ),
+            billing_subscription_id = coalesce(
+              billing_provider_links.billing_subscription_id,
+              excluded.billing_subscription_id
+            ),
+            updated_at = now()
+        returning billing_invoice_id as id
       )
       insert into billing_payment_attempts (
         organization_id,
@@ -316,10 +338,13 @@ export const reconcileAsaasBillingEvent = async (
         ${providerEventId},
         ${mapAsaasAttemptStatus(event)},
         coalesce(${event.valueCents}, 0)
-      from target_invoice
-      on conflict (provider, provider_event_id) do nothing
+      from linked_invoice
+      on conflict (provider, provider_event_id)
+        where provider_event_id is not null
+        do nothing
     `);
-  }
+    }
 
-  return subscriptionStatus || event.paymentId ? "processed" : "review";
+    return subscriptionStatus || event.paymentId ? "processed" : "review";
+  });
 };

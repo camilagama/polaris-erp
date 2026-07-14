@@ -177,17 +177,14 @@ export const getPlatformBillingOverviewForAdmin = async (
 ): Promise<PlatformBillingOverview> =>
   withPlatformAdminContext(platformAdminId, getPlatformBillingOverview);
 
-const getDefaultMutationDb = (): PlatformBillingMutationDb =>
-  db as unknown as PlatformBillingMutationDb;
-
 const isManualPlatformBillingStatus = (
   value: string
 ): value is ManualPlatformBillingStatus =>
   value === "active" || value === "past_due";
 
-export const updatePlatformBillingSubscriptionStatus = async (
+const updatePlatformBillingSubscriptionStatusInTransaction = async (
   input: UpdatePlatformBillingSubscriptionStatusInput,
-  mutationDb: PlatformBillingMutationDb = getDefaultMutationDb()
+  tx: PlatformBillingMutationTx
 ): Promise<void> => {
   const reason = input.reason.trim();
   const paymentEvidenceReference = input.paymentEvidenceReference?.trim();
@@ -206,36 +203,70 @@ export const updatePlatformBillingSubscriptionStatus = async (
     );
   }
 
-  await mutationDb.transaction(async (tx) => {
-    const updatedSubscriptions = await tx
-      .update(billingSubscriptions)
-      .set({
-        status: input.status,
-        updatedAt: new Date(),
-      })
-      .where(eq(billingSubscriptions.id, input.subscriptionId))
-      .returning({
-        id: billingSubscriptions.id,
-        organizationId: billingSubscriptions.organizationId,
-      });
-
-    const [subscription] = updatedSubscriptions;
-
-    if (!subscription) {
-      throw new Error("Billing subscription not found for status change.");
-    }
-
-    await recordPlatformAuditEvent(tx, {
-      action: "billing.subscription.status_changed",
-      actorPlatformAdminId: input.actorPlatformAdminId,
-      actorUserId: input.actorUserId,
-      metadata: {
-        ...(paymentEvidenceReference ? { paymentEvidenceReference } : {}),
-        reason,
-        status: input.status,
-      },
-      subjectId: toStringValue(subscription.id, input.subscriptionId),
-      subjectType: "billing_subscription",
+  const updatedSubscriptions = await tx
+    .update(billingSubscriptions)
+    .set({
+      status: input.status,
+      updatedAt: new Date(),
+    })
+    .where(eq(billingSubscriptions.id, input.subscriptionId))
+    .returning({
+      id: billingSubscriptions.id,
+      organizationId: billingSubscriptions.organizationId,
     });
+
+  const [subscription] = updatedSubscriptions;
+
+  if (!subscription) {
+    throw new Error("Billing subscription not found for status change.");
+  }
+
+  await recordPlatformAuditEvent(tx, {
+    action: "billing.subscription.status_changed",
+    actorPlatformAdminId: input.actorPlatformAdminId,
+    actorUserId: input.actorUserId,
+    metadata: {
+      ...(paymentEvidenceReference ? { paymentEvidenceReference } : {}),
+      reason,
+      status: input.status,
+    },
+    subjectId: toStringValue(subscription.id, input.subscriptionId),
+    subjectType: "billing_subscription",
   });
+};
+
+export const updatePlatformBillingSubscriptionStatus = async (
+  input: UpdatePlatformBillingSubscriptionStatusInput,
+  mutationDb?: PlatformBillingMutationDb
+): Promise<void> => {
+  const reason = input.reason.trim();
+  const paymentEvidenceReference = input.paymentEvidenceReference?.trim();
+
+  if (reason.length === 0) {
+    throw new Error("Billing subscription status change requires a reason.");
+  }
+
+  if (!isManualPlatformBillingStatus(input.status)) {
+    throw new Error("Unsupported billing subscription status.");
+  }
+
+  if (input.status === "active" && !paymentEvidenceReference) {
+    throw new Error(
+      "Manual billing activation requires payment evidence reference."
+    );
+  }
+
+  if (mutationDb) {
+    await mutationDb.transaction((tx) =>
+      updatePlatformBillingSubscriptionStatusInTransaction(input, tx)
+    );
+    return;
+  }
+
+  await withPlatformAdminContext(input.actorPlatformAdminId, (tx) =>
+    updatePlatformBillingSubscriptionStatusInTransaction(
+      input,
+      tx as unknown as PlatformBillingMutationTx
+    )
+  );
 };

@@ -151,7 +151,7 @@ export const getSalesAnalytics = async ({
   });
 };
 
-export const findExistingSaleByIdempotencyKey = async (
+const findExistingSaleByIdempotencyKey = async (
   organizationId: string,
   idempotencyKey: string | undefined
 ): Promise<string | null> => {
@@ -205,7 +205,7 @@ const lockProductsForUpdate = async (
   return result.rows;
 };
 
-export const createSale = async ({
+const createSale = async ({
   actorUserId,
   cardInstallmentRules,
   input,

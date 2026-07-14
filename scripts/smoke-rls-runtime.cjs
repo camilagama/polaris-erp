@@ -35,11 +35,27 @@ const BILLING_TENANT_TABLES = [
 ];
 const RLS_TABLES = [...TENANT_TABLES, ...BILLING_TENANT_TABLES];
 const RLS_POLICY_ERROR_PATTERN = /row-level security policy/i;
+const expectedRuntimeRole = process.env.RLS_SMOKE_EXPECTED_RUNTIME_ROLE;
 
 const assertCondition = (condition, message) => {
   if (!condition) {
     throw new Error(message);
   }
+};
+
+const captureExpectedRlsError = async (client, callback) => {
+  await client.query("SAVEPOINT rls_expected_denial");
+
+  try {
+    await callback();
+  } catch (error) {
+    await client.query("ROLLBACK TO SAVEPOINT rls_expected_denial");
+    await client.query("RELEASE SAVEPOINT rls_expected_denial");
+    return error;
+  }
+
+  await client.query("RELEASE SAVEPOINT rls_expected_denial");
+  return null;
 };
 
 const main = async () => {
@@ -80,6 +96,10 @@ const main = async () => {
       `Role runtime ${baselineRow.current_user} ainda tem BYPASSRLS.`
     );
     assertCondition(
+      !expectedRuntimeRole || baselineRow.current_user === expectedRuntimeRole,
+      `Smoke conectado como ${baselineRow.current_user}, esperado ${expectedRuntimeRole}.`
+    );
+    assertCondition(
       baselineRow.policy_count >= 20,
       `Policies RLS insuficientes: ${baselineRow.policy_count}.`
     );
@@ -111,6 +131,7 @@ const main = async () => {
     const otherBillingCustomerId = crypto.randomUUID();
     const otherBillingSubscriptionId = crypto.randomUUID();
     const otherBillingInvoiceId = crypto.randomUUID();
+    const platformAdminId = crypto.randomUUID();
 
     let deniedWithoutContext = false;
     await client.query("begin");
@@ -338,6 +359,25 @@ const main = async () => {
         organizationId,
       ]);
 
+      const tenantContext = await client.query(
+        `
+          select
+            current_setting('app.organization_id', true) as organization_id,
+            current_setting('app.platform_admin_id', true) as platform_admin_id,
+            current_setting('app.internal_job', true) as internal_job,
+            public.has_active_platform_admin() as has_active_platform_admin
+        `
+      );
+      const tenantContextRow = tenantContext.rows[0];
+
+      assertCondition(
+        tenantContextRow.organization_id === organizationId &&
+          !tenantContextRow.platform_admin_id &&
+          tenantContextRow.internal_job !== "billing_webhook_reconcile" &&
+          tenantContextRow.has_active_platform_admin === false,
+        "Contexto tenant do smoke contem privilegio administrativo ou interno inesperado."
+      );
+
       const crossTenantVisible = await client.query(
         `
           select
@@ -362,47 +402,111 @@ const main = async () => {
         "Contexto tenant A conseguiu ler dados do tenant B."
       );
 
-      let deniedCrossTenantWrite = false;
-      try {
-        await client.query(
-          "insert into categories (organization_id, key, name, description, is_system) values ($1, $2, $3, $4, $5)",
-          [
-            otherOrganizationId,
-            "cross-write",
-            "Cross write",
-            "Escrita cross-tenant smoke",
-            false,
-          ]
-        );
-      } catch (error) {
-        deniedCrossTenantWrite = RLS_POLICY_ERROR_PATTERN.test(error.message);
-      }
+      const crossTenantWriteError = await captureExpectedRlsError(
+        client,
+        async () => {
+          await client.query(
+            "insert into categories (organization_id, key, name, description, is_system) values ($1, $2, $3, $4, $5)",
+            [
+              otherOrganizationId,
+              "cross-write",
+              "Cross write",
+              "Escrita cross-tenant smoke",
+              false,
+            ]
+          );
+        }
+      );
+      const deniedCrossTenantWrite = RLS_POLICY_ERROR_PATTERN.test(
+        crossTenantWriteError?.message ?? ""
+      );
 
       assertCondition(
         deniedCrossTenantWrite,
         "Contexto tenant A conseguiu escrever dados no tenant B."
       );
 
-      let deniedCrossTenantBillingWrite = false;
-      try {
-        await client.query(
-          "insert into billing_provider_links (organization_id, provider, entity_type, external_id) values ($1, $2, $3, $4)",
-          [
-            otherOrganizationId,
-            "manual",
-            "payment_attempt",
-            `rls-smoke-cross-${crypto.randomUUID()}`,
-          ]
-        );
-      } catch (error) {
-        deniedCrossTenantBillingWrite = RLS_POLICY_ERROR_PATTERN.test(
-          error.message
-        );
-      }
+      const crossTenantBillingWriteError = await captureExpectedRlsError(
+        client,
+        async () => {
+          await client.query(
+            "insert into billing_provider_links (organization_id, provider, entity_type, external_id) values ($1, $2, $3, $4)",
+            [
+              otherOrganizationId,
+              "manual",
+              "payment_attempt",
+              `rls-smoke-cross-${crypto.randomUUID()}`,
+            ]
+          );
+        }
+      );
+      const deniedCrossTenantBillingWrite = RLS_POLICY_ERROR_PATTERN.test(
+        crossTenantBillingWriteError?.message ?? ""
+      );
 
       assertCondition(
         deniedCrossTenantBillingWrite,
-        "Contexto tenant A conseguiu escrever billing do tenant B."
+        `Contexto tenant A conseguiu escrever billing do tenant B: ${crossTenantBillingWriteError?.message ?? "insert succeeded"}`
+      );
+
+      await client.query(
+        "insert into platform_admins (id, user_id, status) values ($1, $2, 'active')",
+        [platformAdminId, userId]
+      );
+      await client.query(
+        "insert into platform_admin_grants (platform_admin_id, role, reason) values ($1, 'owner', $2)",
+        [platformAdminId, "RLS runtime smoke"]
+      );
+      await client.query("select set_config($1, $2, true)", [
+        "app.organization_id",
+        "",
+      ]);
+      await client.query("select set_config($1, $2, true)", [
+        "app.platform_admin_id",
+        platformAdminId,
+      ]);
+
+      const platformAdminVisible = await client.query(
+        `
+          select
+            (select count(*)::int from organization where id = any($1::text[])) as organizations,
+            (select count(*)::int from billing_subscriptions where id = any($2::uuid[])) as billing_subscriptions
+        `,
+        [
+          [organizationId, otherOrganizationId],
+          [billingSubscriptionId, otherBillingSubscriptionId],
+        ]
+      );
+      const platformAdminVisibleRow = platformAdminVisible.rows[0];
+
+      assertCondition(
+        platformAdminVisibleRow.organizations === 2 &&
+          platformAdminVisibleRow.billing_subscriptions === 2,
+        "Platform admin ativo nao conseguiu ler o escopo administrativo permitido."
+      );
+
+      const organizationUpdate = await client.query(
+        "update organization set updated_at = updated_at where id = $1",
+        [otherOrganizationId]
+      );
+      const subscriptionUpdate = await client.query(
+        "update billing_subscriptions set updated_at = updated_at where id = $1",
+        [otherBillingSubscriptionId]
+      );
+
+      assertCondition(
+        organizationUpdate.rowCount === 1 && subscriptionUpdate.rowCount === 1,
+        "Platform admin ativo nao conseguiu executar as mutacoes administrativas permitidas."
+      );
+
+      const platformCategoryUpdate = await client.query(
+        "update categories set name = name where organization_id = $1",
+        [otherOrganizationId]
+      );
+
+      assertCondition(
+        platformCategoryUpdate.rowCount === 0,
+        "Platform admin conseguiu escrever em tabela permitida somente para leitura."
       );
     } finally {
       await client.query("rollback");
@@ -414,6 +518,7 @@ const main = async () => {
           currentUser: baselineRow.current_user,
           forcedTables: `${baselineRow.forced_count}/${RLS_TABLES.length}`,
           policies: baselineRow.policy_count,
+          platformAdminCheck: "ok",
           result: "rls-runtime-smoke-ok",
           tenantCrossCheck: "ok",
         },

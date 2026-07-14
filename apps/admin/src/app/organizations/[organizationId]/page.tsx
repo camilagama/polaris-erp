@@ -1,5 +1,5 @@
-import { getPlatformOrganizationDetail } from "@polaris/platform/directory";
-import { listPlatformSupportNotes } from "@polaris/platform/support-notes";
+import { getPlatformOrganizationDetailForAdmin } from "@polaris/platform/directory";
+import { listPlatformSupportNotesForAdmin } from "@polaris/platform/support-notes";
 import Link from "next/link";
 import { forbidden, notFound } from "next/navigation";
 import { connection } from "next/server";
@@ -14,7 +14,7 @@ interface OrganizationDetailPageProps {
 
 const guardPlatformAdmin = async () => {
   try {
-    await requirePlatformAdmin();
+    return await requirePlatformAdmin();
   } catch {
     forbidden();
   }
@@ -41,12 +41,17 @@ const OrganizationDetailContent = async ({
   params,
 }: OrganizationDetailPageProps) => {
   await connection();
-  await guardPlatformAdmin();
+  const platformAdmin = await guardPlatformAdmin();
 
   const { organizationId } = await params;
   const [organization, supportNotes] = await Promise.all([
-    getPlatformOrganizationDetail(organizationId),
-    listPlatformSupportNotes({ organizationId }),
+    getPlatformOrganizationDetailForAdmin(
+      platformAdmin.platformAdminId,
+      organizationId
+    ),
+    listPlatformSupportNotesForAdmin(platformAdmin.platformAdminId, {
+      organizationId,
+    }),
   ]);
 
   if (!organization) {

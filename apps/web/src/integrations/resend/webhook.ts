@@ -7,8 +7,14 @@ import {
   recordResendEmailEvent,
   redactResendWebhookPayload,
 } from "@/integrations/resend/email-service";
-import { observeWebhookIntake } from "@/integrations/webhooks/intake";
-import { isWebhookRequestTooLarge } from "@/integrations/webhooks/request-limits";
+import {
+  markWebhookIntakeProcessed,
+  observeWebhookIntake,
+} from "@/integrations/webhooks/intake";
+import {
+  isWebhookRequestTooLarge,
+  readWebhookRequestBody,
+} from "@/integrations/webhooks/request-limits";
 import { serverEnv } from "@/lib/env";
 
 const getWebhookHeaders = (request: Request) => {
@@ -50,18 +56,34 @@ export const handleResendWebhook = async (request: Request) => {
     );
   }
 
-  const rawBody = await request.text();
+  const rawBody = await readWebhookRequestBody(request);
+
+  if (rawBody === null) {
+    return NextResponse.json(
+      { error: "Webhook payload is too large." },
+      { status: 413 }
+    );
+  }
   const resend = new Resend(serverEnv.RESEND_API_KEY);
+  let event: ReturnType<typeof resend.webhooks.verify>;
 
   try {
-    const event = resend.webhooks.verify({
+    event = resend.webhooks.verify({
       headers: webhookHeaders,
       payload: rawBody,
       webhookSecret: serverEnv.RESEND_WEBHOOK_SECRET,
     });
+  } catch {
+    return NextResponse.json(
+      { error: "Invalid Resend webhook signature." },
+      { status: 400 }
+    );
+  }
+
+  try {
     const payload = redactResendWebhookPayload(event);
 
-    await observeWebhookIntake({
+    const captureResult = await observeWebhookIntake({
       correlationId: webhookHeaders.id,
       eventId: webhookHeaders.id,
       eventType: toStringPayloadValue(payload.type, "unknown"),
@@ -71,16 +93,26 @@ export const handleResendWebhook = async (request: Request) => {
       rawBody,
     });
 
+    if (captureResult === "duplicate") {
+      return NextResponse.json({ ok: true, duplicate: true });
+    }
+
     await recordResendEmailEvent(db, {
       event,
       providerEventId: webhookHeaders.id,
     });
 
+    await markWebhookIntakeProcessed({
+      eventId: webhookHeaders.id,
+      provider: "resend",
+      status: "processed",
+    });
+
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json(
-      { error: "Invalid Resend webhook signature." },
-      { status: 400 }
+      { error: "Unable to process Resend webhook." },
+      { status: 500 }
     );
   }
 };

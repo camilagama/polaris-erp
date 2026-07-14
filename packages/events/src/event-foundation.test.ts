@@ -8,17 +8,20 @@ import {
   markOutboxEventObserved,
   markOutboxEventProcessed,
   redactWebhookHeaders,
+  retryOutboxEvent,
 } from "@polaris/events";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
 const createInsertMock = () => {
+  const returning = vi.fn().mockResolvedValue([{ id: "webhook-1" }]);
   const onConflictDoNothing = vi.fn();
+  onConflictDoNothing.mockReturnValue({ returning });
   const values = vi.fn(() => ({ onConflictDoNothing }));
   const insert = vi.fn(() => ({ values }));
 
-  return { insert, onConflictDoNothing, values };
+  return { insert, onConflictDoNothing, returning, values };
 };
 
 describe("event foundation helpers", () => {
@@ -54,17 +57,19 @@ describe("event foundation helpers", () => {
   it("captures webhook events idempotently without storing raw secrets", async () => {
     const db = createInsertMock();
 
-    await captureWebhookEvent(db as never, {
-      correlationId: "corr-1",
-      eventId: "evt_123",
-      headers: {
-        authorization: "Bearer secret",
-        "content-type": "application/json",
-      },
-      payload: { type: "email.delivered" },
-      provider: "resend",
-      rawBody: '{"type":"email.delivered"}',
-    });
+    await expect(
+      captureWebhookEvent(db as never, {
+        correlationId: "corr-1",
+        eventId: "evt_123",
+        headers: {
+          authorization: "Bearer secret",
+          "content-type": "application/json",
+        },
+        payload: { type: "email.delivered" },
+        provider: "resend",
+        rawBody: '{"type":"email.delivered"}',
+      })
+    ).resolves.toBe("claimed");
 
     expect(db.values).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -89,6 +94,7 @@ describe("event foundation helpers", () => {
       rows: [
         {
           attempts: 1,
+          claim_token: "claim-1",
           correlation_id: "corr-1",
           event_type: "welcome.email",
           id: "event-1",
@@ -100,6 +106,7 @@ describe("event foundation helpers", () => {
 
     await expect(claimOutboxEvent({ execute }, "event-1")).resolves.toEqual({
       attempts: 1,
+      claimToken: "claim-1",
       correlationId: "corr-1",
       eventType: "welcome.email",
       id: "event-1",
@@ -156,13 +163,54 @@ describe("event foundation helpers", () => {
     await expect(claimOutboxEvent({ execute }, "event-1")).resolves.toBeNull();
   });
 
+  it("does not complete an outbox event after its lease token changes", async () => {
+    const execute = vi.fn().mockResolvedValueOnce({ rows: [] });
+
+    await expect(
+      markOutboxEventProcessed({ execute }, "event-1", "stale-claim")
+    ).resolves.toBe(false);
+  });
+
+  it("does not requeue an outbox event after its lease token changes", async () => {
+    const execute = vi.fn().mockResolvedValueOnce({ rows: [] });
+
+    await expect(
+      markOutboxEventFailed({
+        claimToken: "stale-claim",
+        db: { execute },
+        error: "dispatcher timeout",
+        eventId: "event-1",
+      })
+    ).resolves.toBe(false);
+  });
+
+  it("does not observe an outbox event after its lease token changes", async () => {
+    const execute = vi.fn().mockResolvedValueOnce({ rows: [] });
+
+    await expect(
+      markOutboxEventObserved(
+        { execute },
+        "event-1",
+        "stale-claim",
+        "capture-only"
+      )
+    ).resolves.toBe(false);
+  });
+
+  it("reports when retry did not change a terminal outbox event", async () => {
+    const execute = vi.fn().mockResolvedValueOnce({ rows: [] });
+
+    await expect(retryOutboxEvent({ execute }, "event-1")).resolves.toBe(false);
+  });
+
   it("marks outbox events as processed, observed or failed", async () => {
     const execute = vi.fn().mockResolvedValue({});
     const db = { execute };
 
-    await markOutboxEventProcessed(db, "event-1");
-    await markOutboxEventObserved(db, "event-2", "capture-only");
+    await markOutboxEventProcessed(db, "event-1", "claim-1");
+    await markOutboxEventObserved(db, "event-2", "claim-2", "capture-only");
     await markOutboxEventFailed({
+      claimToken: "claim-3",
       db,
       error: "No dispatcher registered.",
       eventId: "event-3",

@@ -7,9 +7,8 @@
     "@polaris/db": "workspace:*",
     "@polaris/events": "workspace:*",
     "@polaris/emails": "workspace:*",
+    "@polaris/e2e-support": "workspace:*",
     "@polaris/auth": "workspace:*",
-    "@polaris/platform": "workspace:*",
-    "@polaris/platform-auth": "workspace:*",
     "@polaris/ui": "workspace:*"
   },
   "scripts": {
@@ -17,6 +16,7 @@
     "build": "bun --env-file=../../.env.local x next build",
     "start": "bun --env-file=../../.env.local x next start",
     "test": "vitest run",
+    "test:postgres": "bun ../../scripts/require-postgres-behavior-database.ts && vitest run src/integrations/asaas/billing-reconciliation.postgres.test.ts",
     "test:e2e": "bun ../../scripts/check-e2e-db-schema.ts && playwright test",
     "typecheck": "tsc --noEmit --project tsconfig.json",
     "check": "cd ../.. && bun x ultracite check",

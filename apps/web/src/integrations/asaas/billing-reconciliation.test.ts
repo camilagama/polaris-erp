@@ -32,7 +32,12 @@ const createDb = () => {
     })
     .mockResolvedValue({ rows: [] });
 
-  return { execute };
+  return {
+    execute,
+    transaction: async <T>(
+      callback: (transaction: { execute: typeof execute }) => Promise<T>
+    ) => await callback({ execute }),
+  };
 };
 
 describe("Asaas billing reconciliation", () => {
@@ -98,6 +103,9 @@ describe("Asaas billing reconciliation", () => {
     expect(db.execute).toHaveBeenCalled();
     expect(source).toContain("billing_provider_links");
     expect(source).toContain("billing_payment_attempts");
+    expect(source).toContain("pg_advisory_xact_lock");
+    expect(source).toContain("return await db.transaction");
+    expect(source).toContain("from linked_invoice");
     expect(source).toContain("on conflict (provider, provider_event_id)");
     expect(source).toContain("card_last4");
     expect(source).not.toContain("creditCardToken");

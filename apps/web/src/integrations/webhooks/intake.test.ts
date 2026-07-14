@@ -2,14 +2,16 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-const importIntake = async () => {
+const importIntake = async (
+  captureResult: "claimed" | "duplicate" = "claimed"
+) => {
   vi.resetModules();
 
   const defaultDb = {
     execute: vi.fn().mockResolvedValue({ rows: [] }),
     insert: vi.fn(),
   };
-  const captureWebhookEvent = vi.fn().mockResolvedValue(undefined);
+  const captureWebhookEvent = vi.fn().mockResolvedValue(captureResult);
   const enqueueOutboxEvent = vi.fn().mockResolvedValue("outbox-1");
 
   vi.doMock("@polaris/db", () => ({ db: defaultDb }));
@@ -41,17 +43,19 @@ describe("webhook intake", () => {
       await importIntake();
     const db = { execute: vi.fn(), insert: vi.fn() };
 
-    await observeWebhookIntake(
-      {
-        eventId: "evt_123",
-        eventType: "payment.received",
-        headers: { "x-request-id": "req_123" },
-        payload: { id: "evt_123" },
-        provider: "asaas",
-        rawBody: '{"id":"evt_123"}',
-      },
-      db
-    );
+    await expect(
+      observeWebhookIntake(
+        {
+          eventId: "evt_123",
+          eventType: "payment.received",
+          headers: { "x-request-id": "req_123" },
+          payload: { id: "evt_123" },
+          provider: "asaas",
+          rawBody: '{"id":"evt_123"}',
+        },
+        db
+      )
+    ).resolves.toBe("claimed");
 
     expect(captureWebhookEvent).toHaveBeenCalledWith(db, {
       correlationId: "evt_123",
@@ -98,6 +102,24 @@ describe("webhook intake", () => {
         topic: "email.webhook",
       })
     );
+  });
+
+  it("does not enqueue a duplicate provider event", async () => {
+    const { enqueueOutboxEvent, observeWebhookIntake } =
+      await importIntake("duplicate");
+
+    await expect(
+      observeWebhookIntake({
+        eventId: "evt_123",
+        eventType: "payment.received",
+        headers: {},
+        payload: { id: "evt_123" },
+        provider: "asaas",
+        rawBody: '{"id":"evt_123"}',
+      })
+    ).resolves.toBe("duplicate");
+
+    expect(enqueueOutboxEvent).not.toHaveBeenCalled();
   });
 
   it("marks webhook rows with processing status and optional error", async () => {

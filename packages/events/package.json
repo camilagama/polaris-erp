@@ -13,6 +13,7 @@
   },
   "scripts": {
     "test": "vitest run",
+    "test:postgres": "bun ../../scripts/require-postgres-behavior-database.ts && vitest run src/event-outbox-lease.postgres.test.ts",
     "typecheck": "tsc --noEmit --project tsconfig.json"
   }
 }

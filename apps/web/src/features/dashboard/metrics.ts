@@ -60,14 +60,14 @@ interface BuildDashboardMetricsInput {
   sales: DashboardSaleRecord[];
 }
 
-export interface DashboardPeriodSalesAggregate {
+interface DashboardPeriodSalesAggregate {
   bucketKey: string;
   salesCount: number;
   shippingAndSellerFees: number;
   sold: number;
 }
 
-export interface DashboardPeriodProductCostAggregate {
+interface DashboardPeriodProductCostAggregate {
   bucketKey: string;
   productCosts: number;
 }

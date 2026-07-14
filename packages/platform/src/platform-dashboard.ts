@@ -1,6 +1,7 @@
 import "server-only";
 
 import { db } from "@polaris/db";
+import { withPlatformAdminContext } from "@polaris/db/tenant-context";
 import { type SQL, sql } from "drizzle-orm";
 import { toIsoString, toNumber, toRows } from "./internal/query-results";
 
@@ -129,3 +130,8 @@ export const getPlatformDashboardData = async (
     summary,
   };
 };
+
+export const getPlatformDashboardDataForAdmin = async (
+  platformAdminId: string
+): Promise<PlatformDashboardData> =>
+  withPlatformAdminContext(platformAdminId, getPlatformDashboardData);

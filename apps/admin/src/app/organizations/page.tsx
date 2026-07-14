@@ -1,4 +1,4 @@
-import { listPlatformOrganizations } from "@polaris/platform/directory";
+import { listPlatformOrganizationsForAdmin } from "@polaris/platform/directory";
 import Link from "next/link";
 import { forbidden } from "next/navigation";
 import { connection } from "next/server";
@@ -19,7 +19,7 @@ const getQuery = async (
 
 const guardPlatformAdmin = async () => {
   try {
-    await requirePlatformAdmin();
+    return await requirePlatformAdmin();
   } catch {
     forbidden();
   }
@@ -44,10 +44,13 @@ const OrganizationsContent = async ({
   searchParams,
 }: OrganizationsPageProps) => {
   await connection();
-  await guardPlatformAdmin();
+  const platformAdmin = await guardPlatformAdmin();
 
   const query = await getQuery(searchParams);
-  const organizations = await listPlatformOrganizations(query);
+  const organizations = await listPlatformOrganizationsForAdmin(
+    platformAdmin.platformAdminId,
+    query
+  );
 
   return (
     <section className="mx-auto grid w-full max-w-6xl gap-6 px-6 py-8">

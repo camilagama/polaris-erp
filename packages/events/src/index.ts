@@ -6,6 +6,7 @@ import { type SQL, sql } from "drizzle-orm";
 import type { IndexColumn } from "drizzle-orm/pg-core";
 
 const MAX_OUTBOX_ATTEMPTS = 5;
+const OUTBOX_LEASE_SECONDS = 300;
 
 const SENSITIVE_HEADER_NAMES = new Set([
   "authorization",
@@ -26,6 +27,8 @@ export interface CaptureWebhookEventInput {
   rawBody: string;
 }
 
+export type WebhookCaptureResult = "claimed" | "duplicate";
+
 export interface EnqueueOutboxEventInput {
   correlationId: string;
   eventType: string;
@@ -42,7 +45,11 @@ interface InsertableDb {
     values: (value: WebhookEventInsert) => {
       onConflictDoNothing: (config?: {
         target?: IndexColumn | IndexColumn[];
-      }) => Promise<unknown> | unknown;
+      }) => {
+        returning: (fields: {
+          id: typeof webhookEvents.id;
+        }) => Promise<Array<{ id: string }>>;
+      };
     };
   };
 }
@@ -53,6 +60,7 @@ export interface QueryableDb {
 
 export interface ClaimedOutboxEvent {
   attempts: number;
+  claimToken: string;
   correlationId: string;
   eventType: string;
   id: string;
@@ -107,10 +115,10 @@ export const redactWebhookHeaders = (
 export const captureWebhookEvent = async (
   db: InsertableDb,
   input: CaptureWebhookEventInput
-): Promise<void> => {
+): Promise<WebhookCaptureResult> => {
   const idempotencyKey = buildWebhookEventKey(input.provider, input.eventId);
 
-  await db
+  const rows = await db
     .insert(webhookEvents)
     .values({
       correlationId: input.correlationId,
@@ -123,7 +131,10 @@ export const captureWebhookEvent = async (
     })
     .onConflictDoNothing({
       target: webhookEvents.idempotencyKey,
-    });
+    })
+    .returning({ id: webhookEvents.id });
+
+  return rows.length === 1 ? "claimed" : "duplicate";
 };
 
 export const enqueueOutboxEvent = async (
@@ -268,12 +279,18 @@ export const claimOutboxEvent = async (
       update event_outbox
       set status = 'processing',
           attempts = attempts + 1,
+          claim_token = gen_random_uuid()::text,
+          claimed_at = now(),
+          lease_expires_at = now() + (${OUTBOX_LEASE_SECONDS} * interval '1 second'),
           last_error = null,
           updated_at = now()
       where id = ${eventId}
-        and status = 'pending'
         and available_at <= now()
-      returning id, topic, event_type, correlation_id, attempts, payload
+        and (
+          status = 'pending'
+          or (status = 'processing' and lease_expires_at <= now())
+        )
+      returning id, topic, event_type, correlation_id, attempts, payload, claim_token
     `)
   );
   const row = rows.at(0);
@@ -284,6 +301,7 @@ export const claimOutboxEvent = async (
 
   return {
     attempts: toNumber(row.attempts),
+    claimToken: toStringValue(row.claim_token),
     correlationId: toStringValue(row.correlation_id),
     eventType: toStringValue(row.event_type),
     id: toStringValue(row.id),
@@ -294,47 +312,70 @@ export const claimOutboxEvent = async (
 
 export const markOutboxEventProcessed = async (
   db: QueryableDb,
-  eventId: string
-): Promise<void> => {
-  await db.execute(sql`
+  eventId: string,
+  claimToken: string
+): Promise<boolean> => {
+  const rows = toRows(
+    await db.execute(sql`
     update event_outbox
     set status = 'processed',
         processed_at = now(),
+        claim_token = null,
+        claimed_at = null,
+        lease_expires_at = null,
         last_error = null,
         updated_at = now()
     where id = ${eventId}
       and status = 'processing'
-  `);
+      and claim_token = ${claimToken}
+    returning id
+  `)
+  );
+
+  return rows.length === 1;
 };
 
 export const markOutboxEventObserved = async (
   db: QueryableDb,
   eventId: string,
+  claimToken: string,
   reason: string | null = null
-): Promise<void> => {
-  await db.execute(sql`
+): Promise<boolean> => {
+  const rows = toRows(
+    await db.execute(sql`
     update event_outbox
     set status = 'observed',
         processed_at = now(),
+        claim_token = null,
+        claimed_at = null,
+        lease_expires_at = null,
         last_error = ${reason},
         updated_at = now()
     where id = ${eventId}
       and status = 'processing'
-  `);
+      and claim_token = ${claimToken}
+    returning id
+  `)
+  );
+
+  return rows.length === 1;
 };
 
 export const markOutboxEventFailed = async ({
+  claimToken,
   db,
   error,
   eventId,
   terminal = false,
 }: {
+  claimToken: string;
   db: QueryableDb;
   error: string;
   eventId: string;
   terminal?: boolean;
-}): Promise<void> => {
-  await db.execute(sql`
+}): Promise<boolean> => {
+  const rows = toRows(
+    await db.execute(sql`
     update event_outbox
     set status = case
           when ${terminal} then 'failed'
@@ -345,11 +386,19 @@ export const markOutboxEventFailed = async ({
           when ${terminal} or attempts >= ${MAX_OUTBOX_ATTEMPTS} then available_at
           else now()
         end,
+        claim_token = null,
+        claimed_at = null,
+        lease_expires_at = null,
         last_error = ${error},
         updated_at = now()
     where id = ${eventId}
       and status = 'processing'
-  `);
+      and claim_token = ${claimToken}
+    returning id
+  `)
+  );
+
+  return rows.length === 1;
 };
 
 export const listWebhookEvents = async (
@@ -378,14 +427,22 @@ export const listWebhookEvents = async (
 export const retryOutboxEvent = async (
   db: QueryableDb,
   eventId: string
-): Promise<void> => {
-  await db.execute(sql`
+): Promise<boolean> => {
+  const rows = toRows(
+    await db.execute(sql`
     update event_outbox
     set status = 'pending',
         available_at = now(),
+        claim_token = null,
+        claimed_at = null,
+        lease_expires_at = null,
         last_error = null,
         updated_at = now()
     where id = ${eventId}
       and status in ('failed', 'dead_letter')
-  `);
+    returning id
+  `)
+  );
+
+  return rows.length === 1;
 };

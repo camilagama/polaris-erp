@@ -42,6 +42,7 @@
     "PERFORMANCE_REQUIRE_REPRESENTATIVE",
     "PERFORMANCE_SEARCH_TERM",
     "PERFORMANCE_USER_ID",
+    "POSTGRES_BEHAVIOR_DATABASE_URL",
     "RESEND_API_KEY",
     "RESEND_FROM_EMAIL",
     "RESEND_WEBHOOK_SECRET",
@@ -84,6 +85,9 @@
       "outputs": []
     },
     "test:e2e": {
+      "cache": false
+    },
+    "test:postgres": {
       "cache": false
     },
     "check": {

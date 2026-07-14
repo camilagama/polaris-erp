@@ -1,17 +1,19 @@
 $ vitest run
 
-[1m[30m[46m RUN [49m[39m[22m [36mv4.1.9 [39m[90mC:/Users/Junior/Documents/0 - Dev/Hub Imports/packages/platform[39m
+ RUN  v4.1.10 C:/Users/Junior/Documents/0 - Dev/Hub Imports/packages/platform
 
- [32m✓[39m src/platform-dashboard.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 20[2mms[22m[39m
- [32m✓[39m src/platform-admin.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 13[2mms[22m[39m
- [32m✓[39m src/platform-audit-events.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 6[2mms[22m[39m
- [32m✓[39m src/platform-organization-mutations.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 11[2mms[22m[39m
- [32m✓[39m src/platform-support-notes.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 15[2mms[22m[39m
- [32m✓[39m src/platform-directory.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 10[2mms[22m[39m
- [32m✓[39m src/platform-billing.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ ✓ src/internal/query-results.test.ts (3 tests) 7ms
+ ✓ src/platform-dashboard.test.ts (1 test) 11ms
+ ✓ src/platform-billing.test.ts (6 tests) 18ms
+ ✓ src/platform-events.test.ts (4 tests) 26ms
+ ✓ src/platform-directory.test.ts (5 tests) 13ms
+ ✓ src/platform-support-notes.test.ts (5 tests) 20ms
+ ✓ src/platform-audit-events.test.ts (1 test) 7ms
+ ✓ src/platform-admin.test.ts (2 tests) 15ms
+ ✓ src/platform-organization-mutations.test.ts (5 tests) 15ms
 
-[2m Test Files [22m [1m[32m7 passed[39m[22m[90m (7)[39m
-[2m      Tests [22m [1m[32m23 passed[39m[22m[90m (23)[39m
-[2m   Start at [22m 01:47:30
-[2m   Duration [22m 1.25s[2m (transform 661ms, setup 0ms, import 5.45s, tests 89ms, environment 1ms)[22m
+ Test Files  9 passed (9)
+      Tests  32 passed (32)
+   Start at  02:38:03
+   Duration  1.68s (transform 1.73s, setup 0ms, import 9.19s, tests 131ms, environment 2ms)
 

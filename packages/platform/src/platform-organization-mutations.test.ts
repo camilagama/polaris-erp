@@ -37,6 +37,30 @@ describe("updatePlatformOrganizationStatus", () => {
     expect(db.transaction).not.toHaveBeenCalled();
   });
 
+  it("rejects unsupported statuses before opening a transaction", async () => {
+    const tx = createTxMock();
+    const db = {
+      transaction: vi.fn(async (callback) => callback(tx)),
+    };
+
+    await expect(
+      updatePlatformOrganizationStatus(
+        {
+          actorPlatformAdminId: "platform-admin-1",
+          actorUserId: "user-1",
+          organizationId: "org-1",
+          reason: "fraud review",
+          status: "deleted" as never,
+        },
+        db as never
+      )
+    ).rejects.toThrow("Unsupported organization status.");
+
+    expect(db.transaction).not.toHaveBeenCalled();
+    expect(tx.update).not.toHaveBeenCalled();
+    expect(tx.insert).not.toHaveBeenCalled();
+  });
+
   it("updates organization status and writes platform audit in one transaction", async () => {
     const tx = createTxMock();
     const db = {

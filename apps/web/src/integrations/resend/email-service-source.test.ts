@@ -46,7 +46,7 @@ describe("email service and Resend webhook", () => {
     expect(existsSync(resendWebhookRoutePath)).toBe(true);
     expect(resendWebhookRouteSource).toContain("handleResendWebhook");
     expect(resendWebhookRouteSource).not.toContain('from "@polaris/db"');
-    expect(resendWebhookHandlerSource).toContain("request.text()");
+    expect(resendWebhookHandlerSource).toContain("readWebhookRequestBody");
     expect(resendWebhookHandlerSource).not.toContain("request.json()");
     expect(resendWebhookHandlerSource).toContain("svix-id");
     expect(resendWebhookHandlerSource).toContain("svix-timestamp");

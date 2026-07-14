@@ -5,12 +5,13 @@ import {
   captureWebhookEvent,
   enqueueOutboxEvent,
   type QueryableDb,
+  type WebhookCaptureResult,
 } from "@polaris/events";
 import { sql } from "drizzle-orm";
 
 type WebhookIntakeDb = Parameters<typeof captureWebhookEvent>[0] & QueryableDb;
 
-export type WebhookIntakeStatus = "processed" | "failed";
+type WebhookIntakeStatus = "processed" | "failed";
 
 export interface ObserveWebhookIntakeInput {
   correlationId?: string;
@@ -39,14 +40,14 @@ const getWebhookIdempotencyKey = (provider: string, eventId: string): string =>
 export const observeWebhookIntake = async (
   input: ObserveWebhookIntakeInput,
   intakeDb: WebhookIntakeDb = defaultDb
-): Promise<void> => {
+): Promise<WebhookCaptureResult> => {
   const correlationId = input.correlationId ?? input.eventId;
   const topic = input.topic ?? getWebhookTopic(input.provider);
   const idempotencyKey =
     input.idempotencyKey ??
     getWebhookIdempotencyKey(input.provider, input.eventId);
 
-  await captureWebhookEvent(intakeDb, {
+  const captureResult = await captureWebhookEvent(intakeDb, {
     correlationId,
     eventId: input.eventId,
     headers: input.headers,
@@ -54,6 +55,10 @@ export const observeWebhookIntake = async (
     provider: input.provider,
     rawBody: input.rawBody,
   });
+
+  if (captureResult === "duplicate") {
+    return captureResult;
+  }
 
   await enqueueOutboxEvent(intakeDb, {
     correlationId,
@@ -63,6 +68,8 @@ export const observeWebhookIntake = async (
     status: "observed",
     topic,
   });
+
+  return captureResult;
 };
 
 export const markWebhookIntakeProcessed = async (

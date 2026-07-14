@@ -1,4 +1,4 @@
-import { getPlatformEventsOverview } from "@polaris/platform/events";
+import { getPlatformEventsOverviewForAdmin } from "@polaris/platform/events";
 import Link from "next/link";
 import { forbidden } from "next/navigation";
 import { connection } from "next/server";
@@ -8,7 +8,7 @@ import { retryOutboxEventAction } from "./actions";
 
 const guardPlatformAdmin = async () => {
   try {
-    await requirePlatformAdmin();
+    return await requirePlatformAdmin();
   } catch {
     forbidden();
   }
@@ -33,9 +33,11 @@ const canRetry = (status: string): boolean =>
 
 const EventsContent = async () => {
   await connection();
-  await guardPlatformAdmin();
+  const platformAdmin = await guardPlatformAdmin();
 
-  const { outbox, webhooks } = await getPlatformEventsOverview();
+  const { outbox, webhooks } = await getPlatformEventsOverviewForAdmin(
+    platformAdmin.platformAdminId
+  );
 
   return (
     <section className="mx-auto grid w-full max-w-6xl gap-6 px-6 py-8">

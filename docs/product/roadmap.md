@@ -2,9 +2,20 @@
 
 ## Objetivo
 
-Este roadmap separa funcionalidades de produto que nao devem bloquear o hardening inicial descrito em [prs.md](./prs.md) e no [Resumo executivo.md](./Resumo%20executivo.md).
+Este roadmap separa funcionalidades de produto que nao devem bloquear o hardening inicial descrito em [prs.md](../reports/prs.md) e no [resumo executivo.md](../reports/resumo-executivo.md).
 
 Antes de abrir producao self-serve, priorize PR 2, PR 3, PR 5, PR 6 e PR 7. Os itens abaixo entram depois que seguranca, integridade financeira, E2E isolado e operacao basica estiverem verificados.
+
+## Status atual
+
+| Item | Status | Evidência atual |
+| --- | --- | --- |
+| Convites e multiusuario | not-started | Fluxos permanecem deliberadamente desativados até a cobertura comportamental de grants e RLS. |
+| Billing e planos | partial | Assinaturas, admin manual e intake de webhooks existem; materialização Woovi e certificação de provider continuam pendentes. |
+| Exportação de dados | not-started | Nenhum fluxo de exportação foi implementado. |
+| Admin e suporte interno | partial | `apps/admin` e auditoria de plataforma existem; E2E de roles e certificação RLS ainda estão em andamento. |
+| LGPD, privacidade e retenção | partial | Runbooks de limpeza e restore existem; portabilidade e retenção de produto ainda não foram implementadas. |
+| Relatórios avançados e recebimentos | not-started | Analytics atuais cobrem operação, não recebíveis consolidados. |
 
 ## Principios de corte
 

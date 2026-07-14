@@ -1,6 +1,7 @@
 import "server-only";
 
 import { db } from "@polaris/db";
+import { withPlatformAdminContext } from "@polaris/db/tenant-context";
 import { type SQL, sql } from "drizzle-orm";
 import {
   toIsoString,
@@ -355,3 +356,35 @@ export const getPlatformUserDetail = async (
     },
   };
 };
+
+export const listPlatformOrganizationsForAdmin = async (
+  platformAdminId: string,
+  query?: string
+): Promise<PlatformOrganizationListItem[]> =>
+  withPlatformAdminContext(platformAdminId, (queryableDb) =>
+    listPlatformOrganizations(query, queryableDb)
+  );
+
+export const getPlatformOrganizationDetailForAdmin = async (
+  platformAdminId: string,
+  organizationId: string
+): Promise<PlatformOrganizationDetail | null> =>
+  withPlatformAdminContext(platformAdminId, (queryableDb) =>
+    getPlatformOrganizationDetail(organizationId, queryableDb)
+  );
+
+export const listPlatformUsersForAdmin = async (
+  platformAdminId: string,
+  query?: string
+): Promise<PlatformUserListItem[]> =>
+  withPlatformAdminContext(platformAdminId, (queryableDb) =>
+    listPlatformUsers(query, queryableDb)
+  );
+
+export const getPlatformUserDetailForAdmin = async (
+  platformAdminId: string,
+  userId: string
+): Promise<PlatformUserDetail | null> =>
+  withPlatformAdminContext(platformAdminId, (queryableDb) =>
+    getPlatformUserDetail(userId, queryableDb)
+  );

@@ -52,39 +52,50 @@ export const processOutboxEvent = async (
 
   if (!dispatcher) {
     if (captureOnlyOutboxTopics.has(event.topic)) {
-      await markOutboxEventObserved(
+      const observed = await markOutboxEventObserved(
         database,
         event.id,
+        event.claimToken,
         `Outbox topic ${event.topic} is capture-only and is not dispatched.`
       );
 
-      return "observed";
+      return observed ? "observed" : "skipped";
     }
 
     const error = `No outbox dispatcher registered for ${event.topic}:${event.eventType}.`;
 
-    await markOutboxEventFailed({
+    const failed = await markOutboxEventFailed({
+      claimToken: event.claimToken,
       db: database,
       error,
       eventId: event.id,
     });
 
-    return "failed";
+    return failed ? "failed" : "skipped";
   }
 
   try {
     await dispatcher(event);
-    await markOutboxEventProcessed(database, event.id);
+    const processed = await markOutboxEventProcessed(
+      database,
+      event.id,
+      event.claimToken
+    );
 
-    return "processed";
+    return processed ? "processed" : "skipped";
   } catch (error) {
-    await markOutboxEventFailed({
+    const failed = await markOutboxEventFailed({
+      claimToken: event.claimToken,
       db: database,
       error: error instanceof Error ? error.message : "Unknown outbox error.",
       eventId: event.id,
     });
 
-    throw error;
+    if (failed) {
+      throw error;
+    }
+
+    return "skipped";
   }
 };
 
