@@ -27,7 +27,7 @@ vi.mock("@/components/dashboard/profit-margin-chart", () => ({
   ProfitMarginChart: () => "ProfitMarginChart",
 }));
 
-vi.mock("@/components/dashboard/revenue-profit-chart", () => ({
+vi.mock("@polaris/ui/components/shared/revenue-profit-chart", () => ({
   RevenueProfitChart: () => "RevenueProfitChart",
 }));
 
@@ -39,7 +39,7 @@ vi.mock("@/components/dashboard/sales-contribution-graph-card", () => ({
   SalesContributionGraphCard: () => "SalesContributionGraphCard",
 }));
 
-vi.mock("@/components/dashboard/sales-count-chart", () => ({
+vi.mock("@polaris/ui/components/shared/sales-count-chart", () => ({
   SalesCountChart: () => "SalesCountChart",
 }));
 

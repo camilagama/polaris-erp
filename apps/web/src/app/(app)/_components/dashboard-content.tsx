@@ -1,5 +1,7 @@
 import { Image01Icon, ShoppingBag02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { RevenueProfitChart } from "@polaris/ui/components/shared/revenue-profit-chart";
+import { SalesCountChart } from "@polaris/ui/components/shared/sales-count-chart";
 import Image from "next/image";
 import Link from "next/link";
 import type { CSSProperties } from "react";
@@ -7,10 +9,8 @@ import { GoalDashboardCompactCard } from "@/components/dashboard/goal-dashboard-
 import { InsightBanner } from "@/components/dashboard/insight-banner";
 import { OperationalCostsChart } from "@/components/dashboard/operational-costs-chart";
 import { ProfitMarginChart } from "@/components/dashboard/profit-margin-chart";
-import { RevenueProfitChart } from "@/components/dashboard/revenue-profit-chart";
 import { RevenueResultChart } from "@/components/dashboard/revenue-result-chart";
 import { SalesContributionGraphCard } from "@/components/dashboard/sales-contribution-graph-card";
-import { SalesCountChart } from "@/components/dashboard/sales-count-chart";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,

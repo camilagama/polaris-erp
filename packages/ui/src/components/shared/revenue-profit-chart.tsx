@@ -7,15 +7,14 @@ import {
   RadialBar,
   RadialBarChart,
 } from "recharts";
-
+import { formatCurrency } from "../../lib/formatters";
+import { cn } from "../../lib/utils";
 import {
   type ChartConfig,
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-} from "@/components/ui/chart";
-import { formatCurrency } from "@/lib/formatters";
-import { cn } from "@/lib/utils";
+} from "../ui/chart";
 
 const chartConfig = {
   profit: {

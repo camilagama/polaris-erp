@@ -1,4 +1,13 @@
 import { getPlatformDashboardDataForAdmin } from "@polaris/platform/dashboard";
+import { RevenueProfitChart } from "@polaris/ui/components/shared/revenue-profit-chart";
+import { SalesCountChart } from "@polaris/ui/components/shared/sales-count-chart";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@polaris/ui/components/ui/card";
 import Link from "next/link";
 import { forbidden } from "next/navigation";
 import { connection } from "next/server";
@@ -41,13 +50,13 @@ const AdminDashboard = async () => {
   );
   const summaryCards = [
     {
-      label: "Organizacoes",
+      label: "Organizações",
       value: dashboard.summary.organizations,
       detail: `${formatNumber(dashboard.summary.activeOrganizations)} ativas`,
       href: "/organizations",
     },
     {
-      label: "Usuarios",
+      label: "Usuários",
       value: dashboard.summary.users,
       detail: `${formatNumber(dashboard.summary.members)} memberships`,
       href: "/users",
@@ -77,6 +86,7 @@ const AdminDashboard = async () => {
       href: "/billing",
     },
   ] as const;
+
   const healthCards = [
     {
       label: "Database",
@@ -92,112 +102,140 @@ const AdminDashboard = async () => {
     },
   ] as const;
 
+  const mockChartData = [
+    { label: "Seg", salesCount: 12, costs: 0, result: 0, sold: 0 },
+    { label: "Ter", salesCount: 15, costs: 0, result: 0, sold: 0 },
+    { label: "Qua", salesCount: 18, costs: 0, result: 0, sold: 0 },
+    { label: "Qui", salesCount: 22, costs: 0, result: 0, sold: 0 },
+    { label: "Sex", salesCount: 28, costs: 0, result: 0, sold: 0 },
+    { label: "Sáb", salesCount: 25, costs: 0, result: 0, sold: 0 },
+    { label: "Dom", salesCount: 30, costs: 0, result: 0, sold: 0 },
+  ];
+
   return (
     <section className="mx-auto grid w-full max-w-6xl gap-6 px-6 py-8">
-      <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-5">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+      <Card className="fade-in-0 slide-in-from-bottom-2 animate-in duration-300">
+        <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
           <div>
-            <h2 className="font-semibold text-lg tracking-normal">
-              Console operacional
-            </h2>
-            <p className="mt-2 max-w-2xl text-sm text-zinc-400">
-              Superficie interna bloqueada por Vercel Authentication, sessao
+            <CardTitle className="text-lg">Console operacional</CardTitle>
+            <CardDescription className="mt-2 max-w-2xl">
+              Superfície interna bloqueada por Vercel Authentication, sessão
               Better Auth e grant ativo de platform admin.
-            </p>
+            </CardDescription>
           </div>
-          <div className="rounded-md border border-zinc-700 px-3 py-2 text-sm">
-            <span className="text-zinc-400">Admin ID </span>
-            <span className="font-mono text-zinc-100">
+          <div className="rounded-md border border-border px-3 py-2 text-sm">
+            <span className="text-muted-foreground">Admin ID </span>
+            <span className="font-mono text-foreground">
               {context.platformAdminId.slice(0, 8)}
             </span>
           </div>
-        </div>
-      </div>
+        </CardHeader>
+      </Card>
 
       <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
-        {summaryCards.map((card) => {
+        {summaryCards.map((card, index) => {
           const cardContent = (
-            <>
-              <h2 className="font-medium text-sm text-zinc-400 tracking-normal">
+            <CardContent className="p-4">
+              <h2 className="font-medium text-muted-foreground text-sm tracking-normal">
                 {card.label}
               </h2>
               <p className="mt-3 font-semibold text-3xl tracking-normal">
                 {formatNumber(card.value)}
               </p>
-              <p className="mt-2 text-sm text-zinc-500">{card.detail}</p>
-            </>
+              <p className="mt-2 text-muted-foreground text-sm">
+                {card.detail}
+              </p>
+            </CardContent>
           );
 
           return card.href ? (
             <Link
-              className="rounded-lg border border-zinc-800 bg-zinc-900 p-4 transition-colors hover:border-zinc-700 hover:bg-zinc-900/80"
+              className="group block"
               href={card.href}
               key={card.label}
               prefetch={false}
             >
-              {cardContent}
+              <Card
+                className="fade-in-0 slide-in-from-bottom-2 animate-in transition-all duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] hover:border-muted-foreground/30 active:scale-[0.98]"
+                style={{
+                  animationDelay: `${index * 50}ms`,
+                  animationFillMode: "both",
+                }}
+              >
+                {cardContent}
+              </Card>
             </Link>
           ) : (
-            <article
-              className="rounded-lg border border-zinc-800 bg-zinc-900/70 p-4"
+            <Card
+              className="fade-in-0 slide-in-from-bottom-2 animate-in opacity-70 duration-300"
               key={card.label}
+              style={{
+                animationDelay: `${index * 50}ms`,
+                animationFillMode: "both",
+              }}
             >
               {cardContent}
-            </article>
+            </Card>
           );
         })}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[0.8fr_1.2fr]">
-        <section className="rounded-lg border border-zinc-800 bg-zinc-900 p-5">
-          <h2 className="font-semibold text-lg tracking-normal">
-            Status operacional
-          </h2>
-          <div className="mt-5 grid gap-3">
+      <div className="grid gap-4 lg:grid-cols-[0.8fr_1.2fr_1fr]">
+        <Card
+          className="fade-in-0 slide-in-from-bottom-2 animate-in fill-mode-both duration-300"
+          style={{ animationDelay: "300ms" }}
+        >
+          <CardHeader>
+            <CardTitle className="text-lg">Status operacional</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-3">
             {healthCards.map((card) => (
               <div
-                className="flex items-center justify-between rounded-md border border-zinc-800 px-3 py-2"
+                className="flex items-center justify-between rounded-md border border-border px-3 py-2 transition-colors hover:bg-muted/30"
                 key={card.label}
               >
-                <span className="text-sm text-zinc-300">{card.label}</span>
+                <span className="text-foreground/80 text-sm">{card.label}</span>
                 <span
                   className={
                     card.ok
-                      ? "font-medium text-emerald-300 text-sm"
-                      : "font-medium text-amber-300 text-sm"
+                      ? "font-medium text-emerald-500 text-sm"
+                      : "font-medium text-amber-500 text-sm"
                   }
                 >
                   {getHealthLabel(card.ok)}
                 </span>
               </div>
             ))}
-          </div>
-        </section>
+          </CardContent>
+        </Card>
 
-        <section className="rounded-lg border border-zinc-800 bg-zinc-900 p-5">
-          <h2 className="font-semibold text-lg tracking-normal">
-            Eventos recentes
-          </h2>
-          <div className="mt-5 grid gap-3">
+        <Card
+          className="fade-in-0 slide-in-from-bottom-2 animate-in fill-mode-both duration-300"
+          style={{ animationDelay: "350ms" }}
+        >
+          <CardHeader>
+            <CardTitle className="text-lg">Eventos recentes</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-3">
             {dashboard.events.length === 0 ? (
-              <p className="rounded-md border border-zinc-800 px-3 py-4 text-sm text-zinc-500">
+              <p className="rounded-md border border-border px-3 py-4 text-muted-foreground text-sm">
                 Nenhum evento recente para exibir.
               </p>
             ) : (
               dashboard.events.map((event) => (
                 <div
-                  className="grid gap-1 rounded-md border border-zinc-800 px-3 py-2"
+                  className="grid gap-1 rounded-md border border-border px-3 py-2 transition-colors hover:bg-muted/30"
                   key={`${event.source}-${event.label}-${event.occurredAt}`}
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <span className="font-medium text-sm text-zinc-200">
+                    <span className="font-medium text-foreground text-sm">
                       {event.label}
                     </span>
-                    <span className="font-mono text-xs text-zinc-500">
+                    <span className="font-mono text-muted-foreground text-xs">
                       {formatEventDate(event.occurredAt)}
                     </span>
                   </div>
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-muted-foreground text-xs">
                     {event.source === "tenant" ? "Tenant" : "Platform"}
                     {event.count
                       ? ` · ${formatNumber(event.count)} eventos`
@@ -206,8 +244,26 @@ const AdminDashboard = async () => {
                 </div>
               ))
             )}
-          </div>
-        </section>
+          </CardContent>
+        </Card>
+
+        <Card
+          className="fade-in-0 slide-in-from-bottom-2 flex animate-in flex-col fill-mode-both duration-300"
+          style={{ animationDelay: "400ms" }}
+        >
+          <CardHeader>
+            <CardTitle className="text-lg">Desempenho Geral</CardTitle>
+            <CardDescription>
+              Métricas de atividade da plataforma (Exemplo Abstraído)
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-1 flex-col justify-between">
+            <div className="mb-4 min-h-[140px] w-full flex-1">
+              <SalesCountChart data={mockChartData} />
+            </div>
+            <RevenueProfitChart profit={12_000} revenue={45_000} />
+          </CardContent>
+        </Card>
       </div>
     </section>
   );

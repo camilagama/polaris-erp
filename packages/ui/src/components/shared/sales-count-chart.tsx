@@ -7,8 +7,15 @@ import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-} from "@/components/ui/chart";
-import type { DashboardPeriodComparisonPoint } from "@/features/dashboard/contracts";
+} from "../ui/chart";
+
+export interface SalesCountChartDataPoint {
+  costs: number;
+  label: string;
+  result: number;
+  salesCount: number;
+  sold: number;
+}
 
 const chartConfig = {
   salesCount: {
@@ -20,7 +27,7 @@ const chartConfig = {
 export function SalesCountChart({
   data,
 }: {
-  data: DashboardPeriodComparisonPoint[];
+  data: SalesCountChartDataPoint[];
 }) {
   return (
     <div className="h-full w-full">
