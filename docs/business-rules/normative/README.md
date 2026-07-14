@@ -1,8 +1,8 @@
 # Regras de negócio normativas
 
-**Versão:** 1.0.0  
+**Versão:** 1.1.0
 **Aprovada em:** 2026-07-14  
-**Autoridade:** decisões DEC-BR-001 a DEC-BR-058 em [registro de decisões](../decision-register.md).  
+**Autoridade:** decisões DEC-BR-001 a DEC-BR-063 em [registro de decisões](../decision-register.md).
 **Escopo:** lançamento brasileiro do Hub Imports/Polaris.  
 **Implementação:** parcial. Este conjunto define o comportamento alvo aprovado; não afirma que o código, banco, testes ou providers já o satisfaçam.
 
@@ -22,6 +22,8 @@ Uma mudança de comportamento exige nova decisão, versão e atualização da [m
 - [Regras aprovadas](approved-rules.md): contrato de produto por domínio.
 - [Estados e permissões](states-and-permissions.md): atores, autorizações e transições permitidas.
 - [Aderência e gates](adherence.md): distância entre regra, implementação, teste e dependência externa.
+- [Aderência individual](adherence-by-rule.md): estado de cada contrato aprovado.
+- [Perfis normativos](rule-profiles.md): campos completos e rastreáveis por contrato.
 
 ## Gates de lançamento
 

@@ -1,6 +1,6 @@
 # Atores e permissões
 
-**Status:** rascunho de descoberta, **não normativo**.
+**Status:** rascunho histórico AS-IS, **não normativo**. A norma aprovada está em [actors.md](actors.md) e [normative/states-and-permissions.md](normative/states-and-permissions.md). Questões listadas abaixo foram resolvidas por DEC-BR-001..063 ou permanecem gates explicitados; não são perguntas abertas atuais.
 
 ## Matriz de acesso do tenant observada
 

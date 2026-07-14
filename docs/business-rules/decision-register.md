@@ -62,5 +62,10 @@
 | DEC-BR-056 | Vendas/financeiro | PIX, cartão, taxas, descontos e arredondamento seguem cálculo confirmado do servidor. | Aprovada em 2026-07-14 | `docs/business-rules/open-questions.md` | Registrar equações e reconciliação |
 | DEC-BR-057 | Metas | Lifecycle `active`, `completed`, `expired` e `archived` confirmado; resolvidas não reativam. | Aprovada em 2026-07-14 | `docs/business-rules/open-questions.md` | Registrar transições e guarda concorrente |
 | DEC-BR-058 | Uploads/entitlements | Free e pago limitam cada imagem a 5 MiB. | Aprovada em 2026-07-14 | `docs/business-rules/open-questions.md` | Atualizar validação e testes |
+| DEC-BR-059 | Identidade/sessões | `google:sub` identifica conta; sem linking implícito por e-mail; sessão 7 dias deslizante/30 dias absoluta, com revogação e auditoria de eventos de segurança. | Aprovada por delegação em 2026-07-14 | `post-audit-decisions-2026-07-14.md` | Implementar linking, sessão e auditoria |
+| DEC-BR-060 | Plataforma/PII | Somente platform owner gere grants temporários; PII mínima com motivo e auditoria de leitura. | Aprovada por delegação em 2026-07-14 | `post-audit-decisions-2026-07-14.md` | Implementar grants, projeções e audit |
+| DEC-BR-061 | Dashboard/tempo | Métricas principais seguem filtro; histórico é separado; `America/Sao_Paulo` explícito. | Aprovada por delegação em 2026-07-14 | `post-audit-decisions-2026-07-14.md` | Separar consultas e testar tempo/histórico |
+| DEC-BR-062 | Jobs/operação | Billing/webhooks: 5 tentativas; imagens: 3; limites por tenant, revisão e alertas obrigatórios. | Aprovada por delegação em 2026-07-14 | `post-audit-decisions-2026-07-14.md` | Implementar política durável e alertas |
+| DEC-BR-063 | E-mail | Eventos atualizam lifecycle; retry só antes de aceitação, 3 vezes em 24h. | Aprovada por delegação em 2026-07-14 | `post-audit-decisions-2026-07-14.md` | Implementar lifecycle e outbox de e-mail |
 
 Decisões aprovadas permanecem rascunhos de descoberta até a documentação normativa final ser produzida após todos os debates. As próximas entradas só serão acrescentadas depois de a decisão precedente esclarecer o escopo.

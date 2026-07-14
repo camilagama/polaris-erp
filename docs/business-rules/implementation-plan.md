@@ -1,7 +1,7 @@
 # Plano de implementação das regras aprovadas
 
 **Status:** plano de execução, não implementado.  
-**Base:** [regras normativas](normative/README.md), DEC-BR-001 a DEC-BR-058.  
+**Base:** [regras normativas](normative/README.md), DEC-BR-001 a DEC-BR-063.
 **Princípio:** cada PR só muda comportamento acompanhado de migração, auditoria, testes de negação e atualização da [aderência](normative/adherence.md).
 
 ## Ordem e dependências
@@ -17,6 +17,10 @@
 | 6 | Metas e timezone | 1 | quotas por plano, uma métrica por meta paga e corrida protegida |
 | 7 | Privacidade, suporte e plataforma | 1; gates jurídicos | sem impersonation, audit de leitura, processo LGPD e runbook |
 | 8 | Aderência final e release | 2–7; todos gates | matriz atualizada e provas de app/banco/teste/provider |
+
+## Contrato obrigatório de cada PR
+
+Cada PR DEVE declarar objetivo, regras, AS-IS, comportamento aprovado, arquivos prováveis, alteração de banco, migração de dados, compatibilidade, rollout, feature flag ou `n/a`, testes, observabilidade, riscos, rollback e critério de aceite. O rollout NÃO PODE liberar capacidade dependente de gate externo sem sua evidência.
 
 ## PR 1 — Tenancy, organização e entitlement base
 
@@ -75,3 +79,13 @@
 - Atualizar [matriz normativa](normative/adherence.md) por regra: app, banco, UI, teste, provider e gate humano.
 - Executar testes unitários, integração/PostgreSQL, E2E, concorrência, idempotência, RLS runtime e sandbox de provider conforme domínio.
 - Bloquear release se qualquer gate externo, regra crítica sem auditoria ou cenário de negação obrigatório continuar sem prova.
+
+## Mapeamento de risco e rollback
+
+| PR | Arquivos/migrações prováveis | Rollout/flag | Observabilidade e rollback |
+| --- | --- | --- | --- |
+| 1 | auth, app-session, schema/migrations tenancy | flag de entitlement; migração antes do guard | métricas de bloqueio; rollback preserva dados e desliga novo guard |
+| 2 | billing, webhooks, outbox, Inngest, e-mail | provider sandbox; não liberar checkout antes de gate | lag/DLQ/transições; rollback desabilita checkout, mantém Free |
+| 3–5 | schema produtos/imagens/ledger/sales | migração expand-contract; flags por quota | reconciliação e divergência; rollback mantém leitura e bloqueia escrita nova |
+| 6 | goals/dashboard/time utilities | flag por tenant | métrica de CAS/timezone; rollback para leitura, não regride histórico |
+| 7 | platform, audit, privacy, RLS | flag de reveal PII | alertas audit/DSR; rollback remove reveal, não apaga trilha |

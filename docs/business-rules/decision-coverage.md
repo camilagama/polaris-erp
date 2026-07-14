@@ -16,10 +16,12 @@
 | Eventos e integrações | Captura parcial, retry, ordem e provider | DEC-BR-034, 035, 044, 049, 050 | Recovery, ordenação, expiração, timezone e comunicação aprovados; sandbox/contrato de provider é gate |
 | Privacidade e auditoria | Direitos, retenção, encerramento, incidentes e papéis de tratamento | DEC-BR-036 a 042 | Decisões aprovadas; tabela de retenção e mapa de papéis são gates externos |
 | Admin de plataforma | Separação entre plataforma e tenant, suporte e ações sensíveis | AS-IS em `actors-and-permissions.md`; DEC-BR-036, 043, 048 | Decisões aprovadas; implementação e auditoria de leitura sensível pendentes |
+| Identidade, admin e dashboard | Linking, revogação de sessão, PII por papel, grants, escopo temporal e timezone | DEC-BR-059, 060, 061 | Decisões aprovadas; implementação e prova promovida pendentes |
+| Operação de providers | Retry/concurrency/revisão de jobs, lifecycle de e-mail, R2 e prova do Neon promovido | DEC-BR-062, 063; `research-operational-platforms-2026-07-14.md` | Regras aprovadas; validação de ambiente e provider permanecem gates |
 
 ## Pendências já prontas para debate posterior
 
-Os lotes 11 e 12 foram consolidados. Não há decisões de produto materiais em aberto.
+Os lotes 11 a 13 foram consolidados. Não há decisão de produto material pendente; permanecem gates externos e de implementação.
 
 1. **Gate jurídico/contábil:** tabela de retenção por categoria, fundamento, prazo e destino final; DEC-BR-040.
 2. **Gate jurídico/privacidade:** mapa de papéis, categorias, compartilhamentos, aviso e contrato; DEC-BR-042.
@@ -29,7 +31,7 @@ Os lotes 11 e 12 foram consolidados. Não há decisões de produto materiais em 
 
 O debate só estará pronto para documentação normativa quando:
 
-1. DEC-BR-001 a 058 estiverem aprovadas, rejeitadas ou explicitamente adiadas; **concluído em 2026-07-14**;
+1. DEC-BR-001 a 063 estiverem aprovadas, rejeitadas ou explicitamente adiadas; **concluído em 2026-07-14**;
 2. cada pendência desta lista estiver decidida, marcada como não aplicável ou transformada em gate externo com responsável;
 3. a cobertura for atualizada para cada decisão final;
 4. a aderência de código, banco, testes e provider for registrada separadamente, sem confundir aprovação de regra com implementação.

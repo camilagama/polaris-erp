@@ -1,6 +1,6 @@
 # Proposta de governança de regras
 
-**Status:** proposta de descoberta, **não normativa**. Requer aprovação antes de qualquer aplicação a PRs, commits ou `AGENTS.md`.
+**Status:** política operacional proposta; regras aprovadas continuam em `normative/`. Alterar `AGENTS.md` requer tarefa e aprovação específicas.
 
 ## Política proposta
 
@@ -11,6 +11,7 @@
 5. Regras substituídas permanecem com status `deprecated` ou `superseded`; não são renumeradas.
 6. Incidentes devem referenciar regra/invariante violada e registrar se a proteção faltou no app, banco, UI ou operação.
 7. Um check documental deve impedir links quebrados e exigir atualização da matriz regra-versus-teste quando um domínio comportamental for alterado.
+8. O registro canônico usa `approved`, `approved_with_gate`, `delegated`, `deferred`, `deprecated` ou `superseded`; DEC-BR-059..063 são `delegated` e aprovadas pelo responsável de produto.
 
 ## Estados propostos para o ciclo de vida
 

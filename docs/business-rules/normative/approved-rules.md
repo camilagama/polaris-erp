@@ -10,6 +10,14 @@
 
 O produto DEVE oferecer login e cadastro público somente por Google OAuth. Não DEVE oferecer email/senha, convite público ou segundo método de identidade sem nova decisão. [DEC-BR-001]
 
+### ACCOUNT-001 — Identidade Google e linking
+
+Conta Google DEVE ser identificada por `providerAccountId = sub`, nunca somente por e-mail. Linking implícito por e-mail NÃO PODE ocorrer; colisão de e-mail usa recuperação explícita e auditada. [DEC-BR-059]
+
+### SESSION-001 — Sessão local
+
+Sessão local DEVE expirar após sete dias de inatividade e 30 dias absolutos. Logout encerra a sessão atual; suspensão, encerramento, recuperação de conta e revogação administrativa encerram sessões afetadas. Login, falha relevante, logout e revogação são auditados sem segredo de autenticação. [DEC-BR-059]
+
 ### ORG-001 — Organização e membership
 
 Cada pessoa DEVE pertencer a exatamente uma organização e cada organização DEVE ter exatamente um membro `owner` no lançamento. Não há convites, troca de organização, outros papéis de tenant ou gestão de membros. Dados legados incompatíveis exigem migração antes de a restrição ser aplicada. [DEC-BR-002, 030]
@@ -25,6 +33,10 @@ No tenant de usuário único, `owner` não possui privilégios adicionais além 
 ### TIME-001 — Tempo operacional
 
 `America/Sao_Paulo` DEVE definir toda data de negócio sem horário, período de meta, virada de quota e job temporal no lançamento. Timestamps de auditoria permanecem timestamps; expansão para outro timezone requer decisão nova. [DEC-BR-037, 049]
+
+### REPORT-002 — Escopo do dashboard
+
+Todo indicador do painel principal DEVE respeitar o intervalo selecionado. Histórico somente PODE aparecer em seção própria e rotulada. Métricas históricas usam snapshots e não dependem de produto vivo; archive/soft delete não altera histórico econômico. [DEC-BR-061]
 
 ## Planos, billing e comunicação
 
@@ -49,6 +61,14 @@ Upgrade é self-service após checkout e confirmação confiável. Asaas trata c
 ### BILLING-001 — Eventos e avisos
 
 Webhooks DEVEM recuperar falha pós-captura de modo durável até sucesso ou revisão. Eventos fora de ordem só PODEM aplicar transição válida usando data/versão persistida e nunca podem regredir estado mais novo. Lifecycle comercial DEVE enviar email transacional ao owner e expor estado no app; avisos são idempotentes, auditáveis e não definem acesso. [DEC-BR-034, 035, 050]
+
+### EVENT-004 — Operação de jobs
+
+Billing e webhooks DEVEM usar até cinco tentativas em 24 horas, com backoff/jitter, serialização por organização, alerta e revisão manual ao esgotar. Imagens usam até três tentativas e no máximo duas execuções por organização; falha terminal exige diagnóstico redigido e fila de revisão. [DEC-BR-062]
+
+### EMAIL-002 — Estado de entrega de e-mail
+
+`email_messages` DEVE refletir `pending`, `accepted`, `delivered`, `failed`, `bounced` ou `suppressed` por evento idempotente e ordenado do provider. Retry automático de mensagem transacional só é permitido antes de existir `provider_message_id`, até três vezes em 24 horas. [DEC-BR-063]
 
 ## Catálogo, imagens e estoque
 
@@ -83,6 +103,10 @@ Meta nasce `active`; conclui ao atingir alvo, expira ao terminar período ou pod
 ### AUDIT-001 — Auditoria obrigatória
 
 Mutações de produto, estoque, venda, meta, plano, billing, soft delete, permissões e ações administrativas críticas DEVEM falhar se não conseguirem gravar auditoria transacional. [DEC-BR-036]
+
+### ADMIN-002 — Grants e dados de suporte
+
+Somente platform owner ativo PODE gerir grants temporários, sempre com motivo, expiração e auditoria. Suporte vê PII somente quando necessária a um caso, com motivo e auditoria de leitura; tokens, payloads brutos e segredos nunca são exibidos. [DEC-BR-060]
 
 ### PRIVACY-001 — Solicitações, retenção e incidentes
 
