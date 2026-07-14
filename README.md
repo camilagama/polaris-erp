@@ -1,141 +1,69 @@
 # Polaris
 
-SaaS self-serve em `Next.js 16` para operacao de revenda com organizacoes, isolamento por tenant, catalogo, estoque, vendas e metas.
+Polaris e um SaaS para operacao de revenda. O app web atende a operacao de cada organizacao, com catalogo, estoque, vendas e metas. O app admin e uma superficie separada para operacao interna da plataforma.
 
-## Stack
+Esta documentacao descreve o comportamento observado no commit `886eda0` da branch `main`. Configuracoes externas, provedores e infraestrutura que nao podem ser comprovados pelo repositorio sao identificados como nao confirmados.
 
-- `Next.js 16` com App Router
-- `React 19`
-- `Better Auth` com Google OAuth, organization plugin, Infrastructure Dashboard e Sentinel
-- `Drizzle ORM` com PostgreSQL/Neon
-- `Tailwind CSS 4` e `shadcn/ui`
-- `Vitest` para testes unitarios e de integracao
-- `Playwright` para fluxos E2E principais
-- `Cloudflare R2` para staging e variantes finais de imagem
-- `Upstash Redis` para rate limit distribuido em ambientes serverless
+## Stack confirmada
 
-## Scripts
+- Bun e Turborepo para o monorepo.
+- Next.js 16 e React 19 nos apps `@polaris/web` e `@polaris/admin`.
+- Better Auth e Google OAuth para identidade.
+- Drizzle ORM e PostgreSQL/Neon para persistencia.
+- Cloudflare R2 para imagens de produtos, Upstash Redis para rate limit, Inngest para jobs e Sentry para observabilidade.
+- Vitest e Playwright para testes.
 
-```bash
-bun dev
-bun run build
-bun run test
-bun run test:e2e
-bun run check
-bun run fix
-bun run knip
-bun run db:generate
-bun run db:migrate
-bun run prod:preflight
-bun run deploy:smoke
-bun run db:smoke:rls
-bun run db:analyze:listings
-```
+Fonte: [package.json](package.json), [apps/web/package.json](apps/web/package.json) e [apps/admin/package.json](apps/admin/package.json). Evidencia: **Confirmado por configuracao**.
 
-## URL local e tunnel
+## Arquitetura resumida
 
-Em `development` e `test`, a origem canonica do app resolve para `APP_LOCAL_URL` ou `http://localhost:3000` por padrao, mesmo que `NEXT_PUBLIC_APP_URL` ou `BETTER_AUTH_URL` ainda apontem para um tunnel antigo. Para rodar dev por tunnel, defina `APP_URL_MODE="tunnel"` e `APP_PUBLIC_URL` com a URL publica atual.
+- `apps/web`: app do cliente, Route Handlers, Server Actions, integracoes e jobs Inngest.
+- `apps/admin`: console interno da plataforma; `apps/admin/vercel.json` descreve uma configuracao prevista para projeto Vercel separado. O projeto ativo nao foi confirmado.
+- `packages/*`: modulos compartilhados de auth, banco, billing, eventos, plataforma, suporte E2E e UI.
 
-## Modelo de acesso
+O runtime web protege a area operacional por sessao, contexto de app e guards de action. O admin exige grant de platform admin no app. Os detalhes e limitacoes estao em [docs/architecture/overview.md](docs/architecture/overview.md).
 
-- Cadastro publico em `/register` com Google.
-- Login em `/sign-in` com Google.
-- Primeiro acesso sem organizacao redireciona para `/onboarding`.
-- Onboarding pede apenas o nome da organizacao e cria membership `owner`, categoria `Outros` e settings padrao silenciosas.
-- Roles suportadas: `owner`, `admin`, `operator`. A role `viewer` foi removida.
-- Nesta fase, cada workspace opera com um unico usuario `owner`.
-- Gestao de membros e convites esta desativada ate o sprint multiusuario.
-- `owner` e `admin` gerenciam configuracoes quando houver mais de uma role ativa.
-- `operator` acessa operacao de catalogo, estoque e vendas.
-- Margens, parcelas e taxas ficam em `Configuracoes`, nao no onboarding.
-- Billing e o admin interno ja existem em estado parcial; checkout self-service e certificacao de providers ainda nao estao prontos para promocao.
+## Requisitos e setup local
 
-Em `development` e `test` existe bootstrap interno de sessao em `/api/auth/dev/bootstrap-session`, protegido por `INTERNAL_BOOTSTRAP_SECRET`. Em `production`, esse endpoint e sempre bloqueado, mesmo com `ALLOW_PLAYWRIGHT_BOOTSTRAP=true`.
+1. Instale Bun `1.3.11`, conforme `packageManager` em [package.json](package.json).
+2. Crie `.env.local` a partir de [.env.example](.env.example), sem versionar valores reais.
+3. Instale dependencias com `bun install`.
+4. Inicie o web com `bun dev` ou o admin com `bun run dev:admin`.
 
-## Tenancy
+Categorias de ambiente:
 
-O schema principal fica em `packages/db/src/schema.ts` e as migracoes em `packages/db/src/migrations/`.
+- URLs canonicas e Better Auth/Google;
+- PostgreSQL/Neon, incluindo URL de runtime, URL direta de migration e bancos isolados de E2E/RLS;
+- R2, Upstash, Inngest, Resend, Woovi, Asaas e Sentry;
+- controles internos de bootstrap, health e reconciliacao.
 
-Tabelas SaaS:
+Os nomes, finalidade e requisitos por ambiente ficam em [.env.example](.env.example). Nunca inclua valores, tokens, cookies ou connection strings em documentos, issues ou logs.
 
-- `organization`: workspace/tenant com `status`
-- `member`: membership interna que liga o owner ao workspace
-- `audit_events`: trilha de auditoria por organizacao
+## Comandos principais
 
-Tabelas de dominio com `organization_id` obrigatorio:
+| Finalidade | Comando |
+| --- | --- |
+| Desenvolvimento web/admin | `bun dev` / `bun run dev:admin` |
+| Check web/admin | `bun run check` / `bun run check:admin` |
+| Testes unitarios | `bun run test` / `bun run test:admin` |
+| Testes E2E | `bun run test:e2e` / `bun run test:e2e:admin` |
+| Typecheck | `bun run typecheck:all` |
+| Banco | `bun run db:generate`, `bun run db:migrate`, `bun run db:smoke:rls` |
+| Preflight e smoke | `bun run prod:preflight`, `bun run deploy:smoke` |
+| Links documentais | `bun run docs:check` |
 
-- `categories`
-- `system_settings`
-- `products`
-- `product_price_changes`
-- `product_stock_entries`
-- `product_stock_write_offs`
-- `sales`
-- `sale_items`
-- `goals`
+Os scripts de banco e producao exigem ambiente apropriado. Nao execute migrations, `db:push`, smokes ou E2E contra producao. Fonte: [package.json](package.json) e [docs/architecture/database-environments.md](docs/architecture/database-environments.md).
 
-Queries/actions por ID devem filtrar por `id + organizationId`. Chaves de imagem finais usam `organizations/{organizationId}/products/{productId}/...`.
+## Limitacoes conhecidas
 
-RLS e obrigatorio antes de producao aberta. O runtime deve usar uma role sem `BYPASSRLS`, e acessos tenant-scoped devem passar por contexto transacional (`app.organization_id`). Para validar o ambiente promovido, rode `bun run db:smoke:rls`.
+- A certificacao de infraestrutura externa ainda requer evidencia operacional: Vercel Authentication do admin, Neon/RLS em ambiente promovido, R2, Upstash, Inngest, Sentry, Google OAuth, Resend, Woovi e Asaas.
+- Billing possui estruturas, reconciliacao e controles internos; checkout self-service nao foi confirmado nesta leitura.
+- Gestao multiusuario de membros e convites esta descrita como desativada no estado atual do projeto.
 
-## Rate limit
+Fontes: [preflight de producao](apps/web/src/ops/production-preflight.ts) e [SOP de ativacao manual de billing](docs/runbooks/manual-billing-activation-sop.md). Evidencia: a implementacao local e **confirmada no codigo/documentacao existente**; a validacao de provedores e **nao confirmada**.
 
-O projeto usa `src/lib/rate-limit.ts`.
+## Documentacao
 
-- Em `production`, configure `UPSTASH_REDIS_REST_URL` e `UPSTASH_REDIS_REST_TOKEN`.
-- Sem Upstash em `production`, endpoints sensiveis falham fechado.
-- Em `development`/`test`, ha fallback em memoria para ergonomia local.
+Comece em [docs/README.md](docs/README.md). O plano de cobertura e rastreabilidade fica em [docs/documentation-plan.md](docs/documentation-plan.md).
 
-Upstash e preferivel aqui porque o app roda em ambiente serverless/multiplas instancias; `Map` local nao limita globalmente e reseta em cold starts.
-
-## Imagens de produto
-
-- Upload vai primeiro para o bucket de staging do R2 com chave namespaced por organizacao e usuario (`staging/{organizationId}/{userId}/...`).
-- O app gera variantes finais `detail` e `table`.
-- Entrega sempre passa por `/api/product-images/{organizationId}/{productId}/{version}/{variant}`.
-- A rota valida sessao, membership da organizacao e posse do produto antes de servir bytes.
-- A reconciliacao diaria limpa objetos orfaos sem retornar chaves completas no payload.
-- Detalhes operacionais e de CORS: [docs/architecture/product-images-r2.md](docs/architecture/product-images-r2.md).
-
-## CI, healthcheck e observabilidade
-
-- CI em `.github/workflows/ci.yml`: `bun run check`, `bun run test`, `bun run knip`, `bun run build`, E2E isolado e jobs manuais `production-preflight`/`rls-smoke`/`deployment-smoke`.
-- Healthcheck: `GET /api/health` retorna status sanitizado com `checks.database.ok`.
-- Diagnostico R2: `GET /api/internal/health/r2` com `Authorization: Bearer $INTERNAL_R2_HEALTH_SECRET`.
-- Sentry baseline: `@sentry/nextjs` com `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN`, e opcionalmente `SENTRY_ORG` / `SENTRY_PROJECT` / `SENTRY_AUTH_TOKEN`.
-- Deploy passo a passo: [docs/runbooks/deploy-vercel.md](docs/runbooks/deploy-vercel.md).
-
-## Banco, E2E e producao
-
-- Modelo de branches, roles, `E2E_DATABASE_URL` e `RLS_DATABASE_URL`: [docs/architecture/database-environments.md](docs/architecture/database-environments.md).
-- Antes de deploy real, rode `bun run prod:preflight` com envs de producao ou acione o job manual `production-preflight`.
-- Para smoke HTTP do deploy promovido, defina `DEPLOYMENT_SMOKE_URL` e rode `bun run deploy:smoke`; ele valida `/api/health`, `/sign-in`, redirect do Google OAuth e bootstrap interno 403. Com `INTERNAL_R2_HEALTH_SECRET`, tambem valida o health interno do R2.
-- Opcional: para validar planos de listagem em dataset representativo, defina `PERFORMANCE_ORGANIZATION_ID` e rode `bun run db:analyze:listings`.
-- Migracao SaaS e rollback: [docs/runbooks/saas-organization-migration-runbook.md](docs/runbooks/saas-organization-migration-runbook.md).
-- Limpeza destrutiva de producao: [docs/runbooks/production-database-cleanup.md](docs/runbooks/production-database-cleanup.md) e [docs/runbooks/production-database-cleanup.sql](docs/runbooks/production-database-cleanup.sql).
-
-## Qualidade atual
-
-Baseline esperado:
-
-- `bun run check`
-- `bun run test`
-- `bun run build`
-- `bun run knip`
-- `bun run prod:preflight` com envs de producao
-- `bun run deploy:smoke` com `DEPLOYMENT_SMOKE_URL`
-- `bun run db:smoke:rls`
-- `bun run test:e2e` com `E2E_DATABASE_URL` isolado
-
-Fluxos E2E cobertos hoje:
-
-- redirecionamento publico/protegido
-- login tecnico de dev/test com sessao bootstrapada
-- cadastro de produto
-- entrada e baixa de estoque
-- venda, cancelamento e estorno
-- alteracao de preco com preservacao de snapshot
-- cartao com taxa no cliente e no vendedor
-- arquivamento de produto
-
-Gap conhecido: E2E com OAuth Google real depende do provedor externo e deve rodar como smoke controlado em staging.
+Documentos existentes de operacao: [ambientes de banco](docs/architecture/database-environments.md), [R2](docs/architecture/product-images-r2.md), [RLS](docs/architecture/rls-tenant-isolation.md) e [deploy Vercel](docs/runbooks/deploy-vercel.md).
