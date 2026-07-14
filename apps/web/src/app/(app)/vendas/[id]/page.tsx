@@ -142,7 +142,7 @@ export default async function VendaDetalhePage(
                 </p>
                 <p
                   className={`font-medium text-sm ${
-                    profitAmount < 0 ? "text-red-400" : "text-chart-6"
+                    profitAmount < 0 ? "text-destructive" : "text-chart-6"
                   }`}
                 >
                   {formatCurrency(profitAmount)}
@@ -210,7 +210,7 @@ export default async function VendaDetalhePage(
         </div>
 
         <div className="lg:col-start-3">
-          <div className="sticky top-6 rounded-xl border border-border/50 bg-card p-6 shadow-sm">
+          <div className="sticky top-6 rounded-xl border border-border/50 bg-card p-6">
             <h3 className="mb-4 font-medium text-base">Resumo financeiro</h3>
             <div className="flex flex-col gap-3 text-sm">
               {isCancelled ? (
@@ -256,14 +256,14 @@ export default async function VendaDetalhePage(
               </div>
 
               {Number(sale.feeAmount) > 0 ? (
-                <div className="flex items-center justify-between text-red-400">
+                <div className="flex items-center justify-between text-destructive">
                   <span>Taxa do cartao (vendedor)</span>
                   <span>-{formatCurrency(sale.feeAmount)}</span>
                 </div>
               ) : null}
 
               {Number(sale.freightAmount) > 0 ? (
-                <div className="flex items-center justify-between text-red-400">
+                <div className="flex items-center justify-between text-destructive">
                   <span>Frete</span>
                   <span>-{formatCurrency(sale.freightAmount)}</span>
                 </div>

@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-14T12:43:00Z",
+  "title": "Design System: Polaris",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Vermelho Polaris",
+        "canonical": "oklch(0.505 0.213 27.518)"
+      },
+      "secondary": {
+        "role": "secondary",
+        "displayName": "Roxo Escuro",
+        "canonical": "oklch(0.967 0.001 286.375)"
+      },
+      "background": {
+        "role": "neutral",
+        "displayName": "Background",
+        "canonical": "oklch(1 0 0)"
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Grandes números ou hero states"
+      }
+    },
+    "shadows": [],
+    "motion": [
+      {
+        "name": "ease-out-strong",
+        "value": "cubic-bezier(0.23, 1, 0.32, 1)",
+        "purpose": "Strong ease-out for UI interactions"
+      }
+    ],
+    "breakpoints": []
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Ação principal, usada de forma controlada.",
+      "html": "<button class=\"ds-btn-primary\">Salvar Alterações</button>",
+      "css": ".ds-btn-primary { background: oklch(0.505 0.213 27.518); color: oklch(0.971 0.013 17.38); padding: 8px 16px; border-radius: calc(0.625rem * 0.8); border: none; font-weight: 500; font-family: sans-serif; transition: background 0.2s cubic-bezier(0.23, 1, 0.32, 1); cursor: pointer; } .ds-btn-primary:hover { opacity: 0.9; } .ds-btn-primary:focus-visible { outline: 2px solid oklch(0.708 0 0); outline-offset: 2px; }"
+    },
+    {
+      "name": "Card Container",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Container principal sem sombras, usa apenas borda.",
+      "html": "<div class=\"ds-card\"><h4>Receita Recorrente</h4><p>R$ 15.000,00</p></div>",
+      "css": ".ds-card { background: oklch(1 0 0); color: oklch(0.145 0 0); border: 1px solid oklch(0.922 0 0); border-radius: 0.625rem; padding: 24px; font-family: sans-serif; } .ds-card h4 { margin: 0 0 8px 0; font-weight: 500; } .ds-card p { margin: 0; font-family: monospace; font-size: 1.5rem; font-weight: 600; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "O Minimalismo Essencial",
+    "overview": "A plataforma atua de forma silenciosa e focada, projetada para que os dados sejam os protagonistas. A interface abandona decorações desnecessárias em favor de clareza, transparência e elegância premium. O objetivo é criar um ambiente confortável para uso diário prolongado, onde a estética obedece à usabilidade. Rejeita-se categoricamente qualquer traço de \"slop de IA\", gradientes confusos ou ruídos visuais.",
+    "keyCharacteristics": [
+      "Foco absoluto na leitura dos dados.",
+      "Design plano (flat) e estruturado por bordas suaves.",
+      "Densidade refinada para uso constante."
+    ],
+    "rules": [
+      {
+        "name": "The Silence Rule",
+        "body": "A interface em si deve ser predominantemente neutra e monocromática. A cor primária deve ocupar menos de 5% da superfície visual.",
+        "section": "colors"
+      },
+      {
+        "name": "The Data-First Rule",
+        "body": "Utilize a variante monoespaçada para exibir dinheiro, SKUs ou dados contábeis.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat-By-Default Rule",
+        "body": "Superfícies não devem flutuar. Utilize bordas para definir contornos, nunca box-shadow.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do manter a densidade visual alta para facilitar o trabalho sem uso de 'white space' excessivo de landing pages.",
+      "Do utilizar componentes contidos, com foco total no conteúdo ao invés da casca visual.",
+      "Do aplicar o 'Vermelho Polaris' apenas para guiar as interações e reforçar as ações principais."
+    ],
+    "donts": [
+      "Don't utilizar designs genéricos gerados por IA ('AI slop').",
+      "Don't usar gradientes exagerados, nem em textos nem em fundos.",
+      "Don't adicionar 'side-stripe borders' (bordas laterais coloridas superdimensionadas) em alertas ou componentes.",
+      "Don't empilhar elementos usando box-shadow. O Polaris adota um design flat baseado em bordas sutis."
+    ]
+  }
+}

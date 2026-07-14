@@ -97,7 +97,7 @@ const OrganizationsContent = async ({
         </search>
       </div>
 
-      <div className="rounded-xl border border-border bg-card shadow-xs">
+      <div className="rounded-xl border border-border bg-card">
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">

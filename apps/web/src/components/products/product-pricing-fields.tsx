@@ -70,7 +70,7 @@ export function ProductPriceSuggestionGuide({
             <span className="text-[10px] text-muted-foreground uppercase leading-none tracking-wider">
               Minimo
             </span>
-            <span className="text-[9px] text-muted-foreground/50 tabular-nums">
+            <span className="text-[9px] text-muted-foreground tabular-nums">
               {suggestion.minimumMarkupPercent}%
             </span>
           </div>
@@ -87,7 +87,7 @@ export function ProductPriceSuggestionGuide({
             <span className="text-[10px] text-muted-foreground uppercase leading-none tracking-wider">
               Ideal
             </span>
-            <span className="text-[9px] text-muted-foreground/50 tabular-nums">
+            <span className="text-[9px] text-muted-foreground tabular-nums">
               {suggestion.idealMarkupPercent}%
             </span>
           </div>

@@ -28,7 +28,7 @@ export default function GlobalError({
   return (
     <html lang="pt-BR">
       <body className="flex min-h-screen items-center justify-center bg-background px-6 py-16 text-foreground">
-        <div className="w-full max-w-2xl rounded-3xl border border-border/60 bg-card p-8 shadow-sm">
+        <div className="w-full max-w-2xl rounded-xl border border-border/60 bg-card p-8">
           <div className="mb-6 inline-flex size-12 items-center justify-center rounded-full bg-destructive/10 text-destructive">
             <HugeiconsIcon icon={Alert02Icon} size={24} strokeWidth={2} />
           </div>

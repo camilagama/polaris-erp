@@ -114,7 +114,7 @@ const AdminDashboard = async () => {
 
   return (
     <section className="mx-auto grid w-full max-w-6xl gap-6 px-6 py-8">
-      <Card className="fade-in-0 slide-in-from-bottom-2 animate-in duration-300">
+      <Card>
         <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
           <div>
             <CardTitle className="text-lg">Console operacional</CardTitle>
@@ -133,7 +133,7 @@ const AdminDashboard = async () => {
       </Card>
 
       <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
-        {summaryCards.map((card, index) => {
+        {summaryCards.map((card) => {
           const cardContent = (
             <CardContent className="p-4">
               <h2 className="font-medium text-muted-foreground text-sm tracking-normal">
@@ -155,25 +155,12 @@ const AdminDashboard = async () => {
               key={card.label}
               prefetch={false}
             >
-              <Card
-                className="fade-in-0 slide-in-from-bottom-2 animate-in transition-all duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] hover:border-muted-foreground/30 active:scale-[0.98]"
-                style={{
-                  animationDelay: `${index * 50}ms`,
-                  animationFillMode: "both",
-                }}
-              >
+              <Card className="transition-all hover:border-muted-foreground/30 active:scale-[0.98]">
                 {cardContent}
               </Card>
             </Link>
           ) : (
-            <Card
-              className="fade-in-0 slide-in-from-bottom-2 animate-in opacity-70 duration-300"
-              key={card.label}
-              style={{
-                animationDelay: `${index * 50}ms`,
-                animationFillMode: "both",
-              }}
-            >
+            <Card className="opacity-70" key={card.label}>
               {cardContent}
             </Card>
           );
@@ -181,10 +168,7 @@ const AdminDashboard = async () => {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[0.8fr_1.2fr_1fr]">
-        <Card
-          className="fade-in-0 slide-in-from-bottom-2 animate-in fill-mode-both duration-300"
-          style={{ animationDelay: "300ms" }}
-        >
+        <Card>
           <CardHeader>
             <CardTitle className="text-lg">Status operacional</CardTitle>
           </CardHeader>
@@ -209,10 +193,7 @@ const AdminDashboard = async () => {
           </CardContent>
         </Card>
 
-        <Card
-          className="fade-in-0 slide-in-from-bottom-2 animate-in fill-mode-both duration-300"
-          style={{ animationDelay: "350ms" }}
-        >
+        <Card>
           <CardHeader>
             <CardTitle className="text-lg">Eventos recentes</CardTitle>
           </CardHeader>
@@ -247,10 +228,7 @@ const AdminDashboard = async () => {
           </CardContent>
         </Card>
 
-        <Card
-          className="fade-in-0 slide-in-from-bottom-2 flex animate-in flex-col fill-mode-both duration-300"
-          style={{ animationDelay: "400ms" }}
-        >
+        <Card className="flex flex-col">
           <CardHeader>
             <CardTitle className="text-lg">Desempenho Geral</CardTitle>
             <CardDescription>

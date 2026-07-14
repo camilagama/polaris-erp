@@ -17,11 +17,9 @@ interface Insight {
 }
 
 const containerClassBySeverity: Record<InsightSeverity, string> = {
-  negative:
-    "bg-destructive/8 text-destructive dark:bg-destructive/12 border border-destructive/20",
+  negative: "bg-destructive/8 text-destructive border border-destructive/20",
   neutral: "bg-muted/50 text-muted-foreground border border-border/50",
-  positive:
-    "bg-emerald-500/8 text-emerald-600 dark:bg-emerald-500/12 dark:text-emerald-400 border border-emerald-500/20",
+  positive: "bg-emerald-500/8 text-emerald-600 border border-emerald-500/20",
 };
 
 const dotClassBySeverity: Record<InsightSeverity, string> = {

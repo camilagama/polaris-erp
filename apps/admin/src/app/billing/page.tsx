@@ -51,34 +51,37 @@ const BillingContent = async () => {
   return (
     <section className="mx-auto grid w-full max-w-6xl gap-6 px-6 py-8">
       <div>
-        <Link className="text-sm text-zinc-500 hover:text-zinc-200" href="/">
+        <Link
+          className="text-muted-foreground text-sm hover:text-foreground"
+          href="/"
+        >
           Voltar
         </Link>
         <h1 className="mt-2 font-semibold text-2xl tracking-normal">Billing</h1>
-        <p className="mt-1 text-sm text-zinc-400">
+        <p className="mt-1 text-muted-foreground text-sm">
           Estado canonico de assinaturas, invoices e acesso derivado.
         </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-          <h2 className="font-medium text-sm text-zinc-400 tracking-normal">
+        <div className="rounded-lg border border-border bg-card p-4">
+          <h2 className="font-medium text-muted-foreground text-sm tracking-normal">
             Assinaturas
           </h2>
           <p className="mt-3 font-semibold text-3xl tracking-normal">
             {overview.totals.subscriptions}
           </p>
         </div>
-        <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-          <h2 className="font-medium text-sm text-zinc-400 tracking-normal">
+        <div className="rounded-lg border border-border bg-card p-4">
+          <h2 className="font-medium text-muted-foreground text-sm tracking-normal">
             Com acesso
           </h2>
           <p className="mt-3 font-semibold text-3xl tracking-normal">
             {overview.totals.activeAccessSubscriptions}
           </p>
         </div>
-        <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-          <h2 className="font-medium text-sm text-zinc-400 tracking-normal">
+        <div className="rounded-lg border border-border bg-card p-4">
+          <h2 className="font-medium text-muted-foreground text-sm tracking-normal">
             Invoices abertas
           </h2>
           <p className="mt-3 font-semibold text-3xl tracking-normal">
@@ -87,31 +90,31 @@ const BillingContent = async () => {
         </div>
       </div>
 
-      <section className="overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900">
-        <div className="border-zinc-800 border-b px-4 py-3">
+      <section className="overflow-hidden rounded-lg border border-border bg-card">
+        <div className="border-border border-b px-4 py-3">
           <h2 className="font-semibold text-lg tracking-normal">
             Assinaturas recentes
           </h2>
         </div>
         {overview.subscriptions.length === 0 ? (
-          <p className="px-4 py-8 text-sm text-zinc-500">
+          <p className="px-4 py-8 text-muted-foreground text-sm">
             Nenhuma assinatura registrada.
           </p>
         ) : (
           overview.subscriptions.map((subscription) => (
             <div
-              className="grid gap-3 border-zinc-800 border-b px-4 py-3 text-sm md:grid-cols-[1fr_0.6fr_0.6fr_0.7fr_1.3fr]"
+              className="grid gap-3 border-border border-b px-4 py-3 text-sm md:grid-cols-[1fr_0.6fr_0.6fr_0.7fr_1.3fr]"
               key={subscription.organizationId}
             >
               <span className="min-w-0">
-                <span className="block truncate font-medium text-zinc-100">
+                <span className="block truncate font-medium text-foreground">
                   {formatTenantLabel(subscription)}
                 </span>
-                <span className="block truncate text-zinc-500">
+                <span className="block truncate text-muted-foreground">
                   {subscription.organizationId} · {subscription.planName}
                 </span>
               </span>
-              <span className="text-zinc-300">{subscription.status}</span>
+              <span className="text-foreground">{subscription.status}</span>
               <span
                 className={
                   subscription.hasAccess
@@ -121,7 +124,7 @@ const BillingContent = async () => {
               >
                 {subscription.hasAccess ? "Acesso ativo" : "Sem acesso"}
               </span>
-              <span className="text-zinc-400">
+              <span className="text-muted-foreground">
                 {formatDateTime(subscription.currentPeriodEnd)}
               </span>
               <form
@@ -140,7 +143,7 @@ const BillingContent = async () => {
                 />
                 <input
                   aria-label="Motivo da alteracao de billing"
-                  className="min-h-9 rounded-md border border-zinc-700 bg-zinc-950 px-3 text-xs text-zinc-100 outline-none placeholder:text-zinc-600"
+                  className="min-h-9 rounded-md border border-border bg-background px-3 text-foreground text-xs outline-none placeholder:text-muted-foreground"
                   name="reason"
                   placeholder={
                     subscription.hasAccess
@@ -152,13 +155,13 @@ const BillingContent = async () => {
                 {!subscription.hasAccess && (
                   <input
                     aria-label="Referencia da evidencia de pagamento"
-                    className="min-h-9 rounded-md border border-zinc-700 bg-zinc-950 px-3 text-xs text-zinc-100 outline-none placeholder:text-zinc-600"
+                    className="min-h-9 rounded-md border border-border bg-background px-3 text-foreground text-xs outline-none placeholder:text-muted-foreground"
                     name="paymentEvidenceReference"
                     placeholder="Referencia do pagamento"
                     required
                   />
                 )}
-                <label className="flex items-center gap-2 text-xs text-zinc-500">
+                <label className="flex items-center gap-2 text-muted-foreground text-xs">
                   <input
                     className="size-3"
                     name="confirm"
@@ -168,7 +171,7 @@ const BillingContent = async () => {
                   Confirmo a alteracao manual
                 </label>
                 <button
-                  className="inline-flex min-h-9 items-center justify-center rounded-md border border-zinc-700 px-3 font-medium text-xs text-zinc-100 hover:bg-zinc-800"
+                  className="inline-flex min-h-9 items-center justify-center rounded-md border border-border px-3 font-medium text-foreground text-xs hover:bg-muted"
                   type="submit"
                 >
                   {subscription.hasAccess ? "Bloquear acesso" : "Ativar acesso"}
@@ -179,35 +182,35 @@ const BillingContent = async () => {
         )}
       </section>
 
-      <section className="overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900">
-        <div className="border-zinc-800 border-b px-4 py-3">
+      <section className="overflow-hidden rounded-lg border border-border bg-card">
+        <div className="border-border border-b px-4 py-3">
           <h2 className="font-semibold text-lg tracking-normal">
             Invoices recentes
           </h2>
         </div>
         {overview.invoices.length === 0 ? (
-          <p className="px-4 py-8 text-sm text-zinc-500">
+          <p className="px-4 py-8 text-muted-foreground text-sm">
             Nenhuma invoice registrada.
           </p>
         ) : (
           overview.invoices.map((invoice) => (
             <div
-              className="grid gap-3 border-zinc-800 border-b px-4 py-3 text-sm md:grid-cols-[1fr_0.7fr_0.7fr_0.7fr]"
+              className="grid gap-3 border-border border-b px-4 py-3 text-sm md:grid-cols-[1fr_0.7fr_0.7fr_0.7fr]"
               key={`${invoice.organizationId}-${invoice.createdAt}`}
             >
               <span className="min-w-0">
-                <span className="block truncate font-medium text-zinc-100">
+                <span className="block truncate font-medium text-foreground">
                   {formatTenantLabel(invoice)}
                 </span>
-                <span className="block truncate text-zinc-500">
+                <span className="block truncate text-muted-foreground">
                   {invoice.organizationId}
                 </span>
               </span>
-              <span className="text-zinc-300">{invoice.status}</span>
-              <span className="text-zinc-300">
+              <span className="text-foreground">{invoice.status}</span>
+              <span className="text-foreground">
                 {formatMoney(invoice.totalCents)}
               </span>
-              <span className="text-zinc-400">
+              <span className="text-muted-foreground">
                 {formatDateTime(invoice.createdAt)}
               </span>
             </div>
@@ -220,13 +223,13 @@ const BillingContent = async () => {
 
 const BillingFallback = () => (
   <section className="mx-auto w-full max-w-6xl px-6 py-8">
-    <p className="text-sm text-zinc-500">Carregando billing...</p>
+    <p className="text-muted-foreground text-sm">Carregando billing...</p>
   </section>
 );
 
 export default function BillingPage() {
   return (
-    <main className="min-h-screen bg-zinc-950 text-zinc-100">
+    <main className="min-h-screen bg-background text-foreground">
       <Suspense fallback={<BillingFallback />}>
         <BillingContent />
       </Suspense>

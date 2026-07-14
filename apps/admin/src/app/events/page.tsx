@@ -42,87 +42,90 @@ const EventsContent = async () => {
   return (
     <section className="mx-auto grid w-full max-w-6xl gap-6 px-6 py-8">
       <div>
-        <Link className="text-sm text-zinc-500 hover:text-zinc-200" href="/">
+        <Link
+          className="text-muted-foreground text-sm hover:text-foreground"
+          href="/"
+        >
           Voltar
         </Link>
         <h1 className="mt-2 font-semibold text-2xl tracking-normal">Eventos</h1>
-        <p className="mt-1 text-sm text-zinc-400">
+        <p className="mt-1 text-muted-foreground text-sm">
           Observabilidade basica de outbox e webhooks capturados.
         </p>
       </div>
 
-      <section className="overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900">
-        <div className="border-zinc-800 border-b px-4 py-3">
+      <section className="overflow-hidden rounded-lg border border-border bg-card">
+        <div className="border-border border-b px-4 py-3">
           <h2 className="font-semibold text-lg tracking-normal">Outbox</h2>
         </div>
         {outbox.length === 0 ? (
-          <p className="px-4 py-8 text-sm text-zinc-500">
+          <p className="px-4 py-8 text-muted-foreground text-sm">
             Nenhum evento de outbox.
           </p>
         ) : (
           outbox.map((event) => (
             <div
-              className="grid gap-3 border-zinc-800 border-b px-4 py-3 text-sm md:grid-cols-[1fr_0.8fr_0.7fr_0.8fr_auto]"
+              className="grid gap-3 border-border border-b px-4 py-3 text-sm md:grid-cols-[1fr_0.8fr_0.7fr_0.8fr_auto]"
               key={event.id}
             >
               <span className="min-w-0">
-                <span className="block truncate font-medium text-zinc-100">
+                <span className="block truncate font-medium text-foreground">
                   {event.topic}
                 </span>
-                <span className="block truncate text-zinc-500">
+                <span className="block truncate text-muted-foreground">
                   {event.eventType}
                 </span>
               </span>
-              <span className="text-zinc-300">{event.status}</span>
-              <span className="text-zinc-300">{event.attempts}</span>
-              <span className="text-zinc-400">
+              <span className="text-foreground">{event.status}</span>
+              <span className="text-foreground">{event.attempts}</span>
+              <span className="text-muted-foreground">
                 {formatDateTime(event.availableAt)}
               </span>
               {canRetry(event.status) ? (
                 <form action={retryOutboxEventAction}>
                   <input name="eventId" type="hidden" value={event.id} />
                   <button
-                    className="rounded-md border border-zinc-700 px-3 py-2 font-medium text-sm text-zinc-100 hover:border-zinc-500"
+                    className="rounded-md border border-border px-3 py-2 font-medium text-foreground text-sm hover:border-muted-foreground"
                     type="submit"
                   >
                     Retry
                   </button>
                 </form>
               ) : (
-                <span className="text-xs text-zinc-600">Sem acao</span>
+                <span className="text-muted-foreground text-xs">Sem acao</span>
               )}
             </div>
           ))
         )}
       </section>
 
-      <section className="overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900">
-        <div className="border-zinc-800 border-b px-4 py-3">
+      <section className="overflow-hidden rounded-lg border border-border bg-card">
+        <div className="border-border border-b px-4 py-3">
           <h2 className="font-semibold text-lg tracking-normal">Webhooks</h2>
         </div>
         {webhooks.length === 0 ? (
-          <p className="px-4 py-8 text-sm text-zinc-500">
+          <p className="px-4 py-8 text-muted-foreground text-sm">
             Nenhum webhook capturado.
           </p>
         ) : (
           webhooks.map((event) => (
             <div
-              className="grid gap-3 border-zinc-800 border-b px-4 py-3 text-sm md:grid-cols-[1fr_1fr_0.7fr_0.8fr]"
+              className="grid gap-3 border-border border-b px-4 py-3 text-sm md:grid-cols-[1fr_1fr_0.7fr_0.8fr]"
               key={event.id}
             >
               <span className="min-w-0">
-                <span className="block truncate font-medium text-zinc-100">
+                <span className="block truncate font-medium text-foreground">
                   {event.provider}
                 </span>
-                <span className="block truncate text-zinc-500">
+                <span className="block truncate text-muted-foreground">
                   {event.providerEventId}
                 </span>
               </span>
-              <span className="truncate text-zinc-400">
+              <span className="truncate text-muted-foreground">
                 {event.correlationId}
               </span>
-              <span className="text-zinc-300">{event.status}</span>
-              <span className="text-zinc-400">
+              <span className="text-foreground">{event.status}</span>
+              <span className="text-muted-foreground">
                 {formatDateTime(event.receivedAt)}
               </span>
             </div>
@@ -135,13 +138,13 @@ const EventsContent = async () => {
 
 const EventsFallback = () => (
   <section className="mx-auto w-full max-w-6xl px-6 py-8">
-    <p className="text-sm text-zinc-500">Carregando eventos...</p>
+    <p className="text-muted-foreground text-sm">Carregando eventos...</p>
   </section>
 );
 
 export default function EventsPage() {
   return (
-    <main className="min-h-screen bg-zinc-950 text-zinc-100">
+    <main className="min-h-screen bg-background text-foreground">
       <Suspense fallback={<EventsFallback />}>
         <EventsContent />
       </Suspense>

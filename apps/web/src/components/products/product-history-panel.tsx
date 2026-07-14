@@ -41,7 +41,7 @@ export function ProductHistoryPanel({
   );
 
   return (
-    <Card className="border-border/50 bg-muted/10 shadow-sm">
+    <Card className="border-border/50 bg-muted/10">
       <CardHeader className="pb-4">
         <CardTitle className="text-base">Históricos</CardTitle>
       </CardHeader>

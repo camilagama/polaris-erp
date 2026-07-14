@@ -19,7 +19,7 @@ export default function AppError({
   };
   return (
     <div className="mx-auto flex min-h-[60svh] max-w-2xl items-center justify-center p-6">
-      <div className="w-full rounded-3xl border border-border/60 bg-card p-8 shadow-sm">
+      <div className="w-full rounded-xl border border-border/60 bg-card p-8">
         <div className="mb-6 inline-flex size-12 items-center justify-center rounded-full bg-destructive/10 text-destructive">
           <HugeiconsIcon icon={Alert02Icon} size={24} strokeWidth={2} />
         </div>

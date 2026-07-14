@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 export default function NotFound() {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-2xl items-center px-6 py-16">
-      <div className="w-full rounded-3xl border border-border/60 bg-card p-8 shadow-sm">
+      <div className="w-full rounded-xl border border-border/60 bg-card p-8">
         <div className="mb-6 inline-flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
           <HugeiconsIcon icon={Search02Icon} size={24} strokeWidth={2} />
         </div>

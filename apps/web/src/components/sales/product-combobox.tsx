@@ -55,7 +55,7 @@ export function ProductCombobox({
           aria-expanded={open}
           aria-label={label}
           className={cn(
-            "flex h-8 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-1 text-left text-xs shadow-xs transition-colors",
+            "flex h-8 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-1 text-left text-xs transition-colors",
             "hover:bg-accent hover:text-accent-foreground",
             "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
             "disabled:cursor-not-allowed disabled:opacity-50",

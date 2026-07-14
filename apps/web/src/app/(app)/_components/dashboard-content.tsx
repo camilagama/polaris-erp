@@ -105,7 +105,7 @@ export async function DashboardContent({
       <InsightBanner metrics={metrics} />
 
       <div
-        className={`fade-in-0 slide-in-from-bottom-2 grid animate-in gap-4 duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] md:grid-cols-2 ${goalsPayload.active.length > 0 ? "lg:grid-cols-3" : "lg:grid-cols-2"}`}
+        className={`grid gap-4 md:grid-cols-2 ${goalsPayload.active.length > 0 ? "lg:grid-cols-3" : "lg:grid-cols-2"}`}
       >
         <div className="flex h-full flex-col" style={layoutContainmentStyle}>
           <SalesContributionGraphCard
@@ -152,14 +152,11 @@ export async function DashboardContent({
       </div>
 
       <div className={`grid gap-4 md:grid-cols-2 ${bottomGridCols}`}>
-        {summaryCards.map((card, index) => (
+        {summaryCards.map((card) => (
           <Card
-            className="fade-in-0 slide-in-from-bottom-2 flex h-full animate-in flex-col justify-center fill-mode-both duration-300 ease-[cubic-bezier(0.23,1,0.32,1)]"
+            className="flex h-full flex-col justify-center"
             key={card.id}
-            style={{
-              ...layoutContainmentStyle,
-              animationDelay: `${100 + index * 50}ms`,
-            }}
+            style={layoutContainmentStyle}
           >
             {card.id !== "revenue" && (
               <CardHeader className="gap-1">
@@ -234,11 +231,8 @@ export async function DashboardContent({
       </div>
 
       <div
-        className="fade-in-0 slide-in-from-bottom-2 grid animate-in gap-4 fill-mode-both duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] xl:grid-cols-[1.35fr_0.95fr]"
-        style={{
-          ...deferredAnalyticsSectionStyle,
-          animationDelay: "250ms",
-        }}
+        className="grid gap-4 xl:grid-cols-[1.35fr_0.95fr]"
+        style={deferredAnalyticsSectionStyle}
       >
         <Card
           className="flex h-full flex-col justify-center"
@@ -295,7 +289,7 @@ export async function DashboardContent({
                           href={`/produtos/${product.id}`}
                           key={product.id}
                         >
-                          <div className="relative flex size-8 items-center justify-center overflow-hidden rounded-lg border border-border/40 bg-muted/10 text-muted-foreground/50 ring-1 ring-foreground/[0.06] dark:ring-white/[0.08]">
+                          <div className="relative flex size-8 items-center justify-center overflow-hidden rounded-lg border border-border/40 bg-muted/10 text-muted-foreground ring-1 ring-foreground/[0.06]">
                             {imageUrl ? (
                               <Image
                                 alt={product.name}

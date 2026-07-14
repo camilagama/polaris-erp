@@ -184,10 +184,7 @@ export function SalesContributionGraphCard({
   return (
     <Card className={cn("flex flex-col justify-center", className)}>
       <CardContent className="flex flex-col gap-2.5">
-        <div
-          className="motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 w-full motion-safe:animate-in motion-safe:duration-500"
-          ref={containerRef}
-        >
+        <div className="w-full" ref={containerRef}>
           {visibleData && visibleData.activities.length > 0 && (
             <TooltipProvider delayDuration={200}>
               <ContributionGraph
@@ -222,18 +219,15 @@ export function SalesContributionGraphCard({
                             <ContributionGraphBlock
                               activity={activity}
                               aria-label={`${longDate}: ${formatCurrency(sold)}, ${salesCount} vendas, ${levelBandLabel(activity.level)}`}
-                              className="motion-safe:fade-in-0 transition-opacity hover:opacity-80 motion-safe:animate-in motion-safe:duration-300"
+                              className="transition-opacity hover:opacity-80"
                               dayIndex={dayIndex}
-                              style={{
-                                animationDelay: `${Math.min(weekIndex * 14 + dayIndex * 10, 280)}ms`,
-                              }}
                               weekIndex={weekIndex}
                             />
                           </g>
                         </TooltipTrigger>
                         <TooltipContent
                           align="center"
-                          className="grid min-w-32 items-start gap-1.5 rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-foreground text-xs/relaxed shadow-xl [&>svg]:hidden"
+                          className="grid min-w-32 items-start gap-1.5 rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-foreground text-xs/relaxed [&>svg]:hidden"
                           collisionPadding={12}
                           hideArrow
                           side="top"

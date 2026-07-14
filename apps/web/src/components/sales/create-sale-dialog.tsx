@@ -647,7 +647,7 @@ export function CreateSaleDialog({
         <Button type="button">Nova venda</Button>
       </DialogTrigger>
       <DialogContent
-        className="flex h-[100svh] max-h-[100svh] w-screen max-w-none flex-col overflow-hidden rounded-none p-0 sm:h-auto sm:max-h-[90vh] sm:max-w-5xl sm:rounded-3xl"
+        className="flex h-[100svh] max-h-[100svh] w-screen max-w-none flex-col overflow-hidden rounded-none p-0 sm:h-auto sm:max-h-[90vh] sm:max-w-5xl sm:rounded-xl"
         onInteractOutside={(e) => e.preventDefault()}
       >
         <div className="border-border/40 border-b px-6 py-4">
@@ -887,7 +887,7 @@ export function CreateSaleDialog({
                         <InputGroupText className="text-xs">R$</InputGroupText>
                       </InputGroupAddon>
                       <InputGroupInput
-                        className="h-8 text-right text-sm placeholder:text-muted-foreground/50"
+                        className="h-8 text-right text-sm placeholder:text-muted-foreground"
                         id="sale-freight"
                         inputMode="numeric"
                         onChange={(event) =>
@@ -912,7 +912,7 @@ export function CreateSaleDialog({
                         <InputGroupText className="text-xs">R$</InputGroupText>
                       </InputGroupAddon>
                       <InputGroupInput
-                        className="h-8 text-right text-sm placeholder:text-muted-foreground/50"
+                        className="h-8 text-right text-sm placeholder:text-muted-foreground"
                         id="sale-additional"
                         inputMode="numeric"
                         onChange={(event) =>
@@ -937,7 +937,7 @@ export function CreateSaleDialog({
                         <InputGroupText className="text-xs">R$</InputGroupText>
                       </InputGroupAddon>
                       <InputGroupInput
-                        className="h-8 text-right text-sm placeholder:text-muted-foreground/50"
+                        className="h-8 text-right text-sm placeholder:text-muted-foreground"
                         id="sale-discount"
                         inputMode="numeric"
                         onChange={(event) =>
@@ -975,7 +975,7 @@ export function CreateSaleDialog({
                 </div>
 
                 {paymentMethod === "card" && sellerFeeAmount > 0 ? (
-                  <div className="flex items-center justify-between text-red-400 text-sm">
+                  <div className="flex items-center justify-between text-destructive text-sm">
                     <span className="font-medium">
                       Taxa do cartao (vendedor)
                     </span>
@@ -986,7 +986,7 @@ export function CreateSaleDialog({
                 ) : null}
 
                 {parsedFreightAmount > 0 ? (
-                  <div className="flex items-center justify-between text-red-400 text-sm">
+                  <div className="flex items-center justify-between text-destructive text-sm">
                     <span className="font-medium">Frete</span>
                     <span className="font-medium">
                       -{formatCurrency(parsedFreightAmount)}

@@ -33,7 +33,7 @@ export default async function ProdutoDetalhePage(
     <div className="flex flex-col gap-6 p-4 pb-20 sm:p-6 sm:pb-6">
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
         <div className="flex flex-col gap-6 xl:col-span-2">
-          <Card className="border-border/50 shadow-sm">
+          <Card className="border-border/50">
             <CardContent className="pt-6">
               <div className="flex flex-col gap-6 sm:flex-row">
                 <div className="size-24 shrink-0 overflow-hidden rounded-lg border border-border/50 bg-muted/30 sm:size-32">
@@ -101,7 +101,7 @@ export default async function ProdutoDetalhePage(
             </CardContent>
           </Card>
 
-          <Card className="border-border/50 shadow-sm">
+          <Card className="border-border/50">
             <CardHeader className="flex flex-col justify-between gap-2 pb-4 sm:flex-row sm:items-center">
               <CardTitle className="text-base">Vendas do Produto</CardTitle>
               <div className="flex gap-4 text-sm">
@@ -131,7 +131,7 @@ export default async function ProdutoDetalhePage(
         </div>
 
         <div className="flex flex-col gap-6">
-          <Card className="border-border/50 bg-muted/10 shadow-sm">
+          <Card className="border-border/50 bg-muted/10">
             <CardHeader className="pb-4">
               <CardTitle className="text-base">
                 Indicadores Financeiros
