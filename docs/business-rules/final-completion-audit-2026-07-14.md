@@ -1,6 +1,6 @@
 # Auditoria final de conclusão da fase de análise
 
-**Data:** 2026-07-14. **Status:** fase de descoberta, pesquisa, debate e norma concluída; implementação e gates externos continuam separados.
+**Data:** 2026-07-14. **Status histórico:** supersedido pela norma v1.2.0 e pelas decisões DEC-BR-064..085 em [research-decision-waves-2026-07-14.md](research-decision-waves-2026-07-14.md). Implementação e gates externos continuam separados.
 
 ## Requisitos concluídos
 

@@ -11,7 +11,7 @@
 5. Regras substituídas permanecem com status `deprecated` ou `superseded`; não são renumeradas.
 6. Incidentes devem referenciar regra/invariante violada e registrar se a proteção faltou no app, banco, UI ou operação.
 7. Um check documental deve impedir links quebrados e exigir atualização da matriz regra-versus-teste quando um domínio comportamental for alterado.
-8. O registro canônico usa `approved`, `approved_with_gate`, `delegated`, `deferred`, `deprecated` ou `superseded`; DEC-BR-059..063 são `delegated` e aprovadas pelo responsável de produto.
+8. O registro canônico usa `approved`, `approved_with_gate`, `delegated`, `deferred`, `deprecated` ou `superseded`; DEC-BR-059..063 são `delegated`, DEC-BR-064..085 são `approved`, e todas foram aprovadas pelo responsável de produto.
 
 ## Estados propostos para o ciclo de vida
 

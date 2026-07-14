@@ -1,6 +1,6 @@
-# Perfis normativos das regras
+# Perfis normativos resumidos (histórico)
 
-**Versão:** 1.1.0. **Responsável/approver:** produto, por decisões DEC-BR-001..063; DEC-BR-059..063 foram aprovadas por delegação explícita em 2026-07-14. **Origem:** decisão, código, schema, testes e pesquisa citados no inventário. **Confiança:** alta para decisão, variável para AS-IS, nunca prova ambiente promovido.
+**Versão:** 1.1.0, histórico. A fonte vigente, individual e completa é [individual-rule-profiles.md](individual-rule-profiles.md). Este arquivo preserva o resumo anterior e não substitui as fichas exigidas por DEC-BR-084.
 
 ## Campos comuns obrigatórios
 

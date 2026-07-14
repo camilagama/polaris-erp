@@ -1,8 +1,8 @@
 # Regras aprovadas
 
-**Versão:** 1.0.0  
+**Versão:** 1.2.0
 **Status:** normativa aprovada, implementação parcial.  
-**Referência:** DEC-BR-001 a DEC-BR-058.
+**Referência:** DEC-BR-001 a DEC-BR-085.
 
 ## Identidade, tenancy e acesso
 
@@ -24,7 +24,7 @@ Cada pessoa DEVE pertencer a exatamente uma organização e cada organização D
 
 ### ORG-002 — Acesso operacional e suspensão
 
-Recurso de tenant DEVE pertencer a uma única organização. Usuário só PODE operar sua própria membership. Acesso exige sessão válida, organização ativa e entitlement aplicável; papel de plataforma nunca concede papel de tenant. Suspensão administrativa é distinta de billing, bloqueia todo acesso e mutação, não redireciona para onboarding e só é alterada por ação de plataforma auditada. [DEC-BR-003, 043, 053]
+Recurso de tenant DEVE pertencer a uma única organização. Usuário só PODE operar sua própria membership. Acesso exige sessão válida, organização ativa e entitlement aplicável; papel de plataforma nunca concede papel de tenant. Suspensão administrativa é distinta de billing, bloqueia todo acesso e mutação, exibe tela própria de acesso restrito sem redirecionar para onboarding e só é alterada por ação de plataforma auditada. [DEC-BR-003, 043, 053, 081]
 
 ### RBAC-001 — Owner e suporte de plataforma
 
@@ -50,13 +50,13 @@ Free e pago mantêm os módulos operacionais, diferenciados por quota. Free perm
 
 ### SUB-001 — Inadimplência, cancelamento e encerramento
 
-Pagamento falho mantém acesso pago integral por sete dias; depois o tenant DEVE migrar automaticamente ao Free sem apagar dados. Se estiver acima de 50 produtos cadastrados, preserva consulta e bloqueia vendas/estoque até voltar ao limite por soft delete elegível. Pagamento confirmado reativa o pago automaticamente. Cancelamento voluntário migra ao Free ao fim do período já pago. [DEC-BR-011, 012, 015, 016, 019]
+Pagamento falho mantém acesso pago integral por sete dias; depois o tenant DEVE migrar automaticamente ao Free sem apagar dados. Se estiver acima de 50 produtos cadastrados, preserva consulta e bloqueia vendas/estoque até voltar ao limite por remoção lógica elegível ou reativar o pago. Pagamento confirmado reativa o pago automaticamente. Cancelamento voluntário migra ao Free ao fim do período já pago. Revogação de PIX Automático não corta período já pago e entra no mesmo relógio interno no próximo vencimento. [DEC-BR-011, 012, 015, 016, 019, 065, 069]
 
 O relógio de período/tolerância DEVE ser persistido, durável e idempotente; webhook apenas reconcilia evento válido mais novo. Encerrar organização paga bloqueia acesso imediatamente e solicita cancelamento da renovação, sem refund automático; falha do provider entra em retry/suporte, sem reativar acesso. [DEC-BR-044, 052]
 
 ### PAY-001 — Checkout e providers
 
-Upgrade é self-service após checkout e confirmação confiável. Asaas trata cartão recorrente; Woovi trata PIX automático/recorrente. Ambos são escopo de lançamento, mas PIX recorrente Woovi permanece bloqueado até validação documental, contratual e em sandbox. [DEC-BR-020, 028, 029]
+Upgrade é self-service após checkout e confirmação confiável. Asaas trata somente cartão recorrente; Woovi trata somente PIX Automático. O domínio interno usa adaptadores separados e fatos normalizados. Se PIX Automático não estiver elegível, homologado ou saudável, ele fica oculto, sem substituição por PIX manual mensal. Estorno de assinatura é exceção manual auditada, sem UI/API pública ou SLA comercial antes de política jurídica/financeira aprovada. [DEC-BR-020, 028, 029, 064, 066, 067]
 
 ### BILLING-001 — Eventos e avisos
 
@@ -64,21 +64,21 @@ Webhooks DEVEM recuperar falha pós-captura de modo durável até sucesso ou rev
 
 ### EVENT-004 — Operação de jobs
 
-Billing e webhooks DEVEM usar até cinco tentativas em 24 horas, com backoff/jitter, serialização por organização, alerta e revisão manual ao esgotar. Imagens usam até três tentativas e no máximo duas execuções por organização; falha terminal exige diagnóstico redigido e fila de revisão. [DEC-BR-062]
+Billing e webhooks DEVEM usar até cinco tentativas em 24 horas, com backoff/jitter, serialização por organização, alerta e revisão manual ao esgotar. Imagens usam até três tentativas e no máximo duas execuções por organização; falha terminal exige diagnóstico redigido e fila de revisão. Support/operator pode investigar e solicitar retry; replay que possa alterar billing ou entitlement exige aprovação de platform owner, motivo e auditoria. [DEC-BR-062, 078]
 
 ### EMAIL-002 — Estado de entrega de e-mail
 
-`email_messages` DEVE refletir `pending`, `accepted`, `delivered`, `failed`, `bounced` ou `suppressed` por evento idempotente e ordenado do provider. Retry automático de mensagem transacional só é permitido antes de existir `provider_message_id`, até três vezes em 24 horas. [DEC-BR-063]
+`email_messages` DEVE refletir `pending`, `accepted`, `delivered`, `failed`, `bounced` ou `suppressed` por evento idempotente e ordenado do provider. Retry automático de mensagem transacional só é permitido antes de existir `provider_message_id`, até três vezes em 24 horas. Após aceitação, falha, bounce ou suppression não geram retry; novo envio é manual, com motivo e auditoria. [DEC-BR-063, 080]
 
 ## Catálogo, imagens e estoque
 
 ### PRODUCT-001 — Produto e remoção
 
-Preço, custo e saldo NÃO PODEM ser negativos. Produto arquivado NÃO PODE ser vendido. Entrada atualiza custo médio, saldo e pode reativar produto arquivado. Soft delete é final, exclusivo de owner, exige estoque zero, confirmação, motivo e auditoria; remove o item da operação normal sem apagar histórico/auditoria. [DEC-BR-021 a 023, 026, 027, 054]
+Preço, custo e saldo NÃO PODEM ser negativos. Produto arquivado NÃO PODE ser vendido. Entrada atualiza custo médio, saldo e pode reativar produto arquivado. Remoção lógica é final, exclusiva de owner, exige estoque zero, confirmação, motivo e auditoria; remove o item da operação normal sem apagar histórico/auditoria e não se apresenta como lixeira recuperável. [DEC-BR-021 a 023, 026, 027, 054, 070]
 
 ### IMAGE-001 — Imagens
 
-Imagens aceitam somente JPEG, PNG ou WebP, até 5 MiB por arquivo. Free permite uma e pago até cinco por produto. Ao soft delete ou encerramento, arquivos e variantes DEVEM sair da operação e só PODEM ser apagados de forma verificável conforme retenção aprovada. [DEC-BR-013, 018, 051, 058]
+Imagens aceitam somente JPEG, PNG ou WebP, até 5 MiB por arquivo. Free permite uma e pago até cinco por produto. Staging expira após 24 horas; ambientes usam bucket ou credencial isolados e CORS por origem exata. Ao remoção lógica ou encerramento, arquivos e variantes DEVEM sair da operação e só PODEM ser apagados de forma verificável conforme retenção aprovada. [DEC-BR-013, 018, 051, 058, 079]
 
 ### STOCK-001 — Movimentos e repetição
 
@@ -112,4 +112,22 @@ Somente platform owner ativo PODE gerir grants temporários, sempre com motivo, 
 
 Solicitações de titulares entram somente por suporte, com verificação manual e trilha rastreável. Encerramento desativa acesso/operação imediatamente; não promete hard delete imediato. Não existe purge automático definitivo antes de tabela validada por categoria, fundamento, prazo, acesso em retenção e destino final. [DEC-BR-038 a 040]
 
-Incidente confirmado de dados pessoais DEVE seguir runbook, responsável, contenção, registro e comunicação regulatória aplicável. Mapa de papéis, categorias, compartilhamentos, aviso e contrato é gate de lançamento público. [DEC-BR-041, 042]
+Por finalidade, a plataforma é controladora de conta, autenticação, billing, segurança e suporte; para dados de clientes inseridos pelo tenant, atua inicialmente como operadora conforme instrução contratual, sujeito à validação jurídica. Solicitações distinguem o controlador aplicável. Incidente confirmado de dados pessoais DEVE seguir runbook, Privacy Lead, Incident Commander, suplentes, contenção, registro e comunicação regulatória aplicável. Mapa de papéis, categorias, compartilhamentos, aviso e contrato é gate de lançamento público. [DEC-BR-041, 042, 072 a 075]
+
+## Confiabilidade, observabilidade e escopo
+
+### MUTATION-001 — Mutação em rede instável
+
+UI não DEVE repetir automaticamente mutação crítica. Comando repetível DEVE ter chave idempotente persistida, estado pendente visível e consulta de resultado antes de nova tentativa. [DEC-BR-082]
+
+### OBS-001 — Telemetria operacional
+
+Eventos e métricas DEVEM ser estruturados e redigidos, correlacionados por IDs internos, e gerar alertas para billing, jobs, RLS, storage e e-mail. Payload bruto, tokens e PII desnecessária NÃO PODEM entrar em logs ou métricas. [DEC-BR-083]
+
+### RELEASE-001 — Prova promovida
+
+Release público DEVE ficar bloqueado sem prova datada de RLS, backup/restore, jobs/cron, dead-letter, domínio/webhooks de e-mail, R2/CORS/lifecycle e OAuth. Runtime tenant-facing usa role sem `BYPASSRLS`; migrations e jobs privilegiados usam conexão separada. Preview usa ambiente isolado e dados sintéticos. [DEC-BR-076, 077]
+
+### SCOPE-001 — Fronteira do lançamento
+
+O lançamento limita-se a organização individual, catálogo, estoque, vendas operacionais, metas, billing e suporte. Colaboração, fornecedores/compras, importação fiscal, refund financeiro de vendas e novas integrações exigem descoberta e decisão próprias. [DEC-BR-085]

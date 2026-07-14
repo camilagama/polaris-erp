@@ -1,5 +1,7 @@
 # Auditoria de aderência à solicitação inicial
 
+> **Nota histórica:** este retrato precede as waves de pesquisa DEC-BR-064..085 e a emissão dos perfis e da aderência individuais na norma v1.2.0. As lacunas de decisão e de documentação indicadas aqui devem ser lidas com esse recorte temporal; gates de ambiente, provider e jurídico permanecem abertos.
+
 **Status:** auditoria de completude, **não normativa**.  
 **Data:** 2026-07-14.  
 **Fonte de requisitos:** `C:\Users\Junior\.codex\attachments\4b6e67e6-7e82-4199-95c8-33370f983256\pasted-text-1.txt`.  

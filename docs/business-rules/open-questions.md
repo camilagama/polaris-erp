@@ -747,3 +747,7 @@ O produto já impõe uma meta `active` por organização, sem distinção de pla
 - **Impacto decisivo:** substitui o máximo AS-IS de 10 MiB para a implementação futura e completa a matriz de upload.
 - **Minha resposta:** **Opção A:** confirmar integralmente.
 - **Status da decisão:** aprovada em 2026-07-14. O limite é 5 MiB por imagem nos planos Free e pago.
+
+## Consolidação posterior
+
+Este arquivo preserva as perguntas e respostas históricas DEC-BR-001 a 058. DEC-BR-059 a 085 foram decididas após auditoria e pesquisa nas fontes primárias, e estão no [registro de decisões](decision-register.md) e em [decisões por waves](research-decision-waves-2026-07-14.md). Ele não é a fonte normativa vigente.

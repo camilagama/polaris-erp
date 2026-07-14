@@ -1,5 +1,7 @@
 # Auditoria de completude pós-decisões
 
+> **Nota histórica:** este relatório precede as waves DEC-BR-064..085. As decisões posteriores estão consolidadas em [research-decision-waves-2026-07-14.md](research-decision-waves-2026-07-14.md); gates externos continuam válidos.
+
 **Status:** descoberta complementar, **não normativo**.  
 **Data:** 2026-07-14.  
 **Escopo:** módulos e dependências que não receberam cobertura suficiente antes de DEC-BR-001 a DEC-BR-058. Não altera essas decisões nem afirma aderência do ambiente promovido.
