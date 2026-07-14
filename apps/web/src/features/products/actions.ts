@@ -1,7 +1,5 @@
 "use server";
 
-import { revalidatePath, updateTag } from "next/cache";
-import { getProductCategoryById } from "@/features/catalog/server";
 import {
   clearProductImageMetadata,
   getProductImageState,
@@ -27,29 +25,12 @@ import {
   writeOffProductStock,
 } from "@/features/products/server";
 import { requireAppContext } from "@/lib/app-session";
-import { buildOrganizationCacheTags } from "@/lib/cache-tags";
 import { toCurrencyString } from "@/lib/domain/currency";
-
-const revalidateCatalogViews = (organizationId: string) => {
-  revalidatePath("/produtos");
-  updateTag(buildOrganizationCacheTags(organizationId).catalog);
-};
-
-const revalidateSharedAnalytics = (organizationId: string) => {
-  revalidatePath("/produtos");
-  updateTag(buildOrganizationCacheTags(organizationId).analytics);
-};
-
-const revalidateCatalogAndAnalytics = (organizationId: string) => {
-  const tags = buildOrganizationCacheTags(organizationId);
-  revalidatePath("/produtos");
-  updateTag(tags.catalog);
-  updateTag(tags.analytics);
-};
-
-const revalidateProductDetail = (productId: string) => {
-  revalidatePath(`/produtos/${productId}`);
-};
+import {
+  productCreated,
+  productDetailsChanged,
+  productInventoryChanged,
+} from "@/lib/domain-invalidation";
 
 const firstZodErrorMessage = (error: { issues: { message: string }[] }) =>
   error.issues[0]?.message ?? "Dados invalidos.";
@@ -64,15 +45,6 @@ export async function createProductAction(input: unknown): Promise<string> {
 
   if (!result.success) {
     throw new Error(firstZodErrorMessage(result.error));
-  }
-
-  const category = await getProductCategoryById(
-    context.organizationId,
-    result.data.categoryId
-  );
-
-  if (!category) {
-    throw new Error("Selecione uma categoria valida.");
   }
 
   const productId = crypto.randomUUID();
@@ -123,8 +95,10 @@ export async function createProductAction(input: unknown): Promise<string> {
     throw error;
   }
 
-  revalidateCatalogAndAnalytics(context.organizationId);
-  revalidateProductDetail(productId);
+  productCreated({
+    organizationId: context.organizationId,
+    productId,
+  });
   return productId;
 }
 
@@ -134,15 +108,6 @@ export async function updateProductAction(id: string, input: unknown) {
 
   if (!result.success) {
     throw new Error(firstZodErrorMessage(result.error));
-  }
-
-  const category = await getProductCategoryById(
-    context.organizationId,
-    result.data.categoryId
-  );
-
-  if (!category) {
-    throw new Error("Selecione uma categoria valida.");
   }
 
   await updateProductWithPriceHistory({
@@ -155,8 +120,10 @@ export async function updateProductAction(id: string, input: unknown) {
     productId: id,
   });
 
-  revalidateCatalogViews(context.organizationId);
-  revalidateProductDetail(id);
+  productDetailsChanged({
+    organizationId: context.organizationId,
+    productId: id,
+  });
 }
 export async function replaceProductImageAction(
   id: string,
@@ -221,8 +188,10 @@ export async function replaceProductImageAction(
     });
   }
 
-  revalidateCatalogViews(context.organizationId);
-  revalidateProductDetail(id);
+  productDetailsChanged({
+    organizationId: context.organizationId,
+    productId: id,
+  });
   return { success: true } as const;
 }
 
@@ -257,8 +226,10 @@ export async function removeProductImageAction(id: string) {
     version: product.imageVersion,
   });
 
-  revalidateCatalogViews(context.organizationId);
-  revalidateProductDetail(id);
+  productDetailsChanged({
+    organizationId: context.organizationId,
+    productId: id,
+  });
   return { success: true } as const;
 }
 
@@ -279,8 +250,10 @@ export async function addProductStockAction(productId: string, input: unknown) {
     unitCost: result.data.unitCost,
   });
 
-  revalidateSharedAnalytics(context.organizationId);
-  revalidateProductDetail(productId);
+  productInventoryChanged({
+    organizationId: context.organizationId,
+    productId,
+  });
 }
 
 export async function writeOffProductStockAction(
@@ -304,8 +277,10 @@ export async function writeOffProductStockAction(
     reason: result.data.reason,
   });
 
-  revalidateSharedAnalytics(context.organizationId);
-  revalidateProductDetail(productId);
+  productInventoryChanged({
+    organizationId: context.organizationId,
+    productId,
+  });
 }
 
 export async function archiveProductAction(id: string) {
@@ -322,8 +297,10 @@ export async function archiveProductAction(id: string) {
     throw new Error("Produto nao encontrado.");
   }
 
-  revalidateCatalogViews(context.organizationId);
-  revalidateProductDetail(id);
+  productDetailsChanged({
+    organizationId: context.organizationId,
+    productId: id,
+  });
 }
 
 export async function unarchiveProductAction(id: string) {
@@ -340,6 +317,8 @@ export async function unarchiveProductAction(id: string) {
     throw new Error("Produto nao encontrado.");
   }
 
-  revalidateCatalogViews(context.organizationId);
-  revalidateProductDetail(id);
+  productDetailsChanged({
+    organizationId: context.organizationId,
+    productId: id,
+  });
 }

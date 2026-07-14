@@ -22,8 +22,8 @@ import {
   buildDashboardMetricsFromAggregates,
   resolveContributionGraphRange,
 } from "@/features/dashboard/metrics";
+import { getOperationalDateBounds } from "@/features/operations/date-bounds";
 import { buildOrganizationCacheTags } from "@/lib/cache-tags";
-import { formatDateInputValue } from "@/lib/domain/date";
 
 const MAX_DAILY_DASHBOARD_BUCKETS = 31;
 
@@ -73,52 +73,7 @@ const getDashboardSalesBucketSql = (range: DashboardSelectedRange) => {
   return sql<string>`to_char(date_trunc('month', s.occurred_on::date), 'YYYY-MM')`;
 };
 
-export const getDashboardDateBounds = async (
-  organizationId: string
-): Promise<{
-  from: string;
-  to: string;
-}> => {
-  "use cache: remote";
-  cacheTag(buildOrganizationCacheTags(organizationId).analytics);
-  cacheLife("minutes");
-
-  const [salesRows, stockEntriesRows] = await withTenantContext(
-    organizationId,
-    async (tx) => {
-      const salesResult = await tx
-        .select({
-          minOccurredOn: sql<string | null>`min(${sales.occurredOn})`,
-        })
-        .from(sales)
-        .where(eq(sales.organizationId, organizationId));
-      const stockEntriesResult = await tx
-        .select({
-          minStockedOn: sql<
-            string | null
-          >`min(${productStockEntries.stockedOn})`,
-        })
-        .from(productStockEntries)
-        .where(eq(productStockEntries.organizationId, organizationId));
-
-      return [salesResult, stockEntriesResult] as const;
-    }
-  );
-  const salesRow = salesRows[0];
-  const stockEntriesRow = stockEntriesRows[0];
-  const today = formatDateInputValue();
-  const earliestMovementDate = [
-    salesRow?.minOccurredOn,
-    stockEntriesRow?.minStockedOn,
-  ]
-    .filter((value): value is string => Boolean(value))
-    .sort((left, right) => left.localeCompare(right))[0];
-
-  return {
-    from: earliestMovementDate ?? today,
-    to: today,
-  };
-};
+export const getDashboardDateBounds = getOperationalDateBounds;
 
 const getDashboardMetricsByRange = cache(
   async (

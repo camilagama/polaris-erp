@@ -6,103 +6,28 @@ import { ProductImageFrame } from "@/components/products/product-image-frame";
 import { ProductUnitsSoldChart } from "@/components/products/product-sales-chart";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  getCatalogSettings,
-  listCategoriesWithUsage,
-} from "@/features/catalog/server";
-import { buildProductInventorySummary } from "@/features/products/history";
-import {
-  getProductByIdQuery,
-  getProductPriceChangesByProductIdQuery,
-  getProductSalesByProductIdQuery,
-  getProductStockEntriesByProductIdQuery,
-  getProductStockWriteOffsByProductIdQuery,
-} from "@/features/products/queries";
-import { getProductSalesHistoryMetrics } from "@/features/products/server";
-import { requirePageAppContext } from "@/lib/app-session";
+import { loadProductDetailPage } from "@/features/products/detail-page";
 import { formatCurrency } from "@/lib/formatters";
 
 export default async function ProdutoDetalhePage(
   props: PageProps<"/produtos/[id]">
 ) {
-  const context = await requirePageAppContext();
   const { id } = await props.params;
-  const product = await getProductByIdQuery(context.organizationId, id);
+  const pageData = await loadProductDetailPage(id);
 
-  if (!product) {
+  if (!pageData) {
     notFound();
   }
 
-  const stockEntries = await getProductStockEntriesByProductIdQuery(
-    context.organizationId,
-    id
-  );
-  const writeOffs = await getProductStockWriteOffsByProductIdQuery(
-    context.organizationId,
-    id
-  );
-  const sales = await getProductSalesByProductIdQuery(
-    context.organizationId,
-    id
-  );
-  const categories = await listCategoriesWithUsage(context.organizationId);
-  const settings = await getCatalogSettings(context.organizationId);
-  const salesMetrics = await getProductSalesHistoryMetrics(
-    context.organizationId,
-    id
-  );
-  const priceChanges = await getProductPriceChangesByProductIdQuery(
-    context.organizationId,
-    id
-  );
-
-  const averageCost = Number(product.costPrice);
-  const initialEntryId =
-    stockEntries
-      .filter(
-        (entry) =>
-          entry.stockedOn === product.purchasedOn &&
-          Math.abs(entry.createdAt.getTime() - product.createdAt.getTime()) <=
-            60_000
-      )
-      .sort(
-        (left, right) =>
-          Math.abs(left.createdAt.getTime() - product.createdAt.getTime()) -
-          Math.abs(right.createdAt.getTime() - product.createdAt.getTime())
-      )[0]?.id ?? null;
-  const inventorySummary = buildProductInventorySummary({
+  const {
     averageCost,
-    currentStock: product.stock,
-    entries: stockEntries.map((entry) => ({
-      createdAt: entry.createdAt.toISOString(),
-      date: entry.stockedOn,
-      id: entry.id,
-      isInitial: entry.id === initialEntryId,
-      quantity: entry.quantity,
-      unitCost: Number(entry.unitCost),
-    })),
-    sales: sales.map((saleItem) => ({
-      cancelledAt: saleItem.cancelledAt
-        ? saleItem.cancelledAt.toISOString()
-        : null,
-      createdAt: saleItem.createdAt.toISOString(),
-      date: saleItem.occurredOn,
-      id: saleItem.id,
-      quantity: saleItem.quantity,
-      saleId: saleItem.saleId,
-      status: saleItem.status,
-      unitCost: Number(saleItem.unitCostSnapshot),
-    })),
-    writeOffs: writeOffs.map((writeOff) => ({
-      createdAt: writeOff.createdAt.toISOString(),
-      date: writeOff.happenedOn,
-      id: writeOff.id,
-      notes: writeOff.notes,
-      quantity: writeOff.quantity,
-      reason: writeOff.reason,
-      unitCost: Number(writeOff.unitCostSnapshot),
-    })),
-  });
+    categoriesForActions,
+    inventorySummary,
+    priceChanges,
+    product,
+    salesMetrics,
+    settings,
+  } = pageData;
 
   return (
     <div className="flex flex-col gap-6 p-4 pb-20 sm:p-6 sm:pb-6">
@@ -131,10 +56,7 @@ export default async function ProdutoDetalhePage(
                         </Link>
                       </Button>
                       <ProductDetailActions
-                        categories={categories.map((category) => ({
-                          id: category.id,
-                          name: category.name,
-                        }))}
+                        categories={categoriesForActions}
                         product={product}
                         settings={settings}
                       />

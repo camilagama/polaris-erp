@@ -1,29 +1,21 @@
 import "server-only";
 
-import {
-  auditEvents,
-  productStockEntries,
-  products,
-  saleItems,
-  sales,
-} from "@polaris/db/schema";
+import { auditEvents, products, saleItems, sales } from "@polaris/db/schema";
 import {
   type TenantTransaction,
   withTenantContext,
 } from "@polaris/db/tenant-context";
 import { and, asc, eq, gte, lte, sql } from "drizzle-orm";
-import { cacheLife, cacheTag } from "next/cache";
 import type { CardInstallmentRule } from "@/features/catalog/payment-rules";
 import { findCardInstallmentRule } from "@/features/catalog/payment-rules";
+import { getOperationalDateBounds } from "@/features/operations/date-bounds";
 import { buildSalesAnalytics } from "@/features/sales/analytics";
 import {
   buildSaleSnapshot,
   calculateSaleFinancials,
 } from "@/features/sales/calculations";
 import type { SalesAnalytics } from "@/features/sales/contracts";
-import { buildOrganizationCacheTags } from "@/lib/cache-tags";
 import { toCurrencyString } from "@/lib/domain/currency";
-import { formatDateInputValue } from "@/lib/domain/date";
 import { formatCurrency } from "@/lib/formatters";
 
 interface LockedProductRow extends Record<string, unknown> {
@@ -58,52 +50,28 @@ interface CreateSaleInput {
   paymentMethod: "card" | "pix";
 }
 
-export const getSalesDateBounds = async (
-  organizationId: string
-): Promise<{
-  from: string;
-  to: string;
-}> => {
-  "use cache: remote";
-  cacheTag(buildOrganizationCacheTags(organizationId).analytics);
-  cacheLife("minutes");
+const SALES_IDEMPOTENCY_CONSTRAINT =
+  "sales_organization_idempotency_key_unique_idx";
 
-  const [salesRows, stockEntriesRows] = await withTenantContext(
-    organizationId,
-    async (tx) => {
-      const salesResult = await tx
-        .select({
-          minOccurredOn: sql<string | null>`min(${sales.occurredOn})`,
-        })
-        .from(sales)
-        .where(eq(sales.organizationId, organizationId));
-      const stockEntriesResult = await tx
-        .select({
-          minStockedOn: sql<
-            string | null
-          >`min(${productStockEntries.stockedOn})`,
-        })
-        .from(productStockEntries)
-        .where(eq(productStockEntries.organizationId, organizationId));
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
 
-      return [salesResult, stockEntriesResult] as const;
-    }
-  );
-  const salesRow = salesRows[0];
-  const stockEntriesRow = stockEntriesRows[0];
-  const today = formatDateInputValue();
-  const earliestMovementDate = [
-    salesRow?.minOccurredOn,
-    stockEntriesRow?.minStockedOn,
-  ]
-    .filter((value): value is string => Boolean(value))
-    .sort((left, right) => left.localeCompare(right))[0];
+const isIdempotencyConflict = (error: unknown): boolean => {
+  if (!isRecord(error)) {
+    return false;
+  }
 
-  return {
-    from: earliestMovementDate ?? today,
-    to: today,
-  };
+  if (
+    error.code === "23505" &&
+    error.constraint === SALES_IDEMPOTENCY_CONSTRAINT
+  ) {
+    return true;
+  }
+
+  return isIdempotencyConflict(error.cause);
 };
+
+export const getSalesDateBounds = getOperationalDateBounds;
 
 export const getSalesAnalytics = async ({
   from,
@@ -402,6 +370,52 @@ export const createSale = async ({
 
     return createdSale.id;
   });
+
+export const createSaleOnce = async ({
+  actorUserId,
+  input,
+  loadCardInstallmentRules,
+  organizationId,
+}: {
+  actorUserId: string;
+  input: CreateSaleInput;
+  loadCardInstallmentRules: () => Promise<CardInstallmentRule[]>;
+  organizationId: string;
+}): Promise<{ created: boolean; saleId: string }> => {
+  const existingSaleId = await findExistingSaleByIdempotencyKey(
+    organizationId,
+    input.idempotencyKey
+  );
+
+  if (existingSaleId) {
+    return { created: false, saleId: existingSaleId };
+  }
+
+  try {
+    const cardInstallmentRules = await loadCardInstallmentRules();
+    const saleId = await createSale({
+      actorUserId,
+      cardInstallmentRules,
+      input,
+      organizationId,
+    });
+
+    return { created: true, saleId };
+  } catch (error) {
+    if (isIdempotencyConflict(error)) {
+      const concurrentSaleId = await findExistingSaleByIdempotencyKey(
+        organizationId,
+        input.idempotencyKey
+      );
+
+      if (concurrentSaleId) {
+        return { created: false, saleId: concurrentSaleId };
+      }
+    }
+
+    throw error;
+  }
+};
 
 export const cancelSale = async ({
   actorUserId,

@@ -3,6 +3,11 @@ import "server-only";
 import { db } from "@polaris/db";
 import { platformSupportNotes } from "@polaris/db/schema";
 import { type SQL, sql } from "drizzle-orm";
+import {
+  toIsoString,
+  toNullableString,
+  toRows,
+} from "./internal/query-results";
 import { recordPlatformAuditEvent } from "./platform-admin";
 
 const SUPPORT_NOTE_LIMIT = 20;
@@ -50,43 +55,6 @@ const getDefaultTransactionalDb = (): TransactionalDb =>
   db as unknown as TransactionalDb;
 
 const getDefaultQueryableDb = (): QueryableDb => db as unknown as QueryableDb;
-
-const toRows = (result: unknown): Record<string, unknown>[] => {
-  if (Array.isArray(result)) {
-    return result.filter(
-      (row): row is Record<string, unknown> =>
-        typeof row === "object" && row !== null
-    );
-  }
-
-  if (typeof result === "object" && result !== null && "rows" in result) {
-    const rows = (result as { rows?: unknown }).rows;
-
-    if (Array.isArray(rows)) {
-      return rows.filter(
-        (row): row is Record<string, unknown> =>
-          typeof row === "object" && row !== null
-      );
-    }
-  }
-
-  return [];
-};
-
-const toIsoString = (value: unknown): string | null => {
-  if (value instanceof Date) {
-    return value.toISOString();
-  }
-
-  if (typeof value === "string" && value.length > 0) {
-    return value;
-  }
-
-  return null;
-};
-
-const toNullableString = (value: unknown): string | null =>
-  typeof value === "string" ? value : null;
 
 const requireTarget = ({
   customerUserId,

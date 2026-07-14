@@ -3,8 +3,9 @@
 import { Search02Icon } from "@hugeicons/core-free-icons";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { DashboardDateRangeFilter } from "@/components/dashboard/dashboard-date-range-filter";
+import { usePaginatedListState } from "@/components/paginated-list-state";
 import { CreateSaleDialog } from "@/components/sales/create-sale-dialog";
 import { PaymentMethodChart } from "@/components/sales/payment-method-chart";
 import { SalesPerformanceChart } from "@/components/sales/sales-performance-chart";
@@ -100,6 +101,8 @@ const getSalesSummarySuffix = (status: SaleStatusFilter) => {
 
   return ` em vendas ${status === "completed" ? "concluidas" : "canceladas"}.`;
 };
+
+const getSaleListItemId = (sale: SaleListItem) => sale.id;
 
 function MobileAnalyticsSection({
   analytics,
@@ -260,10 +263,30 @@ export function SalesPanel({
   const canWriteSales = canRolePerform(role, "sales:write");
   const pathname = usePathname();
   const router = useRouter();
-  const [sales, setSales] = useState(initialSales);
-  const [cursor, setCursor] = useState(initialCursor);
-  const cursorRef = useRef(initialCursor);
-  const [loadingMore, setLoadingMore] = useState(false);
+  const {
+    cursor,
+    items: sales,
+    loadingMore,
+    loadMoreItems,
+  } = usePaginatedListState({
+    getItemId: getSaleListItemId,
+    initialCursor,
+    initialItems: initialSales,
+    loadMore: (currentCursor) =>
+      loadMoreSalesAction({
+        cursor: currentCursor,
+        query: appliedQuery,
+        status,
+      }),
+    onLoadError: (error) => {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Nao foi possivel carregar mais vendas."
+      );
+    },
+    resetKey: `${appliedQuery}\u0000${status}`,
+  });
   const [pending, startTransition] = useTransition();
   const [searchTerm, setSearchTerm] = useState(appliedQuery);
   const emptyStateTitle = getSalesEmptyStateTitle({
@@ -271,32 +294,6 @@ export function SalesPanel({
     status,
   });
   const summarySuffix = getSalesSummarySuffix(status);
-
-  const prevQueryRef = useRef(appliedQuery);
-  const prevStatusRef = useRef(status);
-
-  useEffect(() => {
-    if (
-      prevQueryRef.current !== appliedQuery ||
-      prevStatusRef.current !== status
-    ) {
-      setSales(initialSales);
-      setCursor(initialCursor);
-      cursorRef.current = initialCursor;
-      prevQueryRef.current = appliedQuery;
-      prevStatusRef.current = status;
-      return;
-    }
-
-    setSales((current) => {
-      const currentIds = new Set(current.map((s) => s.id));
-      const newItems = initialSales.filter((s) => !currentIds.has(s.id));
-      const serverMap = new Map(initialSales.map((s) => [s.id, s]));
-
-      const updatedCurrent = current.map((s) => serverMap.get(s.id) ?? s);
-      return [...newItems, ...updatedCurrent];
-    });
-  }, [initialSales, initialCursor, appliedQuery, status]);
 
   useEffect(() => {
     setSearchTerm(appliedQuery);
@@ -338,40 +335,6 @@ export function SalesPanel({
       router.replace(nextUrl, { scroll: false });
     });
   };
-
-  const handleLoadMore = useCallback(async () => {
-    const currentCursor = cursorRef.current;
-    if (!currentCursor || loadingMore) {
-      return;
-    }
-
-    setLoadingMore(true);
-    try {
-      const result = await loadMoreSalesAction({
-        cursor: currentCursor,
-        query: appliedQuery,
-        status,
-      });
-
-      setSales((current) => {
-        const existingIds = new Set(current.map((s) => s.id));
-        const uniqueNewItems = result.items.filter(
-          (item) => !existingIds.has(item.id)
-        );
-        return [...current, ...uniqueNewItems];
-      });
-      setCursor(result.nextCursor);
-      cursorRef.current = result.nextCursor;
-    } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Nao foi possivel carregar mais vendas."
-      );
-    } finally {
-      setLoadingMore(false);
-    }
-  }, [appliedQuery, loadingMore, status]);
 
   return (
     <div className="flex flex-col gap-6 px-6 pb-6">
@@ -573,7 +536,7 @@ export function SalesPanel({
             <Button
               className="w-full"
               disabled={loadingMore}
-              onClick={handleLoadMore}
+              onClick={loadMoreItems}
               type="button"
               variant="outline"
             >

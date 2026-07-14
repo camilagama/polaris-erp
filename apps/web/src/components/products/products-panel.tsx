@@ -9,7 +9,8 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
+import { usePaginatedListState } from "@/components/paginated-list-state";
 import { ProductEditFields } from "@/components/products/product-edit-fields";
 import { ProductImageFrame } from "@/components/products/product-image-frame";
 import { uploadProductImageToStaging } from "@/components/products/product-image-upload";
@@ -91,6 +92,8 @@ const getProductsEmptyStateTitle = ({
 
 const getProductsSummaryScope = (status: ProductStatusFilter) =>
   status === "archived" ? "produtos arquivados" : "produtos ativos";
+
+const getProductListItemId = (product: ProductListItem) => product.id;
 
 function ProductTableThumbnail({ product }: { product: ProductListItem }) {
   return (
@@ -269,10 +272,31 @@ export function ProductsPanel({
   const pathname = usePathname();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [products, setProducts] = useState(initialProducts);
-  const [cursor, setCursor] = useState(initialCursor);
-  const cursorRef = useRef(initialCursor);
-  const [loadingMore, setLoadingMore] = useState(false);
+  const {
+    cursor,
+    items: products,
+    loadingMore,
+    loadMoreItems,
+    setItems: setProducts,
+  } = usePaginatedListState({
+    getItemId: getProductListItemId,
+    initialCursor,
+    initialItems: initialProducts,
+    loadMore: (currentCursor) =>
+      loadMoreProductsAction({
+        cursor: currentCursor,
+        query: appliedQuery,
+        status,
+      }),
+    onLoadError: (error) => {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Nao foi possivel carregar mais produtos."
+      );
+    },
+    resetKey: `${appliedQuery}\u0000${status}`,
+  });
   const [searchTerm, setSearchTerm] = useState(appliedQuery);
   const [editingProduct, setEditingProduct] = useState<ProductListItem | null>(
     null
@@ -289,32 +313,6 @@ export function ProductsPanel({
     status,
   });
   const summaryScope = getProductsSummaryScope(status);
-
-  const prevQueryRef = useRef(appliedQuery);
-  const prevStatusRef = useRef(status);
-
-  useEffect(() => {
-    if (
-      prevQueryRef.current !== appliedQuery ||
-      prevStatusRef.current !== status
-    ) {
-      setProducts(initialProducts);
-      setCursor(initialCursor);
-      cursorRef.current = initialCursor;
-      prevQueryRef.current = appliedQuery;
-      prevStatusRef.current = status;
-      return;
-    }
-
-    setProducts((current) => {
-      const currentIds = new Set(current.map((p) => p.id));
-      const newItems = initialProducts.filter((p) => !currentIds.has(p.id));
-      const serverMap = new Map(initialProducts.map((p) => [p.id, p]));
-
-      const updatedCurrent = current.map((p) => serverMap.get(p.id) ?? p);
-      return [...newItems, ...updatedCurrent];
-    });
-  }, [initialProducts, initialCursor, appliedQuery, status]);
 
   useEffect(() => {
     setSearchTerm(appliedQuery);
@@ -346,40 +344,6 @@ export function ProductsPanel({
       router.replace(nextUrl, { scroll: false });
     });
   };
-
-  const handleLoadMore = useCallback(async () => {
-    const currentCursor = cursorRef.current;
-    if (!currentCursor || loadingMore) {
-      return;
-    }
-
-    setLoadingMore(true);
-    try {
-      const result = await loadMoreProductsAction({
-        cursor: currentCursor,
-        query: appliedQuery,
-        status,
-      });
-
-      setProducts((current) => {
-        const existingIds = new Set(current.map((p) => p.id));
-        const uniqueNewItems = result.items.filter(
-          (item) => !existingIds.has(item.id)
-        );
-        return [...current, ...uniqueNewItems];
-      });
-      setCursor(result.nextCursor);
-      cursorRef.current = result.nextCursor;
-    } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Nao foi possivel carregar mais produtos."
-      );
-    } finally {
-      setLoadingMore(false);
-    }
-  }, [appliedQuery, loadingMore, status]);
 
   const openEditDialog = (product: ProductListItem) => {
     setEditingProduct(product);
@@ -686,7 +650,7 @@ export function ProductsPanel({
             <Button
               className="w-full"
               disabled={loadingMore}
-              onClick={handleLoadMore}
+              onClick={loadMoreItems}
               type="button"
               variant="outline"
             >

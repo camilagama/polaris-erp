@@ -6,6 +6,10 @@ import { type ChangeEvent, useState } from "react";
 import { ProductDatePicker } from "@/components/products/product-date-picker";
 import { ProductImageInput } from "@/components/products/product-image-input";
 import { uploadProductImageToStaging } from "@/components/products/product-image-upload";
+import {
+  ProductPriceMarkupIndicator,
+  ProductPriceSuggestionGuide,
+} from "@/components/products/product-pricing-fields";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -38,17 +42,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "@/components/ui/sonner";
-import { calculateSuggestedPrices } from "@/features/catalog/pricing";
 import { createProductAction } from "@/features/products/actions";
 import { createProductSchema as productSchema } from "@/features/products/schema";
 import { OTHERS_CATEGORY_KEY } from "@/lib/catalog-defaults";
 import { formatDateInputValue } from "@/lib/domain/date";
-import {
-  formatCurrency,
-  formatCurrencyInput,
-  parseCurrencyInput,
-} from "@/lib/formatters";
-import { cn } from "@/lib/utils";
+import { formatCurrencyInput, parseCurrencyInput } from "@/lib/formatters";
 
 interface ProductCategoryOption {
   id: string;
@@ -446,69 +444,16 @@ export function RegisterProductDialog({
             <form.Subscribe
               selector={(state) => [state.values.costPrice, state.values.price]}
             >
-              {([costPrice, price]) => {
-                const suggestion = calculateSuggestedPrices({
-                  costPrice,
-                  currentPrice: price,
-                  idealMarkupPercent: settings.idealMarkupPercent,
-                  minimumMarkupPercent: settings.minimumMarkupPercent,
-                });
-
-                return (
-                  <div className="flex flex-col gap-2">
-                    <p className="text-[11px] text-muted-foreground uppercase tracking-[0.16em]">
-                      Guia de preco sugerido
-                    </p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        className="flex items-center justify-between gap-2 rounded-md border border-border/50 bg-muted/10 px-3 py-1 text-left transition-colors hover:bg-muted/30 focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
-                        onClick={() =>
-                          form.setFieldValue("price", suggestion.minimumPrice)
-                        }
-                        type="button"
-                      >
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] text-muted-foreground uppercase leading-none tracking-wider">
-                            Minimo
-                          </span>
-                          <span className="text-[9px] text-muted-foreground/50 tabular-nums">
-                            {suggestion.minimumMarkupPercent}%
-                          </span>
-                        </div>
-                        <span className="font-medium text-[13px] tabular-nums">
-                          {formatCurrency(suggestion.minimumPrice)}
-                        </span>
-                      </button>
-                      <button
-                        className="flex items-center justify-between gap-2 rounded-md border border-border/50 bg-muted/10 px-3 py-1 text-left transition-colors hover:bg-muted/30 focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
-                        onClick={() =>
-                          form.setFieldValue("price", suggestion.idealPrice)
-                        }
-                        type="button"
-                      >
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] text-muted-foreground uppercase leading-none tracking-wider">
-                            Ideal
-                          </span>
-                          <span className="text-[9px] text-muted-foreground/50 tabular-nums">
-                            {suggestion.idealMarkupPercent}%
-                          </span>
-                        </div>
-                        <span className="font-medium text-[13px] tabular-nums">
-                          {formatCurrency(suggestion.idealPrice)}
-                        </span>
-                      </button>
-                    </div>
-
-                    {suggestion.isBelowMinimum ? (
-                      <p className="text-[11px] text-destructive">
-                        Preco abaixo do minimo sugerido. O salvamento continua
-                        permitido.
-                      </p>
-                    ) : null}
-                  </div>
-                );
-              }}
+              {([costPrice, price]) => (
+                <ProductPriceSuggestionGuide
+                  costPrice={costPrice}
+                  currentPrice={price}
+                  onPriceSelect={(selectedPrice) =>
+                    form.setFieldValue("price", selectedPrice)
+                  }
+                  settings={settings}
+                />
+              )}
             </form.Subscribe>
 
             <form.Field
@@ -553,30 +498,11 @@ export function RegisterProductDialog({
                         type="text"
                         value={formatCurrencyInput(field.state.value)}
                       />
-                      <InputGroupAddon align="inline-end">
-                        <InputGroupText
-                          className={cn(
-                            "font-medium text-[10px] opacity-70",
-                            field.state.value > 0 &&
-                              (form.state.values.costPrice > 0 &&
-                              field.state.value <
-                                form.state.values.costPrice *
-                                  (1 + settings.minimumMarkupPercent / 100)
-                                ? "text-destructive"
-                                : "text-emerald-500")
-                          )}
-                        >
-                          {(
-                            (field.state.value > 0 &&
-                            form.state.values.costPrice > 0
-                              ? field.state.value /
-                                  form.state.values.costPrice -
-                                1
-                              : 0) * 100
-                          ).toFixed(1)}
-                          %
-                        </InputGroupText>
-                      </InputGroupAddon>
+                      <ProductPriceMarkupIndicator
+                        costPrice={form.state.values.costPrice}
+                        minimumMarkupPercent={settings.minimumMarkupPercent}
+                        price={field.state.value}
+                      />
                     </InputGroup>
                     <FieldError
                       errors={(field.state.meta.errors as string[]).map(

@@ -6,6 +6,7 @@
   "dependencies": {
     "@polaris/billing": "workspace:*",
     "@polaris/db": "workspace:*",
+    "@polaris/events": "workspace:*",
     "drizzle-orm": "^0.45.2",
     "server-only": "^0.0.1"
   },
@@ -15,6 +16,7 @@
     "./billing": "./src/platform-billing.ts",
     "./dashboard": "./src/platform-dashboard.ts",
     "./directory": "./src/platform-directory.ts",
+    "./events": "./src/platform-events.ts",
     "./organization-mutations": "./src/platform-organization-mutations.ts",
     "./support-notes": "./src/platform-support-notes.ts"
   },

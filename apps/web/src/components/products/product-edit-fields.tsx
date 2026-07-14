@@ -2,6 +2,10 @@
 
 import type { Dispatch, SetStateAction } from "react";
 import { ProductImageInput } from "@/components/products/product-image-input";
+import {
+  ProductPriceMarkupIndicator,
+  ProductPriceSuggestionGuide,
+} from "@/components/products/product-pricing-fields";
 import { Input } from "@/components/ui/input";
 import {
   InputGroup,
@@ -18,14 +22,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { calculateSuggestedPrices } from "@/features/catalog/pricing";
 import type { ProductImageAsset } from "@/features/products/contracts";
 import {
   formatCurrency,
   formatCurrencyInput,
   parseCurrencyInput,
 } from "@/lib/formatters";
-import { cn } from "@/lib/utils";
 
 interface ProductCategoryOption {
   id: string;
@@ -72,17 +74,8 @@ export function ProductEditFields({
     minimumMarkupPercent: number;
   };
 }) {
-  const suggestion = calculateSuggestedPrices({
-    costPrice: Number(costPrice),
-    currentPrice: Number(price),
-    idealMarkupPercent: settings.idealMarkupPercent,
-    minimumMarkupPercent: settings.minimumMarkupPercent,
-  });
-
-  const currentMarkupPercent =
-    suggestion.costPrice > 0 && Number(price) > 0
-      ? (Number(price) / suggestion.costPrice - 1) * 100
-      : 0;
+  const numericCostPrice = Number(costPrice);
+  const numericPrice = Number(price);
 
   return (
     <div className="flex flex-col gap-4">
@@ -137,53 +130,14 @@ export function ProductEditFields({
           value={description}
         />
       </div>
-      <div className="flex flex-col gap-2">
-        <p className="text-[11px] text-muted-foreground uppercase tracking-[0.16em]">
-          Guia de preco sugerido
-        </p>
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            className="flex items-center justify-between gap-2 rounded-md border border-border/50 bg-muted/10 px-3 py-1 text-left transition-colors hover:bg-muted/30 focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
-            onClick={() => onPriceChange(suggestion.minimumPrice.toString())}
-            type="button"
-          >
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px] text-muted-foreground uppercase leading-none tracking-wider">
-                Minimo
-              </span>
-              <span className="text-[9px] text-muted-foreground/50 tabular-nums">
-                {suggestion.minimumMarkupPercent}%
-              </span>
-            </div>
-            <span className="font-medium text-[13px] tabular-nums">
-              {formatCurrency(suggestion.minimumPrice)}
-            </span>
-          </button>
-          <button
-            className="flex items-center justify-between gap-2 rounded-md border border-border/50 bg-muted/10 px-3 py-1 text-left transition-colors hover:bg-muted/30 focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
-            onClick={() => onPriceChange(suggestion.idealPrice.toString())}
-            type="button"
-          >
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px] text-muted-foreground uppercase leading-none tracking-wider">
-                Ideal
-              </span>
-              <span className="text-[9px] text-muted-foreground/50 tabular-nums">
-                {suggestion.idealMarkupPercent}%
-              </span>
-            </div>
-            <span className="font-medium text-[13px] tabular-nums">
-              {formatCurrency(suggestion.idealPrice)}
-            </span>
-          </button>
-        </div>
-
-        {suggestion.isBelowMinimum ? (
-          <p className="text-[11px] text-destructive">
-            Preco abaixo do minimo sugerido. O salvamento continua permitido.
-          </p>
-        ) : null}
-      </div>
+      <ProductPriceSuggestionGuide
+        costPrice={numericCostPrice}
+        currentPrice={numericPrice}
+        onPriceSelect={(selectedPrice) =>
+          onPriceChange(selectedPrice.toString())
+        }
+        settings={settings}
+      />
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between gap-3">
           <Label htmlFor="product-edit-price">Preco de venda</Label>
@@ -203,21 +157,13 @@ export function ProductEditFields({
             }
             placeholder="0,00"
             type="text"
-            value={formatCurrencyInput(Number(price))}
+            value={formatCurrencyInput(numericPrice)}
           />
-          <InputGroupAddon align="inline-end">
-            <InputGroupText
-              className={cn(
-                "font-medium text-[10px] opacity-70",
-                Number(price) > 0 &&
-                  (suggestion.isBelowMinimum
-                    ? "text-destructive"
-                    : "text-emerald-500")
-              )}
-            >
-              {currentMarkupPercent.toFixed(1)}%
-            </InputGroupText>
-          </InputGroupAddon>
+          <ProductPriceMarkupIndicator
+            costPrice={numericCostPrice}
+            minimumMarkupPercent={settings.minimumMarkupPercent}
+            price={numericPrice}
+          />
         </InputGroup>
         {price.trim().length === 0 ||
         Number(price) < 0 ||

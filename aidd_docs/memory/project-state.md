@@ -1,6 +1,6 @@
 # Project State Memory
 
-Last reviewed: 2026-07-09
+Last reviewed: 2026-07-13
 
 ## Current Architecture
 
@@ -10,14 +10,13 @@ Last reviewed: 2026-07-09
 - `@polaris/db` now owns the shared Drizzle schema/client/tenant context, Drizzle config and migration files. `apps/web/src/db/*` keeps short compatibility wrappers for existing web imports.
 - `@polaris/events` now provides the shared outbox/webhook/idempotency helpers used by web and admin.
 - `@polaris/platform` now provides shared platform admin queries, mutations, audit/support helpers and dashboard data.
-- `@polaris/platform-auth` now provides Cloudflare Access validation, platform admin DB grants and admin rate limiting. `apps/admin/src/lib/platform-admin-auth.ts` is only a local session-injection wrapper.
+- `@polaris/platform-auth` now provides Better Auth session-based platform admin grant validation and admin rate limiting. `apps/admin/src/lib/platform-admin-auth.ts` is only a local session-injection wrapper. The active admin perimeter is a separate `apps/admin` Vercel project with Vercel Authentication/deployment protection plus in-app platform admin grants.
 - `@polaris/auth` now provides the shared Better Auth factory, auth env contract, session helpers and workspace management policy. The web app injects tenant login audit; the admin uses a local wrapper without importing from `apps/web`.
 - `@polaris/ui` and `@polaris/domain` are intentionally not extracted yet.
 
 ## Production Gates Still External
 
-- Vercel projects/domains and preview protection need real environment validation.
-- Cloudflare Access must protect `admin.*` and staging surfaces.
+- Vercel projects/domains, admin Vercel Authentication/deployment protection, and preview protection need real environment validation.
 - Neon production branch protection, runtime role without `BYPASSRLS`, and migrations via `DATABASE_URL_DIRECT` still need live proof.
 - Upstash, R2 lifecycle, Sentry alerts, OAuth callbacks, Resend domain, Inngest credentials, Woovi and Asaas sandbox/prod validation remain operational gates.
 

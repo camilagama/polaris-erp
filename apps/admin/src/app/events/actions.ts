@@ -1,7 +1,6 @@
 "use server";
 
-import { db } from "@polaris/db";
-import { retryOutboxEvent } from "@polaris/events";
+import { retryPlatformOutboxEvent } from "@polaris/platform/events";
 import { assertAdminRateLimit } from "@polaris/platform-auth/admin-rate-limit";
 import { revalidatePath } from "next/cache";
 import { requirePlatformAdmin } from "@/lib/platform-admin-auth";
@@ -26,6 +25,10 @@ export async function retryOutboxEventAction(formData: FormData) {
     targetId: eventId,
   });
 
-  await retryOutboxEvent(db, eventId);
+  await retryPlatformOutboxEvent({
+    actorPlatformAdminId: context.platformAdminId,
+    actorUserId: context.userId,
+    eventId,
+  });
   revalidatePath("/events");
 }

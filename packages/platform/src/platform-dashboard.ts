@@ -2,6 +2,7 @@ import "server-only";
 
 import { db } from "@polaris/db";
 import { type SQL, sql } from "drizzle-orm";
+import { toIsoString, toNumber, toRows } from "./internal/query-results";
 
 const RECENT_EVENT_LIMIT = 6;
 
@@ -36,57 +37,6 @@ export interface PlatformDashboardData {
 interface QueryableDb {
   execute: (query: SQL) => Promise<unknown>;
 }
-
-const toRows = (result: unknown): Record<string, unknown>[] => {
-  if (Array.isArray(result)) {
-    return result.filter(
-      (row): row is Record<string, unknown> =>
-        typeof row === "object" && row !== null
-    );
-  }
-
-  if (typeof result === "object" && result !== null && "rows" in result) {
-    const rows = (result as { rows?: unknown }).rows;
-
-    if (Array.isArray(rows)) {
-      return rows.filter(
-        (row): row is Record<string, unknown> =>
-          typeof row === "object" && row !== null
-      );
-    }
-  }
-
-  return [];
-};
-
-const toNumber = (value: unknown): number => {
-  if (typeof value === "number") {
-    return value;
-  }
-
-  if (typeof value === "bigint") {
-    return Number(value);
-  }
-
-  if (typeof value === "string") {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : 0;
-  }
-
-  return 0;
-};
-
-const toIsoString = (value: unknown): string | null => {
-  if (value instanceof Date) {
-    return value.toISOString();
-  }
-
-  if (typeof value === "string" && value.length > 0) {
-    return value;
-  }
-
-  return null;
-};
 
 const getSummary = async (
   queryableDb: QueryableDb
@@ -147,9 +97,11 @@ const hasR2Config = (): boolean =>
       process.env.R2_BUCKET_STAGING
   );
 
-const checkDatabaseHealth = async (): Promise<boolean> => {
+const checkDatabaseHealth = async (
+  queryableDb: QueryableDb
+): Promise<boolean> => {
   try {
-    await db.execute(sql`select 1`);
+    await queryableDb.execute(sql`select 1`);
     return true;
   } catch {
     return false;
@@ -160,7 +112,7 @@ export const getPlatformDashboardData = async (
   queryableDb: QueryableDb = db
 ): Promise<PlatformDashboardData> => {
   const [database, summary, events] = await Promise.all([
-    checkDatabaseHealth(),
+    checkDatabaseHealth(queryableDb),
     getSummary(queryableDb),
     getEvents(queryableDb),
   ]);

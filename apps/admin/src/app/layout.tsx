@@ -23,8 +23,8 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@polaris/ui/components/ui/sidebar";
+import { TooltipProvider } from "@polaris/ui/components/ui/tooltip";
 import { eq } from "drizzle-orm";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { requirePlatformAdmin } from "@/lib/platform-admin-auth";
 import { AdminSidebar } from "../components/admin-sidebar";
 

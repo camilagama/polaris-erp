@@ -14,9 +14,12 @@ vi.mock("next/navigation", () => ({
   redirect: onboardingMocks.redirect,
 }));
 
-vi.mock("@/lib/app-session", () => ({
+vi.mock("@/features/onboarding/server", () => ({
   createInitialOrganizationForUser:
     onboardingMocks.createInitialOrganizationForUser,
+}));
+
+vi.mock("@/lib/app-session", () => ({
   getAppContext: onboardingMocks.getAppContext,
 }));
 

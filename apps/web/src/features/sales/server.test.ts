@@ -11,6 +11,11 @@ vi.mock("next/cache", () => ({
 vi.mock("@polaris/db", () => ({
   db: {
     execute: vi.fn(),
+    query: {
+      sales: {
+        findFirst: vi.fn(),
+      },
+    },
     select: vi.fn(),
     transaction: vi.fn(),
   },
@@ -27,6 +32,11 @@ const resolveMocks = async () => {
     mockCacheTag: cache.cacheTag as MockFn,
     mockDb: dbModule.db as unknown as {
       execute: MockFn;
+      query: {
+        sales: {
+          findFirst: MockFn;
+        };
+      };
       select: MockFn;
       transaction: MockFn;
     },
@@ -40,6 +50,7 @@ describe("sales server caching", () => {
     const { mockDb } = await resolveMocks();
 
     mockDb.transaction.mockImplementation(async (callback) => callback(mockDb));
+    mockDb.query.sales.findFirst.mockResolvedValue(null);
   });
 
   it("tags and caches sales date bounds with the shared analytics profile", async () => {
@@ -68,5 +79,89 @@ describe("sales server caching", () => {
       from: "2026-03-01",
       to: expect.any(String),
     });
+  });
+
+  it("returns an existing sale before attempting a duplicate create", async () => {
+    const { createSaleOnce } = await import("@/features/sales/server");
+    const { mockDb } = await resolveMocks();
+
+    mockDb.query.sales.findFirst.mockResolvedValueOnce({
+      id: "sale-existing",
+    });
+
+    await expect(
+      createSaleOnce({
+        actorUserId: "user-1",
+        input: {
+          additionalAmount: 0,
+          discountAmount: 0,
+          freightAmount: 0,
+          idempotencyKey: "550e8400-e29b-41d4-a716-446655440000",
+          items: [
+            {
+              expectedUnitPrice: 90,
+              productId: "product-1",
+              quantity: 1,
+            },
+          ],
+          occurredOn: "2026-03-31",
+          paymentFeePayer: "not_applicable",
+          paymentInstallments: 0,
+          paymentMethod: "pix",
+        },
+        loadCardInstallmentRules: vi.fn().mockResolvedValue([]),
+        organizationId: "org_dg_imports",
+      })
+    ).resolves.toEqual({ created: false, saleId: "sale-existing" });
+
+    expect(mockDb.transaction).toHaveBeenCalledOnce();
+  });
+
+  it("recovers the existing sale when a concurrent idempotency insert wins", async () => {
+    const { createSaleOnce } = await import("@/features/sales/server");
+    const { mockDb } = await resolveMocks();
+
+    mockDb.query.sales.findFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ id: "sale-existing" });
+    mockDb.transaction
+      .mockImplementationOnce(async (callback) => callback(mockDb))
+      .mockRejectedValueOnce(
+        Object.assign(
+          new Error("duplicate key value violates unique constraint"),
+          {
+            code: "23505",
+            constraint: "sales_organization_idempotency_key_unique_idx",
+          }
+        )
+      )
+      .mockImplementationOnce(async (callback) => callback(mockDb));
+
+    await expect(
+      createSaleOnce({
+        actorUserId: "user-1",
+        input: {
+          additionalAmount: 0,
+          discountAmount: 0,
+          freightAmount: 0,
+          idempotencyKey: "550e8400-e29b-41d4-a716-446655440000",
+          items: [
+            {
+              expectedUnitPrice: 90,
+              productId: "product-1",
+              quantity: 1,
+            },
+          ],
+          occurredOn: "2026-03-31",
+          paymentFeePayer: "not_applicable",
+          paymentInstallments: 0,
+          paymentMethod: "pix",
+        },
+        loadCardInstallmentRules: vi.fn().mockResolvedValue([]),
+        organizationId: "org_dg_imports",
+      })
+    ).resolves.toEqual({ created: false, saleId: "sale-existing" });
+
+    expect(mockDb.transaction).toHaveBeenCalledTimes(3);
   });
 });

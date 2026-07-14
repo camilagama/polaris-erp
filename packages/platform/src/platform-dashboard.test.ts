@@ -17,6 +17,9 @@ const createDbMock = () => {
   const execute = vi
     .fn()
     .mockResolvedValueOnce({
+      rows: [{ ok: 1 }],
+    })
+    .mockResolvedValueOnce({
       rows: [
         {
           active_organizations: "8",
@@ -65,7 +68,8 @@ describe("getPlatformDashboardData", () => {
   });
 
   it("returns aggregate operational data without exposing sensitive event fields", async () => {
-    const data = await getPlatformDashboardData(createDbMock());
+    const db = createDbMock();
+    const data = await getPlatformDashboardData(db);
 
     expect(data.summary).toEqual({
       activeOrganizations: 8,
@@ -97,5 +101,7 @@ describe("getPlatformDashboardData", () => {
     expect(JSON.stringify(data)).not.toContain("secret");
     expect(JSON.stringify(data)).not.toContain("actor_user_id");
     expect(JSON.stringify(data)).not.toContain("metadata");
+    expect(db.execute).toHaveBeenCalledTimes(3);
+    expect(healthMock).not.toHaveBeenCalled();
   });
 });

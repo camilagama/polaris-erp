@@ -13,7 +13,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { formatDateInputValue } from "@/lib/domain/date";
 import { cn } from "@/lib/utils";
 
 interface DateRangePickerPreset {
@@ -41,6 +40,7 @@ interface DateRangePickerProps {
 }
 
 const toDate = (value: string) => parseISO(`${value}T00:00:00`);
+const toDateInputValue = (value: Date) => format(value, "yyyy-MM-dd");
 
 const toDraftRange = ({
   from,
@@ -197,9 +197,9 @@ export function DateRangePicker({
                     }
 
                     onChange({
-                      from: formatDateInputValue(draftRange.from),
+                      from: toDateInputValue(draftRange.from),
                       preset: draftPreset,
-                      to: formatDateInputValue(draftRange.to),
+                      to: toDateInputValue(draftRange.to),
                     });
                     setOpen(false);
                   }}

@@ -1001,15 +1001,18 @@ describe("sales server actions", () => {
     expect(mockRefresh).not.toHaveBeenCalled();
   });
 
-  it("delegates idempotency lookup to the sales domain", () => {
+  it("delegates create-once sale idempotency to the sales domain", () => {
     const source = readFileSync(
       join(process.cwd(), "src", "features", "sales", "actions.ts"),
       "utf8"
     );
 
-    expect(source).toContain("findExistingSaleByIdempotencyKey");
+    expect(source).toContain("createSaleOnce");
     expect(source).toContain('from "@/features/sales/server"');
-    expect(source).not.toContain("const findExistingSaleByIdempotencyKey");
+    expect(source).not.toContain(
+      "sales_organization_idempotency_key_unique_idx"
+    );
+    expect(source).not.toContain("isIdempotencyConflict");
   });
 
   it("keeps tenant-scoped product locking in the sales domain", () => {

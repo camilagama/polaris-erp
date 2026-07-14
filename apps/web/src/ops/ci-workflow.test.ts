@@ -101,6 +101,8 @@ const INTERNAL_R2_HEALTH_SECRET_PATTERN =
   /INTERNAL_R2_HEALTH_SECRET:\s*\$\{\{\s*secrets\.INTERNAL_R2_HEALTH_SECRET\s*\}\}/;
 const ADMIN_DEPLOYMENT_SMOKE_URL_SECRET_PATTERN =
   /ADMIN_DEPLOYMENT_SMOKE_URL:\s*\$\{\{\s*secrets\.ADMIN_DEPLOYMENT_SMOKE_URL\s*\}\}/;
+const ADMIN_E2E_DATABASE_URL_SECRET_PATTERN =
+  /admin-e2e:[\s\S]*E2E_DATABASE_URL:\s*\$\{\{\s*secrets\.ADMIN_E2E_DATABASE_URL\s*\}\}/;
 const REMOVED_ADMIN_PERIMETER_ENV_PATTERN = /CLOUD[F]LARE_ACCESS/;
 const ACTIVE_SOURCE_EXTENSIONS = new Set([
   ".cjs",
@@ -332,6 +334,8 @@ describe("CI workflow", () => {
     expect(workflow).toContain("admin-e2e:");
     expect(workflow).toContain("bun run test:e2e:admin");
     expect(workflow).toContain("secrets.E2E_DATABASE_URL");
+    expect(workflow).toContain("secrets.ADMIN_E2E_DATABASE_URL");
+    expect(workflow).toMatch(ADMIN_E2E_DATABASE_URL_SECRET_PATTERN);
   });
 
   it("documents production preflight envs in the env example", () => {

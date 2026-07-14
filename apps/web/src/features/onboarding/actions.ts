@@ -1,11 +1,9 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { createInitialOrganizationForUser } from "@/features/onboarding/server";
 import { sendWelcomeEmailIfConfigured } from "@/integrations/resend/email-service";
-import {
-  createInitialOrganizationForUser,
-  getAppContext,
-} from "@/lib/app-session";
+import { getAppContext } from "@/lib/app-session";
 import { requireSession } from "@/lib/session";
 import type { OnboardingActionState } from "./state";
 

@@ -185,6 +185,23 @@ const lockProductForUpdate = async (
   return result.rows.at(0) ?? null;
 };
 
+const assertCategoryBelongsToOrganization = async (
+  tx: TenantTransaction,
+  organizationId: string,
+  categoryId: string
+): Promise<void> => {
+  const category = await tx.query.categories.findFirst({
+    where: and(
+      eq(categories.id, categoryId),
+      eq(categories.organizationId, organizationId)
+    ),
+  });
+
+  if (!category) {
+    throw new Error("Selecione uma categoria valida.");
+  }
+};
+
 export const createProductWithInitialStock = async ({
   actorUserId,
   categoryId,
@@ -211,6 +228,8 @@ export const createProductWithInitialStock = async ({
   stock: number;
 }): Promise<void> => {
   await withTenantContext(organizationId, async (tx) => {
+    await assertCategoryBelongsToOrganization(tx, organizationId, categoryId);
+
     await tx.insert(products).values({
       categoryId,
       costPrice,
@@ -281,6 +300,8 @@ export const updateProductWithPriceHistory = async ({
     if (!product) {
       throw new Error("Produto nao encontrado.");
     }
+
+    await assertCategoryBelongsToOrganization(tx, organizationId, categoryId);
 
     const updatedProductRows = await tx
       .update(products)

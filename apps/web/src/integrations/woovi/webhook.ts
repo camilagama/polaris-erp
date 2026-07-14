@@ -1,11 +1,12 @@
 import "server-only";
 
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { db } from "@polaris/db";
 import { withInternalJobContext } from "@polaris/db/tenant-context";
-import { captureWebhookEvent, enqueueOutboxEvent } from "@polaris/events";
-import { sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import {
+  markWebhookIntakeProcessed,
+  observeWebhookIntake,
+} from "@/integrations/webhooks/intake";
 import { isWebhookRequestTooLarge } from "@/integrations/webhooks/request-limits";
 import { reconcileWooviBillingEvent } from "@/integrations/woovi/billing-reconciliation";
 import { serverEnv } from "@/lib/env";
@@ -154,22 +155,14 @@ export const handleWooviWebhook = async (request: Request) => {
   const correlationId = getString(payload, "correlationID") ?? eventId;
   const redactedPayload = redactWooviWebhookPayload(payload);
 
-  await captureWebhookEvent(db, {
+  await observeWebhookIntake({
     correlationId,
     eventId,
+    eventType: getString(payload, "event") ?? "unknown",
     headers: Object.fromEntries(request.headers.entries()),
     payload: redactedPayload,
     provider: "woovi",
     rawBody,
-  });
-
-  await enqueueOutboxEvent(db, {
-    correlationId,
-    eventType: getString(payload, "event") ?? "unknown",
-    idempotencyKey: `woovi-webhook:${eventId}`,
-    payload: redactedPayload,
-    status: "observed",
-    topic: "woovi.webhook",
   });
 
   const reconciliationStatus = await withInternalJobContext(
@@ -177,15 +170,12 @@ export const handleWooviWebhook = async (request: Request) => {
     (tx) => reconcileWooviBillingEvent(tx, payload, eventId)
   );
 
-  await db.execute(sql`
-    update webhook_events
-    set status = ${reconciliationStatus === "processed" ? "processed" : "failed"},
-        processed_at = now(),
-        last_error = ${reconciliationStatus === "processed" ? null : "manual_review"},
-        updated_at = now()
-    where provider = 'woovi'
-      and provider_event_id = ${eventId}
-  `);
+  await markWebhookIntakeProcessed({
+    eventId,
+    lastError: reconciliationStatus === "processed" ? null : "manual_review",
+    provider: "woovi",
+    status: reconciliationStatus === "processed" ? "processed" : "failed",
+  });
 
   return NextResponse.json({ ok: true });
 };

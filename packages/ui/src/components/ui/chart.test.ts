@@ -32,7 +32,7 @@ vi.mock("recharts", async () => {
   };
 });
 
-import { ChartContainer } from "@/components/ui/chart";
+import { ChartContainer } from "./chart";
 
 describe("ChartContainer", () => {
   it("uses a 16ms resize debounce by default", () => {

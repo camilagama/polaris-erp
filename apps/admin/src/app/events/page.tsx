@@ -1,5 +1,4 @@
-import { db } from "@polaris/db";
-import { listEventOutbox, listWebhookEvents } from "@polaris/events";
+import { getPlatformEventsOverview } from "@polaris/platform/events";
 import Link from "next/link";
 import { forbidden } from "next/navigation";
 import { connection } from "next/server";
@@ -36,10 +35,7 @@ const EventsContent = async () => {
   await connection();
   await guardPlatformAdmin();
 
-  const [outbox, webhooks] = await Promise.all([
-    listEventOutbox(db),
-    listWebhookEvents(db),
-  ]);
+  const { outbox, webhooks } = await getPlatformEventsOverview();
 
   return (
     <section className="mx-auto grid w-full max-w-6xl gap-6 px-6 py-8">

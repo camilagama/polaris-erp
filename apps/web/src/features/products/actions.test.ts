@@ -234,6 +234,11 @@ const createProductUpdateHarness = (
           ],
         });
       },
+      query: {
+        categories: {
+          findFirst: () => Promise.resolve({ id: "category-1" }),
+        },
+      },
       insert: (_table: unknown) => ({
         values: (payload: Record<string, unknown>) => {
           if (!("previousPrice" in payload && "nextPrice" in payload)) {
@@ -525,6 +530,11 @@ describe("product server actions", () => {
       async (callback: (tx: unknown) => Promise<void>) => {
         await callback({
           execute: () => Promise.resolve({ rows: [] }),
+          query: {
+            categories: {
+              findFirst: () => Promise.resolve({ id: "category-1" }),
+            },
+          },
           insert: (table: unknown) => ({
             values: (payload: Record<string, unknown>) => {
               insertLog.push({ payload, table });

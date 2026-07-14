@@ -1,11 +1,12 @@
 import "server-only";
 
-import { db } from "@polaris/db";
 import { withInternalJobContext } from "@polaris/db/tenant-context";
-import { captureWebhookEvent, enqueueOutboxEvent } from "@polaris/events";
-import { sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { reconcileAsaasBillingEvent } from "@/integrations/asaas/billing-reconciliation";
+import {
+  markWebhookIntakeProcessed,
+  observeWebhookIntake,
+} from "@/integrations/webhooks/intake";
 import { isWebhookRequestTooLarge } from "@/integrations/webhooks/request-limits";
 import { serverEnv } from "@/lib/env";
 
@@ -126,22 +127,13 @@ export const handleAsaasWebhook = async (request: Request) => {
 
   const redactedPayload = redactAsaasWebhookPayload(payload);
 
-  await captureWebhookEvent(db, {
-    correlationId: eventId,
+  await observeWebhookIntake({
     eventId,
+    eventType: getString(payload, "event") ?? "unknown",
     headers: Object.fromEntries(request.headers.entries()),
     payload: redactedPayload,
     provider: "asaas",
     rawBody,
-  });
-
-  await enqueueOutboxEvent(db, {
-    correlationId: eventId,
-    eventType: getString(payload, "event") ?? "unknown",
-    idempotencyKey: `asaas-webhook:${eventId}`,
-    payload: redactedPayload,
-    status: "observed",
-    topic: "asaas.webhook",
   });
 
   const reconciliationStatus = await withInternalJobContext(
@@ -149,15 +141,12 @@ export const handleAsaasWebhook = async (request: Request) => {
     (tx) => reconcileAsaasBillingEvent(tx, payload, eventId)
   );
 
-  await db.execute(sql`
-    update webhook_events
-    set status = ${reconciliationStatus === "processed" ? "processed" : "failed"},
-        processed_at = now(),
-        last_error = ${reconciliationStatus === "processed" ? null : "manual_review"},
-        updated_at = now()
-    where provider = 'asaas'
-      and provider_event_id = ${eventId}
-  `);
+  await markWebhookIntakeProcessed({
+    eventId,
+    lastError: reconciliationStatus === "processed" ? null : "manual_review",
+    provider: "asaas",
+    status: reconciliationStatus === "processed" ? "processed" : "failed",
+  });
 
   return NextResponse.json({});
 };

@@ -2,6 +2,12 @@ import "server-only";
 
 import { db } from "@polaris/db";
 import { type SQL, sql } from "drizzle-orm";
+import {
+  toIsoString,
+  toNumber,
+  toRows,
+  toStringValue,
+} from "./internal/query-results";
 
 const LIST_LIMIT = 50;
 const REDACTED_EMAIL = "[redacted]";
@@ -69,60 +75,6 @@ export interface PlatformUserDetail extends PlatformUserListItem {
   sessionSummary: PlatformSessionSummary;
 }
 
-const toRows = (result: unknown): Record<string, unknown>[] => {
-  if (Array.isArray(result)) {
-    return result.filter(
-      (row): row is Record<string, unknown> =>
-        typeof row === "object" && row !== null
-    );
-  }
-
-  if (typeof result === "object" && result !== null && "rows" in result) {
-    const rows = (result as { rows?: unknown }).rows;
-
-    if (Array.isArray(rows)) {
-      return rows.filter(
-        (row): row is Record<string, unknown> =>
-          typeof row === "object" && row !== null
-      );
-    }
-  }
-
-  return [];
-};
-
-const toNumber = (value: unknown): number => {
-  if (typeof value === "number") {
-    return value;
-  }
-
-  if (typeof value === "bigint") {
-    return Number(value);
-  }
-
-  if (typeof value === "string") {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : 0;
-  }
-
-  return 0;
-};
-
-const toSafeString = (value: unknown, fallback = ""): string =>
-  typeof value === "string" ? value : fallback;
-
-const toIsoString = (value: unknown): string | null => {
-  if (value instanceof Date) {
-    return value.toISOString();
-  }
-
-  if (typeof value === "string" && value.length > 0) {
-    return value;
-  }
-
-  return null;
-};
-
 const toStringArray = (value: unknown): string[] => {
   if (!Array.isArray(value)) {
     return [];
@@ -172,24 +124,24 @@ const mapOrganizationRow = (
     sales: toNumber(row.sale_count),
   },
   createdAt: toIsoString(row.created_at),
-  id: toSafeString(row.id),
+  id: toStringValue(row.id),
   primaryMemberEmail:
-    toSafeString(row.owner_email) || toSafeString(row.fallback_member_email)
+    toStringValue(row.owner_email) || toStringValue(row.fallback_member_email)
       ? redactEmail(
-          toSafeString(row.owner_email) ||
-            toSafeString(row.fallback_member_email)
+          toStringValue(row.owner_email) ||
+            toStringValue(row.fallback_member_email)
         )
       : null,
-  status: toSafeString(row.status, "unknown"),
+  status: toStringValue(row.status, "unknown"),
   updatedAt: toIsoString(row.updated_at),
 });
 
 const mapUserRow = (row: Record<string, unknown>): PlatformUserListItem => ({
   createdAt: toIsoString(row.created_at),
-  email: redactEmail(toSafeString(row.email)),
-  id: toSafeString(row.id),
+  email: redactEmail(toStringValue(row.email)),
+  id: toStringValue(row.id),
   latestSessionAt: toIsoString(row.latest_session_at),
-  name: toSafeString(row.name, "Sem nome"),
+  name: toStringValue(row.name, "Sem nome"),
   organizationCount: toNumber(row.organization_count),
   providerIds: toStringArray(row.provider_ids),
   sessionCount: toNumber(row.session_count),
@@ -291,11 +243,11 @@ export const getPlatformOrganizationDetail = async (
     ...mapOrganizationRow(organizationRow),
     members: toRows(memberRows).map((row) => ({
       createdAt: toIsoString(row.created_at),
-      email: redactEmail(toSafeString(row.email)),
-      name: toSafeString(row.name, "Sem nome"),
+      email: redactEmail(toStringValue(row.email)),
+      name: toStringValue(row.name, "Sem nome"),
       providerIds: toStringArray(row.provider_ids),
-      role: toSafeString(row.role, "operator"),
-      userId: toSafeString(row.user_id),
+      role: toStringValue(row.role, "operator"),
+      userId: toStringValue(row.user_id),
     })),
     sessionSummary: {
       count: toNumber(sessionRow.session_count),
@@ -392,9 +344,9 @@ export const getPlatformUserDetail = async (
     ...mapUserRow(userRow),
     organizations: toRows(organizationRows).map((row) => ({
       createdAt: toIsoString(row.created_at),
-      id: toSafeString(row.id),
-      role: toSafeString(row.role, "operator"),
-      status: toSafeString(row.status, "unknown"),
+      id: toStringValue(row.id),
+      role: toStringValue(row.role, "operator"),
+      status: toStringValue(row.status, "unknown"),
     })),
     sessionSummary: {
       count: toNumber(sessionRow.session_count),

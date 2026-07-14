@@ -1,13 +1,13 @@
 import "server-only";
 
 import { db } from "@polaris/db";
-import { captureWebhookEvent, enqueueOutboxEvent } from "@polaris/events";
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import {
   recordResendEmailEvent,
   redactResendWebhookPayload,
 } from "@/integrations/resend/email-service";
+import { observeWebhookIntake } from "@/integrations/webhooks/intake";
 import { isWebhookRequestTooLarge } from "@/integrations/webhooks/request-limits";
 import { serverEnv } from "@/lib/env";
 
@@ -61,21 +61,14 @@ export const handleResendWebhook = async (request: Request) => {
     });
     const payload = redactResendWebhookPayload(event);
 
-    await captureWebhookEvent(db, {
+    await observeWebhookIntake({
       correlationId: webhookHeaders.id,
       eventId: webhookHeaders.id,
+      eventType: toStringPayloadValue(payload.type, "unknown"),
       headers: Object.fromEntries(request.headers.entries()),
       payload,
       provider: "resend",
       rawBody,
-    });
-    await enqueueOutboxEvent(db, {
-      correlationId: webhookHeaders.id,
-      eventType: toStringPayloadValue(payload.type, "unknown"),
-      idempotencyKey: `resend-webhook:${webhookHeaders.id}`,
-      payload,
-      status: "observed",
-      topic: "resend.webhook",
     });
 
     await recordResendEmailEvent(db, {

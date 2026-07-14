@@ -1,49 +1,12 @@
 "use server";
 
-import { revalidatePath, updateTag } from "next/cache";
 import { getCatalogSettings } from "@/features/catalog/server";
 import type { PaginatedSaleProductOptions } from "@/features/sales/queries";
 import { getSaleProductsQuery } from "@/features/sales/queries";
 import { createSaleSchema } from "@/features/sales/schema";
-import {
-  cancelSale,
-  createSale,
-  findExistingSaleByIdempotencyKey,
-} from "@/features/sales/server";
+import { cancelSale, createSaleOnce } from "@/features/sales/server";
 import { requireAppContext } from "@/lib/app-session";
-import { buildOrganizationCacheTags } from "@/lib/cache-tags";
-
-const SALES_IDEMPOTENCY_CONSTRAINT =
-  "sales_organization_idempotency_key_unique_idx";
-
-const revalidateSalesViews = (organizationId: string) => {
-  revalidatePath("/vendas");
-  revalidatePath("/produtos");
-  revalidatePath("/produtos/[id]", "page");
-  updateTag(buildOrganizationCacheTags(organizationId).analytics);
-};
-
-const revalidateSaleDetail = (saleId: string) => {
-  revalidatePath(`/vendas/${saleId}`);
-};
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null;
-
-const isIdempotencyConflict = (error: unknown): boolean => {
-  if (!isRecord(error)) {
-    return false;
-  }
-
-  if (
-    error.code === "23505" &&
-    error.constraint === SALES_IDEMPOTENCY_CONSTRAINT
-  ) {
-    return true;
-  }
-
-  return isIdempotencyConflict(error.cause);
-};
+import { saleChanged } from "@/lib/domain-invalidation";
 
 export async function createSaleAction(data: {
   additionalAmount?: number;
@@ -64,44 +27,25 @@ export async function createSaleAction(data: {
 }): Promise<string> {
   const context = await requireAppContext("sales:write");
   const parsed = createSaleSchema.parse(data);
-  const existingSaleId = await findExistingSaleByIdempotencyKey(
-    context.organizationId,
-    parsed.idempotencyKey
-  );
+  const result = await createSaleOnce({
+    actorUserId: context.userId,
+    input: parsed,
+    loadCardInstallmentRules: async () => {
+      const catalogSettings = await getCatalogSettings(context.organizationId);
+      return catalogSettings.cardInstallmentRules;
+    },
+    organizationId: context.organizationId,
+  });
 
-  if (existingSaleId) {
-    return existingSaleId;
+  if (!result.created) {
+    return result.saleId;
   }
 
-  const catalogSettings = await getCatalogSettings(context.organizationId);
-
-  let createdSaleId: string;
-
-  try {
-    createdSaleId = await createSale({
-      actorUserId: context.userId,
-      cardInstallmentRules: catalogSettings.cardInstallmentRules,
-      input: parsed,
-      organizationId: context.organizationId,
-    });
-  } catch (error) {
-    if (isIdempotencyConflict(error)) {
-      const concurrentSaleId = await findExistingSaleByIdempotencyKey(
-        context.organizationId,
-        parsed.idempotencyKey
-      );
-
-      if (concurrentSaleId) {
-        return concurrentSaleId;
-      }
-    }
-
-    throw error;
-  }
-
-  revalidateSalesViews(context.organizationId);
-  revalidateSaleDetail(createdSaleId);
-  return createdSaleId;
+  saleChanged({
+    organizationId: context.organizationId,
+    saleId: result.saleId,
+  });
+  return result.saleId;
 }
 
 export async function cancelSaleAction(id: string) {
@@ -113,8 +57,10 @@ export async function cancelSaleAction(id: string) {
     saleId: id,
   });
 
-  revalidateSalesViews(context.organizationId);
-  revalidateSaleDetail(id);
+  saleChanged({
+    organizationId: context.organizationId,
+    saleId: id,
+  });
 }
 
 export async function searchSaleProductOptionsAction({

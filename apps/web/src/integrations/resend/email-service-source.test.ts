@@ -53,8 +53,7 @@ describe("email service and Resend webhook", () => {
     expect(resendWebhookHandlerSource).toContain("svix-signature");
     expect(resendWebhookHandlerSource).toContain("webhooks.verify");
     expect(resendWebhookHandlerSource).toContain("RESEND_WEBHOOK_SECRET");
-    expect(resendWebhookHandlerSource).toContain("captureWebhookEvent");
-    expect(resendWebhookHandlerSource).toContain("enqueueOutboxEvent");
+    expect(resendWebhookHandlerSource).toContain("observeWebhookIntake");
     expect(resendWebhookHandlerSource).not.toContain(
       "sendOutboxEventToInngest"
     );
