@@ -320,10 +320,12 @@ const requireFutureExpiry = (expiresAt: Date): void => {
   }
 };
 
+const ADMIN_EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 const requireAdminEmail = (email: string): string => {
   const normalized = normalizeAdminEmail(email);
 
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+  if (!ADMIN_EMAIL_PATTERN.test(normalized)) {
     throw new Error("Platform admin enrollment requires a valid email.");
   }
 

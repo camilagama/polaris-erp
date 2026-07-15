@@ -103,7 +103,7 @@ const main = async (): Promise<void> => {
     );
     const state = existing.rows[0];
 
-    if (!state || state.platform_admins !== "0" || state.enrollments !== "0") {
+    if (state?.platform_admins !== "0" || state.enrollments !== "0") {
       throw new Error(
         "Initial admin bootstrap has already been used. Manage access from the admin console."
       );
