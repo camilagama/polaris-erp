@@ -8,6 +8,7 @@ import {
   UserGroupIcon,
 } from "@hugeicons/core-free-icons";
 import { BaseSidebar } from "@polaris/ui/components/shared/base-sidebar";
+import { DGImportsLogo } from "@polaris/ui/components/ui/svgs/logo";
 import type { ComponentProps } from "react";
 
 const adminNavigationItems = [
@@ -60,6 +61,7 @@ export function AdminSidebar({ user, ...props }: AdminSidebarProps) {
     <BaseSidebar
       {...props}
       brandName="Polaris Admin"
+      logo={<DGImportsLogo className="size-6" />}
       navigationItems={adminNavigationItems}
       user={{
         name: user.name,

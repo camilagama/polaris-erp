@@ -5,7 +5,6 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@polaris/ui/components/ui/sidebar";
-import { TooltipProvider } from "@polaris/ui/components/ui/tooltip";
 import { eq } from "drizzle-orm";
 import type { ReactNode } from "react";
 import { Suspense } from "react";
@@ -52,22 +51,20 @@ async function AdminAppWrapper({ children }: { children: ReactNode }) {
         }}
       />
       <SidebarInset>
-        <TooltipProvider>
-          <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center border-border/60 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/70">
-            <SidebarTrigger />
-            <div className="ml-3 min-w-0 sm:ml-4">
-              <p className="truncate font-semibold text-sm sm:text-base">
-                Polaris Admin
-              </p>
-              <p className="truncate text-[11px] text-muted-foreground sm:text-xs">
-                Console operacional
-              </p>
-            </div>
-          </header>
-          <div className="flex flex-1 flex-col px-4 py-4 sm:px-6 sm:py-6">
-            {children}
+        <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center border-border/60 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/70">
+          <SidebarTrigger />
+          <div className="ml-3 min-w-0 sm:ml-4">
+            <p className="truncate font-semibold text-sm sm:text-base">
+              Polaris Admin
+            </p>
+            <p className="truncate text-[11px] text-muted-foreground sm:text-xs">
+              Console operacional
+            </p>
           </div>
-        </TooltipProvider>
+        </header>
+        <div className="flex flex-1 flex-col px-4 py-4 sm:px-6 sm:py-6">
+          {children}
+        </div>
       </SidebarInset>
     </SidebarProvider>
   );
