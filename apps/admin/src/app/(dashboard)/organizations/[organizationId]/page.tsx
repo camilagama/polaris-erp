@@ -79,7 +79,7 @@ const OrganizationDetailContent = async ({
       : "Reativar organizacao";
 
   return (
-    <section className="mx-auto grid w-full max-w-6xl gap-6 px-6 py-8">
+    <section className="grid gap-6">
       <div>
         <Link
           className="text-muted-foreground text-sm hover:text-foreground"
@@ -376,7 +376,7 @@ const OrganizationDetailContent = async ({
 };
 
 const OrganizationDetailFallback = () => (
-  <section className="mx-auto w-full max-w-6xl px-6 py-8">
+  <section>
     <p className="text-muted-foreground text-sm">Carregando organizacao...</p>
   </section>
 );

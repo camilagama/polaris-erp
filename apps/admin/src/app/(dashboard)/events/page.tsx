@@ -29,7 +29,13 @@ const canRetry = ({
 }): boolean =>
   role === "owner" && (status === "failed" || status === "dead_letter");
 
-const EventsContent = async () => {
+import { EventsDateFilter } from "./events-date-filter";
+
+const EventsContent = async ({
+  searchParams,
+}: {
+  searchParams: { from?: string; to?: string; preset?: string };
+}) => {
   await connection();
   const platformAdmin = await guardPlatformAdmin();
 
@@ -38,12 +44,18 @@ const EventsContent = async () => {
   );
 
   return (
-    <section className="mx-auto grid w-full max-w-6xl gap-6 px-6 py-8">
+    <section className="grid gap-6">
       <PageHeader
         backLink={{ href: "/" }}
         description="Observabilidade basica de outbox e webhooks capturados."
         title="Eventos"
-      />
+      >
+        <EventsDateFilter
+          from={searchParams.from ?? new Date().toISOString().slice(0, 10)}
+          preset={searchParams.preset ?? "last-7-days"}
+          to={searchParams.to ?? new Date().toISOString().slice(0, 10)}
+        />
+      </PageHeader>
 
       <section className="overflow-x-auto rounded-xl border border-border bg-card">
         <div className="border-border border-b px-4 py-3">
@@ -179,16 +191,20 @@ const EventsContent = async () => {
 };
 
 const EventsFallback = () => (
-  <section className="mx-auto w-full max-w-6xl px-6 py-8">
+  <section>
     <p className="text-muted-foreground text-sm">Carregando eventos...</p>
   </section>
 );
 
-export default function EventsPage() {
+export default function EventsPage({
+  searchParams,
+}: {
+  searchParams: { from?: string; to?: string; preset?: string };
+}) {
   return (
     <main className="min-h-screen bg-background text-foreground">
       <Suspense fallback={<EventsFallback />}>
-        <EventsContent />
+        <EventsContent searchParams={searchParams} />
       </Suspense>
     </main>
   );

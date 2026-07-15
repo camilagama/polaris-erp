@@ -33,7 +33,7 @@ const UsersContent = async ({ searchParams }: UsersPageProps) => {
   );
 
   return (
-    <section className="mx-auto grid w-full max-w-6xl gap-6 px-6 py-8">
+    <section className="grid gap-6">
       <PageHeader
         backLink={{ href: "/" }}
         description="Busca por ID técnico, com dados pessoais e sessões redigidos."
@@ -66,7 +66,7 @@ const UsersContent = async ({ searchParams }: UsersPageProps) => {
 };
 
 const UsersFallback = () => (
-  <section className="mx-auto w-full max-w-6xl px-6 py-8">
+  <section>
     <p className="text-muted-foreground text-sm">Carregando usuarios...</p>
   </section>
 );

@@ -30,6 +30,7 @@ interface PlatformDashboardEvent {
 }
 
 export interface PlatformDashboardData {
+  activity: { date: string; count: number; level: number }[];
   events: PlatformDashboardEvent[];
   health: PlatformDashboardHealth;
   summary: PlatformDashboardSummary;
@@ -89,6 +90,78 @@ const getEvents = async (
   }));
 };
 
+const getActivityMap = async (
+  queryableDb: QueryableDb
+): Promise<{ date: string; count: number; level: number }[]> => {
+  const rows = toRows(
+    await queryableDb.execute(sql`
+      select date(created_at) as date, count(*) as count
+      from audit_events
+      where created_at >= now() - interval '365 days'
+      group by date(created_at)
+      order by date(created_at) asc
+    `)
+  );
+
+  let maxCount = 0;
+
+  const activitiesMap = new Map<string, number>();
+
+  for (const row of rows) {
+    const count = toNumber(row.count);
+    const dateStr =
+      typeof row.date === "string"
+        ? row.date
+        : (toIsoString(row.date)?.split("T")[0] ?? "");
+    if (dateStr) {
+      activitiesMap.set(dateStr, count);
+      if (count > maxCount) {
+        maxCount = count;
+      }
+    }
+  }
+
+  // Ensure 365 days range is always filled
+  const activities: { date: string; count: number; level: number }[] = [];
+  const today = new Date();
+
+  for (let i = 364; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().split("T")[0];
+    const count = activitiesMap.get(dateStr) || 0;
+
+    activities.push({
+      date: dateStr,
+      count,
+      level: 0,
+    });
+  }
+
+  return activities.map((activity) => {
+    if (activity.count === 0) {
+      return { ...activity, level: 0 };
+    }
+    if (maxCount === 0) {
+      return { ...activity, level: 1 };
+    }
+
+    const ratio = activity.count / maxCount;
+    let level = 1;
+    if (ratio > 0.25) {
+      level = 2;
+    }
+    if (ratio > 0.5) {
+      level = 3;
+    }
+    if (ratio > 0.75) {
+      level = 4;
+    }
+
+    return { ...activity, level };
+  });
+};
+
 const hasR2Config = (): boolean =>
   Boolean(
     process.env.R2_ACCOUNT_ID &&
@@ -117,8 +190,10 @@ export const getPlatformDashboardData = async (
   const database = await checkDatabaseHealth(queryableDb);
   const summary = await getSummary(queryableDb);
   const events = await getEvents(queryableDb);
+  const activity = await getActivityMap(queryableDb);
 
   return {
+    activity,
     events,
     health: {
       database,

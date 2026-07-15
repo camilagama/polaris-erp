@@ -25,7 +25,7 @@ export default async function PlatformAdminAccessPage() {
   const grants = await listPlatformAdminGrantsForOwner();
 
   return (
-    <main className="mx-auto grid w-full max-w-6xl gap-6 px-6 py-8">
+    <main className="grid gap-6">
       <section className="rounded-lg border border-border bg-card p-5">
         <h1 className="font-semibold text-2xl tracking-normal">
           Acessos temporários da plataforma

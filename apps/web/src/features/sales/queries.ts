@@ -1,5 +1,9 @@
 import "server-only";
 
+import {
+  decodeOpaqueCursor,
+  encodeOpaqueCursor,
+} from "@polaris/db/opaque-cursor";
 import { products, saleItems, sales } from "@polaris/db/schema";
 import { withTenantContext } from "@polaris/db/tenant-context";
 import {
@@ -22,7 +26,6 @@ import type {
   SaleProductOption,
   SaleStatusFilter,
 } from "@/features/sales/contracts";
-import { decodeOpaqueCursor, encodeOpaqueCursor } from "@/lib/opaque-cursor";
 
 const DEFAULT_PAGE_SIZE = 15;
 const DEFAULT_PRODUCT_OPTIONS_PAGE_SIZE = 20;

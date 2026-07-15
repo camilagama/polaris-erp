@@ -6,13 +6,15 @@
   "dependencies": {
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
-    "pg": "^8.22.0"
+    "pg": "^8.22.0",
+    "zod": "^4.4.3"
   },
   "exports": {
     ".": "./src/index.ts",
     "./pool-config": "./src/pool-config.ts",
     "./schema": "./src/schema.ts",
-    "./tenant-context": "./src/tenant-context.ts"
+    "./tenant-context": "./src/tenant-context.ts",
+    "./opaque-cursor": "./src/opaque-cursor.ts"
   },
   "scripts": {
     "db:generate": "drizzle-kit generate",

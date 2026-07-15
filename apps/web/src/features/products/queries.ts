@@ -1,6 +1,10 @@
 import "server-only";
 
 import {
+  decodeOpaqueCursor,
+  encodeOpaqueCursor,
+} from "@polaris/db/opaque-cursor";
+import {
   categories,
   productPriceChanges,
   productStockEntries,
@@ -41,7 +45,6 @@ import type {
   ProductStockWriteOffItem,
 } from "@/features/products/contracts";
 import { buildProductImageUrl } from "@/features/products/image-urls";
-import { decodeOpaqueCursor, encodeOpaqueCursor } from "@/lib/opaque-cursor";
 
 const DEFAULT_PAGE_SIZE = 15;
 const INVENTORY_MOVEMENTS_LIMIT = 200;

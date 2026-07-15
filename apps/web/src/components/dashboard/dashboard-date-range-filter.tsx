@@ -1,8 +1,6 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
-import { useTransition } from "react";
-import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { UrlDateRangeFilter } from "@polaris/ui/components/shared/url-date-range-filter";
 import {
   buildDashboardRangeQuery,
   type DateRangePresetOption,
@@ -32,9 +30,6 @@ export function DashboardDateRangeFilter({
   to,
   variant = "dashboard",
 }: DashboardDateRangeFilterProps) {
-  const pathname = usePathname();
-  const router = useRouter();
-  const [pending, startTransition] = useTransition();
   const resolvePresetRange = (presetValue: string) => {
     if (variant === "sales" && bounds) {
       return getSalesPresetDateRange({
@@ -59,29 +54,29 @@ export function DashboardDateRangeFilter({
     );
   };
 
-  return (
-    <div className="flex w-full sm:justify-end">
-      <DateRangePicker
-        disabled={pending}
-        onChange={({ from: nextFrom, preset: nextPreset, to: nextTo }) => {
-          const query = buildDashboardRangeQuery({
-            from: nextFrom,
-            preset: nextPreset,
-            to: nextTo,
-          });
+  const buildQuery = ({
+    from: nextFrom,
+    preset: nextPreset,
+    to: nextTo,
+  }: {
+    from: string;
+    preset: string | null;
+    to: string;
+  }) =>
+    buildDashboardRangeQuery({
+      from: nextFrom,
+      preset: nextPreset,
+      to: nextTo,
+    });
 
-          startTransition(() => {
-            router.replace(query ? `${pathname}?${query}` : pathname);
-          });
-        }}
-        presets={presets}
-        resolvePresetRange={resolvePresetRange}
-        value={{
-          from,
-          preset,
-          to,
-        }}
-      />
-    </div>
+  return (
+    <UrlDateRangeFilter
+      buildQuery={buildQuery}
+      from={from}
+      preset={preset}
+      presets={presets as { label: string; value: string }[]}
+      resolvePresetRange={resolvePresetRange}
+      to={to}
+    />
   );
 }

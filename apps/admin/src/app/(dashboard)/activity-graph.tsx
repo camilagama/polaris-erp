@@ -1,0 +1,103 @@
+"use client";
+
+import {
+  type Activity,
+  ContributionGraph,
+  ContributionGraphBlock,
+  ContributionGraphCalendar,
+} from "@polaris/ui/components/shared/contribution-graph";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@polaris/ui/components/ui/tooltip";
+import { format, parseISO } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { useMemo } from "react";
+
+const BLOCK_SIZE = 11;
+const BLOCK_MARGIN = 4; // match web
+
+interface ActivityGraphProps {
+  data: Activity[];
+}
+
+export function ActivityGraph({ data }: ActivityGraphProps) {
+  const visibleData = useMemo(() => {
+    if (data.length === 0) {
+      return null;
+    }
+
+    // Use 336 days (48 weeks) which perfectly fills the width of the new max-w-[1600px] half-card container (644px)
+    const maxDays = 336;
+    const visibleActivities =
+      data.length > maxDays ? data.slice(-maxDays) : data;
+    const byDate = new Map(visibleActivities.map((day) => [day.date, day]));
+
+    return { activities: visibleActivities, byDate };
+  }, [data]);
+
+  return (
+    <div className="flex w-full justify-start">
+      {visibleData && visibleData.activities.length > 0 && (
+        <TooltipProvider delayDuration={200}>
+          <ContributionGraph
+            blockMargin={BLOCK_MARGIN}
+            blockSize={BLOCK_SIZE}
+            data={visibleData.activities}
+            fontSize={12}
+            labels={{ legend: { less: "Menos", more: "Mais" } }}
+            maxLevel={4}
+            weekStart={1}
+          >
+            <ContributionGraphCalendar className="overflow-x-hidden">
+              {({ activity, dayIndex, weekIndex }) => {
+                const day = visibleData.byDate.get(activity.date);
+                const count = day?.count ?? 0;
+                const longDate = format(
+                  parseISO(`${activity.date}T12:00:00`),
+                  "PPP",
+                  { locale: ptBR }
+                );
+
+                return (
+                  <Tooltip key={activity.date}>
+                    <TooltipTrigger asChild>
+                      <g>
+                        <ContributionGraphBlock
+                          activity={activity}
+                          className="transition-opacity hover:opacity-80"
+                          dayIndex={dayIndex}
+                          weekIndex={weekIndex}
+                        />
+                      </g>
+                    </TooltipTrigger>
+                    <TooltipContent
+                      align="center"
+                      className="grid min-w-32 items-start gap-1.5 rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-foreground text-xs/relaxed [&>svg]:hidden"
+                      collisionPadding={12}
+                      hideArrow
+                      side="top"
+                      sideOffset={8}
+                    >
+                      <div className="flex flex-col gap-1.5">
+                        <span className="font-medium">{longDate}</span>
+                        <div className="flex items-center justify-between gap-4 leading-none">
+                          <span className="text-muted-foreground">Eventos</span>
+                          <span className="font-medium font-mono tabular-nums">
+                            {count}
+                          </span>
+                        </div>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              }}
+            </ContributionGraphCalendar>
+          </ContributionGraph>
+        </TooltipProvider>
+      )}
+    </div>
+  );
+}

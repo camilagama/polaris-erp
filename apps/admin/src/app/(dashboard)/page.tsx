@@ -1,4 +1,8 @@
 import { getPlatformDashboardDataForAdmin } from "@polaris/platform/dashboard";
+import {
+  AlertBanner,
+  type AlertBannerMessage,
+} from "@polaris/ui/components/shared/alert-banner";
 import { RevenueProfitChart } from "@polaris/ui/components/shared/revenue-profit-chart";
 import { SalesCountChart } from "@polaris/ui/components/shared/sales-count-chart";
 import {
@@ -12,6 +16,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { requirePlatformAdmin } from "@/lib/platform-admin-auth";
+import { ActivityGraph } from "./activity-graph";
 
 const getAdminContext = async () => requirePlatformAdmin();
 
@@ -95,18 +100,39 @@ const AdminDashboard = async () => {
     },
   ] as const;
 
-  const mockChartData = [
-    { label: "Seg", salesCount: 12, costs: 0, result: 0, sold: 0 },
-    { label: "Ter", salesCount: 15, costs: 0, result: 0, sold: 0 },
-    { label: "Qua", salesCount: 18, costs: 0, result: 0, sold: 0 },
-    { label: "Qui", salesCount: 22, costs: 0, result: 0, sold: 0 },
-    { label: "Sex", salesCount: 28, costs: 0, result: 0, sold: 0 },
-    { label: "Sáb", salesCount: 25, costs: 0, result: 0, sold: 0 },
-    { label: "Dom", salesCount: 30, costs: 0, result: 0, sold: 0 },
-  ];
+  const alerts: AlertBannerMessage[] = [];
+  if (!dashboard.health.database) {
+    alerts.push({
+      id: "health-db",
+      message: "Falha de comunicação com o Banco de Dados.",
+      severity: "negative",
+    });
+  }
+  if (!dashboard.health.r2) {
+    alerts.push({
+      id: "health-r2",
+      message: "Credenciais do R2 ausentes ou inválidas.",
+      severity: "negative",
+    });
+  }
+
+  const realChartData = dashboard.activity.slice(-7).map((d) => {
+    const dObj = new Date(`${d.date}T12:00:00`);
+    const label = new Intl.DateTimeFormat("pt-BR", { weekday: "short" }).format(
+      dObj
+    );
+    return {
+      label: label.charAt(0).toUpperCase() + label.slice(1),
+      salesCount: d.count,
+      costs: 0,
+      result: 0,
+      sold: 0,
+    };
+  });
 
   return (
-    <section className="mx-auto grid w-full max-w-6xl gap-6 px-6 py-8">
+    <section className="grid gap-6">
+      <AlertBanner alerts={alerts} />
       <Card>
         <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
           <div>
@@ -160,7 +186,21 @@ const AdminDashboard = async () => {
         })}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[0.8fr_1.2fr_1fr]">
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Atividade do Sistema</CardTitle>
+            <CardDescription>
+              Volume de eventos de auditoria registrados (Tenant + Platform)
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="overflow-hidden">
+            <div className="w-full">
+              <ActivityGraph data={dashboard.activity} />
+            </div>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Status operacional</CardTitle>
@@ -183,6 +223,23 @@ const AdminDashboard = async () => {
                 </span>
               </div>
             ))}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[1fr_1.5fr]">
+        <Card className="flex flex-col">
+          <CardHeader>
+            <CardTitle className="text-lg">Desempenho Geral</CardTitle>
+            <CardDescription>
+              Métricas de atividade da plataforma (Real)
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-1 flex-col justify-between">
+            <div className="mb-4 min-h-[140px] w-full flex-1">
+              <SalesCountChart data={realChartData} />
+            </div>
+            <RevenueProfitChart profit={0} revenue={0} />
           </CardContent>
         </Card>
 
@@ -218,21 +275,6 @@ const AdminDashboard = async () => {
                 </div>
               ))
             )}
-          </CardContent>
-        </Card>
-
-        <Card className="flex flex-col">
-          <CardHeader>
-            <CardTitle className="text-lg">Desempenho Geral</CardTitle>
-            <CardDescription>
-              Métricas de atividade da plataforma (Exemplo Abstraído)
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-1 flex-col justify-between">
-            <div className="mb-4 min-h-[140px] w-full flex-1">
-              <SalesCountChart data={mockChartData} />
-            </div>
-            <RevenueProfitChart profit={12_000} revenue={45_000} />
           </CardContent>
         </Card>
       </div>

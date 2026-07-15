@@ -1,15 +1,15 @@
 "use client";
 
 import { Calendar02Icon } from "@hugeicons/core-free-icons";
-import { format, parseISO } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { startTransition, useEffect, useMemo, useRef, useState } from "react";
-import { getNextRoundedContainerWidth } from "@/components/dashboard/sales-contribution-graph-resize";
 import {
   ContributionGraph,
   ContributionGraphBlock,
   ContributionGraphCalendar,
-} from "@/components/kibo-ui/contribution-graph";
+} from "@polaris/ui/components/shared/contribution-graph";
+import { format, parseISO } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { startTransition, useEffect, useMemo, useRef, useState } from "react";
+import { getNextRoundedContainerWidth } from "@/components/dashboard/sales-contribution-graph-resize";
 import { Card, CardContent } from "@/components/ui/card";
 import { Empty } from "@/components/ui/empty";
 import {

@@ -37,7 +37,7 @@ const BillingContent = async () => {
   );
 
   return (
-    <section className="mx-auto grid w-full max-w-6xl gap-6 px-6 py-8">
+    <section className="grid gap-6">
       <PageHeader
         backLink={{ href: "/" }}
         description="Estado canonico de assinaturas, invoices e acesso derivado."
@@ -252,7 +252,7 @@ const BillingContent = async () => {
 };
 
 const BillingFallback = () => (
-  <section className="mx-auto w-full max-w-6xl px-6 py-8">
+  <section>
     <p className="text-muted-foreground text-sm">Carregando billing...</p>
   </section>
 );

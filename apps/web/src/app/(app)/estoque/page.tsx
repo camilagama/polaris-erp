@@ -64,7 +64,7 @@ export default async function EstoquePage(props: EstoquePageProps) {
   });
 
   return (
-    <div className="flex flex-col gap-6 px-6 pb-6">
+    <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
         <h1 className="font-semibold text-2xl tracking-tight">
           Movimentacoes de estoque
