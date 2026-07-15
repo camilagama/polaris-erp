@@ -13,6 +13,7 @@ describe("billing schema", () => {
     expect(schemaSource).toContain('"billing_customers"');
     expect(schemaSource).toContain('"billing_subscriptions"');
     expect(schemaSource).toContain('"billing_checkout_sessions"');
+    expect(schemaSource).toContain('"signup_checkout_intents"');
     expect(schemaSource).toContain('"billing_invoices"');
     expect(schemaSource).toContain('"billing_payment_attempts"');
     expect(schemaSource).toContain('"billing_provider_links"');

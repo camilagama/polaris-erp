@@ -45,13 +45,14 @@ export type InternalJobContext =
   | "billing_lifecycle"
   | "billing_webhook_reconcile"
   | "goal_resolution"
+  | "onboarding"
   | "platform_admin_bootstrap"
   | "platform_admin_admission"
   | "platform_admin_grant_management"
   | "product_image_reconcile"
   | "stock_ledger_reconciliation";
 
-const setInternalJobContext = async (
+export const setInternalJobContext = async (
   tx: TenantTransaction,
   job: InternalJobContext
 ): Promise<void> => {

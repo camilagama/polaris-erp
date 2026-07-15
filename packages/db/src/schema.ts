@@ -812,6 +812,60 @@ export const billingCheckoutSessions = pgTable(
   ]
 );
 
+/**
+ * A provider checkout started before the buyer has a Polaris identity.
+ * It never grants access by itself: a verified tenant identity must claim it.
+ */
+export const signupCheckoutIntents = pgTable(
+  "signup_checkout_intents",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    billingEmail: text("billing_email").notNull(),
+    planId: text("plan_id")
+      .notNull()
+      .references(() => billingPlans.id),
+    provider: text("provider").notNull(),
+    externalReference: text("external_reference").notNull(),
+    status: text("status").default("pending").notNull(),
+    providerCheckoutId: text("provider_checkout_id"),
+    providerSubscriptionId: text("provider_subscription_id"),
+    checkoutUrl: text("checkout_url"),
+    expiresAt: timestamp("expires_at", tz),
+    paidAt: timestamp("paid_at", tz),
+    claimedUserId: text("claimed_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    claimedOrganizationId: text("claimed_organization_id").references(
+      () => organization.id,
+      { onDelete: "set null" }
+    ),
+    claimedAt: timestamp("claimed_at", tz),
+    lastError: text("last_error"),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("signup_checkout_intents_external_reference_unique_idx").on(
+      table.externalReference
+    ),
+    uniqueIndex("signup_checkout_intents_provider_checkout_unique_idx")
+      .on(table.provider, table.providerCheckoutId)
+      .where(sql`${table.providerCheckoutId} is not null`),
+    index("signup_checkout_intents_email_status_idx").on(
+      table.billingEmail,
+      table.status,
+      table.paidAt
+    ),
+    check(
+      "signup_checkout_intents_provider_known_check",
+      sql`${table.provider} in ('asaas')`
+    ),
+    check(
+      "signup_checkout_intents_status_known_check",
+      sql`${table.status} in ('pending', 'ready', 'paid', 'review', 'expired', 'cancelled')`
+    ),
+  ]
+);
+
 export const billingInvoices = pgTable(
   "billing_invoices",
   {
