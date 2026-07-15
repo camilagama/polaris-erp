@@ -6,10 +6,10 @@ import {
   ContributionGraphBlock,
   ContributionGraphCalendar,
 } from "@polaris/ui/components/shared/contribution-graph";
+import { useContainerWidth } from "@polaris/ui/hooks/use-container-width";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { startTransition, useEffect, useMemo, useRef, useState } from "react";
-import { getNextRoundedContainerWidth } from "@/components/dashboard/sales-contribution-graph-resize";
+import { useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Empty } from "@/components/ui/empty";
 import {
@@ -59,74 +59,7 @@ export function SalesContributionGraphCard({
   graph,
   className,
 }: SalesContributionGraphCardProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const animationFrameIdRef = useRef<number | null>(null);
-  const pendingWidthRef = useRef<number | null>(null);
-  const committedWidthRef = useRef<number | null>(null);
-  const [containerWidth, setContainerWidth] = useState<number | null>(null);
-
-  useEffect(() => {
-    const element = containerRef.current;
-    if (!element) {
-      return;
-    }
-
-    const flushWidth = () => {
-      animationFrameIdRef.current = null;
-      const measuredWidth = pendingWidthRef.current;
-      pendingWidthRef.current = null;
-
-      if (measuredWidth === null) {
-        return;
-      }
-
-      const nextWidth = getNextRoundedContainerWidth(
-        committedWidthRef.current,
-        measuredWidth
-      );
-
-      if (nextWidth === null) {
-        return;
-      }
-
-      committedWidthRef.current = nextWidth;
-      startTransition(() => {
-        setContainerWidth(nextWidth);
-      });
-    };
-
-    const scheduleWidthUpdate = (measuredWidth: number) => {
-      pendingWidthRef.current = measuredWidth;
-
-      if (animationFrameIdRef.current !== null) {
-        return;
-      }
-
-      animationFrameIdRef.current = window.requestAnimationFrame(flushWidth);
-    };
-
-    scheduleWidthUpdate(element.getBoundingClientRect().width);
-
-    const observer = new ResizeObserver((entries) => {
-      const entry = entries[0];
-      if (!entry) {
-        return;
-      }
-
-      scheduleWidthUpdate(entry.contentRect.width);
-    });
-
-    observer.observe(element);
-    return () => {
-      observer.disconnect();
-      pendingWidthRef.current = null;
-
-      if (animationFrameIdRef.current !== null) {
-        window.cancelAnimationFrame(animationFrameIdRef.current);
-        animationFrameIdRef.current = null;
-      }
-    };
-  }, []);
+  const { containerRef, containerWidth } = useContainerWidth();
 
   /**
    * Recorta os dados do gráfico para caber na largura disponível.

@@ -12,34 +12,42 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@polaris/ui/components/ui/tooltip";
+import { useContainerWidth } from "@polaris/ui/hooks/use-container-width";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useMemo } from "react";
 
 const BLOCK_SIZE = 11;
 const BLOCK_MARGIN = 4; // match web
+const CELL_STEP = BLOCK_SIZE + BLOCK_MARGIN;
 
 interface ActivityGraphProps {
   data: Activity[];
 }
 
 export function ActivityGraph({ data }: ActivityGraphProps) {
+  const { containerRef, containerWidth } = useContainerWidth();
+
   const visibleData = useMemo(() => {
-    if (data.length === 0) {
+    if (containerWidth === null || data.length === 0) {
       return null;
     }
 
-    // Use 336 days (48 weeks) which perfectly fills the width of the new max-w-[1600px] half-card container (644px)
-    const maxDays = 336;
+    const maxWeeks = Math.max(
+      1,
+      Math.floor((containerWidth + BLOCK_MARGIN) / CELL_STEP)
+    );
+    const maxDays = maxWeeks * 7 - 6;
+
     const visibleActivities =
       data.length > maxDays ? data.slice(-maxDays) : data;
     const byDate = new Map(visibleActivities.map((day) => [day.date, day]));
 
     return { activities: visibleActivities, byDate };
-  }, [data]);
+  }, [containerWidth, data]);
 
   return (
-    <div className="flex w-full justify-start">
+    <div className="flex w-full justify-start" ref={containerRef}>
       {visibleData && visibleData.activities.length > 0 && (
         <TooltipProvider delayDuration={200}>
           <ContributionGraph
