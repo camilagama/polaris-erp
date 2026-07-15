@@ -230,22 +230,10 @@ describe("getAppContext", () => {
       },
     });
     const { set } = mockUpdateSessionInTransaction();
-    const values = vi.fn().mockResolvedValue([]);
-    txMock.insert.mockReturnValueOnce({ values });
-
     await expect(getAppContext()).resolves.toBeNull();
     expect(set).toHaveBeenCalledWith(
       expect.objectContaining({
         expiresAt: expect.any(Date),
-      })
-    );
-    expect(values).toHaveBeenCalledWith(
-      expect.objectContaining({
-        action: "auth.session_revoked",
-        metadata: {
-          reason: "absolute_lifetime_reached",
-        },
-        subjectId: "session-1",
       })
     );
   });

@@ -1,10 +1,7 @@
 import "server-only";
 
 import { platformAuditEvents } from "@polaris/db/schema";
-import {
-  withInternalJobContext,
-  withUserContext,
-} from "@polaris/db/tenant-context";
+import { withInternalJobContext } from "@polaris/db/tenant-context";
 
 interface AuthHookContext {
   body?: unknown;
@@ -45,29 +42,20 @@ const getGoogleProvider = (
 
 const recordAuthAuditEvent = async ({
   action,
-  actorUserId = null,
   metadata,
   subjectId = null,
 }: {
   action: AuthAuditAction;
-  actorUserId?: string | null;
   metadata: Record<string, string | null>;
   subjectId?: string | null;
 }) => {
   const event = {
     action,
-    actorUserId,
+    actorAdminUserId: null,
     metadata,
     subjectId,
     subjectType: "session",
   };
-
-  if (actorUserId) {
-    await withUserContext(actorUserId, (tx) =>
-      tx.insert(platformAuditEvents).values(event)
-    );
-    return;
-  }
 
   await withInternalJobContext("auth_audit", (tx) =>
     tx.insert(platformAuditEvents).values(event)
@@ -83,7 +71,6 @@ export const recordAuthLoginAuditEvent = async ({
 }) => {
   await recordAuthAuditEvent({
     action: "auth.login_succeeded",
-    actorUserId: session.userId ?? null,
     metadata: {
       provider: getGoogleProvider(context),
     },
@@ -114,7 +101,6 @@ export const recordAuthSessionAuditEvent = async ({
   recordAuthAuditEvent({
     action:
       context?.path === "/sign-out" ? "auth.logout" : "auth.session_revoked",
-    actorUserId: session.userId ?? null,
     metadata: {},
     subjectId: session.id ?? null,
   });

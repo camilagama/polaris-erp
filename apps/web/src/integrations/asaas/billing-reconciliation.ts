@@ -4,6 +4,7 @@ import { FREE_PLAN_ID, PAID_MONTHLY_PLAN_ID } from "@polaris/billing";
 import { type SQL, sql } from "drizzle-orm";
 
 const ASAAS_TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/;
+const SIGNUP_CHECKOUT_REFERENCE_PREFIX = "signup-checkout-intent:";
 
 interface QueryableDb {
   execute: (query: SQL) => Promise<unknown>;
@@ -193,6 +194,44 @@ const mapAsaasAttemptStatus = (event: AsaasBillingEvent): string => {
   return "pending";
 };
 
+const isSuccessfulPayment = (event: AsaasBillingEvent): boolean =>
+  event.event === "PAYMENT_RECEIVED" || event.event === "PAYMENT_CONFIRMED";
+
+const reconcileSignupCheckoutIntent = async (
+  transaction: QueryableDb,
+  event: AsaasBillingEvent
+): Promise<boolean> => {
+  if (
+    !(
+      event.externalReference?.startsWith(SIGNUP_CHECKOUT_REFERENCE_PREFIX) &&
+      isSuccessfulPayment(event)
+    )
+  ) {
+    return false;
+  }
+
+  const intentId = event.externalReference.slice(
+    SIGNUP_CHECKOUT_REFERENCE_PREFIX.length
+  );
+
+  if (!(intentId && event.occurredAt)) {
+    return false;
+  }
+
+  await transaction.execute(sql`
+    update signup_checkout_intents
+    set status = 'paid',
+        paid_at = coalesce(paid_at, ${event.occurredAt}),
+        provider_subscription_id = coalesce(provider_subscription_id, ${event.subscriptionId}),
+        updated_at = now()
+    where id = ${intentId}::uuid
+      and provider = 'asaas'
+      and status in ('pending', 'ready')
+  `);
+
+  return true;
+};
+
 const demoteFreeSubscriptionForPaidActivation = async (
   transaction: QueryableDb,
   {
@@ -283,6 +322,10 @@ export const reconcileAsaasBillingEvent = async (
   const externalReference = event.externalReference;
 
   return await db.transaction(async (transaction) => {
+    if (await reconcileSignupCheckoutIntent(transaction, event)) {
+      return "processed";
+    }
+
     const subscription = await getSubscriptionByExternalReference(
       transaction,
       externalReference

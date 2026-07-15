@@ -9,12 +9,13 @@
     "@polaris/platform": "workspace:*",
     "@polaris/platform-auth": "workspace:*",
     "@polaris/ui": "workspace:*",
-    "@sentry/nextjs": "^10.63.0"
+    "@sentry/nextjs": "^10.63.0",
+    "@tanstack/react-table": "^8.21.3"
   },
   "scripts": {
-    "dev": "bun --env-file=../../.env.local x next dev",
-    "build": "bun --env-file=../../.env.local x next build",
-    "start": "bun --env-file=../../.env.local x next start",
+    "dev": "bun ../../scripts/run-next-with-local-env.ts admin dev --port 3001",
+    "build": "bun ../../scripts/run-next-with-local-env.ts admin build",
+    "start": "bun ../../scripts/run-next-with-local-env.ts admin start",
     "test": "vitest run",
     "typecheck": "tsc --noEmit --project tsconfig.json",
     "check": "cd ../.. && bun x ultracite check",

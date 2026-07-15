@@ -10,16 +10,16 @@ type OrganizationPlatformStatus = "active" | "suspended";
 type MutationReturningRow = Record<string, unknown>;
 
 export interface UpdatePlatformOrganizationStatusInput {
+  actorAdminUserId: string;
   actorPlatformAdminId: string;
-  actorUserId: string;
   organizationId: string;
   reason: string;
   status: OrganizationPlatformStatus;
 }
 
 export interface ClosePlatformOrganizationInput {
+  actorAdminUserId: string;
   actorPlatformAdminId: string;
-  actorUserId: string;
   organizationId: string;
   reason: string;
 }
@@ -102,7 +102,7 @@ const updatePlatformOrganizationStatusInTransaction = async (
     await recordPlatformAuditEvent(tx, {
       action: "auth.sessions_revoked",
       actorPlatformAdminId: input.actorPlatformAdminId,
-      actorUserId: input.actorUserId,
+      actorAdminUserId: input.actorAdminUserId,
       metadata: {
         reason: "organization_suspended",
       },
@@ -114,7 +114,7 @@ const updatePlatformOrganizationStatusInTransaction = async (
   await recordPlatformAuditEvent(tx, {
     action: "organization.status_changed",
     actorPlatformAdminId: input.actorPlatformAdminId,
-    actorUserId: input.actorUserId,
+    actorAdminUserId: input.actorAdminUserId,
     metadata: {
       reason,
       status: input.status,
@@ -222,7 +222,7 @@ const closePlatformOrganizationInTransaction = async (
   await recordPlatformAuditEvent(tx, {
     action: "organization.closure_requested",
     actorPlatformAdminId: input.actorPlatformAdminId,
-    actorUserId: input.actorUserId,
+    actorAdminUserId: input.actorAdminUserId,
     metadata: {
       providerCancellationRequested: Boolean(
         subscription && subscription.provider !== "manual"

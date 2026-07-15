@@ -1,0 +1,394 @@
+import { getPlatformOrganizationDetailForAdmin } from "@polaris/platform/directory";
+import { listPlatformSupportCasesForAdmin } from "@polaris/platform/support-cases";
+import { listPlatformSupportNotesForAdmin } from "@polaris/platform/support-notes";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { connection } from "next/server";
+import { Suspense } from "react";
+import { requirePlatformAdmin } from "@/lib/platform-admin-auth";
+import {
+  createSupportCaseAction,
+  updateSupportCaseAction,
+} from "../../support-cases/actions";
+import { createSupportNoteAction } from "../../support-notes/actions";
+import {
+  changeOrganizationStatusAction,
+  closeOrganizationAction,
+} from "../actions";
+
+interface OrganizationDetailPageProps {
+  params: Promise<{ organizationId: string }>;
+}
+
+const guardPlatformAdmin = async () => requirePlatformAdmin();
+
+const formatNumber = (value: number) =>
+  new Intl.NumberFormat("pt-BR").format(value);
+
+const formatDateTime = (value: string | null) => {
+  if (!value) {
+    return "Sem data";
+  }
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(new Date(value));
+};
+
+const OrganizationDetailContent = async ({
+  params,
+}: OrganizationDetailPageProps) => {
+  await connection();
+  const platformAdmin = await guardPlatformAdmin();
+
+  const { organizationId } = await params;
+  const [organization, supportCases, supportNotes] = await Promise.all([
+    getPlatformOrganizationDetailForAdmin(
+      platformAdmin.platformAdminId,
+      organizationId
+    ),
+    listPlatformSupportCasesForAdmin(platformAdmin.platformAdminId, {
+      organizationId,
+    }),
+    listPlatformSupportNotesForAdmin(platformAdmin.platformAdminId, {
+      organizationId,
+    }),
+  ]);
+
+  if (!organization) {
+    notFound();
+  }
+
+  const counts = [
+    { label: "Membros", value: organization.counts.members },
+    { label: "Produtos", value: organization.counts.products },
+    { label: "Vendas", value: organization.counts.sales },
+    {
+      label: "Sessoes ativas/recentes",
+      value: organization.sessionSummary.count,
+    },
+  ] as const;
+  const nextStatus = organization.status === "active" ? "suspended" : "active";
+  const submitLabel =
+    nextStatus === "suspended"
+      ? "Suspender organizacao"
+      : "Reativar organizacao";
+
+  return (
+    <section className="mx-auto grid w-full max-w-6xl gap-6 px-6 py-8">
+      <div>
+        <Link
+          className="text-muted-foreground text-sm hover:text-foreground"
+          href="/organizations"
+        >
+          Voltar
+        </Link>
+        <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="font-semibold text-2xl tracking-normal">
+              {organization.id}
+            </h1>
+            <p className="mt-1 text-muted-foreground text-sm">
+              {organization.primaryMemberEmail ?? "Sem email principal"}
+            </p>
+          </div>
+          <span className="rounded-md border border-border px-3 py-2 text-foreground text-sm">
+            {organization.status}
+          </span>
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-4">
+        {counts.map((item) => (
+          <article
+            className="rounded-lg border border-border bg-card p-4"
+            key={item.label}
+          >
+            <h2 className="font-medium text-muted-foreground text-sm tracking-normal">
+              {item.label}
+            </h2>
+            <p className="mt-3 font-semibold text-2xl tracking-normal">
+              {formatNumber(item.value)}
+            </p>
+          </article>
+        ))}
+      </div>
+
+      <section className="rounded-lg border border-border bg-card p-5">
+        <h2 className="font-semibold text-lg tracking-normal">
+          Sessoes redigidas
+        </h2>
+        <div className="mt-4 grid gap-2 text-muted-foreground text-sm sm:grid-cols-2">
+          <p>
+            Ultima criada:{" "}
+            {formatDateTime(organization.sessionSummary.latestCreatedAt)}
+          </p>
+          <p>
+            Ultima expiracao:{" "}
+            {formatDateTime(organization.sessionSummary.latestExpiresAt)}
+          </p>
+        </div>
+      </section>
+
+      <section className="rounded-lg border border-border bg-card p-5">
+        <h2 className="font-semibold text-lg tracking-normal">
+          Status da organizacao
+        </h2>
+        <form
+          action={changeOrganizationStatusAction}
+          className="mt-4 grid gap-4"
+        >
+          <input name="organizationId" type="hidden" value={organization.id} />
+          <input name="status" type="hidden" value={nextStatus} />
+          <label className="grid gap-2 text-foreground text-sm">
+            Motivo obrigatorio
+            <textarea
+              className="min-h-24 rounded-md border border-border bg-background px-3 py-2 text-foreground text-sm outline-none placeholder:text-muted-foreground focus:border-ring"
+              name="reason"
+              placeholder="Explique o motivo operacional da mudanca"
+              required
+            />
+          </label>
+          <label className="flex items-start gap-3 text-muted-foreground text-sm">
+            <input className="mt-1" name="confirm" required type="checkbox" />
+            Confirmo que esta mudanca afeta o acesso operacional da organizacao
+            e sera auditada.
+          </label>
+          <button
+            className="w-fit rounded-md border border-amber-600 px-4 py-2 font-medium text-amber-200 text-sm hover:border-amber-400"
+            type="submit"
+          >
+            {submitLabel}
+          </button>
+        </form>
+        <div className="mt-4 grid gap-2">
+          {supportCases.length === 0 ? (
+            <p className="text-muted-foreground text-sm">
+              Nenhum caso de suporte registrado.
+            </p>
+          ) : (
+            supportCases.map((supportCase) => (
+              <article
+                className="rounded-md border border-border px-3 py-3 text-sm"
+                key={supportCase.id}
+              >
+                <p>
+                  {supportCase.kind === "data_subject_request"
+                    ? "Solicitação de titular"
+                    : "Caso de suporte"}
+                  : {supportCase.status}
+                </p>
+                {supportCase.status === "closed" ? null : (
+                  <form
+                    action={updateSupportCaseAction}
+                    className="mt-3 grid gap-2"
+                  >
+                    <input name="caseId" type="hidden" value={supportCase.id} />
+                    <input
+                      name="organizationId"
+                      type="hidden"
+                      value={organization.id}
+                    />
+                    <input name="status" type="hidden" value="closed" />
+                    {supportCase.kind === "data_subject_request" ? (
+                      <label className="flex items-start gap-2 text-muted-foreground text-xs">
+                        <input
+                          name="requesterVerified"
+                          required
+                          type="checkbox"
+                        />
+                        Confirmo que a identidade do titular foi verificada
+                        manualmente.
+                      </label>
+                    ) : null}
+                    <textarea
+                      aria-label={`Resolução do caso ${supportCase.id}`}
+                      className="min-h-16 rounded-md border border-border bg-background px-2 py-1 text-xs"
+                      name="resolution"
+                      placeholder="Resolução manual, sem PII desnecessária"
+                      required
+                    />
+                    <button className="w-fit underline" type="submit">
+                      Encerrar caso
+                    </button>
+                  </form>
+                )}
+              </article>
+            ))
+          )}
+        </div>
+      </section>
+
+      {platformAdmin.role === "owner" ? (
+        <section className="rounded-lg border border-destructive/50 bg-card p-5">
+          <h2 className="font-semibold text-lg tracking-normal">
+            Encerrar organização
+          </h2>
+          <p className="mt-2 text-muted-foreground text-sm">
+            Bloqueia o acesso imediatamente e solicita o cancelamento da
+            renovação ao provider. Não há refund nem exclusão definitiva.
+          </p>
+          <form action={closeOrganizationAction} className="mt-4 grid gap-4">
+            <input
+              name="organizationId"
+              type="hidden"
+              value={organization.id}
+            />
+            <label className="grid gap-2 text-foreground text-sm">
+              Motivo obrigatório
+              <textarea
+                className="min-h-24 rounded-md border border-border bg-background px-3 py-2 text-foreground text-sm outline-none placeholder:text-muted-foreground focus:border-ring"
+                name="reason"
+                placeholder="Explique o encerramento sem incluir PII desnecessária"
+                required
+              />
+            </label>
+            <label className="flex items-start gap-3 text-muted-foreground text-sm">
+              <input className="mt-1" name="confirm" required type="checkbox" />
+              Confirmo o bloqueio imediato e o pedido de cancelamento da
+              renovação, sem refund automático.
+            </label>
+            <button
+              className="w-fit rounded-md border border-destructive px-4 py-2 font-medium text-destructive text-sm hover:bg-destructive hover:text-destructive-foreground"
+              type="submit"
+            >
+              Encerrar organização
+            </button>
+          </form>
+        </section>
+      ) : null}
+
+      <section className="overflow-x-auto rounded-lg border border-border bg-card">
+        <div className="grid w-full min-w-[720px] grid-cols-[1.3fr_1fr_0.7fr_0.9fr] gap-4 border-border border-b px-4 py-3 text-muted-foreground text-xs uppercase">
+          <span>Membro</span>
+          <span>Email redigido</span>
+          <span>Role</span>
+          <span>Providers</span>
+        </div>
+        {organization.members.length === 0 ? (
+          <p className="px-4 py-8 text-muted-foreground text-sm">
+            Nenhum membro encontrado.
+          </p>
+        ) : (
+          organization.members.map((member) => (
+            <Link
+              className="grid w-full min-w-[720px] grid-cols-[1.3fr_1fr_0.7fr_0.9fr] gap-4 border-border border-b px-4 py-3 text-sm hover:bg-muted/50"
+              href={`/users/${member.userId}`}
+              key={member.userId}
+              prefetch={false}
+            >
+              <span className="min-w-0">
+                <span className="block truncate font-medium text-foreground">
+                  {member.name}
+                </span>
+                <span className="block truncate text-muted-foreground">
+                  {member.userId}
+                </span>
+              </span>
+              <span className="truncate text-foreground">{member.email}</span>
+              <span className="text-foreground">{member.role}</span>
+              <span className="truncate text-muted-foreground">
+                {member.providerIds.join(", ") || "Nenhum"}
+              </span>
+            </Link>
+          ))
+        )}
+      </section>
+
+      <section className="rounded-lg border border-border bg-card p-5">
+        <h2 className="font-semibold text-lg tracking-normal">
+          Caso de suporte
+        </h2>
+        <p className="mt-2 text-muted-foreground text-sm">
+          Use para registrar investigação operacional sem abrir uma sessão do
+          tenant e sem revelar dados pessoais.
+        </p>
+        <form action={createSupportCaseAction} className="mt-4 grid gap-3">
+          <input name="organizationId" type="hidden" value={organization.id} />
+          <input name="kind" type="hidden" value="support" />
+          <label className="grid gap-2 text-foreground text-sm">
+            Motivo obrigatório
+            <textarea
+              className="min-h-24 rounded-md border border-border bg-background px-3 py-2 text-foreground text-sm outline-none placeholder:text-muted-foreground focus:border-ring"
+              name="reason"
+              placeholder="Explique o contexto operacional, sem dados pessoais desnecessários"
+              required
+            />
+          </label>
+          <button
+            className="w-fit rounded-md border border-border px-4 py-2 font-medium text-foreground text-sm hover:border-muted-foreground"
+            type="submit"
+          >
+            Abrir caso de suporte
+          </button>
+        </form>
+      </section>
+
+      <section className="rounded-lg border border-border bg-card p-5">
+        <h2 className="font-semibold text-lg tracking-normal">
+          Notas internas
+        </h2>
+        <form action={createSupportNoteAction} className="mt-4 grid gap-3">
+          <input name="organizationId" type="hidden" value={organization.id} />
+          <textarea
+            aria-label="Adicionar nota interna da organizacao"
+            className="min-h-24 rounded-md border border-border bg-background px-3 py-2 text-foreground text-sm outline-none placeholder:text-muted-foreground focus:border-ring"
+            name="body"
+            placeholder="Adicionar contexto interno de suporte"
+            required
+          />
+          <button
+            className="w-fit rounded-md border border-border px-4 py-2 font-medium text-foreground text-sm hover:border-muted-foreground"
+            type="submit"
+          >
+            Salvar nota
+          </button>
+        </form>
+        <div className="mt-5 grid gap-3">
+          {supportNotes.length === 0 ? (
+            <p className="rounded-md border border-border px-3 py-4 text-muted-foreground text-sm">
+              Nenhuma nota interna.
+            </p>
+          ) : (
+            supportNotes.map((note) => (
+              <article
+                className="rounded-md border border-border px-3 py-3"
+                key={note.id}
+              >
+                <p className="whitespace-pre-wrap text-foreground text-sm">
+                  {note.body}
+                </p>
+                <p className="mt-2 text-muted-foreground text-xs">
+                  {formatDateTime(note.createdAt)} -{" "}
+                  {note.authorPlatformAdminId?.slice(0, 8) ?? "sem autor"}
+                </p>
+              </article>
+            ))
+          )}
+        </div>
+      </section>
+    </section>
+  );
+};
+
+const OrganizationDetailFallback = () => (
+  <section className="mx-auto w-full max-w-6xl px-6 py-8">
+    <p className="text-muted-foreground text-sm">Carregando organizacao...</p>
+  </section>
+);
+
+export default function OrganizationDetailPage(
+  props: OrganizationDetailPageProps
+) {
+  return (
+    <main className="min-h-screen bg-background text-foreground">
+      <Suspense fallback={<OrganizationDetailFallback />}>
+        <OrganizationDetailContent {...props} />
+      </Suspense>
+    </main>
+  );
+}

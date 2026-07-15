@@ -1,15 +1,8 @@
 "use client";
 
 import { ShoppingBag02Icon } from "@hugeicons/core-free-icons";
-import { Cell, Pie, PieChart } from "recharts";
-import {
-  type ChartConfig,
-  ChartContainer,
-  ChartLegend,
-  ChartLegendContent,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
+import { DonutChart } from "@polaris/ui/components/shared/donut-chart";
+import type { ChartConfig } from "@/components/ui/chart";
 import { Empty } from "@/components/ui/empty";
 import type { SalesStatusSummary } from "@/features/sales/contracts";
 
@@ -38,62 +31,33 @@ export function SalesStatusChart({ data }: { data: SalesStatusSummary[] }) {
   }
 
   const chartData = data.map((item) => ({
-    count: item.count,
     fill: STATUS_COLORS[item.status],
-    status: item.status,
+    labelKey: item.status,
+    value: item.count,
   }));
   const chartConfig = chartData.reduce<ChartConfig>((config, item) => {
-    config[item.status] = {
-      color: STATUS_COLORS[item.status],
-      label: STATUS_LABELS[item.status],
+    const key = item.labelKey as keyof typeof STATUS_LABELS;
+    config[key] = {
+      color: STATUS_COLORS[key],
+      label: STATUS_LABELS[key],
     };
 
     return config;
   }, {});
 
   return (
-    <ChartContainer className="h-56 w-full" config={chartConfig}>
-      <PieChart accessibilityLayer>
-        <ChartTooltip
-          content={
-            <ChartTooltipContent
-              formatter={(value, name) => (
-                <div className="flex flex-1 items-center justify-between gap-4">
-                  <span className="text-muted-foreground">
-                    {chartConfig[String(name)]?.label ?? name}
-                  </span>
-                  <span className="font-medium font-mono text-foreground">
-                    {Number(value)} venda(s)
-                  </span>
-                </div>
-              )}
-              nameKey="status"
-            />
-          }
+    <DonutChart
+      config={chartConfig}
+      data={chartData}
+      emptyMessage={
+        <Empty
+          className="h-56 border-dashed shadow-none"
+          description="Aguardando registros de vendas para exibir o status."
+          icon={ShoppingBag02Icon}
+          title="Sem vendas no periodo"
         />
-        <Pie
-          data={chartData}
-          dataKey="count"
-          innerRadius={44}
-          isAnimationActive={true}
-          nameKey="status"
-          outerRadius={68}
-          paddingAngle={3}
-          strokeWidth={4}
-        >
-          {chartData.map((item) => (
-            <Cell fill={item.fill} key={item.status} />
-          ))}
-        </Pie>
-        <ChartLegend
-          content={
-            <ChartLegendContent
-              className="flex-wrap gap-2 pt-2 text-[11px]"
-              nameKey="status"
-            />
-          }
-        />
-      </PieChart>
-    </ChartContainer>
+      }
+      formatTooltipValue={(value) => `${value} venda(s)`}
+    />
   );
 }

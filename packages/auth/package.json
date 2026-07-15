@@ -14,6 +14,8 @@
   },
   "exports": {
     ".": "./src/auth.ts",
+    "./admin": "./src/admin-auth.ts",
+    "./admin-options": "./src/admin-auth-options.ts",
     "./app-url": "./src/app-url.ts",
     "./env": "./src/env.ts",
     "./session": "./src/session.ts",

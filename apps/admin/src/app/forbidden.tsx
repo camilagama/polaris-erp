@@ -7,8 +7,7 @@ export default function ForbiddenPage() {
           Admin interno protegido
         </h1>
         <p className="mt-3 text-muted-foreground text-sm">
-          Esta area exige Vercel Authentication, sessao valida e grant ativo de
-          platform admin.
+          Sua sessao esta valida, mas nao possui um grant administrativo ativo.
         </p>
       </section>
     </main>

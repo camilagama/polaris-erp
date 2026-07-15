@@ -112,6 +112,73 @@ export const verifications = pgTable("verifications", {
   ...timestamps,
 });
 
+// ---------------------------------------------------------------------------
+// Internal admin auth tables (isolated from tenant identities)
+// ---------------------------------------------------------------------------
+
+export const adminUsers = pgTable("admin_users", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  email: text("email").notNull().unique(),
+  emailVerified: boolean("email_verified").default(false).notNull(),
+  image: text("image"),
+  ...timestamps,
+});
+
+export const adminSessions = pgTable(
+  "admin_sessions",
+  {
+    id: text("id").notNull(),
+    expiresAt: timestamp("expires_at", tz).notNull(),
+    token: text("token").notNull().unique(),
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+    userId: text("user_id")
+      .notNull()
+      .references(() => adminUsers.id, { onDelete: "cascade" }),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("admin_sessions_id_unique_idx").on(table.id),
+    index("admin_sessions_user_id_idx").on(table.userId),
+  ]
+);
+
+export const adminAccounts = pgTable(
+  "admin_accounts",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id").notNull(),
+    providerId: text("provider_id").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => adminUsers.id, { onDelete: "cascade" }),
+    accessToken: text("access_token"),
+    refreshToken: text("refresh_token"),
+    idToken: text("id_token"),
+    accessTokenExpiresAt: timestamp("access_token_expires_at", tz),
+    refreshTokenExpiresAt: timestamp("refresh_token_expires_at", tz),
+    scope: text("scope"),
+    password: text("password"),
+    ...timestamps,
+  },
+  (table) => [
+    index("admin_accounts_user_id_idx").on(table.userId),
+    uniqueIndex("admin_accounts_provider_account_unique_idx").on(
+      table.providerId,
+      table.accountId
+    ),
+  ]
+);
+
+export const adminVerifications = pgTable("admin_verifications", {
+  id: text("id").primaryKey(),
+  identifier: text("identifier").notNull(),
+  value: text("value").notNull(),
+  expiresAt: timestamp("expires_at", tz).notNull(),
+  ...timestamps,
+});
+
 export const member = pgTable(
   "member",
   {
@@ -209,6 +276,24 @@ export const platformAdminRoleEnum = pgEnum("platform_admin_role", [
   "support",
 ]);
 
+export const platformAdminEnrollments = pgTable(
+  "platform_admin_enrollments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    email: text("email").notNull(),
+    role: platformAdminRoleEnum("role").notNull(),
+    reason: text("reason").notNull(),
+    grantExpiresAt: timestamp("grant_expires_at", tz).notNull(),
+    enrollmentExpiresAt: timestamp("enrollment_expires_at", tz).notNull(),
+    claimedAt: timestamp("claimed_at", tz),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("platform_admin_enrollments_email_unique_idx").on(table.email),
+    index("platform_admin_enrollments_claimed_at_idx").on(table.claimedAt),
+  ]
+);
+
 export const platformSupportCaseKindEnum = pgEnum(
   "platform_support_case_kind",
   ["support", "data_subject_request"]
@@ -223,14 +308,16 @@ export const platformAdmins = pgTable(
   "platform_admins",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    userId: text("user_id")
+    adminUserId: text("admin_user_id")
       .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
+      .references(() => adminUsers.id, { onDelete: "cascade" }),
     status: text("status").default("active").notNull(),
     ...timestamps,
   },
   (table) => [
-    uniqueIndex("platform_admins_user_id_unique_idx").on(table.userId),
+    uniqueIndex("platform_admins_admin_user_id_unique_idx").on(
+      table.adminUserId
+    ),
     index("platform_admins_status_idx").on(table.status),
     check(
       "platform_admins_status_known_check",
@@ -281,9 +368,12 @@ export const platformAuditEvents = pgTable(
       () => platformAdmins.id,
       { onDelete: "set null" }
     ),
-    actorUserId: text("actor_user_id").references(() => users.id, {
-      onDelete: "set null",
-    }),
+    actorAdminUserId: text("actor_admin_user_id").references(
+      () => adminUsers.id,
+      {
+        onDelete: "set null",
+      }
+    ),
     action: text("action").notNull(),
     subjectType: text("subject_type").notNull(),
     subjectId: text("subject_id"),
@@ -718,6 +808,60 @@ export const billingCheckoutSessions = pgTable(
     check(
       "billing_checkout_sessions_status_known_check",
       sql`${table.status} in ('pending', 'ready', 'review', 'expired')`
+    ),
+  ]
+);
+
+/**
+ * A provider checkout started before the buyer has a Polaris identity.
+ * It never grants access by itself: a verified tenant identity must claim it.
+ */
+export const signupCheckoutIntents = pgTable(
+  "signup_checkout_intents",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    billingEmail: text("billing_email").notNull(),
+    planId: text("plan_id")
+      .notNull()
+      .references(() => billingPlans.id),
+    provider: text("provider").notNull(),
+    externalReference: text("external_reference").notNull(),
+    status: text("status").default("pending").notNull(),
+    providerCheckoutId: text("provider_checkout_id"),
+    providerSubscriptionId: text("provider_subscription_id"),
+    checkoutUrl: text("checkout_url"),
+    expiresAt: timestamp("expires_at", tz),
+    paidAt: timestamp("paid_at", tz),
+    claimedUserId: text("claimed_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    claimedOrganizationId: text("claimed_organization_id").references(
+      () => organization.id,
+      { onDelete: "set null" }
+    ),
+    claimedAt: timestamp("claimed_at", tz),
+    lastError: text("last_error"),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("signup_checkout_intents_external_reference_unique_idx").on(
+      table.externalReference
+    ),
+    uniqueIndex("signup_checkout_intents_provider_checkout_unique_idx")
+      .on(table.provider, table.providerCheckoutId)
+      .where(sql`${table.providerCheckoutId} is not null`),
+    index("signup_checkout_intents_email_status_idx").on(
+      table.billingEmail,
+      table.status,
+      table.paidAt
+    ),
+    check(
+      "signup_checkout_intents_provider_known_check",
+      sql`${table.provider} in ('asaas')`
+    ),
+    check(
+      "signup_checkout_intents_status_known_check",
+      sql`${table.status} in ('pending', 'ready', 'paid', 'review', 'expired', 'cancelled')`
     ),
   ]
 );

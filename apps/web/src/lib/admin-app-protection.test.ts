@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const adminPageSource = readFileSync(
-  join(process.cwd(), "..", "admin", "src", "app", "page.tsx"),
+  join(process.cwd(), "..", "admin", "src", "app", "(dashboard)", "page.tsx"),
   "utf8"
 );
 const adminForbiddenSource = readFileSync(
@@ -11,7 +11,16 @@ const adminForbiddenSource = readFileSync(
   "utf8"
 );
 const adminOrganizationListSource = readFileSync(
-  join(process.cwd(), "..", "admin", "src", "app", "organizations", "page.tsx"),
+  join(
+    process.cwd(),
+    "..",
+    "admin",
+    "src",
+    "app",
+    "(dashboard)",
+    "organizations",
+    "page.tsx"
+  ),
   "utf8"
 );
 const adminOrganizationDetailSource = readFileSync(
@@ -21,6 +30,7 @@ const adminOrganizationDetailSource = readFileSync(
     "admin",
     "src",
     "app",
+    "(dashboard)",
     "organizations",
     "[organizationId]",
     "page.tsx"
@@ -33,11 +43,21 @@ const adminOrganizationActionsPath = join(
   "admin",
   "src",
   "app",
+  "(dashboard)",
   "organizations",
   "actions.ts"
 );
 const adminUserListSource = readFileSync(
-  join(process.cwd(), "..", "admin", "src", "app", "users", "page.tsx"),
+  join(
+    process.cwd(),
+    "..",
+    "admin",
+    "src",
+    "app",
+    "(dashboard)",
+    "users",
+    "page.tsx"
+  ),
   "utf8"
 );
 const adminUserDetailSource = readFileSync(
@@ -47,6 +67,7 @@ const adminUserDetailSource = readFileSync(
     "admin",
     "src",
     "app",
+    "(dashboard)",
     "users",
     "[userId]",
     "page.tsx"
@@ -59,6 +80,7 @@ const adminAuditPagePath = join(
   "admin",
   "src",
   "app",
+  "(dashboard)",
   "audit",
   "page.tsx"
 );
@@ -68,6 +90,7 @@ const adminEventsPagePath = join(
   "admin",
   "src",
   "app",
+  "(dashboard)",
   "events",
   "page.tsx"
 );
@@ -77,6 +100,7 @@ const adminEventsActionsPath = join(
   "admin",
   "src",
   "app",
+  "(dashboard)",
   "events",
   "actions.ts"
 );
@@ -86,6 +110,7 @@ const adminBillingPagePath = join(
   "admin",
   "src",
   "app",
+  "(dashboard)",
   "billing",
   "page.tsx"
 );
@@ -95,6 +120,7 @@ const adminSupportNoteActionsPath = join(
   "admin",
   "src",
   "app",
+  "(dashboard)",
   "support-notes",
   "actions.ts"
 );
@@ -114,15 +140,15 @@ describe("admin app protection", () => {
   it("guards the admin root route with platform admin authorization", () => {
     expect(adminPageSource).toContain("requirePlatformAdmin");
     expect(adminPageSource).toContain("getPlatformDashboardData");
-    expect(adminPageSource).toContain("forbidden()");
     expect(adminPageSource).toContain("await connection()");
+    expect(adminPageSource).not.toContain("forbidden()");
     expect(adminPageSource).not.toContain("notFound()");
   });
 
   it("renders a dedicated forbidden state for denied internal access", () => {
     expect(adminForbiddenSource).toContain("Acesso negado");
-    expect(adminForbiddenSource).toContain("platform admin");
-    expect(adminForbiddenSource).toContain("Vercel Authentication");
+    expect(adminForbiddenSource).toContain("grant administrativo ativo");
+    expect(adminForbiddenSource).not.toContain("Vercel Authentication");
   });
 
   it("guards admin organization and user directory routes", () => {
@@ -135,8 +161,8 @@ describe("admin app protection", () => {
 
     for (const source of protectedSources) {
       expect(source).toContain("requirePlatformAdmin");
-      expect(source).toContain("forbidden()");
       expect(source).toContain("await connection()");
+      expect(source).not.toContain("forbidden()");
     }
     expect(adminOrganizationListSource).toContain("listPlatformOrganizations");
     expect(adminOrganizationDetailSource).toContain(

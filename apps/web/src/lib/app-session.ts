@@ -9,7 +9,6 @@ import {
   billingSubscriptions,
   member,
   organization,
-  platformAuditEvents,
   sessions,
 } from "@polaris/db/schema";
 import { setTenantContext, setUserContext } from "@polaris/db/tenant-context";
@@ -98,16 +97,6 @@ const revokeExpiredSession = async ({
         updatedAt: new Date(),
       })
       .where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId)));
-
-    await tx.insert(platformAuditEvents).values({
-      action: "auth.session_revoked",
-      actorUserId: userId,
-      metadata: {
-        reason: "absolute_lifetime_reached",
-      },
-      subjectId: sessionId,
-      subjectType: "session",
-    });
   });
 };
 

@@ -112,11 +112,11 @@ const checkDatabaseHealth = async (
 export const getPlatformDashboardData = async (
   queryableDb: QueryableDb = db
 ): Promise<PlatformDashboardData> => {
-  const [database, summary, events] = await Promise.all([
-    checkDatabaseHealth(queryableDb),
-    getSummary(queryableDb),
-    getEvents(queryableDb),
-  ]);
+  // All queries share the transaction that carries app.platform_admin_id for
+  // RLS. A node-postgres client cannot execute multiple queries concurrently.
+  const database = await checkDatabaseHealth(queryableDb);
+  const summary = await getSummary(queryableDb);
+  const events = await getEvents(queryableDb);
 
   return {
     events,

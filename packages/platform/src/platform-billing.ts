@@ -50,8 +50,8 @@ type ManualPlatformBillingStatus = "active" | "past_due";
 type MutationReturningRow = Record<string, unknown>;
 
 export interface UpdatePlatformBillingSubscriptionStatusInput {
+  actorAdminUserId: string;
   actorPlatformAdminId: string;
-  actorUserId: string;
   paymentEvidenceReference?: string;
   reason: string;
   status: ManualPlatformBillingStatus;
@@ -224,7 +224,7 @@ const updatePlatformBillingSubscriptionStatusInTransaction = async (
   await recordPlatformAuditEvent(tx, {
     action: "billing.subscription.status_changed",
     actorPlatformAdminId: input.actorPlatformAdminId,
-    actorUserId: input.actorUserId,
+    actorAdminUserId: input.actorAdminUserId,
     metadata: {
       ...(paymentEvidenceReference ? { paymentEvidenceReference } : {}),
       reason,

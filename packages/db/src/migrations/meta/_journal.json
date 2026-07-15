@@ -267,6 +267,27 @@
       "when": 1784079000000,
       "tag": "20260714253000_stock_ledger_reconciliation_access",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1784203200000,
+      "tag": "20260715120000_admin_identity_isolation",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1784206800000,
+      "tag": "20260715130000_platform_admin_admission_audit_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1784210400000,
+      "tag": "20260715140000_signup_checkout_intents",
+      "breakpoints": true
     }
   ]
 }

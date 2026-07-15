@@ -1,15 +1,15 @@
 import "server-only";
 
 import { platformAdminGrants, platformAdmins } from "@polaris/db/schema";
-import { withUserContext } from "@polaris/db/tenant-context";
+import { withAdminUserContext } from "@polaris/db/tenant-context";
 import { and, eq, gt, isNull } from "drizzle-orm";
 
 type PlatformAdminRole = "owner" | "operator" | "support";
 
 interface PlatformAdminGrantRow {
+  adminUserId: string;
   platformAdminId: string;
   role: PlatformAdminRole;
-  userId: string;
 }
 
 interface SessionLike {
@@ -19,9 +19,9 @@ interface SessionLike {
 }
 
 export interface PlatformAdminContext {
+  adminUserId: string;
   platformAdminId: string;
   role: PlatformAdminRole;
-  userId: string;
 }
 
 export interface PlatformAdminOptions {
@@ -42,16 +42,16 @@ const isPlatformAdminRole = (value: string): value is PlatformAdminRole =>
   value === "owner" || value === "operator" || value === "support";
 
 const isPlatformAdminGrantRow = (row: {
+  adminUserId: string;
   platformAdminId: string;
   role: string;
-  userId: string;
 }): row is PlatformAdminGrantRow => isPlatformAdminRole(row.role);
 
 const getStrongestGrant = (
   rows: Array<{
+    adminUserId: string;
     platformAdminId: string;
     role: string;
-    userId: string;
   }>
 ) => {
   const validRows = rows.filter(isPlatformAdminGrantRow);
@@ -79,27 +79,19 @@ export const createPlatformAdminAuth = ({
   const getPlatformAdminContext =
     async (): Promise<PlatformAdminContext | null> => {
       const session = await getSession();
-      let userId = session?.user?.id;
+      const adminUserId = session?.user?.id;
 
-      if (
-        !userId &&
-        process.env.NODE_ENV === "development" &&
-        process.env.PLATFORM_ADMIN_DEV_USER_ID
-      ) {
-        userId = process.env.PLATFORM_ADMIN_DEV_USER_ID;
-      }
-
-      if (!userId) {
+      if (!adminUserId) {
         return null;
       }
 
       const now = new Date();
-      const rows = await withUserContext(userId, (tx) =>
+      const rows = await withAdminUserContext(adminUserId, (tx) =>
         tx
           .select({
+            adminUserId: platformAdmins.adminUserId,
             platformAdminId: platformAdmins.id,
             role: platformAdminGrants.role,
-            userId: platformAdmins.userId,
           })
           .from(platformAdmins)
           .innerJoin(
@@ -108,7 +100,7 @@ export const createPlatformAdminAuth = ({
           )
           .where(
             and(
-              eq(platformAdmins.userId, userId),
+              eq(platformAdmins.adminUserId, adminUserId),
               eq(platformAdmins.status, "active"),
               isNull(platformAdminGrants.revokedAt),
               gt(platformAdminGrants.expiresAt, now)
@@ -123,9 +115,9 @@ export const createPlatformAdminAuth = ({
       }
 
       return {
+        adminUserId: strongestGrant.adminUserId,
         platformAdminId: strongestGrant.platformAdminId,
         role: strongestGrant.role,
-        userId: strongestGrant.userId,
       };
     };
 

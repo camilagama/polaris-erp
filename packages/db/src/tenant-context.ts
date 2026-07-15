@@ -21,6 +21,15 @@ export const setUserContext = async (
   await tx.execute(sql`select set_config('app.user_id', ${userId}, true)`);
 };
 
+export const setAdminUserContext = async (
+  tx: TenantTransaction,
+  adminUserId: string
+): Promise<void> => {
+  await tx.execute(
+    sql`select set_config('app.admin_user_id', ${adminUserId}, true)`
+  );
+};
+
 export const setPlatformAdminContext = async (
   tx: TenantTransaction,
   platformAdminId: string
@@ -36,12 +45,14 @@ export type InternalJobContext =
   | "billing_lifecycle"
   | "billing_webhook_reconcile"
   | "goal_resolution"
+  | "onboarding"
   | "platform_admin_bootstrap"
+  | "platform_admin_admission"
   | "platform_admin_grant_management"
   | "product_image_reconcile"
   | "stock_ledger_reconciliation";
 
-const setInternalJobContext = async (
+export const setInternalJobContext = async (
   tx: TenantTransaction,
   job: InternalJobContext
 ): Promise<void> => {
@@ -63,6 +74,15 @@ export const withUserContext = async <T>(
 ): Promise<T> =>
   db.transaction(async (tx) => {
     await setUserContext(tx, userId);
+    return callback(tx);
+  });
+
+export const withAdminUserContext = async <T>(
+  adminUserId: string,
+  callback: (tx: TenantTransaction) => Promise<T> | T
+): Promise<T> =>
+  db.transaction(async (tx) => {
+    await setAdminUserContext(tx, adminUserId);
     return callback(tx);
   });
 

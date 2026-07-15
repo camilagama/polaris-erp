@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { forbidden } from "next/navigation";
 import type { ReactNode } from "react";
 import { Suspense } from "react";
 import "./globals.css";
@@ -17,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 import { db } from "@polaris/db";
-import { users } from "@polaris/db/schema";
+import { adminUsers } from "@polaris/db/schema";
 import {
   SidebarInset,
   SidebarProvider,
@@ -25,7 +24,7 @@ import {
 } from "@polaris/ui/components/ui/sidebar";
 import { TooltipProvider } from "@polaris/ui/components/ui/tooltip";
 import { eq } from "drizzle-orm";
-import { requirePlatformAdmin } from "@/lib/platform-admin-auth";
+import { getPlatformAdminContext } from "@/lib/platform-admin-auth";
 import { AdminSidebar } from "../components/admin-sidebar";
 
 export const metadata: Metadata = {
@@ -35,9 +34,9 @@ export const metadata: Metadata = {
 
 const getAdminContext = async () => {
   try {
-    return await requirePlatformAdmin();
+    return await getPlatformAdminContext();
   } catch {
-    forbidden();
+    return null;
   }
 };
 
@@ -47,9 +46,9 @@ async function AdminAppWrapper({ children }: { children: ReactNode }) {
 
   try {
     adminContext = await getAdminContext();
-    if (adminContext?.userId) {
-      const userRecord = await db.query.users.findFirst({
-        where: eq(users.id, adminContext.userId),
+    if (adminContext?.adminUserId) {
+      const userRecord = await db.query.adminUsers.findFirst({
+        where: eq(adminUsers.id, adminContext.adminUserId),
       });
       if (userRecord?.name) {
         userName = userRecord.name;

@@ -10,6 +10,9 @@ const e2eUrl =
   "postgres://polaris_app:pass@e2e.example.neon.tech/neondb?sslmode=verify-full";
 const productionIntegrationEnv = {
   ADMIN_APP_URL: "https://admin.example.com",
+  ADMIN_BETTER_AUTH_SECRET: strongSecret,
+  ADMIN_GOOGLE_CLIENT_ID: "admin-google-client-id",
+  ADMIN_GOOGLE_CLIENT_SECRET: "admin-google-client-secret",
   BETTER_AUTH_URL: "https://app.example.com",
   DEPLOYMENT_SMOKE_URL: "https://app.example.com",
   GOOGLE_CLIENT_ID: "google-client-id",
@@ -79,8 +82,11 @@ describe("validateProductionPreflight", () => {
         "BETTER_AUTH_SECRET must be at least 32 characters in production preflight.",
         "INTERNAL_R2_HEALTH_SECRET must be at least 32 characters in production preflight.",
         "PRODUCT_IMAGE_RECONCILE_SECRET must be at least 32 characters in production preflight.",
+        "ADMIN_BETTER_AUTH_SECRET must be at least 32 characters in production preflight.",
         "BETTER_AUTH_URL is required in production preflight.",
         "ADMIN_APP_URL is required in production preflight.",
+        "ADMIN_GOOGLE_CLIENT_ID is required in production preflight.",
+        "ADMIN_GOOGLE_CLIENT_SECRET is required in production preflight.",
         "DEPLOYMENT_SMOKE_URL is required in production preflight.",
         "NEXT_PUBLIC_APP_URL is required in production preflight.",
         "GOOGLE_CLIENT_ID is required in production preflight.",

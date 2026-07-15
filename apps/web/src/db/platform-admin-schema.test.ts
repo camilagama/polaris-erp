@@ -8,12 +8,15 @@ const schemaSource = readFileSync(
 );
 
 describe("platform admin schema", () => {
-  it("models platform admins outside tenant membership", () => {
+  it("models platform admins with an isolated administrative identity", () => {
     expect(schemaSource).toContain('"platform_admins"');
-    expect(schemaSource).toContain('userId: text("user_id")');
+    expect(schemaSource).toContain('adminUserId: text("admin_user_id")');
     expect(schemaSource).toContain(
-      'uniqueIndex("platform_admins_user_id_unique_idx")'
+      'uniqueIndex("platform_admins_admin_user_id_unique_idx")'
     );
+    expect(schemaSource).toContain('"admin_users"');
+    expect(schemaSource).toContain('"admin_sessions"');
+    expect(schemaSource).toContain('"platform_admin_enrollments"');
     expect(schemaSource).not.toContain(
       'platformAdmins = pgTable(\n  "platform_admins",\n  {\n    organizationId'
     );

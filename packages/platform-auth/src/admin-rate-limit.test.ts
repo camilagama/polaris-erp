@@ -57,7 +57,7 @@ describe("admin rate limit", () => {
     await expect(
       assertAdminRateLimit({
         action: "organization.status.change",
-        actorUserId: "user-1",
+        actorAdminUserId: "user-1",
         targetId: "org-1",
       })
     ).resolves.toBeUndefined();
@@ -83,7 +83,7 @@ describe("admin rate limit", () => {
     await expect(
       assertAdminRateLimit({
         action: "support-note.create",
-        actorUserId: "user-1",
+        actorAdminUserId: "user-1",
         targetId: "org-1",
       })
     ).rejects.toThrow("Retry after 60 seconds.");
@@ -103,7 +103,7 @@ describe("admin rate limit", () => {
     await expect(
       assertAdminRateLimit({
         action: "support-note.create",
-        actorUserId: "user-1",
+        actorAdminUserId: "user-1",
         targetId: "org-1",
       })
     ).rejects.toThrow("Retry after 60 seconds.");

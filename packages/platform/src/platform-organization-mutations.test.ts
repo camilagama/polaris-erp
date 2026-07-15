@@ -29,7 +29,7 @@ describe("updatePlatformOrganizationStatus", () => {
       updatePlatformOrganizationStatus(
         {
           actorPlatformAdminId: "platform-admin-1",
-          actorUserId: "user-1",
+          actorAdminUserId: "user-1",
           organizationId: "org-1",
           reason: " ",
           status: "suspended",
@@ -51,7 +51,7 @@ describe("updatePlatformOrganizationStatus", () => {
       updatePlatformOrganizationStatus(
         {
           actorPlatformAdminId: "platform-admin-1",
-          actorUserId: "user-1",
+          actorAdminUserId: "user-1",
           organizationId: "org-1",
           reason: "fraud review",
           status: "deleted" as never,
@@ -74,7 +74,7 @@ describe("updatePlatformOrganizationStatus", () => {
     await updatePlatformOrganizationStatus(
       {
         actorPlatformAdminId: "platform-admin-1",
-        actorUserId: "user-1",
+        actorAdminUserId: "user-1",
         organizationId: "org-1",
         reason: "fraud review",
         status: "suspended",
@@ -93,7 +93,7 @@ describe("updatePlatformOrganizationStatus", () => {
       expect.objectContaining({
         action: "organization.status_changed",
         actorPlatformAdminId: "platform-admin-1",
-        actorUserId: "user-1",
+        actorAdminUserId: "user-1",
         metadata: {
           reason: "fraud review",
           status: "suspended",
@@ -123,7 +123,7 @@ describe("updatePlatformOrganizationStatus", () => {
     await updatePlatformOrganizationStatus(
       {
         actorPlatformAdminId: "platform-admin-1",
-        actorUserId: "user-1",
+        actorAdminUserId: "user-1",
         organizationId: "org-1",
         reason: "fraud review",
         status: "suspended",
@@ -150,7 +150,7 @@ describe("updatePlatformOrganizationStatus", () => {
       updatePlatformOrganizationStatus(
         {
           actorPlatformAdminId: "platform-admin-1",
-          actorUserId: "user-1",
+          actorAdminUserId: "user-1",
           organizationId: "org-missing",
           reason: "fraud review",
           status: "suspended",
@@ -174,7 +174,7 @@ describe("updatePlatformOrganizationStatus", () => {
       updatePlatformOrganizationStatus(
         {
           actorPlatformAdminId: "platform-admin-1",
-          actorUserId: "user-1",
+          actorAdminUserId: "user-1",
           organizationId: "org-1",
           reason: "customer asked",
           status: "active",
@@ -207,7 +207,7 @@ describe("updatePlatformOrganizationStatus", () => {
     await closePlatformOrganization(
       {
         actorPlatformAdminId: "platform-admin-1",
-        actorUserId: "user-1",
+        actorAdminUserId: "user-1",
         organizationId: "org-1",
         reason: "Customer requested account closure.",
       },
@@ -244,7 +244,7 @@ describe("updatePlatformOrganizationStatus", () => {
     await closePlatformOrganization(
       {
         actorPlatformAdminId: "platform-admin-1",
-        actorUserId: "user-1",
+        actorAdminUserId: "user-1",
         organizationId: "org-1",
         reason: "Customer requested account closure.",
       },

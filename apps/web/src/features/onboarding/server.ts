@@ -1,17 +1,24 @@
 import "server-only";
 
-import { FREE_PLAN_ID } from "@polaris/billing";
+import { FREE_PLAN_ID, PAID_MONTHLY_PLAN_ID } from "@polaris/billing";
 import {
   auditEvents,
   billingCustomers,
   billingPlans,
+  billingProviderLinks,
   billingSubscriptions,
   categories,
   member,
   organization,
+  signupCheckoutIntents,
   systemSettings,
+  users,
 } from "@polaris/db/schema";
-import { setTenantContext, setUserContext } from "@polaris/db/tenant-context";
+import {
+  setInternalJobContext,
+  setTenantContext,
+  setUserContext,
+} from "@polaris/db/tenant-context";
 import { asc, eq, sql } from "drizzle-orm";
 import { OTHERS_CATEGORY_KEY } from "@/lib/catalog-defaults";
 
@@ -27,19 +34,45 @@ const getDb = async () => {
   return db;
 };
 
+const normalizeBillingEmail = (
+  value: string | null | undefined
+): string | null => {
+  const normalized = value?.trim().toLowerCase();
+
+  return normalized ? normalized : null;
+};
+
+const toRows = (value: unknown): Record<string, unknown>[] => {
+  if (typeof value !== "object" || value === null || !("rows" in value)) {
+    return [];
+  }
+
+  const rows = (value as { rows?: unknown }).rows;
+
+  return Array.isArray(rows)
+    ? rows.filter(
+        (row): row is Record<string, unknown> =>
+          typeof row === "object" && row !== null
+      )
+    : [];
+};
+
 export const createInitialOrganizationForUser = async ({
   billingEmail,
+  organizationName,
   userId,
 }: {
   billingEmail?: string | null;
+  organizationName: string;
   userId: string;
-}): Promise<string> => {
+}): Promise<{ organizationId: string; planId: string }> => {
   const db = await getDb();
 
   const organizationId = await db.transaction(async (tx) => {
     await tx.execute(
       sql`SELECT pg_advisory_xact_lock(${ONBOARDING_LOCK_NAMESPACE}, hashtext(${userId}))`
     );
+    await setInternalJobContext(tx, "onboarding");
     await setUserContext(tx, userId);
 
     const [existingMembership] = await tx
@@ -52,8 +85,41 @@ export const createInitialOrganizationForUser = async ({
       .limit(1);
 
     if (existingMembership) {
-      return existingMembership.organizationId;
+      return {
+        organizationId: existingMembership.organizationId,
+        planId: FREE_PLAN_ID,
+      };
     }
+
+    const canonicalBillingEmail = normalizeBillingEmail(billingEmail);
+    const [identity] = canonicalBillingEmail
+      ? await tx
+          .select({
+            emailVerified: users.emailVerified,
+          })
+          .from(users)
+          .where(eq(users.id, userId))
+          .limit(1)
+      : [];
+    const [paidSignupIntent] =
+      canonicalBillingEmail && identity?.emailVerified
+        ? toRows(
+            await tx.execute(sql`
+            select id, provider, provider_subscription_id as "providerSubscriptionId"
+            from signup_checkout_intents
+            where billing_email = ${canonicalBillingEmail}
+              and plan_id = ${PAID_MONTHLY_PLAN_ID}
+              and status = 'paid'
+              and claimed_at is null
+            order by paid_at asc
+            limit 1
+            for update
+          `)
+          )
+        : [];
+    const selectedPlanId = paidSignupIntent
+      ? PAID_MONTHLY_PLAN_ID
+      : FREE_PLAN_ID;
 
     const [plan] = await tx
       .select({
@@ -61,7 +127,7 @@ export const createInitialOrganizationForUser = async ({
       })
       .from(billingPlans)
       .where(
-        sql`${billingPlans.id} = ${FREE_PLAN_ID} and ${billingPlans.status} = 'active'`
+        sql`${billingPlans.id} = ${selectedPlanId} and ${billingPlans.status} = 'active'`
       )
       .orderBy(asc(billingPlans.id))
       .limit(1);
@@ -74,12 +140,11 @@ export const createInitialOrganizationForUser = async ({
     const billingCustomerId = crypto.randomUUID();
     await setTenantContext(tx, organizationId);
 
-    const technicalName = `Tenant ${organizationId.slice(0, 8)}`;
     const technicalSlug = `tenant-${organizationId}`;
 
     await tx.insert(organization).values({
       id: organizationId,
-      name: technicalName,
+      name: organizationName,
       slug: technicalSlug,
       status: "active",
     });
@@ -113,12 +178,35 @@ export const createInitialOrganizationForUser = async ({
       organizationId,
     });
 
+    const billingSubscriptionId = crypto.randomUUID();
     await tx.insert(billingSubscriptions).values({
       billingCustomerId,
+      id: billingSubscriptionId,
       organizationId,
       planId: plan.id,
       status: "active",
     });
+
+    if (paidSignupIntent) {
+      await tx
+        .update(signupCheckoutIntents)
+        .set({
+          claimedAt: new Date(),
+          claimedOrganizationId: organizationId,
+          claimedUserId: userId,
+        })
+        .where(eq(signupCheckoutIntents.id, paidSignupIntent.id as string));
+
+      if (typeof paidSignupIntent.providerSubscriptionId === "string") {
+        await tx.insert(billingProviderLinks).values({
+          billingSubscriptionId,
+          entityType: "subscription",
+          externalId: paidSignupIntent.providerSubscriptionId,
+          organizationId,
+          provider: paidSignupIntent.provider as "asaas",
+        });
+      }
+    }
 
     await tx.insert(auditEvents).values({
       actorUserId: userId,
@@ -128,7 +216,7 @@ export const createInitialOrganizationForUser = async ({
       type: "organization.created",
     });
 
-    return organizationId;
+    return { organizationId, planId: plan.id };
   });
 
   return organizationId;

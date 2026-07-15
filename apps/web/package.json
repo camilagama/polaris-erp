@@ -12,7 +12,7 @@
     "@polaris/ui": "workspace:*"
   },
   "scripts": {
-    "dev": "bun --env-file=../../.env.local x next dev",
+    "dev": "bun --env-file=../../.env.local x next dev --port 3000",
     "build": "bun --env-file=../../.env.local x next build",
     "start": "bun --env-file=../../.env.local x next start",
     "test": "vitest run",

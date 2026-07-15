@@ -344,7 +344,7 @@ behaviorDescribe("PostgreSQL behavior harness", () => {
     const client = await pool.connect();
 
     try {
-      await client.query("DELETE FROM users WHERE id = ANY($1)", [
+      await client.query("DELETE FROM admin_users WHERE id = ANY($1)", [
         [
           "behavior-platform-user",
           "behavior-inactive-platform-user",
@@ -364,7 +364,7 @@ behaviorDescribe("PostgreSQL behavior harness", () => {
         ]
       );
       await client.query(
-        "INSERT INTO users (id, name, email) VALUES ($1, $2, $3)",
+        "INSERT INTO admin_users (id, name, email) VALUES ($1, $2, $3)",
         [
           "behavior-platform-user",
           "Behavior platform user",
@@ -372,7 +372,7 @@ behaviorDescribe("PostgreSQL behavior harness", () => {
         ]
       );
       await client.query(
-        "INSERT INTO platform_admins (id, user_id, status) VALUES ($1, $2, 'active')",
+        "INSERT INTO platform_admins (id, admin_user_id, status) VALUES ($1, $2, 'active')",
         [platformAdminId, "behavior-platform-user"]
       );
       await client.query(
@@ -424,11 +424,11 @@ behaviorDescribe("PostgreSQL behavior harness", () => {
 
       for (const admin of deniedAdmins) {
         await client.query(
-          "INSERT INTO users (id, name, email) VALUES ($1, $2, $3)",
+          "INSERT INTO admin_users (id, name, email) VALUES ($1, $2, $3)",
           [admin.userId, admin.userId, `${admin.userId}@example.com`]
         );
         await client.query(
-          "INSERT INTO platform_admins (id, user_id, status) VALUES ($1, $2, $3)",
+          "INSERT INTO platform_admins (id, admin_user_id, status) VALUES ($1, $2, $3)",
           [admin.id, admin.userId, admin.status]
         );
         await client.query(
@@ -456,7 +456,7 @@ behaviorDescribe("PostgreSQL behavior harness", () => {
         expect(deniedOrganizations.rows).toEqual([]);
       }
     } finally {
-      await client.query("DELETE FROM users WHERE id = ANY($1)", [
+      await client.query("DELETE FROM admin_users WHERE id = ANY($1)", [
         [
           "behavior-platform-user",
           "behavior-inactive-platform-user",

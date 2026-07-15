@@ -19,8 +19,8 @@ export interface PlatformAuditEventListFilters {
 
 export interface PlatformAuditEventListItem {
   action: string;
+  actorAdminUserId: string | null;
   actorPlatformAdminId: string | null;
-  actorUserId: string | null;
   createdAt: string | null;
   id: string;
   subjectId: string | null;
@@ -73,7 +73,7 @@ export const listPlatformAuditEvents = async (
         id,
         action,
         actor_platform_admin_id,
-        actor_user_id,
+        actor_admin_user_id,
         subject_type,
         subject_id,
         created_at
@@ -87,7 +87,7 @@ export const listPlatformAuditEvents = async (
   return rows.map((row) => ({
     action: toNullableString(row.action) ?? "unknown",
     actorPlatformAdminId: toNullableString(row.actor_platform_admin_id),
-    actorUserId: toNullableString(row.actor_user_id),
+    actorAdminUserId: toNullableString(row.actor_admin_user_id),
     createdAt: toIsoString(row.created_at),
     id: toNullableString(row.id) ?? "",
     subjectId: toNullableString(row.subject_id),

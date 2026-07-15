@@ -5,6 +5,9 @@ const OWNER_ROLE_PATTERNS = [/neondb_owner/i, /postgres/i];
 
 export interface ProductionPreflightEnv {
   ADMIN_APP_URL?: string;
+  ADMIN_BETTER_AUTH_SECRET?: string;
+  ADMIN_GOOGLE_CLIENT_ID?: string;
+  ADMIN_GOOGLE_CLIENT_SECRET?: string;
   ALLOW_PLAYWRIGHT_BOOTSTRAP?: string;
   BETTER_AUTH_SECRET?: string;
   BETTER_AUTH_URL?: string;
@@ -93,6 +96,8 @@ const getOrigin = (value: string | undefined): string | undefined => {
 const REQUIRED_PRODUCTION_INTEGRATION_ENV = [
   "BETTER_AUTH_URL",
   "ADMIN_APP_URL",
+  "ADMIN_GOOGLE_CLIENT_ID",
+  "ADMIN_GOOGLE_CLIENT_SECRET",
   "DEPLOYMENT_SMOKE_URL",
   "NEXT_PUBLIC_APP_URL",
   "GOOGLE_CLIENT_ID",
@@ -123,6 +128,7 @@ export const REQUIRED_PRODUCTION_PREFLIGHT_ENV = [
   ...REQUIRED_PRODUCTION_INTEGRATION_ENV,
   "R2_BUCKET_FINAL",
   "BETTER_AUTH_SECRET",
+  "ADMIN_BETTER_AUTH_SECRET",
   "INTERNAL_R2_HEALTH_SECRET",
   "PRODUCT_IMAGE_RECONCILE_SECRET",
 ] as const satisfies ReadonlyArray<keyof ProductionPreflightEnv>;
@@ -134,6 +140,12 @@ const appendProductionSecretErrors = (
   if (!hasStrongSecret(env.BETTER_AUTH_SECRET)) {
     errors.push(
       "BETTER_AUTH_SECRET must be at least 32 characters in production preflight."
+    );
+  }
+
+  if (!hasStrongSecret(env.ADMIN_BETTER_AUTH_SECRET)) {
+    errors.push(
+      "ADMIN_BETTER_AUTH_SECRET must be at least 32 characters in production preflight."
     );
   }
 

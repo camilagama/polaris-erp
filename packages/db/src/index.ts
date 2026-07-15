@@ -6,20 +6,28 @@ import { resolveDatabasePoolMax } from "./pool-config";
 import * as schema from "./schema";
 
 type Database = NodePgDatabase<typeof schema>;
+const SSLMODE_REQUIRE_PATTERN = /([?&])sslmode=require(?=(&|$))/i;
+
+const resolveDatabaseConnectionString = (): string => {
+  const connectionString = process.env.DATABASE_URL;
+
+  if (!connectionString) {
+    throw new Error("DATABASE_URL is required to initialize @polaris/db.");
+  }
+
+  return connectionString.replace(
+    SSLMODE_REQUIRE_PATTERN,
+    "$1sslmode=verify-full"
+  );
+};
 
 let pool: Pool | null = null;
 let database: Database | null = null;
 
 const getPool = () => {
   if (!pool) {
-    const connectionString = process.env.DATABASE_URL;
-
-    if (!connectionString) {
-      throw new Error("DATABASE_URL is required to initialize @polaris/db.");
-    }
-
     pool = new Pool({
-      connectionString,
+      connectionString: resolveDatabaseConnectionString(),
       connectionTimeoutMillis: 10_000,
       idleTimeoutMillis: 30_000,
       max: resolveDatabasePoolMax(),

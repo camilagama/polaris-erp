@@ -18,8 +18,8 @@ export interface PlatformEventsOverview {
 }
 
 export interface RetryPlatformOutboxEventInput {
+  actorAdminUserId: string;
   actorPlatformAdminId: string;
-  actorUserId: string;
   eventId: string;
   reason: string;
 }
@@ -65,7 +65,7 @@ const retryPlatformOutboxEventInTransaction = async (
   await recordPlatformAuditEvent(tx, {
     action: "outbox.retry_requested",
     actorPlatformAdminId: input.actorPlatformAdminId,
-    actorUserId: input.actorUserId,
+    actorAdminUserId: input.actorAdminUserId,
     metadata: { eventId: input.eventId.trim(), reason: input.reason.trim() },
     subjectId: input.eventId.trim(),
     subjectType: "event_outbox",

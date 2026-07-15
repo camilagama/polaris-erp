@@ -1,14 +1,14 @@
 import { createPlatformAdminAuth } from "@polaris/platform-auth/admin-guard";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { dbMock, sessionMock, withUserContextMock } = vi.hoisted(() => ({
+const { dbMock, sessionMock, withAdminUserContextMock } = vi.hoisted(() => ({
   dbMock: {
     select: vi.fn(),
   },
   sessionMock: {
     getSession: vi.fn(),
   },
-  withUserContextMock: vi.fn(),
+  withAdminUserContextMock: vi.fn(),
 }));
 
 vi.mock("server-only", () => ({}));
@@ -18,7 +18,7 @@ vi.mock("@polaris/db", () => ({
 }));
 
 vi.mock("@polaris/db/tenant-context", () => ({
-  withUserContext: withUserContextMock,
+  withAdminUserContext: withAdminUserContextMock,
 }));
 
 const mockSession = (userId = "user-1") => {
@@ -29,9 +29,9 @@ const mockSession = (userId = "user-1") => {
 
 const mockPlatformGrantRows = (
   rows: Array<{
+    adminUserId: string;
     platformAdminId: string;
     role: "owner" | "operator" | "support";
-    userId: string;
   }>
 ) => {
   const where = vi.fn().mockResolvedValue(rows);
@@ -46,7 +46,7 @@ const mockPlatformGrantRows = (
 describe("getPlatformAdminContext", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    withUserContextMock.mockImplementation(
+    withAdminUserContextMock.mockImplementation(
       async (_userId: string, callback: (tx: typeof dbMock) => unknown) =>
         callback(dbMock)
     );
@@ -68,14 +68,14 @@ describe("getPlatformAdminContext", () => {
     mockSession("user-founder");
     mockPlatformGrantRows([
       {
+        adminUserId: "user-founder",
         platformAdminId: "platform-admin-1",
         role: "support",
-        userId: "user-founder",
       },
       {
+        adminUserId: "user-founder",
         platformAdminId: "platform-admin-1",
         role: "owner",
-        userId: "user-founder",
       },
     ]);
     const { getPlatformAdminContext } = createPlatformAdminAuth({
@@ -85,11 +85,11 @@ describe("getPlatformAdminContext", () => {
     const context = await getPlatformAdminContext();
 
     expect(context).toEqual({
+      adminUserId: "user-founder",
       platformAdminId: "platform-admin-1",
       role: "owner",
-      userId: "user-founder",
     });
-    expect(withUserContextMock).toHaveBeenCalledWith(
+    expect(withAdminUserContextMock).toHaveBeenCalledWith(
       "user-founder",
       expect.any(Function)
     );
@@ -99,9 +99,9 @@ describe("getPlatformAdminContext", () => {
     mockSession("user-founder");
     mockPlatformGrantRows([
       {
+        adminUserId: "user-founder",
         platformAdminId: "platform-admin-1",
         role: "operator",
-        userId: "user-founder",
       },
     ]);
     const { requirePlatformAdmin } = createPlatformAdminAuth({
@@ -109,9 +109,9 @@ describe("getPlatformAdminContext", () => {
     });
 
     await expect(requirePlatformAdmin()).resolves.toEqual({
+      adminUserId: "user-founder",
       platformAdminId: "platform-admin-1",
       role: "operator",
-      userId: "user-founder",
     });
   });
 
@@ -119,9 +119,9 @@ describe("getPlatformAdminContext", () => {
     mockSession("support-user");
     mockPlatformGrantRows([
       {
+        adminUserId: "support-user",
         platformAdminId: "platform-admin-2",
         role: "support",
-        userId: "support-user",
       },
     ]);
     const { requirePlatformAdmin } = createPlatformAdminAuth({

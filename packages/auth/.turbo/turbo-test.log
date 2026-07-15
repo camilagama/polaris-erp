@@ -3,12 +3,13 @@ $ vitest run
 [1m[30m[46m RUN [49m[39m[22m [36mv4.1.10 [39m[90mC:/Users/Junior/Documents/0 - Dev/Hub Imports/packages/auth[39m
 
  [32m✓[39m src/auth.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m src/admin-auth-options.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 7[2mms[22m[39m
  [32m✓[39m src/app-url.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 7[2mms[22m[39m
- [32m✓[39m src/env.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 171[2mms[22m[39m
+ [32m✓[39m src/env.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 200[2mms[22m[39m
  [32m✓[39m src/workspace-management-policy.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 6[2mms[22m[39m
 
-[2m Test Files [22m [1m[32m4 passed[39m[22m[90m (4)[39m
-[2m      Tests [22m [1m[32m16 passed[39m[22m[90m (16)[39m
-[2m   Start at [22m 09:25:43
-[2m   Duration [22m 1.18s[2m (transform 246ms, setup 0ms, import 1.13s, tests 191ms, environment 1ms)[22m
+[2m Test Files [22m [1m[32m5 passed[39m[22m[90m (5)[39m
+[2m      Tests [22m [1m[32m18 passed[39m[22m[90m (18)[39m
+[2m   Start at [22m 13:47:13
+[2m   Duration [22m 1.29s[2m (transform 261ms, setup 0ms, import 1.27s, tests 227ms, environment 1ms)[22m
 

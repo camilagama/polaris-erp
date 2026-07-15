@@ -11,7 +11,7 @@ const DEFAULT_ADMIN_ACTION_WINDOW_MS = 60_000;
 
 interface AdminRateLimitInput {
   action: string;
-  actorUserId: string;
+  actorAdminUserId: string;
   limit?: number;
   targetId?: string;
   windowMs?: number;
@@ -214,26 +214,29 @@ const getRateLimitKeyFromHeaders = (
 
 const getAdminRateLimitScope = ({
   action,
-  actorUserId,
+  actorAdminUserId,
   targetId,
-}: Pick<AdminRateLimitInput, "action" | "actorUserId" | "targetId">): string =>
+}: Pick<
+  AdminRateLimitInput,
+  "action" | "actorAdminUserId" | "targetId"
+>): string =>
   [
     "admin",
     normalizeKeyPart(action),
-    `actor:${normalizeKeyPart(actorUserId)}`,
+    `actor:${normalizeKeyPart(actorAdminUserId)}`,
     `target:${normalizeKeyPart(targetId ?? "none")}`,
   ].join(":");
 
 export const assertAdminRateLimit = async ({
   action,
-  actorUserId,
+  actorAdminUserId,
   limit = DEFAULT_ADMIN_ACTION_LIMIT,
   targetId,
   windowMs = DEFAULT_ADMIN_ACTION_WINDOW_MS,
 }: AdminRateLimitInput): Promise<void> => {
   const key = getRateLimitKeyFromHeaders(
     await headers(),
-    getAdminRateLimitScope({ action, actorUserId, targetId })
+    getAdminRateLimitScope({ action, actorAdminUserId, targetId })
   );
   const result = await checkRateLimit({ key, limit, windowMs });
 
