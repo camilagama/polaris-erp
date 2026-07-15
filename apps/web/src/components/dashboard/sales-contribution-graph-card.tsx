@@ -1,6 +1,5 @@
 "use client";
 
-import { Calendar02Icon } from "@hugeicons/core-free-icons";
 import {
   ContributionGraph,
   ContributionGraphBlock,
@@ -11,7 +10,6 @@ import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Empty } from "@/components/ui/empty";
 import {
   Tooltip,
   TooltipContent,
@@ -71,7 +69,7 @@ export function SalesContributionGraphCard({
    * Sempre mostra os dados mais recentes (slice pelo final).
    */
   const visibleData = useMemo(() => {
-    if (containerWidth === null || graph.days.length === 0) {
+    if (containerWidth === null) {
       return null;
     }
 
@@ -80,8 +78,23 @@ export function SalesContributionGraphCard({
       Math.floor((containerWidth + BLOCK_MARGIN) / CELL_STEP)
     );
     const maxDays = maxWeeks * 7 - 6;
+
+    const sourceDays =
+      graph.days.length > 0
+        ? graph.days
+        : Array.from({ length: maxDays }).map((_, i) => {
+            const d = new Date();
+            d.setDate(d.getDate() - (maxDays - 1 - i));
+            return {
+              date: format(d, "yyyy-MM-dd"),
+              level: 0,
+              salesCount: 0,
+              sold: 0,
+            };
+          });
+
     const days =
-      graph.days.length > maxDays ? graph.days.slice(-maxDays) : graph.days;
+      sourceDays.length > maxDays ? sourceDays.slice(-maxDays) : sourceDays;
 
     const byDate = new Map(days.map((day) => [day.date, day]));
 
@@ -98,21 +111,6 @@ export function SalesContributionGraphCard({
 
     return { activities, byDate, totalSalesCount };
   }, [containerWidth, graph.days]);
-
-  if (graph.days.length === 0) {
-    return (
-      <Card className={cn("flex flex-col", className)}>
-        <CardContent className="flex flex-1 items-center justify-center pt-0">
-          <Empty
-            className="h-48 border-dashed shadow-none"
-            description="Nao ha vendas suficientes para exibir a contribuicao."
-            icon={Calendar02Icon}
-            title="Sem dados suficientes"
-          />
-        </CardContent>
-      </Card>
-    );
-  }
 
   return (
     <Card className={cn("flex flex-col justify-center", className)}>

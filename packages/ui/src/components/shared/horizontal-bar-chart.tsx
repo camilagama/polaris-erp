@@ -19,20 +19,14 @@ export interface HorizontalBarChartData {
 export interface HorizontalBarChartProps {
   config: ChartConfig;
   data: HorizontalBarChartData[];
-  emptyMessage?: React.ReactNode;
   formatType?: "currency" | "number";
 }
 
 export function HorizontalBarChart({
   config,
   data,
-  emptyMessage,
   formatType = "currency",
 }: HorizontalBarChartProps) {
-  if (data.length === 0 && emptyMessage) {
-    return <>{emptyMessage}</>;
-  }
-
   return (
     <ChartContainer className="h-48 w-full" config={config}>
       <BarChart

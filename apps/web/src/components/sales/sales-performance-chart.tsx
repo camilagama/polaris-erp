@@ -1,6 +1,5 @@
 "use client";
 
-import { ShoppingBag02Icon } from "@hugeicons/core-free-icons";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import {
   type ChartConfig,
@@ -8,7 +7,6 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import { Empty } from "@/components/ui/empty";
 import type { SalesPerformancePoint } from "@/features/sales/contracts";
 import { formatCompactCurrency, formatCurrency } from "@/lib/formatters";
 
@@ -24,19 +22,6 @@ export function SalesPerformanceChart({
 }: {
   data: SalesPerformancePoint[];
 }) {
-  const hasData = data.some((point) => point.sold > 0);
-
-  if (!hasData) {
-    return (
-      <Empty
-        className="h-56 border-dashed shadow-none"
-        description="Aguardando vendas no periodo para exibir desempenho."
-        icon={ShoppingBag02Icon}
-        title="Sem desempenho registrado"
-      />
-    );
-  }
-
   return (
     <ChartContainer className="h-56 w-full" config={chartConfig}>
       <AreaChart accessibilityLayer data={data}>

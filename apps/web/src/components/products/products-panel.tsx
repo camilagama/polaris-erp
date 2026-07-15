@@ -215,7 +215,6 @@ function MobileAnalyticsSection({
           <CardContent className="flex flex-1 items-center pt-0">
             <ProductCatalogPerformanceChart
               data={analytics.recentPerformance}
-              emptyLabel="Sem movimentacao recente para exibir faturamento e compras."
             />
           </CardContent>
         </Card>

@@ -18,7 +18,7 @@ import { ptBR } from "date-fns/locale";
 import { useMemo } from "react";
 
 const BLOCK_SIZE = 11;
-const BLOCK_MARGIN = 4; // match web
+const BLOCK_MARGIN = 3; // match web
 const CELL_STEP = BLOCK_SIZE + BLOCK_MARGIN;
 
 interface ActivityGraphProps {
@@ -29,7 +29,7 @@ export function ActivityGraph({ data }: ActivityGraphProps) {
   const { containerRef, containerWidth } = useContainerWidth();
 
   const visibleData = useMemo(() => {
-    if (containerWidth === null || data.length === 0) {
+    if (containerWidth === null) {
       return null;
     }
 
@@ -39,8 +39,23 @@ export function ActivityGraph({ data }: ActivityGraphProps) {
     );
     const maxDays = maxWeeks * 7 - 6;
 
+    const sourceActivities =
+      data.length > 0
+        ? data
+        : Array.from({ length: maxDays }).map((_, i) => {
+            const d = new Date();
+            d.setDate(d.getDate() - (maxDays - 1 - i));
+            return {
+              date: format(d, "yyyy-MM-dd"),
+              count: 0,
+              level: 0,
+            };
+          });
+
     const visibleActivities =
-      data.length > maxDays ? data.slice(-maxDays) : data;
+      sourceActivities.length > maxDays
+        ? sourceActivities.slice(-maxDays)
+        : sourceActivities;
     const byDate = new Map(visibleActivities.map((day) => [day.date, day]));
 
     return { activities: visibleActivities, byDate };

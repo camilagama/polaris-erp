@@ -1,6 +1,5 @@
 "use client";
 
-import { ShoppingBag02Icon } from "@hugeicons/core-free-icons";
 import {
   Area,
   AreaChart,
@@ -17,7 +16,6 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import { Empty } from "@/components/ui/empty";
 import type { DashboardPeriodComparisonPoint } from "@/features/dashboard/contracts";
 import { formatCompactCurrency, formatCurrency } from "@/lib/formatters";
 
@@ -41,21 +39,6 @@ export function RevenueResultChart({
 }: {
   data: DashboardPeriodComparisonPoint[];
 }) {
-  const hasData = data.some(
-    (point) => point.sold > 0 || point.costs > 0 || point.result !== 0
-  );
-
-  if (!hasData) {
-    return (
-      <Empty
-        className="h-48 border-dashed shadow-none"
-        description="Nao ha registros para exibir a comparacao."
-        icon={ShoppingBag02Icon}
-        title="Sem dados de receita"
-      />
-    );
-  }
-
   return (
     <ChartContainer className="h-48 w-full" config={chartConfig}>
       <AreaChart accessibilityLayer data={data}>

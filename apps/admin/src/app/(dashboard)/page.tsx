@@ -123,7 +123,7 @@ const AdminDashboard = async () => {
     );
     return {
       label: label.charAt(0).toUpperCase() + label.slice(1),
-      salesCount: d.count,
+      salesCount: 0,
       costs: 0,
       result: 0,
       sold: 0,
