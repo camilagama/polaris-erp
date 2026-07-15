@@ -48,14 +48,17 @@ type AdminSidebarProps = Omit<
   ComponentProps<typeof BaseSidebar>,
   "navigationItems"
 > & {
+  onSignOut: () => Promise<void>;
   user: {
+    email: string;
+    image: string | null;
     name: string;
     role: string;
     platformAdminId: string;
   };
 };
 
-export function AdminSidebar({ user, ...props }: AdminSidebarProps) {
+export function AdminSidebar({ onSignOut, user, ...props }: AdminSidebarProps) {
   // In Admin, everyone uses the same routes for now, as we check roles at the page level
   return (
     <BaseSidebar
@@ -63,7 +66,10 @@ export function AdminSidebar({ user, ...props }: AdminSidebarProps) {
       brandName="Polaris Admin"
       logo={<DGImportsLogo className="size-6" />}
       navigationItems={adminNavigationItems}
+      onSignOut={onSignOut}
       user={{
+        email: user.email,
+        image: user.image,
         name: user.name,
         role: user.role,
       }}

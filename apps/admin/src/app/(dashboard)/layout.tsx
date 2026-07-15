@@ -8,7 +8,9 @@ import {
 import { eq } from "drizzle-orm";
 import type { ReactNode } from "react";
 import { Suspense } from "react";
+import { signOutAction } from "@/features/auth/actions";
 import { getPlatformAdminContext } from "@/lib/platform-admin-auth";
+import { getSession } from "@/lib/session";
 import { AdminSidebar } from "../../components/admin-sidebar";
 
 const getAdminContext = async () => {
@@ -22,8 +24,17 @@ const getAdminContext = async () => {
 async function AdminAppWrapper({ children }: { children: ReactNode }) {
   let adminContext: Awaited<ReturnType<typeof getAdminContext>> | undefined;
   let userName = "Administrador";
+  let userEmail = "";
+  let userImage: string | null = null;
 
   try {
+    const session = await getSession();
+    if (session?.user) {
+      userName = session.user.name;
+      userEmail = session.user.email;
+      userImage = session.user.image ?? null;
+    }
+
     adminContext = await getAdminContext();
     if (adminContext?.adminUserId) {
       const userRecord = await db.query.adminUsers.findFirst({
@@ -44,7 +55,10 @@ async function AdminAppWrapper({ children }: { children: ReactNode }) {
   return (
     <SidebarProvider>
       <AdminSidebar
+        onSignOut={signOutAction}
         user={{
+          email: userEmail,
+          image: userImage,
           name: userName,
           role: adminContext.role,
           platformAdminId: adminContext.platformAdminId,

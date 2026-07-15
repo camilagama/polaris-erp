@@ -69,6 +69,13 @@ export function BaseSidebar({
   const { state, isMobile } = useSidebar();
   const initials = getUserInitials(user.name);
 
+  let side: "bottom" | "right" | "top" = "top";
+  if (isMobile) {
+    side = "bottom";
+  } else if (state === "collapsed") {
+    side = "right";
+  }
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader className="flex h-16 items-center px-4 pt-5">
@@ -149,9 +156,9 @@ export function BaseSidebar({
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent
-                align="end"
+                align="start"
                 className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
-                side={isMobile ? "bottom" : "right"}
+                side={side}
                 sideOffset={4}
               >
                 <DropdownMenuLabel className="p-0 font-normal">
