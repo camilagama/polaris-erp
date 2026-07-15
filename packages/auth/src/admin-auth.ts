@@ -11,7 +11,10 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
-import { resolveAdminAuthOptions, type AdminAuthEnvironment } from "./admin-auth-options";
+import {
+  type AdminAuthEnvironment,
+  resolveAdminAuthOptions,
+} from "./admin-auth-options";
 
 export interface AdminAuthDependencies {
   admitAdminSession: (adminUserId: string) => Promise<void>;
@@ -24,7 +27,8 @@ export const createAdminAuth = ({
   environment = process.env,
   hasActiveEnrollment,
 }: AdminAuthDependencies) => {
-  const { baseUrl, hasGoogleAuth, secret } = resolveAdminAuthOptions(environment);
+  const { baseUrl, hasGoogleAuth, secret } =
+    resolveAdminAuthOptions(environment);
   const clientId = environment.ADMIN_GOOGLE_CLIENT_ID?.trim();
   const clientSecret = environment.ADMIN_GOOGLE_CLIENT_SECRET?.trim();
 
