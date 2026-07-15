@@ -45,7 +45,7 @@ export async function completeOnboardingAction(
     return _state;
   }
 
-  await createInitialOrganizationForUser({
+  const onboarding = await createInitialOrganizationForUser({
     billingEmail: session.user.email,
     organizationName: parsed.data.organizationName,
     userId: session.user.id,
@@ -56,5 +56,7 @@ export async function completeOnboardingAction(
     userId: session.user.id,
   });
 
-  redirect("/onboarding?step=plan");
+  redirect(
+    onboarding.planId === "polaris-paid-monthly" ? "/" : "/onboarding?step=plan"
+  );
 }

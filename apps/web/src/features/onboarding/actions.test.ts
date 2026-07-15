@@ -37,6 +37,10 @@ describe("completeOnboardingAction", () => {
     });
     onboardingMocks.getAppContext.mockResolvedValue(null);
     onboardingMocks.getAppAccess.mockResolvedValue({ kind: "onboarding" });
+    onboardingMocks.createInitialOrganizationForUser.mockResolvedValue({
+      organizationId: "org-1",
+      planId: "polaris-free",
+    });
   });
 
   it("creates the initial tenant with billing email before redirecting", async () => {
@@ -78,6 +82,22 @@ describe("completeOnboardingAction", () => {
     ).not.toHaveBeenCalled();
     expect(onboardingMocks.redirect).not.toHaveBeenCalled();
     expect(result.organizationNameError).toBeTruthy();
+  });
+
+  it("skips the plan selection screen when a paid signup intent was claimed", async () => {
+    onboardingMocks.createInitialOrganizationForUser.mockResolvedValue({
+      organizationId: "org-paid",
+      planId: "polaris-paid-monthly",
+    });
+    const formData = new FormData();
+    formData.set("organizationName", "Loja paga");
+
+    await completeOnboardingAction(
+      { error: null, organizationNameError: null },
+      formData
+    );
+
+    expect(onboardingMocks.redirect).toHaveBeenCalledWith("/");
   });
 
   it("does not create a tenant for a suspended account", async () => {

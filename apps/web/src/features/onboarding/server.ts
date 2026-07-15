@@ -64,7 +64,7 @@ export const createInitialOrganizationForUser = async ({
   billingEmail?: string | null;
   organizationName: string;
   userId: string;
-}): Promise<string> => {
+}): Promise<{ organizationId: string; planId: string }> => {
   const db = await getDb();
 
   const organizationId = await db.transaction(async (tx) => {
@@ -84,7 +84,10 @@ export const createInitialOrganizationForUser = async ({
       .limit(1);
 
     if (existingMembership) {
-      return existingMembership.organizationId;
+      return {
+        organizationId: existingMembership.organizationId,
+        planId: FREE_PLAN_ID,
+      };
     }
 
     const canonicalBillingEmail = normalizeBillingEmail(billingEmail);
@@ -202,7 +205,7 @@ export const createInitialOrganizationForUser = async ({
       type: "organization.created",
     });
 
-    return organizationId;
+    return { organizationId, planId: plan.id };
   });
 
   return organizationId;

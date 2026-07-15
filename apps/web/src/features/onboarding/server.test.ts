@@ -6,6 +6,7 @@ const { dbMock, txMock } = vi.hoisted(() => {
     execute: vi.fn(),
     insert: vi.fn(),
     select: vi.fn(),
+    update: vi.fn(),
   };
 
   const dbMock = {
@@ -74,12 +75,15 @@ describe("createInitialOrganizationForUser", () => {
   it("locks onboarding per user before reading existing membership", async () => {
     selectMembershipOnce("org-existing");
 
-    const organizationId = await createInitialOrganizationForUser({
+    const onboarding = await createInitialOrganizationForUser({
       organizationName: "Espaço existente",
       userId: "user-1",
     });
 
-    expect(organizationId).toBe("org-existing");
+    expect(onboarding).toEqual({
+      organizationId: "org-existing",
+      planId: "polaris-free",
+    });
     expect(txMock.execute.mock.invocationCallOrder[0]).toBeLessThan(
       txMock.select.mock.invocationCallOrder[0]
     );
@@ -111,7 +115,7 @@ describe("createInitialOrganizationForUser", () => {
     selectDefaultBillingPlanOnce("polaris-free");
     const insertValues = mockInsertValues();
 
-    const organizationId = await createInitialOrganizationForUser({
+    const onboarding = await createInitialOrganizationForUser({
       billingEmail: "user@example.com",
       organizationName: "Loja da Ana",
       userId: "user-1",
@@ -120,7 +124,7 @@ describe("createInitialOrganizationForUser", () => {
     expect(insertValues).toHaveBeenCalledWith(
       expect.objectContaining({
         name: "Loja da Ana",
-        slug: `tenant-${organizationId}`,
+        slug: `tenant-${onboarding.organizationId}`,
       })
     );
     expect(insertValues).toHaveBeenCalledWith(
@@ -134,6 +138,7 @@ describe("createInitialOrganizationForUser", () => {
         status: "active",
       })
     );
+    expect(onboarding.planId).toBe("polaris-free");
   });
 
   it("does not require an E2E environment to activate the initial Free subscription", async () => {
@@ -150,6 +155,57 @@ describe("createInitialOrganizationForUser", () => {
       expect.objectContaining({
         planId: "polaris-free",
         status: "active",
+      })
+    );
+  });
+
+  it("claims an exact-email paid checkout and creates a paid subscription", async () => {
+    selectNoMembershipOnce();
+    selectDefaultBillingPlanOnce("polaris-paid-monthly");
+    const insertValues = mockInsertValues();
+    const where = vi.fn().mockResolvedValue([]);
+    const set = vi.fn().mockReturnValue({ where });
+    txMock.update = vi.fn().mockReturnValue({ set });
+    txMock.execute
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: "signup-intent-1",
+            provider: "asaas",
+            providerSubscriptionId: "sub_123",
+          },
+        ],
+      });
+
+    const onboarding = await createInitialOrganizationForUser({
+      billingEmail: "  OWNER@EXAMPLE.COM ",
+      organizationName: "Loja paga",
+      userId: "user-1",
+    });
+
+    expect(onboarding.planId).toBe("polaris-paid-monthly");
+    expect(insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        planId: "polaris-paid-monthly",
+        status: "active",
+      })
+    );
+    expect(insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        billingSubscriptionId: expect.any(String),
+        externalId: "sub_123",
+        provider: "asaas",
+      })
+    );
+    expect(txMock.update).toHaveBeenCalledTimes(1);
+    expect(set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        claimedOrganizationId: onboarding.organizationId,
+        claimedUserId: "user-1",
+        claimedAt: expect.any(Date),
       })
     );
   });
