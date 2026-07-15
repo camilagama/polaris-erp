@@ -17,6 +17,7 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { requirePlatformAdmin } from "@/lib/platform-admin-auth";
 import { ActivityGraph } from "./activity-graph";
+import { AdminDashboardSkeleton } from "./admin-dashboard-skeleton";
 
 const getAdminContext = async () => requirePlatformAdmin();
 
@@ -282,11 +283,9 @@ const AdminDashboard = async () => {
   );
 };
 
-const AdminDashboardFallback = () => <div className="flex-1" />;
-
 export default function AdminRootPage() {
   return (
-    <Suspense fallback={<AdminDashboardFallback />}>
+    <Suspense fallback={<AdminDashboardSkeleton />}>
       <AdminDashboard />
     </Suspense>
   );

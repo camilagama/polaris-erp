@@ -3,56 +3,77 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export function DashboardSkeleton() {
   return (
-    <div className="flex flex-col gap-5">
-      <Skeleton className="h-20 w-full rounded-lg" />
+    <div className="flex flex-col gap-6">
+      {/* Insight Banner (Fino como o real) */}
+      <Skeleton className="h-14 w-full rounded-xl" />
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card className="flex h-full flex-col">
-          <CardHeader className="gap-1">
-            <Skeleton className="h-4 w-1/3" />
-          </CardHeader>
-          <CardContent className="flex flex-1 items-center justify-center">
-            <Skeleton className="h-40 w-[90%]" />
-          </CardContent>
-        </Card>
-
-        <Card className="flex h-full flex-col">
-          <CardHeader className="gap-1">
-            <Skeleton className="h-4 w-1/3" />
-          </CardHeader>
-          <CardContent className="flex flex-1 flex-col gap-2">
-            <Skeleton className="h-8 w-1/2" />
-            <Skeleton className="h-32 w-[90%]" />
-          </CardContent>
-        </Card>
-
-        <Card className="flex h-full flex-col">
-          <CardHeader className="gap-1">
-            <Skeleton className="h-4 w-1/3" />
-          </CardHeader>
-          <CardContent className="flex flex-1 flex-col gap-2">
-            <Skeleton className="h-8 w-1/2" />
-            <Skeleton className="h-32 w-[90%]" />
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="flex items-center justify-between pt-2">
-        <Skeleton className="h-6 w-32" />
-        <Skeleton className="h-10 w-72" />
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Card className="flex h-32 flex-col justify-center" key={i}>
-            <CardHeader className="py-3">
-              <Skeleton className="h-3 w-1/2" />
+      {/* Top Grid: Sales Contribution & Profit Margin (Sem goals, 2 colunas proporcionais) */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="flex h-full flex-col">
+          <Card className="flex h-full flex-col">
+            <CardHeader className="gap-1 pb-4">
+              <Skeleton className="h-4 w-40" />
+              <Skeleton className="h-3 w-64" />
             </CardHeader>
-            <CardContent>
-              <Skeleton className="h-8 w-2/3" />
+            <CardContent className="flex flex-1 items-center justify-center pt-0">
+              <Skeleton className="h-[200px] w-full" />
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="flex h-full flex-col">
+          <Card className="flex h-full flex-col justify-center">
+            <CardHeader className="gap-1 pb-4">
+              <Skeleton className="h-4 w-32" />
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4 pt-0">
+              <Skeleton className="h-8 w-20" />
+              <Skeleton className="h-[160px] w-full rounded-lg" />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Card className="flex h-[130px] flex-col justify-center" key={i}>
+            <CardHeader className="gap-1 pb-2">
+              <Skeleton className="h-3 w-28" />
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3 pt-0">
+              <Skeleton className="h-8 w-32" />
+              <Skeleton className="h-12 w-full" />
             </CardContent>
           </Card>
         ))}
+      </div>
+
+      {/* Analytics Section: Revenue vs Costs & Top Products */}
+      <div className="grid gap-4 xl:grid-cols-[1.35fr_0.95fr]">
+        <Card className="flex h-[360px] flex-col justify-center">
+          <CardHeader className="gap-1 pb-4">
+            <Skeleton className="h-5 w-40" />
+            <Skeleton className="h-3 w-48" />
+          </CardHeader>
+          <CardContent className="flex h-full flex-col pt-0">
+            <Skeleton className="w-full flex-1" />
+          </CardContent>
+        </Card>
+
+        <Card className="flex h-[360px] flex-col">
+          <CardHeader className="pb-4">
+            <Skeleton className="h-5 w-48" />
+            <Skeleton className="h-3 w-56" />
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3 pt-0">
+            <Skeleton className="h-[42px] w-full" />
+            <Skeleton className="h-[42px] w-full" />
+            <Skeleton className="h-[42px] w-full" />
+            <Skeleton className="h-[42px] w-full" />
+            <Skeleton className="h-[42px] w-full" />
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
