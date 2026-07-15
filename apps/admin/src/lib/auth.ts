@@ -1,13 +1,13 @@
 import "server-only";
 
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { createAdminAuth } from "@polaris/auth/admin";
 import {
   admitPlatformAdminSession,
   hasActivePlatformAdminEnrollment,
 } from "@polaris/platform/admin";
 import { parse } from "dotenv";
-import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
 
 const resolveAdminEnvironment = (): NodeJS.ProcessEnv => {
   const candidates = [

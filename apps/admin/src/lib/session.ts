@@ -30,7 +30,9 @@ export const getSession = async (): Promise<AdminSession> => {
   const createdAt = getSessionCreatedAt(session);
 
   if (session && createdAt && hasExceededAdminSessionLifetime(createdAt)) {
-    await db.delete(adminSessions).where(eq(adminSessions.id, session.session.id));
+    await db
+      .delete(adminSessions)
+      .where(eq(adminSessions.id, session.session.id));
     return null;
   }
 

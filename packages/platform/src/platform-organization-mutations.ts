@@ -10,16 +10,16 @@ type OrganizationPlatformStatus = "active" | "suspended";
 type MutationReturningRow = Record<string, unknown>;
 
 export interface UpdatePlatformOrganizationStatusInput {
-  actorPlatformAdminId: string;
   actorAdminUserId: string;
+  actorPlatformAdminId: string;
   organizationId: string;
   reason: string;
   status: OrganizationPlatformStatus;
 }
 
 export interface ClosePlatformOrganizationInput {
-  actorPlatformAdminId: string;
   actorAdminUserId: string;
+  actorPlatformAdminId: string;
   organizationId: string;
   reason: string;
 }

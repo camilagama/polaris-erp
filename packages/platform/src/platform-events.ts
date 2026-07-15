@@ -18,8 +18,8 @@ export interface PlatformEventsOverview {
 }
 
 export interface RetryPlatformOutboxEventInput {
-  actorPlatformAdminId: string;
   actorAdminUserId: string;
+  actorPlatformAdminId: string;
   eventId: string;
   reason: string;
 }

@@ -19,8 +19,8 @@ export interface PlatformAuditEventListFilters {
 
 export interface PlatformAuditEventListItem {
   action: string;
-  actorPlatformAdminId: string | null;
   actorAdminUserId: string | null;
+  actorPlatformAdminId: string | null;
   createdAt: string | null;
   id: string;
   subjectId: string | null;

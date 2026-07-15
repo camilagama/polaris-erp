@@ -216,7 +216,10 @@ const getAdminRateLimitScope = ({
   action,
   actorAdminUserId,
   targetId,
-}: Pick<AdminRateLimitInput, "action" | "actorAdminUserId" | "targetId">): string =>
+}: Pick<
+  AdminRateLimitInput,
+  "action" | "actorAdminUserId" | "targetId"
+>): string =>
   [
     "admin",
     normalizeKeyPart(action),

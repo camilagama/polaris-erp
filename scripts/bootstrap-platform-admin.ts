@@ -76,7 +76,7 @@ const main = async (): Promise<void> => {
   const pool = new Pool({
     connectionString: databaseUrl,
     connectionTimeoutMillis: 10_000,
-    idleTimeoutMillis: 5_000,
+    idleTimeoutMillis: 5000,
     max: 1,
     ssl: true,
   });
@@ -84,10 +84,17 @@ const main = async (): Promise<void> => {
 
   try {
     await client.query("begin");
-    await client.query("set local app.internal_job = 'platform_admin_bootstrap'");
-    await client.query("select pg_advisory_xact_lock(hashtext('platform_admin_bootstrap'))");
+    await client.query(
+      "set local app.internal_job = 'platform_admin_bootstrap'"
+    );
+    await client.query(
+      "select pg_advisory_xact_lock(hashtext('platform_admin_bootstrap'))"
+    );
 
-    const existing = await client.query<{ platform_admins: string; enrollments: string }>(
+    const existing = await client.query<{
+      platform_admins: string;
+      enrollments: string;
+    }>(
       `
         select
           (select count(*)::text from public.platform_admins) as platform_admins,
@@ -103,7 +110,10 @@ const main = async (): Promise<void> => {
     }
 
     const enrollmentId = randomUUID();
-    const enrollment = await client.query<{ grant_expires_at: Date; enrollment_expires_at: Date }>(
+    const enrollment = await client.query<{
+      grant_expires_at: Date;
+      enrollment_expires_at: Date;
+    }>(
       `
         insert into public.platform_admin_enrollments (
           id,
@@ -139,7 +149,13 @@ const main = async (): Promise<void> => {
         "platform_admin.enrollment_bootstrapped",
         "platform_admin_enrollment",
         enrollmentId,
-        JSON.stringify({ email, grantTtlDays, reason, role, source: "bootstrap-platform-admin" }),
+        JSON.stringify({
+          email,
+          grantTtlDays,
+          reason,
+          role,
+          source: "bootstrap-platform-admin",
+        }),
       ]
     );
     await client.query("commit");

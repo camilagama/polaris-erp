@@ -4,9 +4,9 @@ const MINIMUM_SECRET_LENGTH = 32;
 export interface AdminAuthEnvironment {
   ADMIN_APP_URL?: string;
   ADMIN_BETTER_AUTH_SECRET?: string;
-  BETTER_AUTH_SECRET?: string;
   ADMIN_GOOGLE_CLIENT_ID?: string;
   ADMIN_GOOGLE_CLIENT_SECRET?: string;
+  BETTER_AUTH_SECRET?: string;
   NODE_ENV?: string;
 }
 
@@ -26,11 +26,16 @@ export const resolveAdminAuthOptions = (
   environment: AdminAuthEnvironment
 ): AdminAuthOptions => {
   const isProduction = environment.NODE_ENV === "production";
-  const baseUrl = getOptionalValue(environment.ADMIN_APP_URL) ?? LOCAL_ADMIN_APP_URL;
-  const configuredSecret = getOptionalValue(environment.ADMIN_BETTER_AUTH_SECRET);
+  const baseUrl =
+    getOptionalValue(environment.ADMIN_APP_URL) ?? LOCAL_ADMIN_APP_URL;
+  const configuredSecret = getOptionalValue(
+    environment.ADMIN_BETTER_AUTH_SECRET
+  );
   const secret =
     configuredSecret ??
-    (isProduction ? undefined : getOptionalValue(environment.BETTER_AUTH_SECRET));
+    (isProduction
+      ? undefined
+      : getOptionalValue(environment.BETTER_AUTH_SECRET));
   const clientId = getOptionalValue(environment.ADMIN_GOOGLE_CLIENT_ID);
   const clientSecret = getOptionalValue(environment.ADMIN_GOOGLE_CLIENT_SECRET);
 

@@ -97,7 +97,6 @@ const revokeExpiredSession = async ({
         updatedAt: new Date(),
       })
       .where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId)));
-
   });
 };
 

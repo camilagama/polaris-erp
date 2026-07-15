@@ -50,8 +50,8 @@ type ManualPlatformBillingStatus = "active" | "past_due";
 type MutationReturningRow = Record<string, unknown>;
 
 export interface UpdatePlatformBillingSubscriptionStatusInput {
-  actorPlatformAdminId: string;
   actorAdminUserId: string;
+  actorPlatformAdminId: string;
   paymentEvidenceReference?: string;
   reason: string;
   status: ManualPlatformBillingStatus;

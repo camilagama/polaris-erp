@@ -34,8 +34,8 @@ export interface BootstrapPlatformAdminInput {
 }
 
 export interface GrantPlatformAdminAccessInput {
-  actorPlatformAdminId: string;
   actorAdminUserId: string;
+  actorPlatformAdminId: string;
   expiresAt: Date;
   reason: string;
   role: PlatformAdminRole;
@@ -53,20 +53,20 @@ export interface CreatePlatformAdminEnrollmentInput {
 }
 
 export interface RevokePlatformAdminGrantInput {
-  actorPlatformAdminId: string;
   actorAdminUserId: string;
+  actorPlatformAdminId: string;
   grantId: string;
   reason: string;
 }
 
 export interface PlatformAdminGrantSummary {
+  adminUserId: string;
   expiresAt: string | null;
   grantId: string;
   platformAdminId: string;
   reason: string;
   revokedAt: string | null;
   role: PlatformAdminRole;
-  adminUserId: string;
 }
 
 interface InsertValues {
@@ -97,7 +97,8 @@ interface QueryableDb {
   execute: (query: ReturnType<typeof sql>) => Promise<unknown>;
 }
 
-const normalizeAdminEmail = (email: string): string => email.trim().toLowerCase();
+const normalizeAdminEmail = (email: string): string =>
+  email.trim().toLowerCase();
 
 export const hasActivePlatformAdminEnrollment = async (
   email: string
@@ -170,7 +171,9 @@ export const admitPlatformAdminSession = async (
     const existingAdmin = existingAdminRows[0];
 
     if (existingAdmin && existingAdmin.status !== "active") {
-      throw new Error("Disabled platform admins cannot claim a new enrollment.");
+      throw new Error(
+        "Disabled platform admins cannot claim a new enrollment."
+      );
     }
 
     const platformAdminRows = existingAdmin
@@ -188,7 +191,9 @@ export const admitPlatformAdminSession = async (
     const reason = toNullableString(enrollment.reason);
     const grantExpiresAt = enrollment.grant_expires_at;
 
-    if (!(platformAdminId && role && enrollmentId && reason && grantExpiresAt)) {
+    if (
+      !(platformAdminId && role && enrollmentId && reason && grantExpiresAt)
+    ) {
       throw new Error("Admin enrollment is incomplete.");
     }
 

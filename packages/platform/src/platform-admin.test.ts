@@ -137,7 +137,9 @@ describe("platform admin helpers", () => {
   it("creates a pre-approved enrollment by exact normalized email", async () => {
     const tx = {
       ...createInsertMock(),
-      execute: vi.fn().mockResolvedValueOnce({ rows: [{ id: "enrollment-1" }] }),
+      execute: vi
+        .fn()
+        .mockResolvedValueOnce({ rows: [{ id: "enrollment-1" }] }),
     };
     const db = { transaction: vi.fn(async (callback) => callback(tx)) };
 

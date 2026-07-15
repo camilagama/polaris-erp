@@ -368,9 +368,12 @@ export const platformAuditEvents = pgTable(
       () => platformAdmins.id,
       { onDelete: "set null" }
     ),
-    actorAdminUserId: text("actor_admin_user_id").references(() => adminUsers.id, {
-      onDelete: "set null",
-    }),
+    actorAdminUserId: text("actor_admin_user_id").references(
+      () => adminUsers.id,
+      {
+        onDelete: "set null",
+      }
+    ),
     action: text("action").notNull(),
     subjectType: text("subject_type").notNull(),
     subjectId: text("subject_id"),
