@@ -58,6 +58,16 @@ const selectDefaultBillingPlanOnce = (planId: string | null) => {
   });
 };
 
+const selectUserEmailVerificationOnce = (emailVerified: boolean) => {
+  txMock.select.mockReturnValueOnce({
+    from: vi.fn().mockReturnValue({
+      where: vi.fn().mockReturnValue({
+        limit: vi.fn().mockResolvedValue([{ emailVerified }]),
+      }),
+    }),
+  });
+};
+
 const mockInsertValues = () => {
   const values = vi.fn().mockResolvedValue([]);
   txMock.insert.mockReturnValue({ values });
@@ -112,6 +122,7 @@ describe("createInitialOrganizationForUser", () => {
 
   it("creates an active Free subscription with the workspace name chosen during onboarding", async () => {
     selectNoMembershipOnce();
+    selectUserEmailVerificationOnce(true);
     selectDefaultBillingPlanOnce("polaris-free");
     const insertValues = mockInsertValues();
 
@@ -161,6 +172,7 @@ describe("createInitialOrganizationForUser", () => {
 
   it("claims an exact-email paid checkout and creates a paid subscription", async () => {
     selectNoMembershipOnce();
+    selectUserEmailVerificationOnce(true);
     selectDefaultBillingPlanOnce("polaris-paid-monthly");
     const insertValues = mockInsertValues();
     const where = vi.fn().mockResolvedValue([]);
@@ -208,6 +220,25 @@ describe("createInitialOrganizationForUser", () => {
         claimedAt: expect.any(Date),
       })
     );
+  });
+
+  it("keeps an unverified identity on Free instead of claiming a paid checkout", async () => {
+    selectNoMembershipOnce();
+    selectUserEmailVerificationOnce(false);
+    selectDefaultBillingPlanOnce("polaris-free");
+    const insertValues = mockInsertValues();
+
+    const onboarding = await createInitialOrganizationForUser({
+      billingEmail: "owner@example.com",
+      organizationName: "Loja pendente",
+      userId: "user-1",
+    });
+
+    expect(onboarding.planId).toBe("polaris-free");
+    expect(insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({ planId: "polaris-free" })
+    );
+    expect(txMock.update).not.toHaveBeenCalled();
   });
 
   it("fails onboarding when no active billing plan exists", async () => {

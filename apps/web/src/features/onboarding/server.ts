@@ -12,6 +12,7 @@ import {
   organization,
   signupCheckoutIntents,
   systemSettings,
+  users,
 } from "@polaris/db/schema";
 import {
   setInternalJobContext,
@@ -91,9 +92,19 @@ export const createInitialOrganizationForUser = async ({
     }
 
     const canonicalBillingEmail = normalizeBillingEmail(billingEmail);
-    const [paidSignupIntent] = canonicalBillingEmail
-      ? toRows(
-          await tx.execute(sql`
+    const [identity] = canonicalBillingEmail
+      ? await tx
+          .select({
+            emailVerified: users.emailVerified,
+          })
+          .from(users)
+          .where(eq(users.id, userId))
+          .limit(1)
+      : [];
+    const [paidSignupIntent] =
+      canonicalBillingEmail && identity?.emailVerified
+        ? toRows(
+            await tx.execute(sql`
             select id, provider, provider_subscription_id as "providerSubscriptionId"
             from signup_checkout_intents
             where billing_email = ${canonicalBillingEmail}
@@ -104,8 +115,8 @@ export const createInitialOrganizationForUser = async ({
             limit 1
             for update
           `)
-        )
-      : [];
+          )
+        : [];
     const selectedPlanId = paidSignupIntent
       ? PAID_MONTHLY_PLAN_ID
       : FREE_PLAN_ID;
