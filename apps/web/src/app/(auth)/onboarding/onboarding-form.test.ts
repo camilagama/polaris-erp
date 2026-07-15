@@ -31,7 +31,7 @@ describe("OnboardingForm", () => {
     reactMocks.useActionState.mockReset();
   });
 
-  it("shows recoverable errors without asking for a workspace name", async () => {
+  it("collects an organization name before creating the Free workspace", async () => {
     const { OnboardingForm } = await import(
       "@/app/(auth)/onboarding/onboarding-form"
     );
@@ -45,10 +45,11 @@ describe("OnboardingForm", () => {
     const markup = renderToStaticMarkup(createElement(OnboardingForm));
 
     expect(markup).toContain('aria-live="polite"');
-    expect(markup).not.toContain('name="workspaceName"');
-    expect(markup).not.toContain("Nome da workspace");
+    expect(markup).toContain('name="organizationName"');
+    expect(markup).toContain('autoComplete="organization"');
+    expect(markup).toContain("Nome da organização");
     expect(markup).toContain("Nao foi possivel iniciar sua conta.");
-    expect(markup).toContain("Criando...");
+    expect(markup).toContain("Criando espaço...");
     expect(markup).toMatch(DISABLED_BUTTON_ATTRIBUTE_PATTERN);
   });
 

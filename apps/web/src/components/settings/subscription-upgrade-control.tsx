@@ -15,7 +15,11 @@ const redirectToHostedCheckout = (checkoutUrl: string): void => {
   window.location.assign(checkoutUrl);
 };
 
-export function SubscriptionUpgradeControl() {
+export function SubscriptionUpgradeControl({
+  label = "Fazer upgrade",
+}: {
+  label?: string;
+}) {
   const [pending, startTransition] = useTransition();
   const [waiting, setWaiting] = useState(false);
 
@@ -100,7 +104,7 @@ export function SubscriptionUpgradeControl() {
       size="xs"
       type="button"
     >
-      {pending || waiting ? "Preparando checkout..." : "Fazer upgrade"}
+      {pending || waiting ? "Preparando checkout..." : label}
     </Button>
   );
 }

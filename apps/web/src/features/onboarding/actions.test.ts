@@ -48,39 +48,47 @@ describe("completeOnboardingAction", () => {
       },
     });
     const formData = new FormData();
-    formData.set("workspaceName", "Cliente nao deve controlar isso");
+    formData.set("organizationName", "Loja do cliente");
 
-    await completeOnboardingAction({ error: null }, formData);
-
-    expect(
-      onboardingMocks.createInitialOrganizationForUser
-    ).toHaveBeenCalledWith({
-      billingEmail: "owner@example.com",
-      userId: "user-1",
-    });
-    expect(onboardingMocks.redirect).toHaveBeenCalledWith("/");
-  });
-
-  it("does not require a workspace name", async () => {
-    const result = await completeOnboardingAction(
-      { error: null },
-      new FormData()
+    await completeOnboardingAction(
+      { error: null, organizationNameError: null },
+      formData
     );
 
     expect(
       onboardingMocks.createInitialOrganizationForUser
     ).toHaveBeenCalledWith({
-      billingEmail: undefined,
+      billingEmail: "owner@example.com",
+      organizationName: "Loja do cliente",
       userId: "user-1",
     });
-    expect(onboardingMocks.redirect).toHaveBeenCalledWith("/");
-    expect(result).toBeUndefined();
+    expect(onboardingMocks.redirect).toHaveBeenCalledWith(
+      "/onboarding?step=plan"
+    );
+  });
+
+  it("returns a validation error when organization name is missing", async () => {
+    const result = await completeOnboardingAction(
+      { error: null, organizationNameError: null },
+      new FormData()
+    );
+
+    expect(
+      onboardingMocks.createInitialOrganizationForUser
+    ).not.toHaveBeenCalled();
+    expect(onboardingMocks.redirect).not.toHaveBeenCalled();
+    expect(result.organizationNameError).toBeTruthy();
   });
 
   it("does not create a tenant for a suspended account", async () => {
     onboardingMocks.getAppAccess.mockResolvedValue({ kind: "suspended" });
 
-    await completeOnboardingAction({ error: null }, new FormData());
+    const formData = new FormData();
+    formData.set("organizationName", "Loja da Ana");
+    await completeOnboardingAction(
+      { error: null, organizationNameError: null },
+      formData
+    );
 
     expect(
       onboardingMocks.createInitialOrganizationForUser

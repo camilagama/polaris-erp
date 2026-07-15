@@ -75,6 +75,7 @@ describe("createInitialOrganizationForUser", () => {
     selectMembershipOnce("org-existing");
 
     const organizationId = await createInitialOrganizationForUser({
+      organizationName: "Espaço existente",
       userId: "user-1",
     });
 
@@ -91,6 +92,7 @@ describe("createInitialOrganizationForUser", () => {
     selectMembershipOnce("org-existing");
 
     await createInitialOrganizationForUser({
+      organizationName: "Espaço existente",
       userId: "user-1",
     });
 
@@ -104,19 +106,20 @@ describe("createInitialOrganizationForUser", () => {
     ).toBeLessThan(txMock.select.mock.invocationCallOrder[0]);
   });
 
-  it("creates an active Free subscription with a server-side technical tenant identity during onboarding", async () => {
+  it("creates an active Free subscription with the workspace name chosen during onboarding", async () => {
     selectNoMembershipOnce();
     selectDefaultBillingPlanOnce("polaris-free");
     const insertValues = mockInsertValues();
 
     const organizationId = await createInitialOrganizationForUser({
       billingEmail: "user@example.com",
+      organizationName: "Loja da Ana",
       userId: "user-1",
     });
 
     expect(insertValues).toHaveBeenCalledWith(
       expect.objectContaining({
-        name: `Tenant ${organizationId.slice(0, 8)}`,
+        name: "Loja da Ana",
         slug: `tenant-${organizationId}`,
       })
     );
@@ -139,6 +142,7 @@ describe("createInitialOrganizationForUser", () => {
     const insertValues = mockInsertValues();
 
     await createInitialOrganizationForUser({
+      organizationName: "Loja da Ana",
       userId: "user-1",
     });
 
@@ -156,6 +160,7 @@ describe("createInitialOrganizationForUser", () => {
 
     await expect(
       createInitialOrganizationForUser({
+        organizationName: "Loja da Ana",
         userId: "user-1",
       })
     ).rejects.toThrow("Plano de billing ativo nao encontrado.");

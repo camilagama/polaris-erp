@@ -29,9 +29,11 @@ const getDb = async () => {
 
 export const createInitialOrganizationForUser = async ({
   billingEmail,
+  organizationName,
   userId,
 }: {
   billingEmail?: string | null;
+  organizationName: string;
   userId: string;
 }): Promise<string> => {
   const db = await getDb();
@@ -74,12 +76,11 @@ export const createInitialOrganizationForUser = async ({
     const billingCustomerId = crypto.randomUUID();
     await setTenantContext(tx, organizationId);
 
-    const technicalName = `Tenant ${organizationId.slice(0, 8)}`;
     const technicalSlug = `tenant-${organizationId}`;
 
     await tx.insert(organization).values({
       id: organizationId,
-      name: technicalName,
+      name: organizationName,
       slug: technicalSlug,
       status: "active",
     });
