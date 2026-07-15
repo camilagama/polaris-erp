@@ -49,11 +49,10 @@ import {
   archiveGoalAction,
   unarchiveGoalAction,
 } from "@/features/goals/actions";
-import {
-  type DashboardGoalCard,
-  type DashboardGoalHistoryItem,
-  type GoalsSettingsPayload,
-  MAX_ACTIVE_GOALS,
+import type {
+  DashboardGoalCard,
+  DashboardGoalHistoryItem,
+  GoalsSettingsPayload,
 } from "@/features/goals/contracts";
 import { formatCurrency } from "@/lib/formatters";
 
@@ -115,7 +114,7 @@ export function GoalsSettingsPanel({
   const [historyOpen, setHistoryOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
-  const atCapacity = payload.active.length >= MAX_ACTIVE_GOALS;
+  const atCapacity = payload.active.length >= payload.maxActiveGoals;
 
   const handleArchive = () => {
     if (!archiveId) {
@@ -160,9 +159,9 @@ export function GoalsSettingsPanel({
             <div className="flex flex-col gap-1.5">
               <CardTitle>Metas</CardTitle>
               <CardDescription>
-                {MAX_ACTIVE_GOALS === 1
+                {payload.maxActiveGoals === 1
                   ? "Resumo no dashboard. Limite: 1 meta ativa por vez."
-                  : `Resumo no dashboard. Ate ${MAX_ACTIVE_GOALS} ativas.`}
+                  : `Resumo no dashboard. Ate ${payload.maxActiveGoals} ativas.`}
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
@@ -384,6 +383,7 @@ export function GoalsSettingsPanel({
 
       <GoalFormDialog
         dateBounds={dateBounds}
+        maxActiveGoals={payload.maxActiveGoals}
         mode="create"
         onOpenChange={setCreateOpen}
         open={createOpen}
@@ -394,6 +394,7 @@ export function GoalsSettingsPanel({
           dateBounds={dateBounds}
           initialGoal={editGoal}
           key={editGoal.id}
+          maxActiveGoals={payload.maxActiveGoals}
           mode="edit"
           onOpenChange={(open) => {
             if (!open) {
@@ -416,7 +417,7 @@ export function GoalsSettingsPanel({
           <AlertDialogHeader>
             <AlertDialogTitle>Arquivar meta</AlertDialogTitle>
             <AlertDialogDescription>
-              {MAX_ACTIVE_GOALS === 1
+              {payload.maxActiveGoals === 1
                 ? "Sai das ativas. Para desarquivar, primeiro arquive ou encerre a meta que estiver ativa."
                 : "Sai das ativas. Pode desarquivar depois se houver vaga."}
             </AlertDialogDescription>

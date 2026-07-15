@@ -21,6 +21,26 @@ const getFirstFetchCall = (calls: unknown[][]): FetchCall => {
 };
 
 describe("Woovi billing adapter", () => {
+  it("cancels a Pix Automatic provider subscription", async () => {
+    const fetch = vi.fn(async () => ({ ok: true }));
+    const adapter = createWooviBillingAdapter({
+      apiKey: "app-id",
+      baseUrl: "https://api.woovi.com/",
+      fetch: fetch as never,
+    });
+
+    await expect(
+      adapter.cancelPixRecurringSubscription("subscription-1")
+    ).resolves.toBeUndefined();
+    expect(fetch).toHaveBeenCalledWith(
+      "https://api.woovi.com/api/v1/subscriptions/subscription-1/cancel",
+      {
+        headers: { Authorization: "app-id" },
+        method: "PUT",
+      }
+    );
+  });
+
   it("creates Pix recurring subscriptions with correlationID and app authorization", async () => {
     const fetch = vi.fn(async () => ({
       json: async () => ({

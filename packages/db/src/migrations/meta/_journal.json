@@ -155,6 +155,118 @@
       "when": 1784030400000,
       "tag": "20260714090000_event_outbox_leases",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1784064942038,
+      "tag": "20260714213542_lovely_ultimo",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1784066400000,
+      "tag": "20260714220000_free_plan_entitlements",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1784068200000,
+      "tag": "20260714223000_goal_entitlement_capacity",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1784070000000,
+      "tag": "20260714230000_command_executions",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1784071800000,
+      "tag": "20260714233000_billing_lifecycle_clock",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1784072700000,
+      "tag": "20260714234500_billing_lifecycle_job_access",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1784073600000,
+      "tag": "20260714240000_email_lifecycle",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1784074200000,
+      "tag": "20260714241000_product_soft_delete",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1784074800000,
+      "tag": "20260714242000_product_image_gallery",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1784075400000,
+      "tag": "20260714243000_stock_ledger",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1784076000000,
+      "tag": "20260714244000_goal_state_machine",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1784076600000,
+      "tag": "20260714245000_billing_checkout_sessions",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1784077200000,
+      "tag": "20260714250000_platform_admin_grant_expiry",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1784077800000,
+      "tag": "20260714251000_platform_admin_tables_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1784078400000,
+      "tag": "20260714252000_platform_support_cases",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1784079000000,
+      "tag": "20260714253000_stock_ledger_reconciliation_access",
+      "breakpoints": true
     }
   ]
 }

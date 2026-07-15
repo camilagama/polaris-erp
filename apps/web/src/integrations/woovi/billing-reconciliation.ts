@@ -10,6 +10,7 @@ interface WooviBillingEvent {
   correlationID: string | null;
   event: string | null;
   globalID: string | null;
+  occurredAt?: Date | null;
   paymentSubscriptionGlobalID: string | null;
   status: string | null;
   value: number | null;
@@ -45,6 +46,18 @@ const getNumber = (
   return null;
 };
 
+const getOccurredAt = (record: Record<string, unknown>): Date | null => {
+  const value = getString(record, "createdAt");
+
+  if (!value) {
+    return null;
+  }
+
+  const occurredAt = new Date(value);
+
+  return Number.isNaN(occurredAt.getTime()) ? null : occurredAt;
+};
+
 const parseWooviBillingEvent = (
   payload: Record<string, unknown>
 ): WooviBillingEvent => ({
@@ -55,6 +68,7 @@ const parseWooviBillingEvent = (
     payload,
     "paymentSubscriptionGlobalID"
   ),
+  occurredAt: getOccurredAt(payload),
   status: getString(payload, "status"),
   value: getNumber(payload, "value"),
 });
@@ -155,14 +169,33 @@ export const reconcileWooviBillingEvent = async (
     return "review";
   }
 
+  await db.execute(sql`
+    select pg_advisory_xact_lock(
+      hashtext(${`billing:organization:${subscription.organizationId}`})
+    )
+  `);
+
   const subscriptionStatus = mapWooviSubscriptionStatus(event);
 
-  if (subscriptionStatus) {
+  if (subscriptionStatus && event.occurredAt) {
     await db.execute(sql`
       update billing_subscriptions
       set status = ${subscriptionStatus},
+          grace_period_ends_at = case
+            when ${subscriptionStatus} = 'past_due' then coalesce(
+              grace_period_ends_at,
+              coalesce(current_period_end, ${event.occurredAt}) + interval '7 days'
+            )
+            when ${subscriptionStatus} = 'active' then null
+            else grace_period_ends_at
+          end,
+          last_provider_event_at = ${event.occurredAt},
           updated_at = now()
       where id = ${subscription.id}
+        and (
+          last_provider_event_at is null
+          or last_provider_event_at <= ${event.occurredAt}
+        )
     `);
   }
 
@@ -213,7 +246,8 @@ export const reconcileWooviBillingEvent = async (
     `);
   }
 
-  return subscriptionStatus || event.event.startsWith("PIX_AUTOMATIC_COBR")
-    ? "processed"
-    : "review";
+  return (subscriptionStatus && !event.occurredAt) ||
+    !(subscriptionStatus || event.event.startsWith("PIX_AUTOMATIC_COBR"))
+    ? "review"
+    : "processed";
 };

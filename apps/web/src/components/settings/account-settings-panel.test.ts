@@ -1,11 +1,14 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { AccountSettingsPanel } from "@/components/settings/account-settings-panel";
+
+vi.mock("server-only", () => ({}));
 
 describe("AccountSettingsPanel", () => {
   it("renders one-user account, billing, and support details without workspace naming", () => {
     const markup = renderToStaticMarkup(
       AccountSettingsPanel({
+        asaasCardCheckoutEnabled: true,
         billing: {
           amountCents: 19_900,
           billingEmail: "billing@example.com",
@@ -13,6 +16,7 @@ describe("AccountSettingsPanel", () => {
           currentPeriodEnd: new Date("2026-08-10T12:00:00.000Z"),
           interval: "month",
           planName: "Polaris Start",
+          planId: "polaris-paid-monthly",
           status: "active",
         },
         user: {
@@ -32,6 +36,7 @@ describe("AccountSettingsPanel", () => {
     expect(markup).toContain("199,00");
     expect(markup).toContain("billing@example.com");
     expect(markup).toContain("billing-support@example.com");
+    expect(markup).toContain("Cancelar no fim do periodo");
     expect(markup).toContain(
       "mailto:billing-support@example.com?subject=Suporte%20Polaris"
     );

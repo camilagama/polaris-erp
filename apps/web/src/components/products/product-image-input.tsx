@@ -26,7 +26,7 @@ interface ProductImageInputProps {
 }
 
 const PRODUCT_IMAGE_ACCEPT = "image/jpeg,image/png,image/webp";
-const PRODUCT_IMAGE_MAX_BYTES = 10 * 1024 * 1024;
+const PRODUCT_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 
 const buildDisplayImage = ({
   currentImage,
@@ -62,7 +62,7 @@ const translateUploadError = (error: string | undefined) => {
   }
 
   if (error.includes("maximum size")) {
-    return "A imagem excede o limite de 10 MB.";
+    return "A imagem excede o limite de 5 MB.";
   }
 
   if (error.includes("accepted file type")) {

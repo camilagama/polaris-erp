@@ -32,6 +32,17 @@ vi.mock("@polaris/db", () => ({
   },
 }));
 
+const { completeCommandExecutionMock, reserveCommandExecutionMock } =
+  vi.hoisted(() => ({
+    completeCommandExecutionMock: vi.fn(),
+    reserveCommandExecutionMock: vi.fn(),
+  }));
+
+vi.mock("@polaris/events", () => ({
+  completeCommandExecution: completeCommandExecutionMock,
+  reserveCommandExecution: reserveCommandExecutionMock,
+}));
+
 const mockGetCatalogSettings = vi.fn();
 
 vi.mock("@/features/catalog/server", () => ({
@@ -73,9 +84,11 @@ const resolveMocks = async () => {
   const appSessionModule = await import("@/lib/app-session");
   const dbModule = await import("@polaris/db");
   const cache = await import("next/cache");
+  const events = await import("@polaris/events");
 
   return {
     mockCatalogSettings: mockGetCatalogSettings as MockFn,
+    mockCompleteCommandExecution: events.completeCommandExecution as MockFn,
     mockDb: dbModule.db as unknown as {
       query: {
         sales: {
@@ -86,6 +99,7 @@ const resolveMocks = async () => {
       transaction: MockFn;
     },
     mockRefresh: cache.refresh as MockFn,
+    mockReserveCommandExecution: events.reserveCommandExecution as MockFn,
     mockRequireAppContext: appSessionModule.requireAppContext as MockFn,
     mockSession: sessionModule.getSession as MockFn,
     mockUpdateTag: cache.updateTag as MockFn,
@@ -154,10 +168,25 @@ const createSalesHarness = (
           ) {
             const rows = Array.isArray(payload) ? payload : [payload];
             saleItemsLog.push(...rows);
-            return Promise.resolve([]);
+            return {
+              returning: async () =>
+                rows.map((row, index) => ({
+                  id: `sale-item-${index + 1}`,
+                  productId: row.productId,
+                  quantity: row.quantity,
+                  unitCostSnapshot: row.unitCostSnapshot,
+                })),
+            };
           }
 
           if (!Array.isArray(payload) && "subjectType" in payload) {
+            return Promise.resolve([]);
+          }
+
+          if (
+            Array.isArray(payload) &&
+            payload.every((row) => "sourceId" in row && "delta" in row)
+          ) {
             return Promise.resolve([]);
           }
 
@@ -339,8 +368,13 @@ const createCancelSaleHarness = (params: {
         }),
       }),
       insert: (_table: unknown) => ({
-        values: (payload: Record<string, unknown>) => {
-          if ("subjectType" in payload) {
+        values: (
+          payload: Record<string, unknown> | Record<string, unknown>[]
+        ) => {
+          if (
+            Array.isArray(payload) ||
+            (!Array.isArray(payload) && "subjectType" in payload)
+          ) {
             return Promise.resolve([]);
           }
 
@@ -385,6 +419,11 @@ describe("sales server actions", () => {
       ],
       idealMarkupPercent: 0,
       minimumMarkupPercent: 0,
+    });
+    completeCommandExecutionMock.mockResolvedValue(true);
+    reserveCommandExecutionMock.mockResolvedValue({
+      commandId: "command-1",
+      kind: "new",
     });
     mockDb.transaction.mockImplementation(async (callback) => callback(mockDb));
   });
@@ -892,6 +931,22 @@ describe("sales server actions", () => {
     expect(mockUpdateTag).toHaveBeenCalledWith(
       buildOrganizationCacheTags("org_dg_imports").analytics
     );
+  });
+
+  it("returns a persisted cancellation replay without restoring stock again", async () => {
+    const { cancelSaleAction } = await import("@/features/sales/actions");
+    const { mockReserveCommandExecution } = await resolveMocks();
+
+    mockReserveCommandExecution.mockResolvedValueOnce({
+      commandId: "command-1",
+      kind: "replay",
+      result: { saleId: "sale-1" },
+      status: "succeeded",
+    });
+
+    await expect(
+      cancelSaleAction("sale-1", "550e8400-e29b-41d4-a716-446655440000")
+    ).resolves.toBeUndefined();
   });
 
   it("does not revalidate when cancellation targets another tenant", async () => {

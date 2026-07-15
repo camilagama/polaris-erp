@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { DGImportsLogo } from "@/components/ui/svgs/logo";
-import { getAppContext } from "@/lib/app-session";
+import { getAppAccess } from "@/lib/app-session";
 import { getSession } from "@/lib/session";
 import { OnboardingForm } from "./onboarding-form";
 
@@ -17,9 +17,13 @@ export default async function OnboardingPage() {
     redirect("/sign-in");
   }
 
-  const context = await getAppContext();
+  const access = await getAppAccess();
 
-  if (context) {
+  if (access.kind === "suspended") {
+    redirect("/restricted-access");
+  }
+
+  if (access.kind === "active") {
     redirect("/");
   }
 

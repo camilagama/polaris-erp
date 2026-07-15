@@ -202,10 +202,10 @@ describe("admin app protection", () => {
     const eventsActionSource = readFileSync(adminEventsActionsPath, "utf8");
 
     expect(eventsPageSource).toContain("requirePlatformAdmin");
-    expect(eventsPageSource).toContain("getPlatformEventsOverview");
+    expect(eventsPageSource).toContain("getPlatformEventsOverviewForAdmin");
     expect(eventsPageSource).toContain("retryOutboxEventAction");
     expect(eventsActionSource).toContain("requirePlatformAdmin");
-    expect(eventsActionSource).toContain('minimumRole: "operator"');
+    expect(eventsActionSource).toContain('minimumRole: "owner"');
     expect(eventsActionSource).toContain("assertAdminRateLimit");
     expect(eventsActionSource).toContain("outbox.retry");
     expect(eventsActionSource).toContain("retryPlatformOutboxEvent");

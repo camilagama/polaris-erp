@@ -1,22 +1,32 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { authMocks, rateLimitMocks, serverEnvMock } = vi.hoisted(() => ({
-  authMocks: {
-    handler: vi.fn(),
-  },
-  rateLimitMocks: {
-    checkRateLimit: vi.fn(),
-  },
-  serverEnvMock: {
-    BETTER_AUTH_URL: "https://app.example.com",
-  },
-}));
+const { authAuditMocks, authMocks, rateLimitMocks, serverEnvMock } = vi.hoisted(
+  () => ({
+    authAuditMocks: {
+      recordAuthLoginFailureAuditEvent: vi.fn(),
+    },
+    authMocks: {
+      handler: vi.fn(),
+    },
+    rateLimitMocks: {
+      checkRateLimit: vi.fn(),
+    },
+    serverEnvMock: {
+      BETTER_AUTH_URL: "https://app.example.com",
+    },
+  })
+);
 
 vi.mock("@/lib/auth", () => ({
   auth: {
     handler: authMocks.handler,
   },
+}));
+
+vi.mock("@/lib/auth-audit", () => ({
+  recordAuthLoginFailureAuditEvent:
+    authAuditMocks.recordAuthLoginFailureAuditEvent,
 }));
 
 vi.mock("@/lib/env", () => ({
@@ -36,6 +46,10 @@ const createRequest = (url: string) => new NextRequest(url);
 
 describe("GET /api/auth/google", () => {
   beforeEach(() => {
+    authAuditMocks.recordAuthLoginFailureAuditEvent.mockReset();
+    authAuditMocks.recordAuthLoginFailureAuditEvent.mockResolvedValue(
+      undefined
+    );
     authMocks.handler.mockReset();
     rateLimitMocks.checkRateLimit.mockReset();
     rateLimitMocks.checkRateLimit.mockResolvedValue({
@@ -147,6 +161,11 @@ describe("GET /api/auth/google", () => {
     expect(response.status).toBe(429);
     expect(response.headers.get("retry-after")).toBe("60");
     expect(authMocks.handler).not.toHaveBeenCalled();
+    expect(
+      authAuditMocks.recordAuthLoginFailureAuditEvent
+    ).toHaveBeenCalledWith({
+      reason: "rate_limited",
+    });
   });
 
   it("redirects to sign-in with a sanitized error when Better Auth throws", async () => {
@@ -164,5 +183,10 @@ describe("GET /api/auth/google", () => {
     expect(response.headers.get("location")).toBe(
       "https://app.example.com/sign-in?error=google_oauth_unavailable"
     );
+    expect(
+      authAuditMocks.recordAuthLoginFailureAuditEvent
+    ).toHaveBeenCalledWith({
+      reason: "initiation_failed",
+    });
   });
 });

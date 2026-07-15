@@ -56,7 +56,7 @@ O relógio de período/tolerância DEVE ser persistido, durável e idempotente; 
 
 ### PAY-001 — Checkout e providers
 
-Upgrade é self-service após checkout e confirmação confiável. Asaas trata somente cartão recorrente; Woovi trata somente PIX Automático. O domínio interno usa adaptadores separados e fatos normalizados. Se PIX Automático não estiver elegível, homologado ou saudável, ele fica oculto, sem substituição por PIX manual mensal. Estorno de assinatura é exceção manual auditada, sem UI/API pública ou SLA comercial antes de política jurídica/financeira aprovada. [DEC-BR-020, 028, 029, 064, 066, 067]
+Upgrade é self-service após checkout externo e confirmação confiável por webhook. Asaas trata somente cartão recorrente; Woovi trata somente PIX Automático. O checkout do provider captura os dados necessários; a aplicação não coleta nem persiste dados de cartão, PIX ou documento de pagador. O domínio interno usa adaptadores separados e fatos normalizados. Se PIX Automático não estiver elegível, homologado ou saudável, ele fica oculto, sem substituição por PIX manual mensal. Estorno de assinatura é exceção manual auditada, sem UI/API pública ou SLA comercial antes de política jurídica/financeira aprovada. [DEC-BR-020, 028, 029, 064, 066, 067]
 
 ### BILLING-001 — Eventos e avisos
 

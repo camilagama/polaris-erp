@@ -1,8 +1,8 @@
 import "server-only";
 
-import { db } from "@polaris/db";
 import { platformAdminGrants, platformAdmins } from "@polaris/db/schema";
-import { and, eq, gt, isNull, or } from "drizzle-orm";
+import { withUserContext } from "@polaris/db/tenant-context";
+import { and, eq, gt, isNull } from "drizzle-orm";
 
 type PlatformAdminRole = "owner" | "operator" | "support";
 
@@ -94,28 +94,27 @@ export const createPlatformAdminAuth = ({
       }
 
       const now = new Date();
-      const rows = await db
-        .select({
-          platformAdminId: platformAdmins.id,
-          role: platformAdminGrants.role,
-          userId: platformAdmins.userId,
-        })
-        .from(platformAdmins)
-        .innerJoin(
-          platformAdminGrants,
-          eq(platformAdminGrants.platformAdminId, platformAdmins.id)
-        )
-        .where(
-          and(
-            eq(platformAdmins.userId, userId),
-            eq(platformAdmins.status, "active"),
-            isNull(platformAdminGrants.revokedAt),
-            or(
-              isNull(platformAdminGrants.expiresAt),
+      const rows = await withUserContext(userId, (tx) =>
+        tx
+          .select({
+            platformAdminId: platformAdmins.id,
+            role: platformAdminGrants.role,
+            userId: platformAdmins.userId,
+          })
+          .from(platformAdmins)
+          .innerJoin(
+            platformAdminGrants,
+            eq(platformAdminGrants.platformAdminId, platformAdmins.id)
+          )
+          .where(
+            and(
+              eq(platformAdmins.userId, userId),
+              eq(platformAdmins.status, "active"),
+              isNull(platformAdminGrants.revokedAt),
               gt(platformAdminGrants.expiresAt, now)
             )
           )
-        );
+      );
 
       const strongestGrant = getStrongestGrant(rows);
 

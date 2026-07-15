@@ -9,7 +9,9 @@ import {
 const { dbMock, sessionMock, txMock } = vi.hoisted(() => {
   const txMock = {
     execute: vi.fn(),
+    insert: vi.fn(),
     select: vi.fn(),
+    update: vi.fn(),
   };
 
   const dbMock = {
@@ -25,6 +27,10 @@ const { dbMock, sessionMock, txMock } = vi.hoisted(() => {
   return { dbMock, sessionMock, txMock };
 });
 
+const entitlementMocks = vi.hoisted(() => ({
+  getOrganizationProductQuotaStatus: vi.fn(),
+}));
+
 vi.mock("server-only", () => ({}));
 
 vi.mock("next/navigation", () => ({
@@ -37,6 +43,11 @@ vi.mock("@polaris/db", () => ({
 
 vi.mock("@/lib/session", () => ({
   getSession: sessionMock.getSession,
+}));
+
+vi.mock("@/lib/entitlements", () => ({
+  getOrganizationProductQuotaStatus:
+    entitlementMocks.getOrganizationProductQuotaStatus,
 }));
 
 const selectAppContextMembershipOnce = (
@@ -79,6 +90,14 @@ const mockUpdateSession = () => {
   return { set, where };
 };
 
+const mockUpdateSessionInTransaction = () => {
+  const where = vi.fn().mockResolvedValue([]);
+  const set = vi.fn().mockReturnValue({ where });
+  txMock.update.mockReturnValueOnce({ set });
+
+  return { set, where };
+};
+
 const mockSession = ({
   activeOrganizationId = null,
   sessionId = "session-1",
@@ -102,6 +121,12 @@ const mockSession = ({
 describe("getAppContext", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    entitlementMocks.getOrganizationProductQuotaStatus.mockResolvedValue({
+      isFree: true,
+      isOverRegisteredProductLimit: false,
+      maxRegisteredProducts: 50,
+      registeredProductCount: 0,
+    });
   });
 
   it("returns null for inactive organizations without updating the active session organization", async () => {
@@ -117,6 +142,21 @@ describe("getAppContext", () => {
     expect(context).toBeNull();
     expect(dbMock.transaction).toHaveBeenCalledOnce();
     expect(dbMock.update).not.toHaveBeenCalled();
+  });
+
+  it("redirects suspended organizations to the restricted access page", async () => {
+    const navigation = await import("next/navigation");
+
+    mockSession({ activeOrganizationId: "org-suspended" });
+    selectAppContextMembershipOnce({
+      organizationId: "org-suspended",
+      organizationStatus: "suspended",
+      role: "owner",
+    });
+
+    await requirePageAppContext();
+
+    expect(navigation.redirect).toHaveBeenCalledWith("/restricted-access");
   });
 
   it("returns null when the session active organization is not a user membership", async () => {
@@ -177,6 +217,39 @@ describe("getAppContext", () => {
     });
   });
 
+  it("rejects a session after its thirty-day absolute lifetime", async () => {
+    mockSession({ activeOrganizationId: "org-active" });
+    sessionMock.getSession.mockResolvedValueOnce({
+      session: {
+        activeOrganizationId: "org-active",
+        createdAt: new Date(Date.now() - 31 * 24 * 60 * 60 * 1000),
+        id: "session-1",
+      },
+      user: {
+        id: "user-1",
+      },
+    });
+    const { set } = mockUpdateSessionInTransaction();
+    const values = vi.fn().mockResolvedValue([]);
+    txMock.insert.mockReturnValueOnce({ values });
+
+    await expect(getAppContext()).resolves.toBeNull();
+    expect(set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        expiresAt: expect.any(Date),
+      })
+    );
+    expect(values).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "auth.session_revoked",
+        metadata: {
+          reason: "absolute_lifetime_reached",
+        },
+        subjectId: "session-1",
+      })
+    );
+  });
+
   it.each([
     "trialing",
     "past_due",
@@ -211,6 +284,26 @@ describe("getAppContext", () => {
 
     await expect(requireAppContext("catalog:read")).rejects.toThrow(
       "Assinatura ativa necessaria para acessar o Polaris."
+    );
+  });
+
+  it("keeps Free tenants above the registered-product limit read-only for sales and stock", async () => {
+    mockSession({ activeOrganizationId: "org-active" });
+    selectAppContextMembershipOnce({
+      organizationId: "org-active",
+      organizationStatus: "active",
+      role: "owner",
+    });
+    selectBillingStatusOnce("active");
+    entitlementMocks.getOrganizationProductQuotaStatus.mockResolvedValueOnce({
+      isFree: true,
+      isOverRegisteredProductLimit: true,
+      maxRegisteredProducts: 50,
+      registeredProductCount: 51,
+    });
+
+    await expect(requireAppContext("sales:write")).rejects.toThrow(
+      "O plano Free excedeu o limite de produtos cadastrados."
     );
   });
 

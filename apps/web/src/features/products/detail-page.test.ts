@@ -11,6 +11,7 @@ const loaderMocks = vi.hoisted(() => ({
   })),
   getCatalogSettings: vi.fn(),
   getProductByIdQuery: vi.fn(),
+  getActiveProductImageGallery: vi.fn(),
   getProductPriceChangesByProductIdQuery: vi.fn(),
   getProductSalesByProductIdQuery: vi.fn(),
   getProductSalesHistoryMetrics: vi.fn(),
@@ -33,6 +34,10 @@ vi.mock("@/features/catalog/server", () => ({
 
 vi.mock("@/features/products/history", () => ({
   buildProductInventorySummary: loaderMocks.buildProductInventorySummary,
+}));
+
+vi.mock("@/features/products/image-access", () => ({
+  getActiveProductImageGallery: loaderMocks.getActiveProductImageGallery,
 }));
 
 vi.mock("@/features/products/queries", () => ({
@@ -95,6 +100,7 @@ describe("loadProductDetailPage", () => {
       trend: [],
     });
     loaderMocks.getProductPriceChangesByProductIdQuery.mockResolvedValue([]);
+    loaderMocks.getActiveProductImageGallery.mockResolvedValue([]);
   });
 
   it("returns null when the product is missing after resolving page context", async () => {

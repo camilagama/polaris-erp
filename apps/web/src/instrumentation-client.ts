@@ -1,9 +1,4 @@
-import {
-  captureRouterTransitionStart,
-  init,
-  replayIntegration,
-} from "@sentry/nextjs";
-import { getSentrySamplingConfig } from "@/lib/sentry-config";
+import { captureRouterTransitionStart, init } from "@sentry/nextjs";
 
 const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
 const vercelEnv = process.env.NEXT_PUBLIC_VERCEL_ENV?.trim();
@@ -13,21 +8,33 @@ const sentryEnvironment =
     : (process.env.NODE_ENV ?? "development");
 
 if (dsn) {
-  const samplingConfig = getSentrySamplingConfig({
-    nodeEnv: process.env.NODE_ENV,
-    replaysOnErrorSampleRate:
-      process.env.NEXT_PUBLIC_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE,
-    replaysSessionSampleRate:
-      process.env.NEXT_PUBLIC_SENTRY_REPLAYS_SESSION_SAMPLE_RATE,
-    tracesSampleRate: process.env.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE,
-  });
-
   init({
     dsn,
-    enableLogs: true,
     environment: sentryEnvironment,
-    integrations: [replayIntegration()],
-    ...samplingConfig,
+    dataCollection: {
+      httpBodies: [],
+      userInfo: false,
+    },
+    beforeSend(event) {
+      event.contexts = undefined;
+      event.extra = undefined;
+      event.request = undefined;
+      event.tags = undefined;
+      event.user = undefined;
+      event.breadcrumbs = [];
+      event.fingerprint = ["application_error"];
+      event.message = "application_error";
+
+      for (const exception of event.exception?.values ?? []) {
+        exception.value = "application_error";
+      }
+
+      return event;
+    },
+    beforeSendTransaction() {
+      return null;
+    },
+    tracesSampleRate: 0,
   });
 }
 

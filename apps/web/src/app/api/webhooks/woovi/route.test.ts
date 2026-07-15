@@ -25,7 +25,11 @@ const importRoute = async () => {
   vi.doMock("@/lib/env", () => ({
     serverEnv: { WOOVI_WEBHOOK_SECRET: secret },
   }));
-  vi.doMock("@polaris/db", () => ({ db: { execute } }));
+  const db = {
+    execute,
+    transaction: vi.fn(async (callback) => callback(db)),
+  };
+  vi.doMock("@polaris/db", () => ({ db }));
   vi.doMock("@polaris/events", () => ({
     captureWebhookEvent,
     enqueueOutboxEvent,
@@ -125,7 +129,7 @@ describe("POST /api/webhooks/woovi", () => {
     expect(captureWebhookEvent).not.toHaveBeenCalled();
   });
 
-  it("captures, enqueues, and reconciles valid events idempotently", async () => {
+  it("captures valid events idempotently and leaves reconciliation to the outbox worker", async () => {
     const {
       captureWebhookEvent,
       enqueueOutboxEvent,
@@ -152,14 +156,12 @@ describe("POST /api/webhooks/woovi", () => {
       expect.anything(),
       expect.objectContaining({
         idempotencyKey: "woovi-webhook:evt_123",
-        status: "observed",
+        payload: expect.objectContaining({ providerEventId: "evt_123" }),
+        status: "pending",
         topic: "woovi.webhook",
       })
     );
-    expect(reconcileWooviBillingEvent).toHaveBeenCalledTimes(2);
-    expect(withInternalJobContext).toHaveBeenCalledWith(
-      "billing_webhook_reconcile",
-      expect.any(Function)
-    );
+    expect(reconcileWooviBillingEvent).not.toHaveBeenCalled();
+    expect(withInternalJobContext).not.toHaveBeenCalled();
   });
 });

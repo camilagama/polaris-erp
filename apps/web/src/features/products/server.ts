@@ -3,18 +3,25 @@ import "server-only";
 import {
   auditEvents,
   categories,
+  productImages,
   productPriceChanges,
   productStockEntries,
   productStockWriteOffs,
   products,
   saleItems,
   sales,
+  stockMovements,
 } from "@polaris/db/schema";
 import {
   type TenantTransaction,
   withTenantContext,
 } from "@polaris/db/tenant-context";
-import { and, asc, eq, gte, lte, sql } from "drizzle-orm";
+import {
+  type CommandExecutionReservation,
+  completeCommandExecution,
+  reserveCommandExecution,
+} from "@polaris/events";
+import { and, asc, count, eq, gte, isNull, lte, sql } from "drizzle-orm";
 import {
   buildProductAnalytics,
   buildProductSalesHistoryMetrics,
@@ -29,11 +36,14 @@ import {
 } from "@/features/products/stock";
 import { toCurrencyString } from "@/lib/domain/currency";
 import { formatDateInputValue } from "@/lib/domain/date";
+import { getOrganizationPlanEntitlements } from "@/lib/entitlements";
 
+const PRODUCT_QUOTA_LOCK_NAMESPACE = 662_981;
 interface LockedProductRow extends Record<string, unknown> {
   costPrice: string;
   id: string;
   price: string;
+  softDeletedAt: Date | null;
   stock: number;
 }
 
@@ -176,13 +186,48 @@ const lockProductForUpdate = async (
   productId: string
 ): Promise<LockedProductRow | null> => {
   const result = await tx.execute<LockedProductRow>(sql`
-    select id, price, cost_price as "costPrice", stock
+    select id, price, cost_price as "costPrice", stock,
+      soft_deleted_at as "softDeletedAt"
     from products
     where id = ${productId} and organization_id = ${organizationId}
     for update
   `);
 
   return result.rows.at(0) ?? null;
+};
+
+const assertProductIsOperational = (product: LockedProductRow): void => {
+  if (product.softDeletedAt) {
+    throw new Error("Produto removido definitivamente.");
+  }
+};
+
+interface StockCommandResult {
+  productId: string;
+}
+
+const getStockCommandReplayResult = (
+  reservation: CommandExecutionReservation
+): StockCommandResult | null => {
+  if (reservation.kind === "processing") {
+    throw new Error("Operacao de estoque ainda esta em processamento.");
+  }
+
+  if (reservation.kind !== "replay") {
+    return null;
+  }
+
+  if (reservation.status === "failed") {
+    throw new Error("A operacao de estoque anterior falhou.");
+  }
+
+  const productId = reservation.result.productId;
+
+  if (typeof productId !== "string" || productId.length === 0) {
+    throw new Error("Resultado da operacao de estoque invalido.");
+  }
+
+  return { productId };
 };
 
 const assertCategoryBelongsToOrganization = async (
@@ -199,6 +244,37 @@ const assertCategoryBelongsToOrganization = async (
 
   if (!category) {
     throw new Error("Selecione uma categoria valida.");
+  }
+};
+
+const assertRegisteredProductCapacity = async (
+  tx: TenantTransaction,
+  organizationId: string
+): Promise<void> => {
+  await tx.execute(
+    sql`SELECT pg_advisory_xact_lock(${PRODUCT_QUOTA_LOCK_NAMESPACE}, hashtext(${organizationId}))`
+  );
+
+  const entitlements = await getOrganizationPlanEntitlements(
+    tx,
+    organizationId
+  );
+  const [{ value: registeredProductCount }] = await tx
+    .select({ value: count() })
+    .from(products)
+    .where(
+      and(
+        eq(products.organizationId, organizationId),
+        isNull(products.softDeletedAt)
+      )
+    );
+
+  if (
+    Number(registeredProductCount ?? 0) >= entitlements.maxRegisteredProducts
+  ) {
+    throw new Error(
+      `Limite de ${entitlements.maxRegisteredProducts} produtos cadastrados atingido.`
+    );
   }
 };
 
@@ -229,6 +305,7 @@ export const createProductWithInitialStock = async ({
 }): Promise<void> => {
   await withTenantContext(organizationId, async (tx) => {
     await assertCategoryBelongsToOrganization(tx, organizationId, categoryId);
+    await assertRegisteredProductCapacity(tx, organizationId);
 
     await tx.insert(products).values({
       categoryId,
@@ -257,13 +334,36 @@ export const createProductWithInitialStock = async ({
           }),
     });
 
+    if (image) {
+      await tx.insert(productImages).values({
+        blurDataUrl: image.blurDataURL,
+        height: image.height,
+        organizationId,
+        position: 0,
+        productId,
+        version: image.version,
+        width: image.width,
+      });
+    }
+
     if (stock > 0) {
+      const stockEntryId = crypto.randomUUID();
       await tx.insert(productStockEntries).values({
+        id: stockEntryId,
         organizationId,
         productId,
         quantity: stock,
         stockedOn: purchasedOn,
         unitCost: costPrice,
+      });
+      await tx.insert(stockMovements).values({
+        delta: stock,
+        occurredOn: purchasedOn,
+        organizationId,
+        productId,
+        sourceId: stockEntryId,
+        type: "entry",
+        unitCostSnapshot: costPrice,
       });
     }
 
@@ -300,6 +400,7 @@ export const updateProductWithPriceHistory = async ({
     if (!product) {
       throw new Error("Produto nao encontrado.");
     }
+    assertProductIsOperational(product);
 
     await assertCategoryBelongsToOrganization(tx, organizationId, categoryId);
 
@@ -346,6 +447,7 @@ export const updateProductWithPriceHistory = async ({
 
 export const addProductStock = async ({
   actorUserId,
+  idempotencyKey,
   organizationId,
   productId,
   quantity,
@@ -353,18 +455,31 @@ export const addProductStock = async ({
   unitCost,
 }: {
   actorUserId: string;
+  idempotencyKey: string;
   organizationId: string;
   productId: string;
   quantity: number;
   stockedOn: string;
   unitCost: number;
-}): Promise<void> => {
-  await withTenantContext(organizationId, async (tx) => {
+}): Promise<StockCommandResult> =>
+  withTenantContext(organizationId, async (tx) => {
+    const reservation = await reserveCommandExecution(tx, {
+      commandType: "stock.add",
+      correlationId: idempotencyKey,
+      idempotencyKey,
+      organizationId,
+    });
+    const replayResult = getStockCommandReplayResult(reservation);
+
+    if (replayResult) {
+      return replayResult;
+    }
     const product = await lockProductForUpdate(tx, organizationId, productId);
 
     if (!product) {
       throw new Error("Produto nao encontrado.");
     }
+    assertProductIsOperational(product);
 
     const { nextCostPrice, nextStock } = applyStockAddition({
       currentCostPrice: Number(product.costPrice),
@@ -373,12 +488,23 @@ export const addProductStock = async ({
       incomingUnitCost: unitCost,
     });
 
+    const stockEntryId = crypto.randomUUID();
     await tx.insert(productStockEntries).values({
+      id: stockEntryId,
       organizationId,
       productId,
       quantity,
       stockedOn,
       unitCost: toCurrencyString(unitCost),
+    });
+    await tx.insert(stockMovements).values({
+      delta: quantity,
+      occurredOn: stockedOn,
+      organizationId,
+      productId,
+      sourceId: stockEntryId,
+      type: "entry",
+      unitCostSnapshot: toCurrencyString(unitCost),
     });
 
     const updatedProductRows = await tx
@@ -409,12 +535,18 @@ export const addProductStock = async ({
       subjectType: "stock",
       type: "stock.added",
     });
+    await completeCommandExecution(tx, {
+      commandId: reservation.commandId,
+      result: { productId },
+      status: "succeeded",
+    });
+    return { productId };
   });
-};
 
 export const writeOffProductStock = async ({
   actorUserId,
   happenedOn,
+  idempotencyKey,
   notes,
   organizationId,
   productId,
@@ -423,31 +555,55 @@ export const writeOffProductStock = async ({
 }: {
   actorUserId: string;
   happenedOn: string;
+  idempotencyKey: string;
   notes: string | null;
   organizationId: string;
   productId: string;
   quantity: number;
   reason: "adjustment" | "operational";
-}): Promise<void> => {
-  await withTenantContext(organizationId, async (tx) => {
+}): Promise<StockCommandResult> =>
+  withTenantContext(organizationId, async (tx) => {
+    const reservation = await reserveCommandExecution(tx, {
+      commandType: "stock.write_off",
+      correlationId: idempotencyKey,
+      idempotencyKey,
+      organizationId,
+    });
+    const replayResult = getStockCommandReplayResult(reservation);
+
+    if (replayResult) {
+      return replayResult;
+    }
     const product = await lockProductForUpdate(tx, organizationId, productId);
 
     if (!product) {
       throw new Error("Produto nao encontrado.");
     }
+    assertProductIsOperational(product);
 
     const { nextStock } = applyStockWriteOff({
       currentStock: product.stock,
       quantity,
     });
 
+    const writeOffId = crypto.randomUUID();
     await tx.insert(productStockWriteOffs).values({
+      id: writeOffId,
       happenedOn,
       notes,
       organizationId,
       productId,
       quantity,
       reason,
+      unitCostSnapshot: product.costPrice,
+    });
+    await tx.insert(stockMovements).values({
+      delta: -quantity,
+      occurredOn: happenedOn,
+      organizationId,
+      productId,
+      sourceId: writeOffId,
+      type: "write_off",
       unitCostSnapshot: product.costPrice,
     });
 
@@ -474,8 +630,13 @@ export const writeOffProductStock = async ({
       subjectType: "stock",
       type: "stock.written_off",
     });
+    await completeCommandExecution(tx, {
+      commandId: reservation.commandId,
+      result: { productId },
+      status: "succeeded",
+    });
+    return { productId };
   });
-};
 
 export const setProductArchivedState = async ({
   actorUserId,
@@ -500,7 +661,8 @@ export const setProductArchivedState = async ({
         .where(
           and(
             eq(products.id, productId),
-            eq(products.organizationId, organizationId)
+            eq(products.organizationId, organizationId),
+            isNull(products.softDeletedAt)
           )
         )
         .returning({ id: products.id });
@@ -521,3 +683,80 @@ export const setProductArchivedState = async ({
 
   return updatedProducts.length > 0;
 };
+
+export const softDeleteProduct = ({
+  actorUserId,
+  organizationId,
+  productId,
+  reason,
+}: {
+  actorUserId: string;
+  organizationId: string;
+  productId: string;
+  reason: string;
+}): Promise<"already_deleted" | "deleted"> =>
+  withTenantContext(organizationId, async (tx) => {
+    const product = await lockProductForUpdate(tx, organizationId, productId);
+
+    if (!product) {
+      throw new Error("Produto nao encontrado.");
+    }
+
+    if (product.softDeletedAt) {
+      return "already_deleted";
+    }
+
+    if (product.stock !== 0) {
+      throw new Error("Produto precisa ter estoque zero para remocao final.");
+    }
+
+    const now = new Date();
+    await tx
+      .update(productImages)
+      .set({
+        removedAt: now,
+      })
+      .where(
+        and(
+          eq(productImages.organizationId, organizationId),
+          eq(productImages.productId, productId),
+          isNull(productImages.removedAt)
+        )
+      );
+    const deletedProducts = await tx
+      .update(products)
+      .set({
+        imageBlurDataUrl: null,
+        imageHeight: null,
+        imageUploadedAt: null,
+        imageVersion: null,
+        imageWidth: null,
+        softDeletedAt: now,
+        softDeletedByUserId: actorUserId,
+        softDeleteReason: reason,
+        updatedAt: now,
+      })
+      .where(
+        and(
+          eq(products.id, productId),
+          eq(products.organizationId, organizationId),
+          isNull(products.softDeletedAt)
+        )
+      )
+      .returning({ id: products.id });
+
+    if (deletedProducts.length === 0) {
+      return "already_deleted";
+    }
+
+    await tx.insert(auditEvents).values({
+      actorUserId,
+      metadata: { reason },
+      organizationId,
+      subjectId: productId,
+      subjectType: "product",
+      type: "product.soft_deleted",
+    });
+
+    return "deleted";
+  });

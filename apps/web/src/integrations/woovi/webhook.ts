@@ -1,17 +1,12 @@
 import "server-only";
 
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { withInternalJobContext } from "@polaris/db/tenant-context";
 import { NextResponse } from "next/server";
-import {
-  markWebhookIntakeProcessed,
-  observeWebhookIntake,
-} from "@/integrations/webhooks/intake";
+import { observeWebhookIntake } from "@/integrations/webhooks/intake";
 import {
   isWebhookRequestTooLarge,
   readWebhookRequestBody,
 } from "@/integrations/webhooks/request-limits";
-import { reconcileWooviBillingEvent } from "@/integrations/woovi/billing-reconciliation";
 import { serverEnv } from "@/lib/env";
 
 const SIGNATURE_HEADER = "x-webhook-signature";
@@ -63,6 +58,15 @@ const getString = (
   return typeof value === "string" && value.length > 0 ? value : null;
 };
 
+const getNumber = (
+  record: Record<string, unknown>,
+  key: string
+): number | string | null => {
+  const value = record[key];
+
+  return typeof value === "number" || typeof value === "string" ? value : null;
+};
+
 export const getWooviWebhookEventId = (
   payload: Record<string, unknown>
 ): string | null => {
@@ -80,6 +84,7 @@ export const redactWooviWebhookPayload = (
   payload: Record<string, unknown>
 ): Record<string, unknown> => ({
   correlationID: getString(payload, "correlationID"),
+  createdAt: getString(payload, "createdAt"),
   event: getString(payload, "event"),
   globalID: getString(payload, "globalID"),
   paymentSubscriptionGlobalID: getString(
@@ -87,6 +92,7 @@ export const redactWooviWebhookPayload = (
     "paymentSubscriptionGlobalID"
   ),
   status: getString(payload, "status"),
+  value: getNumber(payload, "value"),
 });
 
 const parseJsonPayload = (rawBody: string): Record<string, unknown> | null => {
@@ -170,7 +176,7 @@ export const handleWooviWebhook = async (request: Request) => {
     eventId,
     eventType: getString(payload, "event") ?? "unknown",
     headers: Object.fromEntries(request.headers.entries()),
-    payload: redactedPayload,
+    payload: { ...redactedPayload, providerEventId: eventId },
     provider: "woovi",
     rawBody,
   });
@@ -179,17 +185,5 @@ export const handleWooviWebhook = async (request: Request) => {
     return NextResponse.json({ ok: true, duplicate: true });
   }
 
-  const reconciliationStatus = await withInternalJobContext(
-    "billing_webhook_reconcile",
-    (tx) => reconcileWooviBillingEvent(tx, payload, eventId)
-  );
-
-  await markWebhookIntakeProcessed({
-    eventId,
-    lastError: reconciliationStatus === "processed" ? null : "manual_review",
-    provider: "woovi",
-    status: reconciliationStatus === "processed" ? "processed" : "failed",
-  });
-
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ accepted: true, ok: true });
 };

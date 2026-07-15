@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,13 +24,16 @@ export function SaleDetailActions({
 }) {
   const [pending, startTransition] = useTransition();
   const [confirmingCancel, setConfirmingCancel] = useState(false);
+  const cancellationKeyRef = useRef<string | null>(null);
   const router = useRouter();
 
   const handleCancelSale = () => {
     startTransition(async () => {
       try {
-        await cancelSaleAction(sale.id);
+        cancellationKeyRef.current ??= crypto.randomUUID();
+        await cancelSaleAction(sale.id, cancellationKeyRef.current);
         toast.success("Venda cancelada com estorno de estoque.");
+        cancellationKeyRef.current = null;
         setConfirmingCancel(false);
         router.refresh();
       } catch (error) {

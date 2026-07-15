@@ -101,7 +101,7 @@ describe("ProductsPanel", () => {
           ],
           initialCursor: "cursor-1",
           products: [product],
-          role: "operator",
+          role: "owner",
           settings: {
             idealMarkupPercent: 100,
             minimumMarkupPercent: 30,
@@ -150,7 +150,7 @@ describe("ProductsPanel", () => {
           ],
           initialCursor: null,
           products: [product],
-          role: "operator",
+          role: "owner",
           settings: {
             idealMarkupPercent: 100,
             minimumMarkupPercent: 30,

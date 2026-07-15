@@ -1,16 +1,9 @@
 import "server-only";
 
-import { db } from "@polaris/db";
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
-import {
-  recordResendEmailEvent,
-  redactResendWebhookPayload,
-} from "@/integrations/resend/email-service";
-import {
-  markWebhookIntakeProcessed,
-  observeWebhookIntake,
-} from "@/integrations/webhooks/intake";
+import { redactResendWebhookPayload } from "@/integrations/resend/email-service";
+import { observeWebhookIntake } from "@/integrations/webhooks/intake";
 import {
   isWebhookRequestTooLarge,
   readWebhookRequestBody,
@@ -81,12 +74,16 @@ export const handleResendWebhook = async (request: Request) => {
   }
 
   try {
-    const payload = redactResendWebhookPayload(event);
+    const redactedPayload = redactResendWebhookPayload(event);
+    const payload = {
+      ...redactedPayload,
+      providerEventId: webhookHeaders.id,
+    };
 
     const captureResult = await observeWebhookIntake({
       correlationId: webhookHeaders.id,
       eventId: webhookHeaders.id,
-      eventType: toStringPayloadValue(payload.type, "unknown"),
+      eventType: toStringPayloadValue(redactedPayload.type, "unknown"),
       headers: Object.fromEntries(request.headers.entries()),
       payload,
       provider: "resend",
@@ -96,17 +93,6 @@ export const handleResendWebhook = async (request: Request) => {
     if (captureResult === "duplicate") {
       return NextResponse.json({ ok: true, duplicate: true });
     }
-
-    await recordResendEmailEvent(db, {
-      event,
-      providerEventId: webhookHeaders.id,
-    });
-
-    await markWebhookIntakeProcessed({
-      eventId: webhookHeaders.id,
-      provider: "resend",
-      status: "processed",
-    });
 
     return NextResponse.json({ ok: true });
   } catch {

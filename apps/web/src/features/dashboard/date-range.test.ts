@@ -20,4 +20,19 @@ describe("resolveDashboardDateRange", () => {
       to: "2026-04-15",
     });
   });
+
+  it("uses Sao Paulo when resolving a preset across the UTC year boundary", () => {
+    const range = resolveDashboardDateRange({
+      referenceDate: new Date("2026-01-01T02:30:00.000Z"),
+      searchParams: {
+        preset: "current-month",
+      },
+    });
+
+    expect(range).toMatchObject({
+      from: "2025-12-01",
+      preset: "current-month",
+      to: "2025-12-31",
+    });
+  });
 });

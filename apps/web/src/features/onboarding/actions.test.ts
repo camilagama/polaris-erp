@@ -3,6 +3,7 @@ import { completeOnboardingAction } from "@/features/onboarding/actions";
 
 const onboardingMocks = vi.hoisted(() => ({
   createInitialOrganizationForUser: vi.fn(),
+  getAppAccess: vi.fn(),
   getAppContext: vi.fn(),
   redirect: vi.fn(),
   requireSession: vi.fn(),
@@ -20,6 +21,7 @@ vi.mock("@/features/onboarding/server", () => ({
 }));
 
 vi.mock("@/lib/app-session", () => ({
+  getAppAccess: onboardingMocks.getAppAccess,
   getAppContext: onboardingMocks.getAppContext,
 }));
 
@@ -34,6 +36,7 @@ describe("completeOnboardingAction", () => {
       user: { id: "user-1" },
     });
     onboardingMocks.getAppContext.mockResolvedValue(null);
+    onboardingMocks.getAppAccess.mockResolvedValue({ kind: "onboarding" });
   });
 
   it("creates the initial tenant with billing email before redirecting", async () => {
@@ -72,5 +75,16 @@ describe("completeOnboardingAction", () => {
     });
     expect(onboardingMocks.redirect).toHaveBeenCalledWith("/");
     expect(result).toBeUndefined();
+  });
+
+  it("does not create a tenant for a suspended account", async () => {
+    onboardingMocks.getAppAccess.mockResolvedValue({ kind: "suspended" });
+
+    await completeOnboardingAction({ error: null }, new FormData());
+
+    expect(
+      onboardingMocks.createInitialOrganizationForUser
+    ).not.toHaveBeenCalled();
+    expect(onboardingMocks.redirect).toHaveBeenCalledWith("/restricted-access");
   });
 });

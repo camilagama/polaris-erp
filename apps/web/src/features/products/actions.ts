@@ -1,18 +1,22 @@
 "use server";
 
 import {
+  appendProductImageMetadata,
   clearProductImageMetadata,
+  createProductImageVersion,
   getProductImageState,
+  removeAdditionalProductImageMetadata,
   replaceProductImageMetadata,
 } from "@/features/products/image-access";
 import {
   type StagedProductImageInput,
   stagedProductImageSchema,
 } from "@/features/products/image-schema";
-import { deleteProductImageVersion } from "@/features/products/image-storage";
 import { storeProductImageFromStage } from "@/features/products/image-workflow";
 import {
   createProductSchema,
+  productImageVersionSchema,
+  softDeleteProductSchema,
   stockAdditionSchema,
   stockWriteOffSchema,
   updateProductSchema,
@@ -21,6 +25,7 @@ import {
   addProductStock,
   createProductWithInitialStock,
   setProductArchivedState,
+  softDeleteProduct,
   updateProductWithPriceHistory,
   writeOffProductStock,
 } from "@/features/products/server";
@@ -52,48 +57,36 @@ export async function createProductAction(input: unknown): Promise<string> {
     ReturnType<typeof storeProductImageFromStage>
   > | null = null;
 
-  try {
-    if (stagedImage?.success) {
-      storedImage = await storeProductImageFromStage({
-        organizationId: context.organizationId,
-        productId,
-        stagedImage: stagedImage.data,
-        userId: context.userId,
-        version: 1,
-      });
-    }
-
-    await createProductWithInitialStock({
-      actorUserId: context.userId,
-      categoryId: result.data.categoryId,
-      costPrice: toCurrencyString(result.data.costPrice),
-      description: result.data.description || null,
-      image: storedImage
-        ? {
-            blurDataURL: storedImage.blurDataURL,
-            height: storedImage.height,
-            version: storedImage.version,
-            width: storedImage.width,
-          }
-        : null,
-      name: result.data.name,
+  if (stagedImage?.success) {
+    storedImage = await storeProductImageFromStage({
       organizationId: context.organizationId,
-      price: toCurrencyString(result.data.price),
       productId,
-      purchasedOn: result.data.purchasedOn,
-      stock: result.data.stock,
+      stagedImage: stagedImage.data,
+      userId: context.userId,
+      version: 1,
     });
-  } catch (error) {
-    if (storedImage) {
-      await deleteProductImageVersion({
-        organizationId: context.organizationId,
-        productId,
-        version: storedImage.version,
-      });
-    }
-
-    throw error;
   }
+
+  await createProductWithInitialStock({
+    actorUserId: context.userId,
+    categoryId: result.data.categoryId,
+    costPrice: toCurrencyString(result.data.costPrice),
+    description: result.data.description || null,
+    image: storedImage
+      ? {
+          blurDataURL: storedImage.blurDataURL,
+          height: storedImage.height,
+          version: storedImage.version,
+          width: storedImage.width,
+        }
+      : null,
+    name: result.data.name,
+    organizationId: context.organizationId,
+    price: toCurrencyString(result.data.price),
+    productId,
+    purchasedOn: result.data.purchasedOn,
+    stock: result.data.stock,
+  });
 
   productCreated({
     organizationId: context.organizationId,
@@ -170,22 +163,9 @@ export async function replaceProductImageAction(
   });
 
   if (!imageMetadataReplaced) {
-    await deleteProductImageVersion({
-      organizationId: context.organizationId,
-      productId: id,
-      version: storedImage.version,
-    });
     throw new Error(
       "Imagem do produto foi atualizada por outra operacao. Recarregue e tente novamente."
     );
-  }
-
-  if (oldVersion !== null) {
-    await deleteProductImageVersion({
-      organizationId: context.organizationId,
-      productId: id,
-      version: oldVersion,
-    });
   }
 
   productDetailsChanged({
@@ -193,6 +173,74 @@ export async function replaceProductImageAction(
     productId: id,
   });
   return { success: true } as const;
+}
+
+export async function addProductImageAction(
+  id: string,
+  image: StagedProductImageInput
+) {
+  const context = await requireAppContext("products:write");
+  const parsed = stagedProductImageSchema.safeParse(image);
+
+  if (!parsed.success) {
+    return {
+      errors: parsed.error.flatten().fieldErrors,
+      success: false,
+    } as const;
+  }
+
+  const version = createProductImageVersion();
+  const storedImage = await storeProductImageFromStage({
+    organizationId: context.organizationId,
+    productId: id,
+    stagedImage: parsed.data,
+    userId: context.userId,
+    version,
+  });
+
+  await appendProductImageMetadata({
+    actorUserId: context.userId,
+    blurDataUrl: storedImage.blurDataURL,
+    height: storedImage.height,
+    organizationId: context.organizationId,
+    productId: id,
+    version: storedImage.version,
+    width: storedImage.width,
+  });
+
+  productDetailsChanged({
+    organizationId: context.organizationId,
+    productId: id,
+  });
+  return { success: true } as const;
+}
+
+export async function removeAdditionalProductImageAction(
+  id: string,
+  version: unknown
+) {
+  const context = await requireAppContext("products:write");
+  const parsedVersion = productImageVersionSchema.safeParse(version);
+
+  if (!parsedVersion.success) {
+    throw new Error(firstZodErrorMessage(parsedVersion.error));
+  }
+
+  const removed = await removeAdditionalProductImageMetadata({
+    actorUserId: context.userId,
+    organizationId: context.organizationId,
+    productId: id,
+    version: parsedVersion.data,
+  });
+
+  if (!removed) {
+    throw new Error("Imagem adicional nao encontrada.");
+  }
+
+  productDetailsChanged({
+    organizationId: context.organizationId,
+    productId: id,
+  });
 }
 
 export async function removeProductImageAction(id: string) {
@@ -220,12 +268,6 @@ export async function removeProductImageAction(id: string) {
     );
   }
 
-  await deleteProductImageVersion({
-    organizationId: context.organizationId,
-    productId: id,
-    version: product.imageVersion,
-  });
-
   productDetailsChanged({
     organizationId: context.organizationId,
     productId: id,
@@ -233,8 +275,12 @@ export async function removeProductImageAction(id: string) {
   return { success: true } as const;
 }
 
-export async function addProductStockAction(productId: string, input: unknown) {
-  const context = await requireAppContext("products:write");
+export async function addProductStockAction(
+  productId: string,
+  input: unknown,
+  idempotencyKey = crypto.randomUUID()
+) {
+  const context = await requireAppContext("inventory:write");
   const result = stockAdditionSchema.safeParse(input);
 
   if (!result.success) {
@@ -243,6 +289,7 @@ export async function addProductStockAction(productId: string, input: unknown) {
 
   await addProductStock({
     actorUserId: context.userId,
+    idempotencyKey,
     organizationId: context.organizationId,
     productId,
     quantity: result.data.quantity,
@@ -258,9 +305,10 @@ export async function addProductStockAction(productId: string, input: unknown) {
 
 export async function writeOffProductStockAction(
   productId: string,
-  input: unknown
+  input: unknown,
+  idempotencyKey = crypto.randomUUID()
 ) {
-  const context = await requireAppContext("products:write");
+  const context = await requireAppContext("inventory:write");
   const result = stockWriteOffSchema.safeParse(input);
 
   if (!result.success) {
@@ -270,6 +318,7 @@ export async function writeOffProductStockAction(
   await writeOffProductStock({
     actorUserId: context.userId,
     happenedOn: result.data.happenedOn,
+    idempotencyKey,
     notes: result.data.notes || null,
     organizationId: context.organizationId,
     productId,
@@ -321,4 +370,29 @@ export async function unarchiveProductAction(id: string) {
     organizationId: context.organizationId,
     productId: id,
   });
+}
+
+export async function softDeleteProductAction(id: string, input: unknown) {
+  const context = await requireAppContext("products:write");
+  const result = softDeleteProductSchema.safeParse(input);
+
+  if (!result.success) {
+    throw new Error(firstZodErrorMessage(result.error));
+  }
+
+  const deletionResult = await softDeleteProduct({
+    actorUserId: context.userId,
+    organizationId: context.organizationId,
+    productId: id,
+    reason: result.data.reason,
+  });
+
+  if (deletionResult === "deleted") {
+    productDetailsChanged({
+      organizationId: context.organizationId,
+      productId: id,
+    });
+  }
+
+  return deletionResult;
 }

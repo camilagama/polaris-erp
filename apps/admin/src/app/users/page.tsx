@@ -66,7 +66,7 @@ const UsersContent = async ({ searchParams }: UsersPageProps) => {
             Usuarios
           </h1>
           <p className="mt-1 text-muted-foreground text-sm">
-            Busca global read-only com emails e sessoes redigidos.
+            Busca por ID técnico, com dados pessoais e sessões redigidos.
           </p>
         </div>
         <search className="w-full max-w-md">
@@ -76,7 +76,7 @@ const UsersContent = async ({ searchParams }: UsersPageProps) => {
               className="min-w-0 flex-1 rounded-md border border-border bg-background px-3 py-2 text-foreground text-sm outline-none placeholder:text-muted-foreground focus:border-ring"
               defaultValue={query}
               name="q"
-              placeholder="Nome, email ou ID"
+              placeholder="ID técnico"
             />
             <button
               className="rounded-md border border-border px-4 py-2 font-medium text-foreground text-sm hover:border-muted-foreground"

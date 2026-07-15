@@ -39,3 +39,19 @@ export const stockWriteOffSchema = z.object({
     .min(1, "Quantidade deve ser maior que zero."),
   reason: z.enum(["adjustment", "operational"]),
 });
+
+export const softDeleteProductSchema = z.object({
+  confirmed: z.literal(true, {
+    error: "Confirme a remocao definitiva do produto.",
+  }),
+  reason: z
+    .string()
+    .trim()
+    .min(3, "Informe o motivo da remocao definitiva.")
+    .max(240, "O motivo deve ter no maximo 240 caracteres."),
+});
+
+export const productImageVersionSchema = z
+  .number()
+  .int("Versao da imagem invalida.")
+  .positive("Versao da imagem invalida.");

@@ -79,6 +79,7 @@ describe("Asaas billing reconciliation", () => {
       reconcileAsaasBillingEvent(
         db,
         {
+          dateCreated: "2026-07-14 12:00:00",
           event: "PAYMENT_RECEIVED",
           id: "evt_1",
           payment: {
@@ -104,9 +105,15 @@ describe("Asaas billing reconciliation", () => {
     expect(source).toContain("billing_provider_links");
     expect(source).toContain("billing_payment_attempts");
     expect(source).toContain("pg_advisory_xact_lock");
+    expect(source).toContain("billing:organization:");
     expect(source).toContain("return await db.transaction");
     expect(source).toContain("from linked_invoice");
     expect(source).toContain("on conflict (provider, provider_event_id)");
+    expect(source).toContain("last_provider_event_at <=");
+    expect(source).toContain("grace_period_ends_at");
+    expect(source).toContain("free_subscription.plan_id");
+    expect(source).toContain("paid_subscription.plan_id");
+    expect(source).toContain("PAID_MONTHLY_PLAN_ID");
     expect(source).toContain("card_last4");
     expect(source).not.toContain("creditCardToken");
     expect(source).not.toContain("cvv");
@@ -119,6 +126,22 @@ describe("Asaas billing reconciliation", () => {
         {
           event: "PAYMENT_RECEIVED",
           id: "evt_1",
+        },
+        "evt_1"
+      )
+    ).resolves.toBe("review");
+  });
+
+  it("keeps status-changing events without a provider timestamp in manual review", async () => {
+    await expect(
+      reconcileAsaasBillingEvent(
+        createDb(),
+        {
+          event: "PAYMENT_RECEIVED",
+          payment: {
+            externalReference:
+              "billing-subscription:00000000-0000-0000-0000-000000000001",
+          },
         },
         "evt_1"
       )

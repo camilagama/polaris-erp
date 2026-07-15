@@ -4,6 +4,7 @@ import {
   listPlatformOrganizations,
   listPlatformUsers,
   redactEmail,
+  redactName,
 } from "@polaris/platform/directory";
 import { describe, expect, it, vi } from "vitest";
 
@@ -22,6 +23,10 @@ describe("platform directory redaction", () => {
   it("redacts customer emails", () => {
     expect(redactEmail("junior@example.com")).toBe("j***@example.com");
     expect(redactEmail("invalid-email")).toBe("[redacted]");
+  });
+
+  it("redacts customer names", () => {
+    expect(redactName("Junior")).toBe("[redacted]");
   });
 
   it("lists users without returning auth tokens or raw email addresses", async () => {
@@ -46,7 +51,7 @@ describe("platform directory redaction", () => {
       ],
     });
 
-    const users = await listPlatformUsers("customer@example.com", { execute });
+    const users = await listPlatformUsers("user-1", { execute });
     const serialized = JSON.stringify(users);
 
     expect(users).toEqual([
@@ -55,13 +60,14 @@ describe("platform directory redaction", () => {
         email: "c***@example.com",
         id: "user-1",
         latestSessionAt: "2026-07-09T12:30:00.000Z",
-        name: "Customer One",
+        name: "[redacted]",
         organizationCount: 2,
         providerIds: ["google"],
         sessionCount: 3,
       },
     ]);
     expect(serialized).not.toContain("customer@example.com");
+    expect(serialized).not.toContain("Customer One");
     for (const value of sensitiveValues) {
       expect(serialized).not.toContain(value);
     }
@@ -86,7 +92,7 @@ describe("platform directory redaction", () => {
       ],
     });
 
-    const organizations = await listPlatformOrganizations("owner@example.com", {
+    const organizations = await listPlatformOrganizations("org-1", {
       execute,
     });
     const serialized = JSON.stringify(organizations);
@@ -164,6 +170,7 @@ describe("platform directory redaction", () => {
     const serialized = JSON.stringify(organization);
 
     expect(organization?.members[0]?.email).toBe("o***@example.com");
+    expect(organization?.members[0]?.name).toBe("[redacted]");
     expect(organization?.sessionSummary).toEqual({
       count: 2,
       latestCreatedAt: "2026-07-09T12:00:00.000Z",
@@ -221,6 +228,7 @@ describe("platform directory redaction", () => {
     const serialized = JSON.stringify(user);
 
     expect(user?.email).toBe("o***@example.com");
+    expect(user?.name).toBe("[redacted]");
     expect(user?.providerIds).toEqual(["google", "github"]);
     expect(user?.organizations).toHaveLength(1);
     expect(serialized).not.toContain("operator@example.com");

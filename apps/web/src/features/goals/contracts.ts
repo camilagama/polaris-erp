@@ -1,6 +1,3 @@
-/** Only one active goal at a time (dashboard + create/unarchive enforcement). */
-export const MAX_ACTIVE_GOALS = 1;
-
 export type GoalMetric = "revenue" | "profit" | "sales_count";
 
 export type GoalStatus = "active" | "completed" | "expired" | "archived";
@@ -50,4 +47,5 @@ export interface GoalsDashboardPayload {
 export interface GoalsSettingsPayload {
   active: DashboardGoalCard[];
   history: DashboardGoalHistoryItem[];
+  maxActiveGoals: number;
 }

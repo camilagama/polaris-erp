@@ -12,10 +12,7 @@ const importRoute = async ({
 } = {}) => {
   vi.resetModules();
 
-  const captureWebhookEvent = vi.fn().mockResolvedValue(undefined);
-  const enqueueOutboxEvent = vi.fn().mockResolvedValue("outbox-1");
-  const execute = vi.fn().mockResolvedValue({ rows: [] });
-  const recordResendEmailEvent = vi.fn().mockResolvedValue(undefined);
+  const observeWebhookIntake = vi.fn().mockResolvedValue("claimed");
   const redactResendWebhookPayload = vi.fn((event: unknown) => event);
   const verify = vi.fn(verifyImpl);
 
@@ -25,10 +22,8 @@ const importRoute = async ({
       RESEND_WEBHOOK_SECRET: "resend-secret",
     },
   }));
-  vi.doMock("@polaris/db", () => ({ db: { execute } }));
-  vi.doMock("@polaris/events", () => ({
-    captureWebhookEvent,
-    enqueueOutboxEvent,
+  vi.doMock("@/integrations/webhooks/intake", () => ({
+    observeWebhookIntake,
   }));
   vi.doMock("resend", () => ({
     Resend: vi.fn(function Resend() {
@@ -36,17 +31,14 @@ const importRoute = async ({
     }),
   }));
   vi.doMock("@/integrations/resend/email-service", () => ({
-    recordResendEmailEvent,
     redactResendWebhookPayload,
   }));
 
   const route = await import("./route");
 
   return {
-    captureWebhookEvent,
-    enqueueOutboxEvent,
+    observeWebhookIntake,
     POST: route.POST as (request: Request) => Promise<Response>,
-    recordResendEmailEvent,
     verify,
   };
 };
@@ -75,7 +67,7 @@ const createRequest = ({
 
 describe("POST /api/webhooks/resend", () => {
   it("rejects missing Svix headers", async () => {
-    const { captureWebhookEvent, POST, verify } = await importRoute();
+    const { observeWebhookIntake, POST, verify } = await importRoute();
 
     const response = await POST(createRequest({ headers: {} }));
 
@@ -84,11 +76,11 @@ describe("POST /api/webhooks/resend", () => {
       error: "Missing Resend webhook headers.",
     });
     expect(verify).not.toHaveBeenCalled();
-    expect(captureWebhookEvent).not.toHaveBeenCalled();
+    expect(observeWebhookIntake).not.toHaveBeenCalled();
   });
 
   it("rejects oversized payloads before verification", async () => {
-    const { captureWebhookEvent, POST, verify } = await importRoute();
+    const { observeWebhookIntake, POST, verify } = await importRoute();
 
     const response = await POST(createRequest({ contentLength: "262145" }));
 
@@ -97,11 +89,11 @@ describe("POST /api/webhooks/resend", () => {
       error: "Webhook payload is too large.",
     });
     expect(verify).not.toHaveBeenCalled();
-    expect(captureWebhookEvent).not.toHaveBeenCalled();
+    expect(observeWebhookIntake).not.toHaveBeenCalled();
   });
 
   it("rejects invalid signatures", async () => {
-    const { captureWebhookEvent, POST } = await importRoute({
+    const { observeWebhookIntake, POST } = await importRoute({
       verifyImpl: () => {
         throw new Error("invalid");
       },
@@ -113,17 +105,11 @@ describe("POST /api/webhooks/resend", () => {
     expect(await response.json()).toEqual({
       error: "Invalid Resend webhook signature.",
     });
-    expect(captureWebhookEvent).not.toHaveBeenCalled();
+    expect(observeWebhookIntake).not.toHaveBeenCalled();
   });
 
-  it("captures, enqueues, and records verified events idempotently", async () => {
-    const {
-      captureWebhookEvent,
-      enqueueOutboxEvent,
-      POST,
-      recordResendEmailEvent,
-      verify,
-    } = await importRoute();
+  it("captures verified events through the transactional intake", async () => {
+    const { observeWebhookIntake, POST, verify } = await importRoute();
 
     const firstResponse = await POST(createRequest());
     const secondResponse = await POST(createRequest());
@@ -131,23 +117,13 @@ describe("POST /api/webhooks/resend", () => {
     expect(firstResponse.status).toBe(200);
     expect(secondResponse.status).toBe(200);
     expect(verify).toHaveBeenCalledTimes(2);
-    expect(captureWebhookEvent).toHaveBeenCalledTimes(2);
-    expect(captureWebhookEvent).toHaveBeenCalledWith(
-      expect.anything(),
+    expect(observeWebhookIntake).toHaveBeenCalledTimes(2);
+    expect(observeWebhookIntake).toHaveBeenCalledWith(
       expect.objectContaining({
         eventId: "msg_123",
+        eventType: "email.delivered",
         provider: "resend",
       })
     );
-    expect(enqueueOutboxEvent).toHaveBeenCalledTimes(2);
-    expect(enqueueOutboxEvent).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({
-        idempotencyKey: "resend-webhook:msg_123",
-        status: "observed",
-        topic: "resend.webhook",
-      })
-    );
-    expect(recordResendEmailEvent).toHaveBeenCalledTimes(2);
   });
 });

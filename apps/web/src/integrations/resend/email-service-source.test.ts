@@ -27,6 +27,10 @@ describe("email service and Resend webhook", () => {
     expect(emailServiceSource).toContain("insert into email_messages");
     expect(emailServiceSource).toContain("on conflict (idempotency_key)");
     expect(emailServiceSource).toContain("provider_message_id");
+    expect(emailServiceSource).toContain("status = 'accepted'");
+    expect(emailServiceSource).toContain("accepted_at = now()");
+    expect(emailServiceSource).toContain("attemptCount >= 3");
+    expect(emailServiceSource).toContain("providerMessageId");
     expect(emailServiceSource).toContain("RESEND_FROM_EMAIL");
     expect(emailServiceSource).toContain("@resend\\.dev");
     expect(emailServiceSource).toContain("verified domain in production");
@@ -40,6 +44,8 @@ describe("email service and Resend webhook", () => {
     );
     expect(emailServiceSource).toContain("redactResendWebhookPayload");
     expect(emailServiceSource).toContain("emailId");
+    expect(emailServiceSource).toContain("provider_occurred_at");
+    expect(emailServiceSource).toContain("resolveResendEmailStatus");
   });
 
   it("validates Resend webhooks from raw body and svix headers", () => {
@@ -54,9 +60,10 @@ describe("email service and Resend webhook", () => {
     expect(resendWebhookHandlerSource).toContain("webhooks.verify");
     expect(resendWebhookHandlerSource).toContain("RESEND_WEBHOOK_SECRET");
     expect(resendWebhookHandlerSource).toContain("observeWebhookIntake");
+    expect(resendWebhookHandlerSource).toContain("providerEventId");
+    expect(resendWebhookHandlerSource).not.toContain("recordResendEmailEvent");
     expect(resendWebhookHandlerSource).not.toContain(
-      "sendOutboxEventToInngest"
+      "markWebhookIntakeProcessed"
     );
-    expect(resendWebhookHandlerSource).toContain("recordResendEmailEvent");
   });
 });

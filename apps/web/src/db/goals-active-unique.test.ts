@@ -13,18 +13,22 @@ const readSqlMigrations = () =>
     .map((fileName) => readFileSync(join(migrationsDir, fileName), "utf8"))
     .join("\n");
 
-describe("active goals database invariant", () => {
-  it("allows only one active goal per organization", () => {
+describe("active goals database invariants", () => {
+  it("allows one active goal per organization and metric", () => {
     const schema = readFileSync(join(dbPackageRoot, "src/schema.ts"), "utf8");
     const migrations = readSqlMigrations();
 
-    expect(schema).toContain("goals_one_active_per_organization_idx");
+    expect(schema).toContain("goals_one_active_per_organization_metric_idx");
     expect(schema).toContain("where(sql`status = 'active'`)");
     expect(migrations).toContain(
-      'CREATE UNIQUE INDEX "goals_one_active_per_organization_idx"'
+      'CREATE UNIQUE INDEX "goals_one_active_per_organization_metric_idx"'
     );
-    expect(migrations).toContain(
-      "Multiple active goals per organization must be resolved"
-    );
+  });
+
+  it("prevents terminal goals from returning to active", () => {
+    const migrations = readSqlMigrations();
+
+    expect(migrations).toContain("enforce_goal_state_transition");
+    expect(migrations).toContain("Completed and expired goals are terminal");
   });
 });

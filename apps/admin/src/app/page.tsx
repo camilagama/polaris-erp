@@ -65,7 +65,7 @@ const AdminDashboard = async () => {
       label: "Admins internos",
       value: dashboard.summary.platformAdmins,
       detail: `${formatNumber(dashboard.summary.disabledPlatformAdmins)} desativados`,
-      href: null,
+      href: context.role === "owner" ? "/admin-access" : null,
     },
     {
       label: "Auditoria",
@@ -160,9 +160,9 @@ const AdminDashboard = async () => {
               </Card>
             </Link>
           ) : (
-            <Card className="opacity-70" key={card.label}>
-              {cardContent}
-            </Card>
+            <article className="opacity-70" key={card.label}>
+              <Card>{cardContent}</Card>
+            </article>
           );
         })}
       </div>

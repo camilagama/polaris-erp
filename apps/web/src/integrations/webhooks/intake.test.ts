@@ -2,17 +2,24 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-const importIntake = async (
-  captureResult: "claimed" | "duplicate" = "claimed"
-) => {
+const importIntake = async ({
+  captureResult = "claimed",
+  enqueueError,
+}: {
+  captureResult?: "claimed" | "duplicate";
+  enqueueError?: Error;
+} = {}) => {
   vi.resetModules();
 
   const defaultDb = {
     execute: vi.fn().mockResolvedValue({ rows: [] }),
     insert: vi.fn(),
+    transaction: vi.fn(async (callback) => callback(defaultDb)),
   };
   const captureWebhookEvent = vi.fn().mockResolvedValue(captureResult);
-  const enqueueOutboxEvent = vi.fn().mockResolvedValue("outbox-1");
+  const enqueueOutboxEvent = enqueueError
+    ? vi.fn().mockRejectedValue(enqueueError)
+    : vi.fn().mockResolvedValue("outbox-1");
 
   vi.doMock("@polaris/db", () => ({ db: defaultDb }));
   vi.doMock("@polaris/events", () => ({
@@ -41,7 +48,11 @@ describe("webhook intake", () => {
   it("captures and enqueues observed provider events with normalized defaults", async () => {
     const { captureWebhookEvent, enqueueOutboxEvent, observeWebhookIntake } =
       await importIntake();
-    const db = { execute: vi.fn(), insert: vi.fn() };
+    const db = {
+      execute: vi.fn(),
+      insert: vi.fn(),
+      transaction: vi.fn(async (callback) => callback(db)),
+    };
 
     await expect(
       observeWebhookIntake(
@@ -70,14 +81,19 @@ describe("webhook intake", () => {
       eventType: "payment.received",
       idempotencyKey: "asaas-webhook:evt_123",
       payload: { id: "evt_123" },
-      status: "observed",
+      status: "pending",
       topic: "asaas.webhook",
     });
+    expect(db.transaction).toHaveBeenCalledTimes(1);
   });
 
   it("honors explicit correlation, topic, and idempotency values", async () => {
     const { enqueueOutboxEvent, observeWebhookIntake } = await importIntake();
-    const db = { execute: vi.fn(), insert: vi.fn() };
+    const db = {
+      execute: vi.fn(),
+      insert: vi.fn(),
+      transaction: vi.fn(async (callback) => callback(db)),
+    };
 
     await observeWebhookIntake(
       {
@@ -105,8 +121,9 @@ describe("webhook intake", () => {
   });
 
   it("does not enqueue a duplicate provider event", async () => {
-    const { enqueueOutboxEvent, observeWebhookIntake } =
-      await importIntake("duplicate");
+    const { enqueueOutboxEvent, observeWebhookIntake } = await importIntake({
+      captureResult: "duplicate",
+    });
 
     await expect(
       observeWebhookIntake({
@@ -120,6 +137,35 @@ describe("webhook intake", () => {
     ).resolves.toBe("duplicate");
 
     expect(enqueueOutboxEvent).not.toHaveBeenCalled();
+  });
+
+  it("rejects the transaction when enqueueing fails so the capture is rolled back", async () => {
+    const enqueueError = new Error("outbox unavailable");
+    const { captureWebhookEvent, enqueueOutboxEvent, observeWebhookIntake } =
+      await importIntake({ enqueueError });
+    const db = {
+      execute: vi.fn(),
+      insert: vi.fn(),
+      transaction: vi.fn(async (callback) => callback(db)),
+    };
+
+    await expect(
+      observeWebhookIntake(
+        {
+          eventId: "evt_123",
+          eventType: "payment.received",
+          headers: {},
+          payload: { id: "evt_123" },
+          provider: "asaas",
+          rawBody: '{"id":"evt_123"}',
+        },
+        db
+      )
+    ).rejects.toThrow("outbox unavailable");
+
+    expect(captureWebhookEvent).toHaveBeenCalledTimes(1);
+    expect(enqueueOutboxEvent).toHaveBeenCalledTimes(1);
+    expect(db.transaction).toHaveBeenCalledTimes(1);
   });
 
   it("marks webhook rows with processing status and optional error", async () => {

@@ -17,12 +17,16 @@ vi.mock("@/features/catalog/server", () => ({
   getProductCategoryById: vi.fn(),
 }));
 
-vi.mock("@/features/products/image-storage", () => ({
-  deleteProductImageVersion: vi.fn(),
-}));
-
 vi.mock("@/features/products/image-workflow", () => ({
   storeProductImageFromStage: vi.fn(),
+}));
+
+vi.mock("@/lib/entitlements", () => ({
+  getOrganizationPlanEntitlements: vi.fn().mockResolvedValue({
+    maxActiveGoals: 1,
+    maxImagesPerProduct: 1,
+    maxRegisteredProducts: 50,
+  }),
 }));
 
 vi.mock("next/cache", () => ({
@@ -40,6 +44,17 @@ vi.mock("@polaris/db", () => ({
     transaction: vi.fn(),
     update: vi.fn(),
   },
+}));
+
+const { completeCommandExecutionMock, reserveCommandExecutionMock } =
+  vi.hoisted(() => ({
+    completeCommandExecutionMock: vi.fn(),
+    reserveCommandExecutionMock: vi.fn(),
+  }));
+
+vi.mock("@polaris/events", () => ({
+  completeCommandExecution: completeCommandExecutionMock,
+  reserveCommandExecution: reserveCommandExecutionMock,
 }));
 
 const ISO_DATE_ERROR_REGEX = /ISO YYYY-MM-DD/;
@@ -71,15 +86,12 @@ const resolveMocks = async () => {
   const appSessionModule = await import("@/lib/app-session");
   const catalogModule = await import("@/features/catalog/server");
   const dbModule = await import("@polaris/db");
-  const imageStorageModule = await import("@/features/products/image-storage");
   const imageWorkflowModule = await import(
     "@/features/products/image-workflow"
   );
   const cache = await import("next/cache");
 
   return {
-    mockDeleteProductImageVersion:
-      imageStorageModule.deleteProductImageVersion as MockFn,
     mockDb: dbModule.db as unknown as {
       execute: MockFn;
       insert: MockFn;
@@ -141,6 +153,10 @@ const createInventoryHarness = (
 
           if ("happenedOn" in payload && "reason" in payload) {
             writeOffLog.push(payload);
+            return Promise.resolve([]);
+          }
+
+          if ("delta" in payload && "sourceId" in payload) {
             return Promise.resolve([]);
           }
 
@@ -314,7 +330,6 @@ describe("product server actions", () => {
     vi.clearAllMocks();
 
     const {
-      mockDeleteProductImageVersion,
       mockDb,
       mockGetProductCategoryById,
       mockRequireAppContext,
@@ -337,8 +352,12 @@ describe("product server actions", () => {
     mockGetProductCategoryById.mockResolvedValue({
       id: "category-1",
     });
+    completeCommandExecutionMock.mockResolvedValue(true);
+    reserveCommandExecutionMock.mockResolvedValue({
+      commandId: "command-1",
+      kind: "new",
+    });
 
-    mockDeleteProductImageVersion.mockResolvedValue(undefined);
     mockDb.insert.mockReturnValue({
       values: () => Promise.resolve([]),
     });
@@ -541,6 +560,11 @@ describe("product server actions", () => {
               return Promise.resolve([]);
             },
           }),
+          select: () => ({
+            from: () => ({
+              where: () => Promise.resolve([{ value: 0 }]),
+            }),
+          }),
         });
       }
     );
@@ -713,7 +737,7 @@ describe("product server actions", () => {
     const { removeProductImageAction } = await import(
       "@/features/products/actions"
     );
-    const { mockDb, mockDeleteProductImageVersion } = await resolveMocks();
+    const { mockDb } = await resolveMocks();
     const updatePayloads: Record<string, unknown>[] = [];
 
     mockDb.select.mockReturnValue({
@@ -749,23 +773,19 @@ describe("product server actions", () => {
       imageVersion: null,
       imageWidth: null,
     });
-    expect(mockDeleteProductImageVersion).toHaveBeenCalledWith({
-      organizationId: "org_dg_imports",
-      productId: "product-1",
-      version: 3,
-    });
+    expect(
+      readFileSync(
+        join(process.cwd(), "src", "features", "products", "actions.ts"),
+        "utf8"
+      )
+    ).not.toContain("deleteProductImageVersion");
   });
 
   it("does not delete the stored image when removal loses the version race", async () => {
     const { removeProductImageAction } = await import(
       "@/features/products/actions"
     );
-    const {
-      mockDb,
-      mockDeleteProductImageVersion,
-      mockRefresh,
-      mockUpdateTag,
-    } = await resolveMocks();
+    const { mockDb, mockRefresh, mockUpdateTag } = await resolveMocks();
 
     mockDb.select.mockReturnValue({
       from: () => ({
@@ -792,7 +812,6 @@ describe("product server actions", () => {
       "Imagem do produto foi atualizada por outra operacao. Recarregue e tente novamente."
     );
 
-    expect(mockDeleteProductImageVersion).not.toHaveBeenCalled();
     expect(mockUpdateTag).not.toHaveBeenCalled();
     expect(mockRefresh).not.toHaveBeenCalled();
   });
@@ -803,7 +822,6 @@ describe("product server actions", () => {
     );
     const {
       mockDb,
-      mockDeleteProductImageVersion,
       mockRefresh,
       mockStoreProductImageFromStage,
       mockUpdateTag,
@@ -845,12 +863,6 @@ describe("product server actions", () => {
       "Imagem do produto foi atualizada por outra operacao. Recarregue e tente novamente."
     );
 
-    expect(mockDeleteProductImageVersion).toHaveBeenCalledTimes(1);
-    expect(mockDeleteProductImageVersion).toHaveBeenCalledWith({
-      organizationId: "org_dg_imports",
-      productId: "product-1",
-      version: 4,
-    });
     expect(mockUpdateTag).not.toHaveBeenCalled();
     expect(mockRefresh).not.toHaveBeenCalled();
   });
@@ -859,12 +871,7 @@ describe("product server actions", () => {
     const { removeProductImageAction } = await import(
       "@/features/products/actions"
     );
-    const {
-      mockDb,
-      mockDeleteProductImageVersion,
-      mockRefresh,
-      mockUpdateTag,
-    } = await resolveMocks();
+    const { mockDb, mockRefresh, mockUpdateTag } = await resolveMocks();
 
     mockDb.select.mockReturnValue({
       from: () => ({
@@ -878,7 +885,6 @@ describe("product server actions", () => {
       removeProductImageAction("product-from-other-tenant")
     ).rejects.toThrow("Produto nao encontrado.");
 
-    expect(mockDeleteProductImageVersion).not.toHaveBeenCalled();
     expect(mockUpdateTag).not.toHaveBeenCalled();
     expect(mockRefresh).not.toHaveBeenCalled();
   });

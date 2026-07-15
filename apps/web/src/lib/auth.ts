@@ -1,6 +1,10 @@
 import { createPolarisAuth } from "@polaris/auth";
-import { recordAuthLoginAuditEvent } from "@/lib/auth-audit";
+import {
+  recordAuthLoginAuditEvent,
+  recordAuthSessionAuditEvent,
+} from "@/lib/auth-audit";
 
 export const auth = createPolarisAuth({
   recordAuthLoginAuditEvent,
+  recordAuthSessionAuditEvent,
 });

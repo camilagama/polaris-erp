@@ -20,7 +20,7 @@ const validateProductImageFile = (file: File) => {
   }
 
   if (file.size > PRODUCT_IMAGE_MAX_BYTES) {
-    throw new Error("A imagem excede o limite de 10 MB.");
+    throw new Error("A imagem excede o limite de 5 MB.");
   }
 };
 

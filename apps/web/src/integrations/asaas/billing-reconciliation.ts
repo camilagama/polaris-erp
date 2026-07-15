@@ -1,6 +1,9 @@
 import "server-only";
 
+import { FREE_PLAN_ID, PAID_MONTHLY_PLAN_ID } from "@polaris/billing";
 import { type SQL, sql } from "drizzle-orm";
+
+const ASAAS_TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/;
 
 interface QueryableDb {
   execute: (query: SQL) => Promise<unknown>;
@@ -18,6 +21,7 @@ interface AsaasBillingEvent {
   cardLast4: string | null;
   event: string | null;
   externalReference: string | null;
+  occurredAt?: Date | null;
   paymentId: string | null;
   paymentStatus: string | null;
   subscriptionId: string | null;
@@ -57,6 +61,21 @@ const getMoneyCents = (
   }
 
   return null;
+};
+
+const getAsaasOccurredAt = (record: Record<string, unknown>): Date | null => {
+  const value = getString(record, "dateCreated");
+
+  if (!value) {
+    return null;
+  }
+
+  const isoValue = ASAAS_TIMESTAMP_PATTERN.test(value)
+    ? `${value.replace(" ", "T")}-03:00`
+    : value;
+  const occurredAt = new Date(isoValue);
+
+  return Number.isNaN(occurredAt.getTime()) ? null : occurredAt;
 };
 
 const getSubscriptionByExternalReference = async (
@@ -103,6 +122,7 @@ const parseAsaasBillingEvent = (
       getString(subscription, "externalReference"),
     paymentId: getString(payment, "id"),
     paymentStatus: getString(payment, "status"),
+    occurredAt: getAsaasOccurredAt(payload),
     subscriptionId,
     subscriptionStatus: getString(subscription, "status"),
     valueCents:
@@ -173,6 +193,82 @@ const mapAsaasAttemptStatus = (event: AsaasBillingEvent): string => {
   return "pending";
 };
 
+const demoteFreeSubscriptionForPaidActivation = async (
+  transaction: QueryableDb,
+  {
+    occurredAt,
+    organizationId,
+    subscriptionId,
+  }: {
+    occurredAt: Date;
+    organizationId: string;
+    subscriptionId: string;
+  }
+): Promise<void> => {
+  await transaction.execute(sql`
+    update billing_subscriptions as free_subscription
+    set status = 'canceled',
+        canceled_at = coalesce(canceled_at, now()),
+        updated_at = now()
+    where free_subscription.organization_id = ${organizationId}
+      and free_subscription.plan_id = ${FREE_PLAN_ID}
+      and free_subscription.status in ('trialing', 'active', 'past_due', 'paused')
+      and free_subscription.id <> ${subscriptionId}
+      and exists (
+        select 1
+        from billing_subscriptions as paid_subscription
+        where paid_subscription.id = ${subscriptionId}
+          and paid_subscription.plan_id = ${PAID_MONTHLY_PLAN_ID}
+          and (
+            paid_subscription.last_provider_event_at is null
+            or paid_subscription.last_provider_event_at <= ${occurredAt}
+          )
+      )
+  `);
+};
+
+const reconcileSubscriptionStatus = async (
+  transaction: QueryableDb,
+  event: AsaasBillingEvent,
+  subscription: { id: string; organizationId: string }
+): Promise<"active" | "canceled" | "incomplete" | "past_due" | null> => {
+  const subscriptionStatus = mapAsaasSubscriptionStatus(event);
+
+  if (!(subscriptionStatus && event.occurredAt)) {
+    return subscriptionStatus;
+  }
+
+  if (subscriptionStatus === "active") {
+    await demoteFreeSubscriptionForPaidActivation(transaction, {
+      occurredAt: event.occurredAt,
+      organizationId: subscription.organizationId,
+      subscriptionId: subscription.id,
+    });
+  }
+
+  await transaction.execute(sql`
+    update billing_subscriptions
+    set status = ${subscriptionStatus},
+        grace_period_ends_at = case
+          when ${subscriptionStatus} = 'past_due' then coalesce(
+            grace_period_ends_at,
+            coalesce(current_period_end, ${event.occurredAt}) + interval '7 days'
+          )
+          when ${subscriptionStatus} = 'active' then null
+          else grace_period_ends_at
+        end,
+        last_provider_event_at = ${event.occurredAt},
+        updated_at = now()
+    where id = ${subscription.id}
+      and (
+        last_provider_event_at is null
+        or last_provider_event_at <= ${event.occurredAt}
+      )
+  `);
+
+  return subscriptionStatus;
+};
+
 export const reconcileAsaasBillingEvent = async (
   db: TransactionalDb,
   payload: Record<string, unknown>,
@@ -196,16 +292,17 @@ export const reconcileAsaasBillingEvent = async (
       return "review";
     }
 
-    const subscriptionStatus = mapAsaasSubscriptionStatus(event);
-
-    if (subscriptionStatus) {
-      await transaction.execute(sql`
-      update billing_subscriptions
-      set status = ${subscriptionStatus},
-          updated_at = now()
-      where id = ${subscription.id}
+    await transaction.execute(sql`
+      select pg_advisory_xact_lock(
+        hashtext(${`billing:organization:${subscription.organizationId}`})
+      )
     `);
-    }
+
+    const subscriptionStatus = await reconcileSubscriptionStatus(
+      transaction,
+      event,
+      subscription
+    );
 
     if (event.subscriptionId) {
       await transaction.execute(sql`
@@ -345,6 +442,9 @@ export const reconcileAsaasBillingEvent = async (
     `);
     }
 
-    return subscriptionStatus || event.paymentId ? "processed" : "review";
+    return (subscriptionStatus && !event.occurredAt) ||
+      !(subscriptionStatus || event.paymentId)
+      ? "review"
+      : "processed";
   });
 };

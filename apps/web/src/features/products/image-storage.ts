@@ -362,36 +362,6 @@ export const listAllStoredProductImageObjects = async () => {
   return objects;
 };
 
-export const listAllStoredProductImageKeys = async () =>
-  (await listAllStoredProductImageObjects()).map((object) => object.key);
-
-export const deleteManyProductImageKeys = async (keys: string[]) => {
-  const env = getRequiredStorageEnv();
-  const client = getStorageClient();
-
-  for (let index = 0; index < keys.length; index += 1000) {
-    const chunk = keys.slice(index, index + 1000);
-
-    if (chunk.length === 0) {
-      continue;
-    }
-
-    const result = await client.send(
-      new DeleteObjectsCommand({
-        Bucket: env.finalBucket,
-        Delete: {
-          Objects: chunk.map((key) => ({ Key: key })),
-          Quiet: true,
-        },
-      })
-    );
-    assertBatchDeleteSucceeded(
-      result,
-      `deleteManyProductImageKeys(offset=${index})`
-    );
-  }
-};
-
 export const getExpectedProductImageKeys = (
   organizationId: string,
   productId: string,

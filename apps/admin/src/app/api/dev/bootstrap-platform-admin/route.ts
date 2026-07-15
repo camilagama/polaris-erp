@@ -1,10 +1,10 @@
 import { serverEnv } from "@polaris/auth/env";
-import { db } from "@polaris/db";
 import { bootstrapPlatformAdmin } from "@polaris/platform/admin";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 
 const LOCAL_E2E_HOSTS = new Set(["127.0.0.1", "::1", "localhost"]);
+const E2E_PLATFORM_ADMIN_GRANT_TTL_MS = 86_400_000;
 
 const bootstrapPlatformAdminSchema = z.object({
   email: z.string().trim().email(),
@@ -171,7 +171,8 @@ export async function POST(request: Request) {
       name: name ?? normalizedEmail,
     }));
 
-  const platformAdminId = await bootstrapPlatformAdmin(db as never, {
+  const platformAdminId = await bootstrapPlatformAdmin({
+    expiresAt: new Date(Date.now() + E2E_PLATFORM_ADMIN_GRANT_TTL_MS),
     reason: "Playwright admin E2E bootstrap",
     role,
     userId: user.id,

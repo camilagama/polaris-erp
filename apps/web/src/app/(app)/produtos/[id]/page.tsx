@@ -23,6 +23,7 @@ export default async function ProdutoDetalhePage(
     averageCost,
     categoriesForActions,
     inventorySummary,
+    images,
     priceChanges,
     product,
     salesMetrics,
@@ -39,7 +40,7 @@ export default async function ProdutoDetalhePage(
                 <div className="size-24 shrink-0 overflow-hidden rounded-lg border border-border/50 bg-muted/30 sm:size-32">
                   <ProductImageFrame
                     alt={`Imagem do produto ${product.name}`}
-                    image={product.image}
+                    image={images[0] ?? product.image}
                     priority
                     sizes="128px"
                   />
@@ -57,6 +58,7 @@ export default async function ProdutoDetalhePage(
                       </Button>
                       <ProductDetailActions
                         categories={categoriesForActions}
+                        images={images}
                         product={product}
                         settings={settings}
                       />
@@ -98,6 +100,22 @@ export default async function ProdutoDetalhePage(
                   </div>
                 </div>
               </div>
+              {images.length > 1 ? (
+                <div className="flex gap-2 overflow-x-auto">
+                  {images.slice(1).map((image) => (
+                    <div
+                      className="size-14 shrink-0 overflow-hidden rounded-md border border-border/50 bg-muted/30"
+                      key={image.version}
+                    >
+                      <ProductImageFrame
+                        alt={`Imagem adicional de ${product.name}`}
+                        image={image}
+                        sizes="56px"
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </CardContent>
           </Card>
 

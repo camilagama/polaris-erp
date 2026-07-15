@@ -5,39 +5,39 @@ import {
   type TenantTransaction,
   withTenantContext,
 } from "@polaris/db/tenant-context";
-import { and, asc, count, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, sql } from "drizzle-orm";
 import { getDashboardMetrics } from "@/features/dashboard/server";
-import {
-  type DashboardGoalCard,
-  type DashboardGoalHistoryItem,
-  type GoalMetric,
-  type GoalStatus,
-  type GoalsDashboardPayload,
-  type GoalsSettingsPayload,
-  MAX_ACTIVE_GOALS,
+import type {
+  DashboardGoalCard,
+  DashboardGoalHistoryItem,
+  GoalMetric,
+  GoalStatus,
+  GoalsDashboardPayload,
+  GoalsSettingsPayload,
 } from "@/features/goals/contracts";
 import { formatCompletionElapsedLabel } from "@/features/goals/duration";
 import {
   computeGoalProgressPercent,
   getGoalActualValue,
-  goalTargetMet,
 } from "@/features/goals/progress";
 import type { CreateGoalInput, UpdateGoalInput } from "@/features/goals/schema";
 import { goalPeriodIsCreatable } from "@/features/goals/schema";
 import { roundCurrency } from "@/lib/domain/currency";
 import { formatDateInputValue } from "@/lib/domain/date";
+import { getOrganizationPlanEntitlements } from "@/lib/entitlements";
 
+const GOAL_QUOTA_LOCK_NAMESPACE = 411_297;
 const SETTINGS_HISTORY_LIMIT = 40;
 
-const createGoalCapacityErrorMessage = (): string =>
-  MAX_ACTIVE_GOALS === 1
+const createGoalCapacityErrorMessage = (maxActiveGoals: number): string =>
+  maxActiveGoals === 1
     ? "Permitido apenas 1 meta ativa por vez. Arquive ou encerre a meta atual antes de criar outra."
-    : `Voce pode ter no maximo ${MAX_ACTIVE_GOALS} metas ativas. Encerre ou arquive uma meta antes de criar outra.`;
+    : `Voce pode ter no maximo ${maxActiveGoals} metas ativas. Encerre ou arquive uma meta antes de criar outra.`;
 
-const unarchiveCapacityErrorMessage = (): string =>
-  MAX_ACTIVE_GOALS === 1
+const unarchiveCapacityErrorMessage = (maxActiveGoals: number): string =>
+  maxActiveGoals === 1
     ? "Ja existe uma meta ativa. Arquive ou encerre ela antes de reativar esta."
-    : `Ja existem ${MAX_ACTIVE_GOALS} metas ativas. Arquive ou conclua outra antes de reativar esta.`;
+    : `Ja existem ${maxActiveGoals} metas ativas. Arquive ou conclua outra antes de reativar esta.`;
 
 const toTargetDecimalString = (metric: GoalMetric, value: number): string => {
   if (metric === "sales_count") {
@@ -47,16 +47,10 @@ const toTargetDecimalString = (metric: GoalMetric, value: number): string => {
   return roundCurrency(value).toFixed(2);
 };
 
-const toResolvedDecimalString = (
-  metric: GoalMetric,
-  actual: number
-): string => {
-  if (metric === "sales_count") {
-    return `${Math.round(actual)}.00`;
-  }
-
-  return roundCurrency(actual).toFixed(2);
-};
+const toResolvedDecimalString = (metric: GoalMetric, actual: number): string =>
+  metric === "sales_count"
+    ? `${Math.round(actual)}.00`
+    : roundCurrency(actual).toFixed(2);
 
 const countActiveGoals = async (
   tx: TenantTransaction,
@@ -72,6 +66,42 @@ const countActiveGoals = async (
   return Number(rows[0]?.value ?? 0);
 };
 
+const assertActiveGoalCapacity = async (
+  tx: TenantTransaction,
+  organizationId: string,
+  metric: GoalMetric,
+  messageForLimit: (maxActiveGoals: number) => string
+): Promise<void> => {
+  await tx.execute(
+    sql`SELECT pg_advisory_xact_lock(${GOAL_QUOTA_LOCK_NAMESPACE}, hashtext(${organizationId}))`
+  );
+
+  const entitlements = await getOrganizationPlanEntitlements(
+    tx,
+    organizationId
+  );
+  const activeCount = await countActiveGoals(tx, organizationId);
+
+  if (activeCount >= entitlements.maxActiveGoals) {
+    throw new Error(messageForLimit(entitlements.maxActiveGoals));
+  }
+
+  const rows = await tx
+    .select({ value: count() })
+    .from(goals)
+    .where(
+      and(
+        eq(goals.organizationId, organizationId),
+        eq(goals.metric, metric),
+        eq(goals.status, "active")
+      )
+    );
+
+  if (Number(rows[0]?.value ?? 0) > 0) {
+    throw new Error("Ja existe uma meta ativa para esta metrica.");
+  }
+};
+
 const writeGoalAuditEvent = (
   tx: TenantTransaction,
   {
@@ -81,7 +111,7 @@ const writeGoalAuditEvent = (
     subjectId,
     type,
   }: {
-    actorUserId: string;
+    actorUserId?: string;
     metadata?: Record<string, unknown>;
     organizationId: string;
     subjectId?: string;
@@ -96,59 +126,6 @@ const writeGoalAuditEvent = (
     subjectType: "goal",
     type,
   });
-
-const resolveActiveGoalTransitions = async (
-  organizationId: string
-): Promise<void> => {
-  const today = formatDateInputValue();
-  const activeRows = await withTenantContext(organizationId, (tx) =>
-    tx
-      .select()
-      .from(goals)
-      .where(
-        and(
-          eq(goals.organizationId, organizationId),
-          eq(goals.status, "active")
-        )
-      )
-  );
-
-  for (const row of activeRows) {
-    const metrics = await getDashboardMetrics(organizationId, {
-      from: row.periodStart,
-      to: row.periodEnd,
-    });
-    const metric = row.metric as GoalMetric;
-    const actual = getGoalActualValue(metric, metrics);
-    const target = Number(row.targetValue);
-
-    let nextStatus: "completed" | "expired" | null = null;
-
-    if (goalTargetMet(metric, actual, target)) {
-      nextStatus = "completed";
-    } else if (today > row.periodEnd) {
-      nextStatus = "expired";
-    }
-
-    if (!nextStatus) {
-      continue;
-    }
-
-    await withTenantContext(organizationId, (tx) =>
-      tx
-        .update(goals)
-        .set({
-          resolvedAt: new Date(),
-          resolvedValue: toResolvedDecimalString(metric, actual),
-          status: nextStatus,
-          updatedAt: new Date(),
-        })
-        .where(
-          and(eq(goals.id, row.id), eq(goals.organizationId, organizationId))
-        )
-    );
-  }
-};
 
 const buildActiveDashboardCards = async (
   organizationId: string,
@@ -189,8 +166,6 @@ const buildActiveDashboardCards = async (
 export const getGoalsDashboardData = async (
   organizationId: string
 ): Promise<GoalsDashboardPayload> => {
-  await resolveActiveGoalTransitions(organizationId);
-
   const activeRows = await withTenantContext(organizationId, (tx) =>
     tx
       .select()
@@ -212,8 +187,6 @@ export const getGoalsDashboardData = async (
 export const getGoalsSettingsData = async (
   organizationId: string
 ): Promise<GoalsSettingsPayload> => {
-  await resolveActiveGoalTransitions(organizationId);
-
   const activeRows = await withTenantContext(organizationId, (tx) =>
     tx
       .select()
@@ -265,7 +238,13 @@ export const getGoalsSettingsData = async (
     };
   });
 
-  return { active, history };
+  const maxActiveGoals = await withTenantContext(
+    organizationId,
+    async (tx) =>
+      (await getOrganizationPlanEntitlements(tx, organizationId)).maxActiveGoals
+  );
+
+  return { active, history, maxActiveGoals };
 };
 
 export const createGoal = async (
@@ -288,11 +267,12 @@ export const createGoal = async (
   }
 
   await withTenantContext(organizationId, async (tx) => {
-    const activeCount = await countActiveGoals(tx, organizationId);
-
-    if (activeCount >= MAX_ACTIVE_GOALS) {
-      throw new Error(createGoalCapacityErrorMessage());
-    }
+    await assertActiveGoalCapacity(
+      tx,
+      organizationId,
+      input.metric,
+      createGoalCapacityErrorMessage
+    );
 
     await tx.insert(goals).values({
       createdByUserId,
@@ -359,7 +339,11 @@ export const updateGoal = async (
         updatedAt: new Date(),
       })
       .where(
-        and(eq(goals.id, input.id), eq(goals.organizationId, organizationId))
+        and(
+          eq(goals.id, input.id),
+          eq(goals.organizationId, organizationId),
+          eq(goals.status, "active")
+        )
       )
       .returning({ id: goals.id });
 
@@ -398,6 +382,10 @@ export const archiveGoal = async (
     return;
   }
 
+  if (row.status !== "active") {
+    throw new Error("Somente metas ativas podem ser arquivadas.");
+  }
+
   const metric = row.metric as GoalMetric;
   const metrics = await getDashboardMetrics(organizationId, {
     from: row.periodStart,
@@ -415,7 +403,11 @@ export const archiveGoal = async (
         updatedAt: new Date(),
       })
       .where(
-        and(eq(goals.id, goalId), eq(goals.organizationId, organizationId))
+        and(
+          eq(goals.id, goalId),
+          eq(goals.organizationId, organizationId),
+          eq(goals.status, "active")
+        )
       )
       .returning({ id: goals.id });
 
@@ -469,11 +461,12 @@ export const unarchiveGoal = async (
   }
 
   await withTenantContext(organizationId, async (tx) => {
-    const activeCount = await countActiveGoals(tx, organizationId);
-
-    if (activeCount >= MAX_ACTIVE_GOALS) {
-      throw new Error(unarchiveCapacityErrorMessage());
-    }
+    await assertActiveGoalCapacity(
+      tx,
+      organizationId,
+      row.metric as GoalMetric,
+      unarchiveCapacityErrorMessage
+    );
 
     const unarchivedRows = await tx
       .update(goals)
@@ -484,7 +477,11 @@ export const unarchiveGoal = async (
         updatedAt: new Date(),
       })
       .where(
-        and(eq(goals.id, goalId), eq(goals.organizationId, organizationId))
+        and(
+          eq(goals.id, goalId),
+          eq(goals.organizationId, organizationId),
+          eq(goals.status, "archived")
+        )
       )
       .returning({ id: goals.id });
 

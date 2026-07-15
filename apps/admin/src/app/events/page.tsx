@@ -28,8 +28,14 @@ const formatDateTime = (value: string | null) => {
   }).format(new Date(value));
 };
 
-const canRetry = (status: string): boolean =>
-  status === "failed" || status === "dead_letter";
+const canRetry = ({
+  role,
+  status,
+}: {
+  role: "operator" | "owner" | "support";
+  status: string;
+}): boolean =>
+  role === "owner" && (status === "failed" || status === "dead_letter");
 
 const EventsContent = async () => {
   await connection();
@@ -81,9 +87,23 @@ const EventsContent = async () => {
               <span className="text-muted-foreground">
                 {formatDateTime(event.availableAt)}
               </span>
-              {canRetry(event.status) ? (
+              {canRetry({
+                role: platformAdmin.role,
+                status: event.status,
+              }) ? (
                 <form action={retryOutboxEventAction}>
                   <input name="eventId" type="hidden" value={event.id} />
+                  <label className="sr-only" htmlFor={`reason-${event.id}`}>
+                    Motivo do retry
+                  </label>
+                  <input
+                    className="mb-2 w-full rounded-md border border-border bg-background px-2 py-1 text-sm"
+                    id={`reason-${event.id}`}
+                    maxLength={240}
+                    name="reason"
+                    placeholder="Motivo do retry, sem dados pessoais"
+                    required
+                  />
                   <button
                     className="rounded-md border border-border px-3 py-2 font-medium text-foreground text-sm hover:border-muted-foreground"
                     type="submit"
@@ -92,7 +112,11 @@ const EventsContent = async () => {
                   </button>
                 </form>
               ) : (
-                <span className="text-muted-foreground text-xs">Sem acao</span>
+                <span className="text-muted-foreground text-xs">
+                  {event.status === "failed" || event.status === "dead_letter"
+                    ? "Aprovação de owner necessária"
+                    : "Sem acao"}
+                </span>
               )}
             </div>
           ))

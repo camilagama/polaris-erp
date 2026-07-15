@@ -8,6 +8,7 @@ const stubRequiredEnv = (
   const optionalEnvNames = [
     "ALLOW_PLAYWRIGHT_BOOTSTRAP",
     "ASAAS_API_BASE_URL",
+    "ASAAS_CARD_CHECKOUT_ENABLED",
     "ASAAS_API_KEY",
     "ASAAS_WEBHOOK_TOKEN",
     "BETTER_AUTH_API_KEY",

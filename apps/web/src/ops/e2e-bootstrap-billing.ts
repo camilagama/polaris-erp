@@ -1,15 +1,18 @@
 import "server-only";
 
+import {
+  PAID_MONTHLY_PLAN_ENTITLEMENTS,
+  PAID_MONTHLY_PLAN_ID,
+  toBillingEntitlementList,
+} from "@polaris/billing";
+
 const E2E_BILLING_PLAN = {
-  amountCents: 9900,
+  amountCents: 4990,
   currency: "BRL",
-  entitlements: [
-    { key: "catalog.products.limit", value: 500 },
-    { key: "support.priority", value: false },
-  ],
-  id: "polaris-start-monthly",
+  entitlements: toBillingEntitlementList(PAID_MONTHLY_PLAN_ENTITLEMENTS),
+  id: PAID_MONTHLY_PLAN_ID,
   interval: "month",
-  name: "Polaris Start",
+  name: "Polaris Mensal",
   status: "active",
 };
 

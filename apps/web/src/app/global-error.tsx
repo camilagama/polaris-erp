@@ -6,6 +6,7 @@ import { captureException } from "@sentry/nextjs";
 import Link from "next/link";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { createSafeOperationalError } from "@/lib/observability";
 
 export default function GlobalError({
   error,
@@ -18,7 +19,9 @@ export default function GlobalError({
 }) {
   useEffect(() => {
     if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
-      captureException(error);
+      captureException(createSafeOperationalError("global_error"), {
+        tags: error.digest ? { digest: error.digest } : undefined,
+      });
     }
   }, [error]);
 

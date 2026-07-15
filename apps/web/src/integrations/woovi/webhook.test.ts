@@ -65,10 +65,12 @@ describe("Woovi webhook foundation", () => {
       })
     ).toEqual({
       correlationID: "corr-1",
+      createdAt: null,
       event: "PIX_AUTOMATIC_APPROVED",
       globalID: null,
       paymentSubscriptionGlobalID: null,
       status: "ACTIVE",
+      value: null,
     });
   });
 
@@ -80,9 +82,8 @@ describe("Woovi webhook foundation", () => {
     expect(handlerSource).toContain("x-webhook-signature");
     expect(handlerSource).toContain("observeWebhookIntake");
     expect(handlerSource).not.toContain("sendOutboxEventToInngest");
-    expect(handlerSource).toContain("markWebhookIntakeProcessed");
-    expect(handlerSource).toContain("withInternalJobContext");
-    expect(handlerSource).toContain("billing_webhook_reconcile");
+    expect(handlerSource).not.toContain("markWebhookIntakeProcessed");
+    expect(handlerSource).not.toContain("withInternalJobContext");
     expect(handlerSource).toContain('provider: "woovi"');
   });
 });

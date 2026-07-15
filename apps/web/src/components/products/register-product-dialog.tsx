@@ -169,7 +169,7 @@ export function RegisterProductDialog({
         >
           <FieldGroup className="py-6">
             <ProductImageInput
-              description="Opcional. Aceita JPG, PNG ou WebP com ate 10 MB."
+              description="Opcional. Aceita JPG, PNG ou WebP com ate 5 MB."
               id="register-product-image"
               label="Imagem do produto"
               onFileChange={setSelectedImage}

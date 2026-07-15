@@ -1,19 +1,24 @@
 import { createPlatformAdminAuth } from "@polaris/platform-auth/admin-guard";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { dbMock, sessionMock } = vi.hoisted(() => ({
+const { dbMock, sessionMock, withUserContextMock } = vi.hoisted(() => ({
   dbMock: {
     select: vi.fn(),
   },
   sessionMock: {
     getSession: vi.fn(),
   },
+  withUserContextMock: vi.fn(),
 }));
 
 vi.mock("server-only", () => ({}));
 
 vi.mock("@polaris/db", () => ({
   db: dbMock,
+}));
+
+vi.mock("@polaris/db/tenant-context", () => ({
+  withUserContext: withUserContextMock,
 }));
 
 const mockSession = (userId = "user-1") => {
@@ -41,6 +46,10 @@ const mockPlatformGrantRows = (
 describe("getPlatformAdminContext", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    withUserContextMock.mockImplementation(
+      async (_userId: string, callback: (tx: typeof dbMock) => unknown) =>
+        callback(dbMock)
+    );
   });
 
   it("does not treat an organization user as a platform admin", async () => {
@@ -80,6 +89,10 @@ describe("getPlatformAdminContext", () => {
       role: "owner",
       userId: "user-founder",
     });
+    expect(withUserContextMock).toHaveBeenCalledWith(
+      "user-founder",
+      expect.any(Function)
+    );
   });
 
   it("accepts an active DB platform grant after Better Auth session", async () => {

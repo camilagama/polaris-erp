@@ -1,5 +1,14 @@
-import { format, parseISO } from "date-fns";
+import { parseISO } from "date-fns";
 import { z } from "zod";
+
+const BUSINESS_TIME_ZONE = "America/Sao_Paulo";
+
+const businessDateFormatter = new Intl.DateTimeFormat("en-CA", {
+  day: "2-digit",
+  month: "2-digit",
+  timeZone: BUSINESS_TIME_ZONE,
+  year: "numeric",
+});
 
 export const isoDateSchema = z
   .string()
@@ -15,5 +24,13 @@ export const isoDateSchema = z
 
 export const parseIsoDate = (value: string) => parseISO(value);
 
-export const formatDateInputValue = (value = new Date()) =>
-  format(value, "yyyy-MM-dd");
+export const formatDateInputValue = (value = new Date()): string => {
+  const parts = businessDateFormatter.formatToParts(value);
+  const values = Object.fromEntries(
+    parts
+      .filter(({ type }) => type !== "literal")
+      .map(({ type, value: partValue }) => [type, partValue])
+  );
+
+  return `${values.year}-${values.month}-${values.day}`;
+};

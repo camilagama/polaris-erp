@@ -1,5 +1,6 @@
 import "server-only";
 
+import { FREE_PLAN_ID } from "@polaris/billing";
 import {
   auditEvents,
   billingCustomers,
@@ -25,14 +26,6 @@ const getDb = async () => {
   const { db } = await import("@polaris/db");
   return db;
 };
-
-const shouldActivateBillingForE2E = (): boolean =>
-  process.env.NODE_ENV === "production" &&
-  process.env.ALLOW_PLAYWRIGHT_BOOTSTRAP === "true" &&
-  process.env.VERCEL_ENV !== "preview" &&
-  process.env.VERCEL_ENV !== "production" &&
-  Boolean(process.env.E2E_DATABASE_URL) &&
-  process.env.DATABASE_URL === process.env.E2E_DATABASE_URL;
 
 export const createInitialOrganizationForUser = async ({
   billingEmail,
@@ -67,8 +60,10 @@ export const createInitialOrganizationForUser = async ({
         id: billingPlans.id,
       })
       .from(billingPlans)
-      .where(eq(billingPlans.status, "active"))
-      .orderBy(asc(billingPlans.amountCents), asc(billingPlans.id))
+      .where(
+        sql`${billingPlans.id} = ${FREE_PLAN_ID} and ${billingPlans.status} = 'active'`
+      )
+      .orderBy(asc(billingPlans.id))
       .limit(1);
 
     if (!plan) {
@@ -122,7 +117,7 @@ export const createInitialOrganizationForUser = async ({
       billingCustomerId,
       organizationId,
       planId: plan.id,
-      status: shouldActivateBillingForE2E() ? "active" : "incomplete",
+      status: "active",
     });
 
     await tx.insert(auditEvents).values({

@@ -21,6 +21,7 @@ export interface RetryPlatformOutboxEventInput {
   actorPlatformAdminId: string;
   actorUserId: string;
   eventId: string;
+  reason: string;
 }
 
 interface PlatformOutboxMutationTx extends QueryableDb {
@@ -34,9 +35,6 @@ interface PlatformOutboxMutationDb {
     callback: (tx: PlatformOutboxMutationTx) => Result | Promise<Result>
   ) => Promise<Result>;
 }
-
-const getDefaultMutationDb = (): PlatformOutboxMutationDb =>
-  db as unknown as PlatformOutboxMutationDb;
 
 export const getPlatformEventsOverview = async (
   queryableDb: QueryableDb = db
@@ -54,32 +52,55 @@ export const getPlatformEventsOverviewForAdmin = async (
 ): Promise<PlatformEventsOverview> =>
   withPlatformAdminContext(platformAdminId, getPlatformEventsOverview);
 
+const retryPlatformOutboxEventInTransaction = async (
+  input: RetryPlatformOutboxEventInput,
+  tx: PlatformOutboxMutationTx
+): Promise<boolean> => {
+  const retried = await retryOutboxEvent(tx, input.eventId.trim());
+
+  if (!retried) {
+    return false;
+  }
+
+  await recordPlatformAuditEvent(tx, {
+    action: "outbox.retry_requested",
+    actorPlatformAdminId: input.actorPlatformAdminId,
+    actorUserId: input.actorUserId,
+    metadata: { eventId: input.eventId.trim(), reason: input.reason.trim() },
+    subjectId: input.eventId.trim(),
+    subjectType: "event_outbox",
+  });
+
+  return true;
+};
+
 export const retryPlatformOutboxEvent = async (
   input: RetryPlatformOutboxEventInput,
-  mutationDb: PlatformOutboxMutationDb = getDefaultMutationDb()
+  mutationDb?: PlatformOutboxMutationDb
 ): Promise<boolean> => {
   const eventId = input.eventId.trim();
+  const reason = input.reason.trim();
 
   if (eventId.length === 0) {
     throw new Error("Outbox event retry requires an event id.");
   }
 
-  return await mutationDb.transaction(async (tx) => {
-    const retried = await retryOutboxEvent(tx, eventId);
+  if (reason.length === 0 || reason.length > 240) {
+    throw new Error(
+      "Outbox event retry requires a reason of up to 240 characters."
+    );
+  }
 
-    if (!retried) {
-      return false;
-    }
+  if (mutationDb) {
+    return await mutationDb.transaction((tx) =>
+      retryPlatformOutboxEventInTransaction(input, tx)
+    );
+  }
 
-    await recordPlatformAuditEvent(tx, {
-      action: "outbox.retry_requested",
-      actorPlatformAdminId: input.actorPlatformAdminId,
-      actorUserId: input.actorUserId,
-      metadata: { eventId },
-      subjectId: eventId,
-      subjectType: "event_outbox",
-    });
-
-    return true;
-  });
+  return await withPlatformAdminContext(input.actorPlatformAdminId, (tx) =>
+    retryPlatformOutboxEventInTransaction(
+      input,
+      tx as unknown as PlatformOutboxMutationTx
+    )
+  );
 };

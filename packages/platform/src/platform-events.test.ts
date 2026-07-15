@@ -84,6 +84,7 @@ describe("platform events", () => {
         actorPlatformAdminId: "platform-admin-1",
         actorUserId: "user-1",
         eventId: "event-1",
+        reason: "provider recovered",
       },
       db
     );
@@ -97,6 +98,7 @@ describe("platform events", () => {
         actorUserId: "user-1",
         metadata: {
           eventId: "event-1",
+          reason: "provider recovered",
         },
         subjectId: "event-1",
         subjectType: "event_outbox",
@@ -117,6 +119,7 @@ describe("platform events", () => {
           actorPlatformAdminId: "platform-admin-1",
           actorUserId: "user-1",
           eventId: "event-1",
+          reason: "provider recovered",
         },
         db
       )
@@ -137,10 +140,35 @@ describe("platform events", () => {
           actorPlatformAdminId: "platform-admin-1",
           actorUserId: "user-1",
           eventId: " ",
+          reason: "provider recovered",
         },
         db
       )
     ).rejects.toThrow("Outbox event retry requires an event id.");
+
+    expect(db.transaction).not.toHaveBeenCalled();
+    expect(tx.values).not.toHaveBeenCalled();
+  });
+
+  it("rejects missing retry reasons without writing audit", async () => {
+    const tx = createTxMock();
+    const db = {
+      transaction: vi.fn(async (callback) => callback(tx)),
+    };
+
+    await expect(
+      retryPlatformOutboxEvent(
+        {
+          actorPlatformAdminId: "platform-admin-1",
+          actorUserId: "user-1",
+          eventId: "event-1",
+          reason: " ",
+        },
+        db
+      )
+    ).rejects.toThrow(
+      "Outbox event retry requires a reason of up to 240 characters."
+    );
 
     expect(db.transaction).not.toHaveBeenCalled();
     expect(tx.values).not.toHaveBeenCalled();

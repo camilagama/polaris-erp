@@ -30,10 +30,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "@/components/ui/sonner";
 import { createGoalAction, updateGoalAction } from "@/features/goals/actions";
-import {
-  type DashboardGoalCard,
-  MAX_ACTIVE_GOALS,
-} from "@/features/goals/contracts";
+import type { DashboardGoalCard } from "@/features/goals/contracts";
 import {
   createGoalSchema,
   goalDisplayModeSchema,
@@ -63,6 +60,7 @@ interface GoalFormDialogProps {
     to: string;
   };
   initialGoal?: DashboardGoalCard | null;
+  maxActiveGoals: number;
   mode: GoalFormMode;
   onOpenChange: (open: boolean) => void;
   open: boolean;
@@ -71,6 +69,7 @@ interface GoalFormDialogProps {
 export function GoalFormDialog({
   dateBounds: _dateBounds,
   initialGoal,
+  maxActiveGoals,
   mode,
   onOpenChange,
   open,
@@ -170,9 +169,9 @@ export function GoalFormDialog({
 
   const title = mode === "edit" ? "Editar meta" : "Nova meta";
   const createModeDescription =
-    MAX_ACTIVE_GOALS === 1
+    maxActiveGoals === 1
       ? "Uma meta ativa por vez no dashboard (receita, lucro operacional ou vendas no periodo)."
-      : `Defina ate ${MAX_ACTIVE_GOALS} metas ativas para acompanhar receita, lucro operacional ou quantidade de vendas no periodo.`;
+      : `Defina ate ${maxActiveGoals} metas ativas para acompanhar receita, lucro operacional ou quantidade de vendas no periodo.`;
   const description =
     mode === "edit"
       ? "Ajuste nome, tipo, periodo ou valor alvo. Metas totalmente passadas nao podem ser salvas."

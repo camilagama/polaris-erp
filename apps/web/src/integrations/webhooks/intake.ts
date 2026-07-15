@@ -11,6 +11,12 @@ import { sql } from "drizzle-orm";
 
 type WebhookIntakeDb = Parameters<typeof captureWebhookEvent>[0] & QueryableDb;
 
+interface TransactionalWebhookIntakeDb {
+  transaction: <T>(
+    callback: (transactionDb: WebhookIntakeDb) => Promise<T>
+  ) => Promise<T>;
+}
+
 type WebhookIntakeStatus = "processed" | "failed";
 
 export interface ObserveWebhookIntakeInput {
@@ -37,9 +43,9 @@ const getWebhookTopic = (provider: string): string => `${provider}.webhook`;
 const getWebhookIdempotencyKey = (provider: string, eventId: string): string =>
   `${provider}-webhook:${eventId}`;
 
-export const observeWebhookIntake = async (
+export const observeWebhookIntake = (
   input: ObserveWebhookIntakeInput,
-  intakeDb: WebhookIntakeDb = defaultDb
+  intakeDb: TransactionalWebhookIntakeDb = defaultDb
 ): Promise<WebhookCaptureResult> => {
   const correlationId = input.correlationId ?? input.eventId;
   const topic = input.topic ?? getWebhookTopic(input.provider);
@@ -47,29 +53,31 @@ export const observeWebhookIntake = async (
     input.idempotencyKey ??
     getWebhookIdempotencyKey(input.provider, input.eventId);
 
-  const captureResult = await captureWebhookEvent(intakeDb, {
-    correlationId,
-    eventId: input.eventId,
-    headers: input.headers,
-    payload: input.payload,
-    provider: input.provider,
-    rawBody: input.rawBody,
-  });
+  return intakeDb.transaction(async (transactionDb) => {
+    const captureResult = await captureWebhookEvent(transactionDb, {
+      correlationId,
+      eventId: input.eventId,
+      headers: input.headers,
+      payload: input.payload,
+      provider: input.provider,
+      rawBody: input.rawBody,
+    });
 
-  if (captureResult === "duplicate") {
+    if (captureResult === "duplicate") {
+      return captureResult;
+    }
+
+    await enqueueOutboxEvent(transactionDb, {
+      correlationId,
+      eventType: input.eventType,
+      idempotencyKey,
+      payload: input.payload,
+      status: "pending",
+      topic,
+    });
+
     return captureResult;
-  }
-
-  await enqueueOutboxEvent(intakeDb, {
-    correlationId,
-    eventType: input.eventType,
-    idempotencyKey,
-    payload: input.payload,
-    status: "observed",
-    topic,
   });
-
-  return captureResult;
 };
 
 export const markWebhookIntakeProcessed = async (

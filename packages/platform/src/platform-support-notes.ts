@@ -52,9 +52,6 @@ export interface ListPlatformSupportNotesInput {
   organizationId?: string | null;
 }
 
-const getDefaultTransactionalDb = (): TransactionalDb =>
-  db as unknown as TransactionalDb;
-
 const getDefaultQueryableDb = (): QueryableDb => db as unknown as QueryableDb;
 
 const requireTarget = ({
@@ -102,7 +99,7 @@ const assertCustomerBelongsToOrganization = async (
 
 export const createPlatformSupportNote = async (
   input: CreatePlatformSupportNoteInput,
-  transactionalDb: TransactionalDb = getDefaultTransactionalDb()
+  transactionalDb?: TransactionalDb
 ): Promise<void> => {
   const body = input.body.trim();
 
@@ -112,7 +109,7 @@ export const createPlatformSupportNote = async (
 
   requireTarget(input);
 
-  await transactionalDb.transaction(async (tx) => {
+  const create = async (tx: SupportNoteTx): Promise<void> => {
     await assertCustomerBelongsToOrganization(tx, input);
 
     await tx.insert(platformSupportNotes).values({
@@ -132,7 +129,16 @@ export const createPlatformSupportNote = async (
       subjectId: input.organizationId ?? input.customerUserId ?? null,
       subjectType: "support_note",
     });
-  });
+  };
+
+  if (transactionalDb) {
+    await transactionalDb.transaction(create);
+    return;
+  }
+
+  await withPlatformAdminContext(input.authorPlatformAdminId, (tx) =>
+    create(tx as unknown as SupportNoteTx)
+  );
 };
 
 const getSupportNotesWhereClause = ({

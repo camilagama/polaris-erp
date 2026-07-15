@@ -16,8 +16,9 @@ const getRequiredFormValue = (formData: FormData, key: string): string => {
 };
 
 export async function retryOutboxEventAction(formData: FormData) {
-  const context = await requirePlatformAdmin({ minimumRole: "operator" });
+  const context = await requirePlatformAdmin({ minimumRole: "owner" });
   const eventId = getRequiredFormValue(formData, "eventId");
+  const reason = getRequiredFormValue(formData, "reason");
 
   await assertAdminRateLimit({
     action: "outbox.retry",
@@ -29,6 +30,7 @@ export async function retryOutboxEventAction(formData: FormData) {
     actorPlatformAdminId: context.platformAdminId,
     actorUserId: context.userId,
     eventId,
+    reason,
   });
   if (retried) {
     revalidatePath("/events");

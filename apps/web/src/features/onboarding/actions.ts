@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { createInitialOrganizationForUser } from "@/features/onboarding/server";
 import { sendWelcomeEmailIfConfigured } from "@/integrations/resend/email-service";
-import { getAppContext } from "@/lib/app-session";
+import { getAppAccess } from "@/lib/app-session";
 import { requireSession } from "@/lib/session";
 import type { OnboardingActionState } from "./state";
 
@@ -12,10 +12,16 @@ export async function completeOnboardingAction(
   _formData: FormData
 ): Promise<OnboardingActionState> {
   const session = await requireSession();
-  const existingContext = await getAppContext();
+  const access = await getAppAccess();
 
-  if (existingContext) {
+  if (access.kind === "suspended") {
+    redirect("/restricted-access");
+    return _state;
+  }
+
+  if (access.kind === "active") {
     redirect("/");
+    return _state;
   }
 
   await createInitialOrganizationForUser({

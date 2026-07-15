@@ -12,6 +12,7 @@ import {
 
 const LIST_LIMIT = 50;
 const REDACTED_EMAIL = "[redacted]";
+const REDACTED_NAME = "[redacted]";
 
 interface QueryableDb {
   execute: (query: SQL) => Promise<unknown>;
@@ -100,21 +101,13 @@ export const redactEmail = (email: string): string => {
   return `${localPart.at(0) ?? "*"}***@${domain}`;
 };
 
+export const redactName = (_name: string): string => REDACTED_NAME;
+
 const getOrganizationSearchClause = (query: string | null): SQL =>
-  query
-    ? sql`where o.id = ${query} or exists (
-        select 1
-        from member search_member
-        join users search_user on search_user.id = search_member.user_id
-        where search_member.organization_id = o.id
-          and search_user.email ilike ${`%${query}%`}
-      )`
-    : sql``;
+  query ? sql`where o.id = ${query}` : sql``;
 
 const getUserSearchClause = (query: string | null): SQL =>
-  query
-    ? sql`where u.name ilike ${`%${query}%`} or u.email ilike ${`%${query}%`} or u.id = ${query}`
-    : sql``;
+  query ? sql`where u.id = ${query}` : sql``;
 
 const mapOrganizationRow = (
   row: Record<string, unknown>
@@ -142,7 +135,7 @@ const mapUserRow = (row: Record<string, unknown>): PlatformUserListItem => ({
   email: redactEmail(toStringValue(row.email)),
   id: toStringValue(row.id),
   latestSessionAt: toIsoString(row.latest_session_at),
-  name: toStringValue(row.name, "Sem nome"),
+  name: redactName(toStringValue(row.name, "Sem nome")),
   organizationCount: toNumber(row.organization_count),
   providerIds: toStringArray(row.provider_ids),
   sessionCount: toNumber(row.session_count),
@@ -245,7 +238,7 @@ export const getPlatformOrganizationDetail = async (
     members: toRows(memberRows).map((row) => ({
       createdAt: toIsoString(row.created_at),
       email: redactEmail(toStringValue(row.email)),
-      name: toStringValue(row.name, "Sem nome"),
+      name: redactName(toStringValue(row.name, "Sem nome")),
       providerIds: toStringArray(row.provider_ids),
       role: toStringValue(row.role, "operator"),
       userId: toStringValue(row.user_id),

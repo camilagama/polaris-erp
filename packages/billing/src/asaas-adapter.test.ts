@@ -1,4 +1,8 @@
-import { createAsaasBillingAdapter } from "@polaris/billing/providers/asaas";
+import {
+  AsaasCheckoutRejectedError,
+  AsaasCheckoutUnknownOutcomeError,
+  createAsaasBillingAdapter,
+} from "@polaris/billing/providers/asaas";
 import { describe, expect, it, vi } from "vitest";
 
 type FetchCall = [string, { body: string }];
@@ -21,15 +25,29 @@ const getFirstFetchCall = (calls: unknown[][]): FetchCall => {
 };
 
 describe("Asaas billing adapter", () => {
-  it("creates credit card subscriptions using tokenized cards only", async () => {
+  it("cancels a provider subscription without touching settled charges", async () => {
+    const fetch = vi.fn(async () => ({ ok: true }));
+    const adapter = createAsaasBillingAdapter({
+      apiKey: "asaas-key",
+      baseUrl: "https://api.asaas.com/v3/",
+      fetch: fetch as never,
+    });
+
+    await expect(
+      adapter.cancelSubscription("sub_123")
+    ).resolves.toBeUndefined();
+    expect(fetch).toHaveBeenCalledWith(
+      "https://api.asaas.com/v3/subscriptions/sub_123",
+      {
+        headers: { access_token: "asaas-key" },
+        method: "DELETE",
+      }
+    );
+  });
+
+  it("creates an Asaas-hosted recurring checkout without payer data", async () => {
     const fetch = vi.fn(async () => ({
-      json: async () => ({
-        creditCardDetails: {
-          creditCardBrand: "MASTERCARD",
-          creditCardNumber: "8829",
-        },
-        id: "sub_123",
-      }),
+      json: async () => ({ id: "checkout_123" }),
       ok: true,
     }));
     const adapter = createAsaasBillingAdapter({
@@ -39,27 +57,31 @@ describe("Asaas billing adapter", () => {
     });
 
     await expect(
-      adapter.createCreditCardSubscription({
-        creditCardToken: "card-token",
-        customerId: "cus_123",
+      adapter.createHostedRecurringCheckout({
+        callback: {
+          cancelUrl: "https://app.example.com/billing/cancelled",
+          expiredUrl: "https://app.example.com/billing/expired",
+          successUrl: "https://app.example.com/billing/success",
+        },
         cycle: "MONTHLY",
-        description: "Plano Pro",
-        externalReference: "billing-subscription-1",
-        nextDueDate: "2026-08-09",
+        description: "Plano mensal Polaris",
+        externalReference: "checkout:subscription-1",
+        itemName: "Polaris mensal",
+        minutesToExpire: 60,
+        nextDueDate: "2026-08-09 00:00:00",
         value: 49.9,
       })
     ).resolves.toEqual({
-      cardBrand: "MASTERCARD",
-      cardLast4: "8829",
-      externalReference: "billing-subscription-1",
-      subscriptionId: "sub_123",
+      checkoutId: "checkout_123",
+      checkoutUrl: "https://asaas.com/checkoutSession/show?id=checkout_123",
+      externalReference: "checkout:subscription-1",
     });
 
     const [, request] = getFirstFetchCall(fetch.mock.calls);
     const body = JSON.parse(request.body);
 
     expect(fetch).toHaveBeenCalledWith(
-      "https://api.asaas.com/v3/subscriptions",
+      "https://api.asaas.com/v3/checkouts",
       expect.objectContaining({
         headers: expect.objectContaining({
           "Content-Type": "application/json",
@@ -69,17 +91,20 @@ describe("Asaas billing adapter", () => {
       })
     );
     expect(body).toMatchObject({
-      billingType: "CREDIT_CARD",
-      creditCardToken: "card-token",
-      customer: "cus_123",
-      cycle: { interval: "MONTHLY" },
-      externalReference: "billing-subscription-1",
+      billingTypes: ["CREDIT_CARD"],
+      chargeTypes: ["RECURRENT"],
+      externalReference: "checkout:subscription-1",
+      subscription: {
+        cycle: "MONTHLY",
+        nextDueDate: "2026-08-09 00:00:00",
+      },
     });
-    expect(JSON.stringify(body)).not.toContain("cvv");
-    expect(JSON.stringify(body)).not.toContain("number");
+    expect(body).not.toHaveProperty("customerData");
+    expect(JSON.stringify(body)).not.toContain("creditCardToken");
+    expect(JSON.stringify(body)).not.toContain("cpfCnpj");
   });
 
-  it("throws when Asaas rejects the subscription request", async () => {
+  it("fails closed when Asaas rejects the hosted checkout", async () => {
     const adapter = createAsaasBillingAdapter({
       apiKey: "asaas-key",
       baseUrl: "https://api.asaas.com/v3",
@@ -90,15 +115,47 @@ describe("Asaas billing adapter", () => {
     });
 
     await expect(
-      adapter.createCreditCardSubscription({
-        creditCardToken: "card-token",
-        customerId: "cus_123",
+      adapter.createHostedRecurringCheckout({
+        callback: {
+          cancelUrl: "https://app.example.com/billing/cancelled",
+          expiredUrl: "https://app.example.com/billing/expired",
+          successUrl: "https://app.example.com/billing/success",
+        },
         cycle: "MONTHLY",
-        description: "Plano Pro",
-        externalReference: "billing-subscription-1",
-        nextDueDate: "2026-08-09",
+        description: "Plano mensal Polaris",
+        externalReference: "checkout:subscription-1",
+        itemName: "Polaris mensal",
+        minutesToExpire: 60,
+        nextDueDate: "2026-08-09 00:00:00",
         value: 49.9,
       })
-    ).rejects.toThrow("Asaas failed");
+    ).rejects.toBeInstanceOf(AsaasCheckoutRejectedError);
+  });
+
+  it("marks a network interruption as an unknown provider outcome", async () => {
+    const adapter = createAsaasBillingAdapter({
+      apiKey: "asaas-key",
+      baseUrl: "https://api.asaas.com/v3",
+      fetch: vi.fn(() =>
+        Promise.reject(new Error("network interrupted"))
+      ) as never,
+    });
+
+    await expect(
+      adapter.createHostedRecurringCheckout({
+        callback: {
+          cancelUrl: "https://app.example.com/billing/cancelled",
+          expiredUrl: "https://app.example.com/billing/expired",
+          successUrl: "https://app.example.com/billing/success",
+        },
+        cycle: "MONTHLY",
+        description: "Plano mensal Polaris",
+        externalReference: "checkout:subscription-1",
+        itemName: "Polaris mensal",
+        minutesToExpire: 60,
+        nextDueDate: "2026-08-09 00:00:00",
+        value: 49.9,
+      })
+    ).rejects.toBeInstanceOf(AsaasCheckoutUnknownOutcomeError);
   });
 });

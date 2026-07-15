@@ -2,17 +2,20 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
   assertAdminRateLimitMock,
+  closePlatformOrganizationMock,
   revalidatePathMock,
   requirePlatformAdminMock,
   updatePlatformOrganizationStatusMock,
 } = vi.hoisted(() => ({
   assertAdminRateLimitMock: vi.fn(),
+  closePlatformOrganizationMock: vi.fn(),
   revalidatePathMock: vi.fn(),
   requirePlatformAdminMock: vi.fn(),
   updatePlatformOrganizationStatusMock: vi.fn(),
 }));
 
 vi.mock("@polaris/platform/organization-mutations", () => ({
+  closePlatformOrganization: closePlatformOrganizationMock,
   updatePlatformOrganizationStatus: updatePlatformOrganizationStatusMock,
 }));
 
@@ -26,7 +29,10 @@ vi.mock("@/lib/platform-admin-auth", () => ({
   requirePlatformAdmin: requirePlatformAdminMock,
 }));
 
-import { changeOrganizationStatusAction } from "./actions";
+import {
+  changeOrganizationStatusAction,
+  closeOrganizationAction,
+} from "./actions";
 
 const createStatusChangeForm = (): FormData => {
   const formData = new FormData();
@@ -101,5 +107,39 @@ describe("changeOrganizationStatusAction", () => {
     });
     expect(revalidatePathMock).toHaveBeenCalledWith("/organizations");
     expect(revalidatePathMock).toHaveBeenCalledWith("/organizations/org-1");
+  });
+});
+
+describe("closeOrganizationAction", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    requirePlatformAdminMock.mockResolvedValue({
+      platformAdminId: "platform-admin-1",
+      userId: "user-1",
+    });
+  });
+
+  it("requires an owner, confirmation and a reason before closing", async () => {
+    const formData = new FormData();
+    formData.set("organizationId", "org-1");
+    formData.set("reason", "Customer requested closure.");
+    formData.set("confirm", "on");
+
+    await closeOrganizationAction(formData);
+
+    expect(requirePlatformAdminMock).toHaveBeenCalledWith({
+      minimumRole: "owner",
+    });
+    expect(assertAdminRateLimitMock).toHaveBeenCalledWith({
+      action: "organization.close",
+      actorUserId: "user-1",
+      targetId: "org-1",
+    });
+    expect(closePlatformOrganizationMock).toHaveBeenCalledWith({
+      actorPlatformAdminId: "platform-admin-1",
+      actorUserId: "user-1",
+      organizationId: "org-1",
+      reason: "Customer requested closure.",
+    });
   });
 });

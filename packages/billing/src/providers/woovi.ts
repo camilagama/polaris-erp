@@ -44,6 +44,23 @@ export const createWooviBillingAdapter = ({
   baseUrl,
   fetch,
 }: WooviAdapterOptions) => ({
+  cancelPixRecurringSubscription: async (
+    subscriptionId: string
+  ): Promise<void> => {
+    const response = await fetch(
+      `${trimTrailingSlash(baseUrl)}/api/v1/subscriptions/${encodeURIComponent(subscriptionId)}/cancel`,
+      {
+        headers: {
+          Authorization: apiKey,
+        },
+        method: "PUT",
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Woovi failed to cancel Pix recurring subscription.");
+    }
+  },
   createPixRecurringSubscription: async (
     input: CreateWooviPixRecurringSubscriptionInput
   ): Promise<CreateWooviPixRecurringSubscriptionResult> => {

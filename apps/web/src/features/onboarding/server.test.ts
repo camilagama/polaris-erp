@@ -104,9 +104,9 @@ describe("createInitialOrganizationForUser", () => {
     ).toBeLessThan(txMock.select.mock.invocationCallOrder[0]);
   });
 
-  it("creates an incomplete subscription with a server-side technical tenant identity during onboarding", async () => {
+  it("creates an active Free subscription with a server-side technical tenant identity during onboarding", async () => {
     selectNoMembershipOnce();
-    selectDefaultBillingPlanOnce("polaris-start-monthly");
+    selectDefaultBillingPlanOnce("polaris-free");
     const insertValues = mockInsertValues();
 
     const organizationId = await createInitialOrganizationForUser({
@@ -127,22 +127,15 @@ describe("createInitialOrganizationForUser", () => {
     );
     expect(insertValues).toHaveBeenCalledWith(
       expect.objectContaining({
-        planId: "polaris-start-monthly",
-        status: "incomplete",
+        planId: "polaris-free",
+        status: "active",
       })
     );
   });
 
-  it("activates the initial subscription only for isolated local E2E bootstrap", async () => {
-    const isolatedDatabaseUrl = "postgres://e2e:e2e@example.com/e2e";
-
-    vi.stubEnv("ALLOW_PLAYWRIGHT_BOOTSTRAP", "true");
-    vi.stubEnv("DATABASE_URL", isolatedDatabaseUrl);
-    vi.stubEnv("E2E_DATABASE_URL", isolatedDatabaseUrl);
-    vi.stubEnv("NODE_ENV", "production");
-    vi.stubEnv("VERCEL_ENV", "development");
+  it("does not require an E2E environment to activate the initial Free subscription", async () => {
     selectNoMembershipOnce();
-    selectDefaultBillingPlanOnce("polaris-start-monthly");
+    selectDefaultBillingPlanOnce("polaris-free");
     const insertValues = mockInsertValues();
 
     await createInitialOrganizationForUser({
@@ -151,7 +144,7 @@ describe("createInitialOrganizationForUser", () => {
 
     expect(insertValues).toHaveBeenCalledWith(
       expect.objectContaining({
-        planId: "polaris-start-monthly",
+        planId: "polaris-free",
         status: "active",
       })
     );

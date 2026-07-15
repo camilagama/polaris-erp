@@ -1,18 +1,22 @@
-export interface CreateAsaasCreditCardSubscriptionInput {
-  creditCardToken: string;
-  customerId: string;
+export interface CreateAsaasHostedCheckoutInput {
+  callback: {
+    cancelUrl: string;
+    expiredUrl: string;
+    successUrl: string;
+  };
   cycle: "MONTHLY" | "YEARLY";
   description: string;
   externalReference: string;
+  itemName: string;
+  minutesToExpire: number;
   nextDueDate: string;
   value: number;
 }
 
-export interface CreateAsaasCreditCardSubscriptionResult {
-  cardBrand: string | null;
-  cardLast4: string | null;
+export interface CreateAsaasHostedCheckoutResult {
+  checkoutId: string;
+  checkoutUrl: string;
   externalReference: string;
-  subscriptionId: string;
 }
 
 export interface AsaasAdapterOptions {
@@ -21,25 +25,23 @@ export interface AsaasAdapterOptions {
   fetch: typeof fetch;
 }
 
+export class AsaasCheckoutRejectedError extends Error {
+  constructor() {
+    super("Asaas rejected the hosted recurring checkout.");
+  }
+}
+
+export class AsaasCheckoutUnknownOutcomeError extends Error {
+  constructor() {
+    super("Asaas checkout request has an unknown outcome.");
+  }
+}
+
 const TRAILING_SLASH_PATTERN = /\/$/;
+const ASAAS_CHECKOUT_PAGE_URL = "https://asaas.com/checkoutSession/show";
 
 const trimTrailingSlash = (value: string): string =>
   value.replace(TRAILING_SLASH_PATTERN, "");
-
-const getRecord = (
-  value: unknown,
-  key: string
-): Record<string, unknown> | null => {
-  if (typeof value !== "object" || value === null || !(key in value)) {
-    return null;
-  }
-
-  const field = (value as Record<string, unknown>)[key];
-
-  return typeof field === "object" && field !== null
-    ? (field as Record<string, unknown>)
-    : null;
-};
 
 const getString = (value: unknown, key: string): string | null => {
   if (typeof value !== "object" || value === null || !(key in value)) {
@@ -56,52 +58,81 @@ export const createAsaasBillingAdapter = ({
   baseUrl,
   fetch,
 }: AsaasAdapterOptions) => ({
-  createCreditCardSubscription: async (
-    input: CreateAsaasCreditCardSubscriptionInput
-  ): Promise<CreateAsaasCreditCardSubscriptionResult> => {
+  cancelSubscription: async (subscriptionId: string): Promise<void> => {
     const response = await fetch(
-      `${trimTrailingSlash(baseUrl)}/subscriptions`,
+      `${trimTrailingSlash(baseUrl)}/subscriptions/${encodeURIComponent(subscriptionId)}`,
       {
+        headers: {
+          access_token: apiKey,
+        },
+        method: "DELETE",
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Asaas failed to cancel subscription.");
+    }
+  },
+  createHostedRecurringCheckout: async (
+    input: CreateAsaasHostedCheckoutInput
+  ): Promise<CreateAsaasHostedCheckoutResult> => {
+    let response: Response;
+
+    try {
+      response = await fetch(`${trimTrailingSlash(baseUrl)}/checkouts`, {
         body: JSON.stringify({
-          billingType: "CREDIT_CARD",
-          creditCardToken: input.creditCardToken,
-          customer: input.customerId,
-          cycle: { interval: input.cycle },
-          description: input.description,
+          billingTypes: ["CREDIT_CARD"],
+          callback: input.callback,
+          chargeTypes: ["RECURRENT"],
           externalReference: input.externalReference,
-          nextDueDate: input.nextDueDate,
-          value: input.value,
+          items: [
+            {
+              description: input.description,
+              name: input.itemName,
+              quantity: 1,
+              value: input.value,
+            },
+          ],
+          minutesToExpire: input.minutesToExpire,
+          subscription: {
+            cycle: input.cycle,
+            nextDueDate: input.nextDueDate,
+          },
         }),
         headers: {
           "Content-Type": "application/json",
           access_token: apiKey,
         },
         method: "POST",
-      }
-    );
-    const raw = await response.json();
+      });
+    } catch {
+      throw new AsaasCheckoutUnknownOutcomeError();
+    }
 
     if (!response.ok) {
-      throw new Error("Asaas failed to create credit card subscription.");
+      throw new AsaasCheckoutRejectedError();
     }
 
-    const subscriptionId = getString(raw, "id");
+    let raw: unknown;
 
-    if (!subscriptionId) {
-      throw new Error("Asaas did not return a subscription id.");
+    try {
+      raw = await response.json();
+    } catch {
+      throw new AsaasCheckoutUnknownOutcomeError();
     }
 
-    const creditCardDetails = getRecord(raw, "creditCardDetails");
+    const checkoutId = getString(raw, "id");
+
+    if (!checkoutId) {
+      throw new AsaasCheckoutUnknownOutcomeError();
+    }
 
     return {
-      cardBrand: creditCardDetails
-        ? getString(creditCardDetails, "creditCardBrand")
-        : null,
-      cardLast4: creditCardDetails
-        ? getString(creditCardDetails, "creditCardNumber")
-        : null,
+      checkoutId,
+      checkoutUrl:
+        getString(raw, "link") ??
+        `${ASAAS_CHECKOUT_PAGE_URL}?id=${encodeURIComponent(checkoutId)}`,
       externalReference: input.externalReference,
-      subscriptionId,
     };
   },
 });

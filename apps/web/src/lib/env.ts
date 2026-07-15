@@ -66,6 +66,7 @@ const serverEnvSchema = z
       return trimmedValue.length === 0 ? undefined : trimmedValue;
     }, z.string().url().optional()),
     ASAAS_API_KEY: optionalNonEmptyString,
+    ASAAS_CARD_CHECKOUT_ENABLED: optionalBooleanString,
     ASAAS_WEBHOOK_TOKEN: optionalNonEmptyString,
     INTERNAL_BOOTSTRAP_SECRET: optionalNonEmptyString,
     INTERNAL_R2_HEALTH_SECRET: optionalNonEmptyString,
@@ -201,6 +202,7 @@ export const serverEnv = serverEnvSchema.parse({
   ALLOW_PLAYWRIGHT_BOOTSTRAP: process.env.ALLOW_PLAYWRIGHT_BOOTSTRAP,
   ASAAS_API_BASE_URL: process.env.ASAAS_API_BASE_URL,
   ASAAS_API_KEY: process.env.ASAAS_API_KEY,
+  ASAAS_CARD_CHECKOUT_ENABLED: process.env.ASAAS_CARD_CHECKOUT_ENABLED,
   ASAAS_WEBHOOK_TOKEN: process.env.ASAAS_WEBHOOK_TOKEN,
   INTERNAL_BOOTSTRAP_SECRET: process.env.INTERNAL_BOOTSTRAP_SECRET,
   INTERNAL_R2_HEALTH_SECRET: process.env.INTERNAL_R2_HEALTH_SECRET,

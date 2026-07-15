@@ -11,6 +11,8 @@ describe("Inngest route", () => {
 
     expect(routeSource).toContain('from "inngest/next"');
     expect(routeSource).toContain("productImageInngestFunctions");
+    expect(routeSource).toContain("billingLifecycleInngestFunctions");
+    expect(routeSource).toContain("goalResolutionInngestFunctions");
     expect(routeSource).toContain("serve({");
     expect(routeSource).toContain("inngestFunctions");
     expect(routeSource).toContain("maxDuration = 300");

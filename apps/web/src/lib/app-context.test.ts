@@ -8,56 +8,23 @@ import {
 } from "@/lib/app-context";
 
 describe("organization roles", () => {
-  it("orders roles by operational authority", () => {
-    expect(
-      (["owner", "admin", "operator"] as OrganizationRole[]).map(getRoleRank)
-    ).toEqual([4, 3, 2]);
+  it("models a tenant as its single owner", () => {
+    expect(["owner"] as OrganizationRole[]).toEqual(["owner"]);
+    expect(getRoleRank("owner")).toBe(1);
   });
 
-  it("allows operators to manage sales but not catalog settings", () => {
-    expect(canRolePerform("operator", "sales:write")).toBe(true);
-    expect(canRolePerform("operator", "settings:write")).toBe(false);
-  });
+  it("permits every current operational action to the individual owner", () => {
+    const permissions: AppPermission[] = [
+      "analytics:read",
+      "catalog:read",
+      "organization:delete",
+      "products:write",
+      "sales:write",
+      "settings:write",
+    ];
 
-  it("keeps organization deletion restricted to the owner", () => {
-    expect(canRolePerform("admin", "organization:delete")).toBe(false);
-    expect(canRolePerform("owner", "organization:delete")).toBe(true);
-  });
-
-  it("keeps the full role/action matrix explicit", () => {
-    const matrix: Record<OrganizationRole, Record<AppPermission, boolean>> = {
-      admin: {
-        "analytics:read": true,
-        "catalog:read": true,
-        "organization:delete": false,
-        "products:write": true,
-        "sales:write": true,
-        "settings:write": true,
-      },
-      operator: {
-        "analytics:read": true,
-        "catalog:read": true,
-        "organization:delete": false,
-        "products:write": true,
-        "sales:write": true,
-        "settings:write": false,
-      },
-      owner: {
-        "analytics:read": true,
-        "catalog:read": true,
-        "organization:delete": true,
-        "products:write": true,
-        "sales:write": true,
-        "settings:write": true,
-      },
-    };
-
-    for (const [role, permissions] of Object.entries(matrix)) {
-      for (const [permission, expected] of Object.entries(permissions)) {
-        expect(
-          canRolePerform(role as OrganizationRole, permission as AppPermission)
-        ).toBe(expected);
-      }
+    for (const permission of permissions) {
+      expect(canRolePerform("owner", permission)).toBe(true);
     }
   });
 

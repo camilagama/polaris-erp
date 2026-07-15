@@ -5,11 +5,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import type { AccountBillingSummary } from "@/features/account/server";
+import {
+  type AccountBillingSummary,
+  canRequestSubscriptionCancellation,
+} from "@/features/account/server";
 import type { OrganizationRole } from "@/lib/app-context";
 import { formatCurrency, formatDateTime } from "@/lib/formatters";
+import { SubscriptionCancellationControl } from "./subscription-cancellation-control";
+import { SubscriptionUpgradeControl } from "./subscription-upgrade-control";
 
 interface AccountSettingsPanelProps {
+  asaasCardCheckoutEnabled: boolean;
   billing: AccountBillingSummary;
   supportEmail?: string | null;
   user: {
@@ -20,8 +26,6 @@ interface AccountSettingsPanelProps {
 }
 
 const roleLabel: Record<OrganizationRole, string> = {
-  admin: "Administrador",
-  operator: "Operador",
   owner: "Responsavel",
 };
 
@@ -64,6 +68,7 @@ const getPlanLine = (billing: AccountBillingSummary): string => {
 };
 
 export function AccountSettingsPanel({
+  asaasCardCheckoutEnabled,
   billing,
   supportEmail,
   user,
@@ -71,6 +76,8 @@ export function AccountSettingsPanel({
   const renewalText = billing.currentPeriodEnd
     ? formatDateTime(billing.currentPeriodEnd)
     : "Data nao definida";
+  const canRequestUpgrade =
+    billing.planId === "polaris-free" && asaasCardCheckoutEnabled;
 
   return (
     <Card className="lg:col-span-2">
@@ -103,7 +110,7 @@ export function AccountSettingsPanel({
           <div className="flex flex-col gap-1">
             <h2 className="font-medium text-sm">Assinatura</h2>
             <p className="text-muted-foreground text-xs">
-              Cobranca obrigatoria desde o primeiro dia.
+              O plano Free continua disponivel com limites reduzidos.
             </p>
           </div>
           <div className="mt-4 flex flex-col gap-1">
@@ -118,6 +125,16 @@ export function AccountSettingsPanel({
                 ? `Cancela no fim do periodo: ${renewalText}`
                 : `Proximo ciclo: ${renewalText}`}
             </p>
+            {canRequestSubscriptionCancellation(billing) ? (
+              <div className="mt-2">
+                <SubscriptionCancellationControl />
+              </div>
+            ) : null}
+            {canRequestUpgrade ? (
+              <div className="mt-2">
+                <SubscriptionUpgradeControl />
+              </div>
+            ) : null}
           </div>
         </section>
 

@@ -95,7 +95,13 @@ export const accounts = pgTable(
     password: text("password"),
     ...timestamps,
   },
-  (table) => [index("accounts_user_id_idx").on(table.userId)]
+  (table) => [
+    index("accounts_user_id_idx").on(table.userId),
+    uniqueIndex("accounts_provider_account_unique_idx").on(
+      table.providerId,
+      table.accountId
+    ),
+  ]
 );
 
 export const verifications = pgTable("verifications", {
@@ -116,20 +122,19 @@ export const member = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    role: text("role").default("operator").notNull(),
+    role: text("role").default("owner").notNull(),
     createdAt: timestamp("created_at", tz).defaultNow().notNull(),
   },
   (table) => [
     index("member_organization_id_idx").on(table.organizationId),
     index("member_user_id_idx").on(table.userId),
+    uniqueIndex("member_user_unique_idx").on(table.userId),
+    uniqueIndex("member_organization_unique_idx").on(table.organizationId),
     uniqueIndex("member_organization_user_unique_idx").on(
       table.organizationId,
       table.userId
     ),
-    check(
-      "member_role_known_check",
-      sql`${table.role} in ('owner', 'admin', 'operator')`
-    ),
+    check("member_role_known_check", sql`${table.role} = 'owner'`),
   ]
 );
 
@@ -204,6 +209,16 @@ export const platformAdminRoleEnum = pgEnum("platform_admin_role", [
   "support",
 ]);
 
+export const platformSupportCaseKindEnum = pgEnum(
+  "platform_support_case_kind",
+  ["support", "data_subject_request"]
+);
+
+export const platformSupportCaseStatusEnum = pgEnum(
+  "platform_support_case_status",
+  ["open", "in_review", "closed"]
+);
+
 export const platformAdmins = pgTable(
   "platform_admins",
   {
@@ -250,6 +265,10 @@ export const platformAdminGrants = pgTable(
       table.platformAdminId,
       table.revokedAt,
       table.expiresAt
+    ),
+    check(
+      "platform_admin_grants_expiry_required_check",
+      sql`${table.expiresAt} is not null`
     ),
   ]
 );
@@ -318,6 +337,45 @@ export const platformSupportNotes = pgTable(
   ]
 );
 
+export const platformSupportCases = pgTable(
+  "platform_support_cases",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    createdByPlatformAdminId: uuid("created_by_platform_admin_id").references(
+      () => platformAdmins.id,
+      { onDelete: "set null" }
+    ),
+    organizationId: text("organization_id").references(() => organization.id, {
+      onDelete: "set null",
+    }),
+    customerUserId: text("customer_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    kind: platformSupportCaseKindEnum("kind").notNull(),
+    status: platformSupportCaseStatusEnum("status").default("open").notNull(),
+    reason: text("reason").notNull(),
+    requesterVerifiedAt: timestamp("requester_verified_at", tz),
+    resolution: text("resolution"),
+    closedAt: timestamp("closed_at", tz),
+    ...timestamps,
+  },
+  (table) => [
+    index("platform_support_cases_created_by_platform_admin_id_idx").on(
+      table.createdByPlatformAdminId
+    ),
+    index("platform_support_cases_organization_id_idx").on(
+      table.organizationId
+    ),
+    index("platform_support_cases_customer_user_id_idx").on(
+      table.customerUserId
+    ),
+    index("platform_support_cases_status_created_at_idx").on(
+      table.status,
+      table.createdAt
+    ),
+  ]
+);
+
 // ---------------------------------------------------------------------------
 // Durable event foundation for webhooks, outbox and provider integrations
 // ---------------------------------------------------------------------------
@@ -362,6 +420,44 @@ export const eventOutbox = pgTable(
       sql`${table.status} in ('pending', 'processing', 'processed', 'observed', 'failed', 'dead_letter')`
     ),
     check("event_outbox_attempts_non_negative", sql`${table.attempts} >= 0`),
+  ]
+);
+
+export const commandExecutions = pgTable(
+  "command_executions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    commandType: text("command_type").notNull(),
+    idempotencyKey: text("idempotency_key").notNull(),
+    correlationId: text("correlation_id").notNull(),
+    status: text("status").default("processing").notNull(),
+    result: jsonb("result")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    errorCode: text("error_code"),
+    completedAt: timestamp("completed_at", tz),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("command_executions_organization_type_key_unique_idx").on(
+      table.organizationId,
+      table.commandType,
+      table.idempotencyKey
+    ),
+    index("command_executions_organization_status_idx").on(
+      table.organizationId,
+      table.status,
+      table.createdAt
+    ),
+    index("command_executions_correlation_id_idx").on(table.correlationId),
+    check(
+      "command_executions_status_known_check",
+      sql`${table.status} in ('processing', 'succeeded', 'failed')`
+    ),
   ]
 );
 
@@ -425,6 +521,10 @@ export const emailMessages = pgTable(
     idempotencyKey: text("idempotency_key").notNull(),
     status: text("status").default("pending").notNull(),
     lastError: text("last_error"),
+    attemptCount: integer("attempt_count").default(0).notNull(),
+    nextAttemptAt: timestamp("next_attempt_at", tz),
+    acceptedAt: timestamp("accepted_at", tz),
+    providerOccurredAt: timestamp("provider_occurred_at", tz),
     sentAt: timestamp("sent_at", tz),
     ...timestamps,
   },
@@ -439,9 +539,14 @@ export const emailMessages = pgTable(
       table.status,
       table.createdAt
     ),
+    index("email_messages_retry_idx").on(table.status, table.nextAttemptAt),
     check(
       "email_messages_status_known_check",
-      sql`${table.status} in ('pending', 'sent', 'failed', 'delivered', 'bounced', 'complained', 'suppressed')`
+      sql`${table.status} in ('pending', 'accepted', 'failed', 'delivered', 'bounced', 'suppressed')`
+    ),
+    check(
+      "email_messages_attempt_count_non_negative",
+      sql`${table.attemptCount} >= 0`
     ),
   ]
 );
@@ -546,6 +651,8 @@ export const billingSubscriptions = pgTable(
     status: text("status").default("incomplete").notNull(),
     currentPeriodStart: timestamp("current_period_start", tz),
     currentPeriodEnd: timestamp("current_period_end", tz),
+    gracePeriodEndsAt: timestamp("grace_period_ends_at", tz),
+    lastProviderEventAt: timestamp("last_provider_event_at", tz),
     cancelAtPeriodEnd: boolean("cancel_at_period_end").default(false).notNull(),
     canceledAt: timestamp("canceled_at", tz),
     ...timestamps,
@@ -553,12 +660,64 @@ export const billingSubscriptions = pgTable(
   (table) => [
     index("billing_subscriptions_organization_id_idx").on(table.organizationId),
     index("billing_subscriptions_status_idx").on(table.status),
+    index("billing_subscriptions_grace_period_ends_at_idx").on(
+      table.gracePeriodEndsAt
+    ),
     uniqueIndex("billing_subscriptions_active_organization_unique_idx")
       .on(table.organizationId)
       .where(sql`status in ('trialing', 'active', 'past_due', 'paused')`),
     check(
       "billing_subscriptions_status_known_check",
       sql`${table.status} in ('trialing', 'active', 'past_due', 'paused', 'canceled', 'incomplete')`
+    ),
+  ]
+);
+
+export const billingCheckoutSessions = pgTable(
+  "billing_checkout_sessions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    billingSubscriptionId: uuid("billing_subscription_id")
+      .notNull()
+      .references(() => billingSubscriptions.id, { onDelete: "cascade" }),
+    provider: text("provider").notNull(),
+    externalReference: text("external_reference").notNull(),
+    idempotencyKey: text("idempotency_key").notNull(),
+    status: text("status").default("pending").notNull(),
+    providerCheckoutId: text("provider_checkout_id"),
+    checkoutUrl: text("checkout_url"),
+    expiresAt: timestamp("expires_at", tz),
+    providerRequestStartedAt: timestamp("provider_request_started_at", tz),
+    lastError: text("last_error"),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("billing_checkout_sessions_external_reference_unique_idx").on(
+      table.externalReference
+    ),
+    uniqueIndex(
+      "billing_checkout_sessions_organization_idempotency_unique_idx"
+    ).on(table.organizationId, table.idempotencyKey),
+    uniqueIndex("billing_checkout_sessions_provider_checkout_unique_idx")
+      .on(table.provider, table.providerCheckoutId)
+      .where(sql`${table.providerCheckoutId} is not null`),
+    uniqueIndex("billing_checkout_sessions_one_open_per_organization_idx")
+      .on(table.organizationId)
+      .where(sql`${table.status} in ('pending', 'ready', 'review')`),
+    index("billing_checkout_sessions_subscription_id_idx").on(
+      table.billingSubscriptionId
+    ),
+    index("billing_checkout_sessions_status_idx").on(table.status),
+    check(
+      "billing_checkout_sessions_provider_known_check",
+      sql`${table.provider} in ('asaas')`
+    ),
+    check(
+      "billing_checkout_sessions_status_known_check",
+      sql`${table.status} in ('pending', 'ready', 'review', 'expired')`
     ),
   ]
 );
@@ -710,6 +869,12 @@ export const productWriteOffReasonEnum = pgEnum("product_write_off_reason", [
   "adjustment",
   "operational",
 ]);
+export const stockMovementTypeEnum = pgEnum("stock_movement_type", [
+  "entry",
+  "write_off",
+  "sale",
+  "sale_reversal",
+]);
 
 export const goalMetricEnum = pgEnum("goal_metric", [
   "revenue",
@@ -836,12 +1001,29 @@ export const products = pgTable(
     imageBlurDataUrl: text("image_blur_data_url"),
     imageUploadedAt: timestamp("image_uploaded_at", tz),
     archivedAt: timestamp("archived_at", tz),
+    softDeletedAt: timestamp("soft_deleted_at", tz),
+    softDeletedByUserId: text("soft_deleted_by_user_id").references(
+      () => users.id
+    ),
+    softDeleteReason: text("soft_delete_reason"),
     ...timestamps,
   },
   (table) => [
     check("products_cost_price_non_negative", sql`${table.costPrice} >= 0`),
     check("products_price_non_negative", sql`${table.price} >= 0`),
     check("products_stock_non_negative", sql`${table.stock} >= 0`),
+    check(
+      "products_soft_delete_metadata_consistent",
+      sql`(
+        ${table.softDeletedAt} is null
+        and ${table.softDeletedByUserId} is null
+        and ${table.softDeleteReason} is null
+      ) or (
+        ${table.softDeletedAt} is not null
+        and ${table.softDeletedByUserId} is not null
+        and length(btrim(${table.softDeleteReason})) > 0
+      )`
+    ),
     check(
       "products_image_version_positive",
       sql`${table.imageVersion} is null or ${table.imageVersion} > 0`
@@ -869,22 +1051,71 @@ export const products = pgTable(
     }),
     index("products_active_list_idx")
       .on(table.organizationId, table.name, table.createdAt, table.id)
-      .where(sql`archived_at IS NULL`),
+      .where(sql`archived_at IS NULL AND soft_deleted_at IS NULL`),
     index("products_archived_list_idx")
       .on(table.organizationId, table.name, table.createdAt, table.id)
-      .where(sql`archived_at IS NOT NULL`),
+      .where(sql`archived_at IS NOT NULL AND soft_deleted_at IS NULL`),
     index("products_active_name_idx")
       .on(table.name)
-      .where(sql`archived_at IS NULL`),
+      .where(sql`archived_at IS NULL AND soft_deleted_at IS NULL`),
     index("products_active_name_trgm_idx")
       .using("gin", table.name.op("gin_trgm_ops"))
-      .where(sql`archived_at IS NULL`),
+      .where(sql`archived_at IS NULL AND soft_deleted_at IS NULL`),
     index("products_archived_name_trgm_idx")
       .using("gin", table.name.op("gin_trgm_ops"))
-      .where(sql`archived_at IS NOT NULL`),
+      .where(sql`archived_at IS NOT NULL AND soft_deleted_at IS NULL`),
     index("products_archived_idx")
       .on(table.archivedAt)
-      .where(sql`archived_at IS NOT NULL`),
+      .where(sql`archived_at IS NOT NULL AND soft_deleted_at IS NULL`),
+    index("products_soft_deleted_idx")
+      .on(table.organizationId, table.softDeletedAt)
+      .where(sql`soft_deleted_at IS NOT NULL`),
+  ]
+);
+
+export const productImages = pgTable(
+  "product_images",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    productId: uuid("product_id")
+      .notNull()
+      .references(() => products.id),
+    position: integer("position").notNull(),
+    version: integer("version").notNull(),
+    blurDataUrl: text("blur_data_url").notNull(),
+    width: integer("width").notNull(),
+    height: integer("height").notNull(),
+    uploadedAt: timestamp("uploaded_at", tz).defaultNow().notNull(),
+    removedAt: timestamp("removed_at", tz),
+  },
+  (table) => [
+    check("product_images_position_non_negative", sql`${table.position} >= 0`),
+    check("product_images_version_positive", sql`${table.version} > 0`),
+    check("product_images_width_positive", sql`${table.width} > 0`),
+    check("product_images_height_positive", sql`${table.height} > 0`),
+    uniqueIndex("product_images_organization_id_unique_idx").on(
+      table.organizationId,
+      table.id
+    ),
+    uniqueIndex("product_images_active_position_unique_idx")
+      .on(table.organizationId, table.productId, table.position)
+      .where(sql`removed_at IS NULL`),
+    uniqueIndex("product_images_product_version_unique_idx").on(
+      table.organizationId,
+      table.productId,
+      table.version
+    ),
+    index("product_images_active_list_idx")
+      .on(table.organizationId, table.productId, table.position)
+      .where(sql`removed_at IS NULL`),
+    foreignKey({
+      columns: [table.organizationId, table.productId],
+      foreignColumns: [products.organizationId, products.id],
+      name: "product_images_organization_product_fk",
+    }),
   ]
 );
 
@@ -897,7 +1128,7 @@ export const productPriceChanges = pgTable(
       .references(() => organization.id, { onDelete: "cascade" }),
     productId: uuid("product_id")
       .notNull()
-      .references(() => products.id, { onDelete: "cascade" }),
+      .references(() => products.id),
     previousPrice: decimal("previous_price", { precision: 12, scale: 2 })
       .notNull()
       .default("0"),
@@ -948,7 +1179,7 @@ export const productStockEntries = pgTable(
       .references(() => organization.id, { onDelete: "cascade" }),
     productId: uuid("product_id")
       .notNull()
-      .references(() => products.id, { onDelete: "cascade" }),
+      .references(() => products.id),
     stockedOn: date("stocked_on").default(sql`CURRENT_DATE`).notNull(),
     quantity: integer("quantity").notNull(),
     unitCost: decimal("unit_cost", { precision: 12, scale: 2 })
@@ -987,7 +1218,7 @@ export const productStockWriteOffs = pgTable(
       .references(() => organization.id, { onDelete: "cascade" }),
     productId: uuid("product_id")
       .notNull()
-      .references(() => products.id, { onDelete: "cascade" }),
+      .references(() => products.id),
     happenedOn: date("happened_on").default(sql`CURRENT_DATE`).notNull(),
     quantity: integer("quantity").notNull(),
     reason: productWriteOffReasonEnum("reason").notNull(),
@@ -1015,6 +1246,54 @@ export const productStockWriteOffs = pgTable(
       columns: [table.organizationId, table.productId],
       foreignColumns: [products.organizationId, products.id],
       name: "product_stock_write_offs_organization_product_fk",
+    }),
+  ]
+);
+
+export const stockMovements = pgTable(
+  "stock_movements",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    productId: uuid("product_id")
+      .notNull()
+      .references(() => products.id),
+    type: stockMovementTypeEnum("type").notNull(),
+    sourceId: uuid("source_id").notNull(),
+    occurredOn: date("occurred_on").notNull(),
+    delta: integer("delta").notNull(),
+    unitCostSnapshot: decimal("unit_cost_snapshot", {
+      precision: 12,
+      scale: 2,
+    })
+      .notNull()
+      .default("0"),
+    createdAt: timestamp("created_at", tz).defaultNow().notNull(),
+  },
+  (table) => [
+    check("stock_movements_delta_non_zero", sql`${table.delta} <> 0`),
+    check(
+      "stock_movements_unit_cost_non_negative",
+      sql`${table.unitCostSnapshot} >= 0`
+    ),
+    uniqueIndex("stock_movements_source_unique_idx").on(
+      table.organizationId,
+      table.productId,
+      table.type,
+      table.sourceId
+    ),
+    index("stock_movements_product_occurred_on_idx").on(
+      table.organizationId,
+      table.productId,
+      table.occurredOn,
+      table.createdAt
+    ),
+    foreignKey({
+      columns: [table.organizationId, table.productId],
+      foreignColumns: [products.organizationId, products.id],
+      name: "stock_movements_organization_product_fk",
     }),
   ]
 );
@@ -1062,6 +1341,7 @@ export const sales = pgTable(
       .notNull()
       .default("0"),
     cancelledAt: timestamp("cancelled_at", tz),
+    cancelledOn: date("cancelled_on"),
     idempotencyKey: text("idempotency_key"),
     ...timestamps,
   },
@@ -1159,7 +1439,7 @@ export const saleItems = pgTable(
       .references(() => sales.id, { onDelete: "cascade" }),
     productId: uuid("product_id")
       .notNull()
-      .references(() => products.id, { onDelete: "cascade" }),
+      .references(() => products.id),
     productNameSnapshot: text("product_name_snapshot").notNull(),
     quantity: integer("quantity").notNull(),
     unitPriceSnapshot: decimal("unit_price_snapshot", {
@@ -1246,8 +1526,8 @@ export const goals = pgTable(
       sql`${table.periodEnd} >= ${table.periodStart}`
     ),
     index("goals_status_idx").on(table.organizationId, table.status),
-    uniqueIndex("goals_one_active_per_organization_idx")
-      .on(table.organizationId)
+    uniqueIndex("goals_one_active_per_organization_metric_idx")
+      .on(table.organizationId, table.metric)
       .where(sql`status = 'active'`),
     index("goals_period_end_idx").on(table.organizationId, table.periodEnd),
     index("goals_created_by_user_id_idx").on(

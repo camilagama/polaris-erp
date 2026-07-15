@@ -30,9 +30,10 @@ vi.mock("next/cache", () => ({
   revalidatePath: revalidatePathMock,
 }));
 
-const createFormData = (eventId = "event-1") => {
+const createFormData = (eventId = "event-1", reason = "provider recovered") => {
   const formData = new FormData();
   formData.set("eventId", eventId);
+  formData.set("reason", reason);
   return formData;
 };
 
@@ -53,6 +54,22 @@ describe("retryOutboxEventAction", () => {
     expect(retryPlatformOutboxEventMock).not.toHaveBeenCalled();
   });
 
+  it("requires a reason before retrying an outbox event", async () => {
+    requirePlatformAdminMock.mockResolvedValueOnce({
+      platformAdminId: "platform-admin-1",
+      userId: "user-1",
+    });
+
+    const { retryOutboxEventAction } = await import("./actions");
+
+    await expect(
+      retryOutboxEventAction(createFormData("event-1", " "))
+    ).rejects.toThrow("Missing required field: reason");
+
+    expect(assertAdminRateLimitMock).not.toHaveBeenCalled();
+    expect(retryPlatformOutboxEventMock).not.toHaveBeenCalled();
+  });
+
   it("rate limits and delegates retry through the platform module", async () => {
     requirePlatformAdminMock.mockResolvedValueOnce({
       platformAdminId: "platform-admin-1",
@@ -68,7 +85,7 @@ describe("retryOutboxEventAction", () => {
     ).resolves.toBeUndefined();
 
     expect(requirePlatformAdminMock).toHaveBeenCalledWith({
-      minimumRole: "operator",
+      minimumRole: "owner",
     });
     expect(assertAdminRateLimitMock).toHaveBeenCalledWith({
       action: "outbox.retry",
@@ -79,6 +96,7 @@ describe("retryOutboxEventAction", () => {
       actorPlatformAdminId: "platform-admin-1",
       actorUserId: "user-1",
       eventId: "event-1",
+      reason: "provider recovered",
     });
     expect(revalidatePathMock).toHaveBeenCalledWith("/events");
   });

@@ -1,14 +1,3 @@
-import {
-  endOfMonth,
-  endOfYear,
-  format,
-  parseISO,
-  startOfMonth,
-  startOfYear,
-  subDays,
-  subMonths,
-} from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { formatDateInputValue, isoDateSchema } from "@/lib/domain/date";
 
 export interface DateRangePresetOption<TValue extends string = string> {
@@ -61,6 +50,30 @@ const dashboardDatePresetValues = createDatePresetValues(
 const isValidIsoDate = (value: string | undefined) =>
   value ? isoDateSchema.safeParse(value).success : false;
 
+const formatDateRangeLabel = (value: string): string => {
+  const [year, month, day] = value.split("-");
+
+  return `${day}/${month}/${year}`;
+};
+
+const shiftBusinessDate = (value: string, days: number): string => {
+  const [year, month, day] = value.split("-").map(Number);
+  const shifted = new Date(Date.UTC(year, month - 1, day + days));
+
+  return shifted.toISOString().slice(0, 10);
+};
+
+const getMonthBounds = (value: string): { from: string; to: string } => {
+  const [year, month] = value.split("-").map(Number);
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const monthString = String(month).padStart(2, "0");
+
+  return {
+    from: `${year}-${monthString}-01`,
+    to: `${year}-${monthString}-${String(lastDay).padStart(2, "0")}`,
+  };
+};
+
 export const normalizeDateRange = <TPreset extends string>({
   from,
   preset,
@@ -75,11 +88,7 @@ export const normalizeDateRange = <TPreset extends string>({
 
   return {
     from: normalizedFrom,
-    label: `${format(parseISO(`${normalizedFrom}T00:00:00`), "dd/MM/yyyy", {
-      locale: ptBR,
-    })} ate ${format(parseISO(`${normalizedTo}T00:00:00`), "dd/MM/yyyy", {
-      locale: ptBR,
-    })}`,
+    label: `${formatDateRangeLabel(normalizedFrom)} ate ${formatDateRangeLabel(normalizedTo)}`,
     preset,
     to: normalizedTo,
   };
@@ -91,9 +100,9 @@ export const getDashboardPresetDateRange = <
   preset: TPreset,
   referenceDate = new Date()
 ): ResolvedDateRange<TPreset> => {
-  if (preset === "all-time") {
-    const today = formatDateInputValue(referenceDate);
+  const today = formatDateInputValue(referenceDate);
 
+  if (preset === "all-time") {
     return normalizeDateRange({
       from: today,
       preset,
@@ -102,35 +111,42 @@ export const getDashboardPresetDateRange = <
   }
 
   if (preset === "current-month") {
+    const bounds = getMonthBounds(today);
+
     return normalizeDateRange({
-      from: formatDateInputValue(startOfMonth(referenceDate)),
+      from: bounds.from,
       preset,
-      to: formatDateInputValue(endOfMonth(referenceDate)),
+      to: bounds.to,
     });
   }
 
   if (preset === "previous-month") {
-    const previousMonthDate = subMonths(referenceDate, 1);
+    const [year, month] = today.split("-").map(Number);
+    const previousMonth = month === 1 ? 12 : month - 1;
+    const previousYear = month === 1 ? year - 1 : year;
+    const bounds = getMonthBounds(
+      `${previousYear}-${String(previousMonth).padStart(2, "0")}-01`
+    );
 
     return normalizeDateRange({
-      from: formatDateInputValue(startOfMonth(previousMonthDate)),
+      from: bounds.from,
       preset,
-      to: formatDateInputValue(endOfMonth(previousMonthDate)),
+      to: bounds.to,
     });
   }
 
   if (preset === "last-30-days") {
     return normalizeDateRange({
-      from: formatDateInputValue(subDays(referenceDate, 29)),
+      from: shiftBusinessDate(today, -29),
       preset,
-      to: formatDateInputValue(referenceDate),
+      to: today,
     });
   }
 
   return normalizeDateRange({
-    from: formatDateInputValue(startOfYear(referenceDate)),
+    from: `${today.slice(0, 4)}-01-01`,
     preset,
-    to: formatDateInputValue(endOfYear(referenceDate)),
+    to: `${today.slice(0, 4)}-12-31`,
   });
 };
 

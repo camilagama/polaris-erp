@@ -4,8 +4,6 @@ import { auditEvents } from "@polaris/db/schema";
 import { withTenantContext } from "@polaris/db/tenant-context";
 import type { AppContext } from "@/lib/app-session";
 
-const AUDIT_LOG_TIMEOUT_MS = 500;
-
 interface RecordAuditEventInput {
   context: AppContext;
   metadata?: Record<string, unknown>;
@@ -31,7 +29,7 @@ export const recordActorAuditEvent = async ({
   subjectType,
   type,
 }: RecordActorAuditEventInput) => {
-  const write = withTenantContext(organizationId, (tx) =>
+  await withTenantContext(organizationId, (tx) =>
     tx.insert(auditEvents).values({
       actorUserId,
       metadata,
@@ -40,14 +38,7 @@ export const recordActorAuditEvent = async ({
       subjectType,
       type,
     })
-  ).catch(() => undefined);
-
-  await Promise.race([
-    write,
-    new Promise<undefined>((resolve) => {
-      setTimeout(resolve, AUDIT_LOG_TIMEOUT_MS);
-    }),
-  ]);
+  );
 };
 
 export const recordAuditEvent = async ({

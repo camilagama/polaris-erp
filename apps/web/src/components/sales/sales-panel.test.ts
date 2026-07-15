@@ -112,7 +112,7 @@ describe("SalesPanel", () => {
             to: "2026-03-31",
           },
           initialCursor: "cursor-1",
-          role: "operator",
+          role: "owner",
           sales: [sale],
           selectedRange: {
             from: "2026-03-01",
@@ -165,7 +165,7 @@ describe("SalesPanel", () => {
             to: "2026-03-31",
           },
           initialCursor: null,
-          role: "operator",
+          role: "owner",
           sales: [sale],
           selectedRange: {
             from: "2026-03-01",

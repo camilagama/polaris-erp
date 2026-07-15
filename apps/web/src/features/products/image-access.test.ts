@@ -6,6 +6,10 @@ vi.mock("@/features/products/image-storage", () => ({
   getExpectedProductImageKeys: vi.fn(() => []),
 }));
 
+vi.mock("@/lib/entitlements", () => ({
+  getOrganizationPlanEntitlements: vi.fn(),
+}));
+
 vi.mock("@polaris/db", () => ({
   db: {
     execute: vi.fn(),
@@ -21,6 +25,7 @@ vi.mock("@polaris/db", () => ({
         findFirst: vi.fn(),
       },
     },
+    select: vi.fn(),
     transaction: vi.fn(),
   },
 }));
@@ -29,6 +34,7 @@ type MockFn = ReturnType<typeof vi.fn>;
 
 const resolveMocks = async () => {
   const dbModule = await import("@polaris/db");
+  const entitlementsModule = await import("@/lib/entitlements");
 
   return {
     mockDb: dbModule.db as unknown as {
@@ -39,9 +45,12 @@ const resolveMocks = async () => {
         organization: { findFirst: MockFn };
         products: { findFirst: MockFn };
       };
+      select: MockFn;
       transaction: MockFn;
       update: MockFn;
     },
+    mockGetOrganizationPlanEntitlements:
+      entitlementsModule.getOrganizationPlanEntitlements as MockFn,
   };
 };
 
@@ -49,7 +58,8 @@ describe("product image access", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
 
-    const { mockDb } = await resolveMocks();
+    const { mockDb, mockGetOrganizationPlanEntitlements } =
+      await resolveMocks();
 
     mockDb.transaction.mockImplementation(async (callback) => callback(mockDb));
     mockDb.insert.mockReturnValue({
@@ -58,6 +68,9 @@ describe("product image access", () => {
     mockDb.query.products.findFirst.mockResolvedValue({ id: "product-1" });
     mockDb.query.member.findFirst.mockResolvedValue({ id: "member-1" });
     mockDb.query.organization.findFirst.mockResolvedValue({ id: "org-1" });
+    mockGetOrganizationPlanEntitlements.mockResolvedValue({
+      maxImagesPerProduct: 1,
+    });
   });
 
   it("checks authenticated image reads inside tenant database context", async () => {
@@ -187,5 +200,76 @@ describe("product image access", () => {
         type: "product_image.removed",
       })
     );
+  });
+
+  it("rejects a new image when the tenant plan capacity is already occupied", async () => {
+    const { appendProductImageMetadata } = await import(
+      "@/features/products/image-access"
+    );
+    const { mockDb } = await resolveMocks();
+
+    mockDb.execute.mockResolvedValue({ rows: [{ id: "product-1" }] });
+    mockDb.select.mockReturnValue({
+      from: () => ({
+        where: () => ({
+          orderBy: () => Promise.resolve([{ position: 0 }]),
+        }),
+      }),
+    });
+
+    await expect(
+      appendProductImageMetadata({
+        actorUserId: "user-1",
+        blurDataUrl: "data:image/webp;base64,new",
+        height: 900,
+        organizationId: "org_dg_imports",
+        productId: "product-1",
+        version: 2,
+        width: 1200,
+      })
+    ).rejects.toThrow("Limite de 1 imagens por produto atingido.");
+
+    expect(mockDb.insert).not.toHaveBeenCalled();
+  });
+
+  it("applies the paid capacity of five images", async () => {
+    const { appendProductImageMetadata } = await import(
+      "@/features/products/image-access"
+    );
+    const { mockDb, mockGetOrganizationPlanEntitlements } =
+      await resolveMocks();
+
+    mockGetOrganizationPlanEntitlements.mockResolvedValue({
+      maxImagesPerProduct: 5,
+    });
+    mockDb.execute.mockResolvedValue({ rows: [{ id: "product-1" }] });
+    mockDb.select.mockReturnValue({
+      from: () => ({
+        where: () => ({
+          orderBy: () =>
+            Promise.resolve([
+              { position: 0 },
+              { position: 1 },
+              { position: 2 },
+              { position: 3 },
+              { position: 4 },
+            ]),
+        }),
+      }),
+    });
+
+    await expect(
+      appendProductImageMetadata({
+        actorUserId: "user-1",
+        blurDataUrl: "data:image/webp;base64,new",
+        height: 900,
+        organizationId: "org_dg_imports",
+        productId: "product-1",
+        version: 6,
+        width: 1200,
+      })
+    ).rejects.toThrow("Limite de 5 imagens por produto atingido.");
+
+    expect(mockDb.insert).not.toHaveBeenCalled();
   });
 });

@@ -5,6 +5,7 @@ import {
   listCategoriesWithUsage,
 } from "@/features/catalog/server";
 import { buildProductInventorySummary } from "@/features/products/history";
+import { getActiveProductImageGallery } from "@/features/products/image-access";
 import {
   getProductByIdQuery,
   getProductPriceChangesByProductIdQuery,
@@ -31,6 +32,7 @@ export const loadProductDetailPage = async (productId: string) => {
     settings,
     salesMetrics,
     priceChanges,
+    images,
   ] = await Promise.all([
     getProductStockEntriesByProductIdQuery(context.organizationId, productId),
     getProductStockWriteOffsByProductIdQuery(context.organizationId, productId),
@@ -39,6 +41,7 @@ export const loadProductDetailPage = async (productId: string) => {
     getCatalogSettings(context.organizationId),
     getProductSalesHistoryMetrics(context.organizationId, productId),
     getProductPriceChangesByProductIdQuery(context.organizationId, productId),
+    getActiveProductImageGallery(context.organizationId, productId),
   ]);
 
   const averageCost = Number(product.costPrice);
@@ -88,6 +91,11 @@ export const loadProductDetailPage = async (productId: string) => {
       unitCost: Number(writeOff.unitCostSnapshot),
     })),
   });
+  const imagesForDisplay = [...images];
+
+  if (imagesForDisplay.length === 0 && product.image) {
+    imagesForDisplay.push(product.image);
+  }
 
   return {
     averageCost,
@@ -96,6 +104,7 @@ export const loadProductDetailPage = async (productId: string) => {
       name: category.name,
     })),
     inventorySummary,
+    images: imagesForDisplay,
     priceChanges,
     product,
     salesMetrics,

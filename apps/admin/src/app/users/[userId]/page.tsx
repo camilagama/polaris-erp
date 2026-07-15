@@ -1,10 +1,15 @@
 import { getPlatformUserDetailForAdmin } from "@polaris/platform/directory";
+import { listPlatformSupportCasesForAdmin } from "@polaris/platform/support-cases";
 import { listPlatformSupportNotesForAdmin } from "@polaris/platform/support-notes";
 import Link from "next/link";
 import { forbidden, notFound } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { requirePlatformAdmin } from "@/lib/platform-admin-auth";
+import {
+  createSupportCaseAction,
+  updateSupportCaseAction,
+} from "../../support-cases/actions";
 import { createSupportNoteAction } from "../../support-notes/actions";
 
 interface UserDetailPageProps {
@@ -41,8 +46,11 @@ const UserDetailContent = async ({ params }: UserDetailPageProps) => {
   const platformAdmin = await guardPlatformAdmin();
 
   const { userId } = await params;
-  const [user, supportNotes] = await Promise.all([
+  const [user, supportCases, supportNotes] = await Promise.all([
     getPlatformUserDetailForAdmin(platformAdmin.platformAdminId, userId),
+    listPlatformSupportCasesForAdmin(platformAdmin.platformAdminId, {
+      customerUserId: userId,
+    }),
     listPlatformSupportNotesForAdmin(platformAdmin.platformAdminId, {
       customerUserId: userId,
     }),
@@ -143,6 +151,91 @@ const UserDetailContent = async ({ params }: UserDetailPageProps) => {
             </Link>
           ))
         )}
+      </section>
+
+      <section className="rounded-lg border border-border bg-card p-5">
+        <h2 className="font-semibold text-lg tracking-normal">
+          Solicitação de titular
+        </h2>
+        <p className="mt-2 text-muted-foreground text-sm">
+          Registra a solicitação para verificação manual. Este fluxo não exibe
+          dados pessoais adicionais nem executa exclusão definitiva.
+        </p>
+        <form action={createSupportCaseAction} className="mt-4 grid gap-3">
+          <input name="customerUserId" type="hidden" value={user.id} />
+          <input name="kind" type="hidden" value="data_subject_request" />
+          <label className="grid gap-2 text-foreground text-sm">
+            Motivo obrigatório, sem dados pessoais desnecessários
+            <textarea
+              className="min-h-24 rounded-md border border-border bg-background px-3 py-2 text-foreground text-sm outline-none placeholder:text-muted-foreground focus:border-ring"
+              name="reason"
+              placeholder="Descreva a solicitação e o próximo passo de verificação manual"
+              required
+            />
+          </label>
+          <button
+            className="w-fit rounded-md border border-border px-4 py-2 font-medium text-foreground text-sm hover:border-muted-foreground"
+            type="submit"
+          >
+            Registrar solicitação manual
+          </button>
+        </form>
+        <div className="mt-4 grid gap-2">
+          {supportCases.length === 0 ? (
+            <p className="text-muted-foreground text-sm">
+              Nenhuma solicitação manual registrada.
+            </p>
+          ) : (
+            supportCases.map((supportCase) => (
+              <article
+                className="rounded-md border border-border px-3 py-3 text-sm"
+                key={supportCase.id}
+              >
+                <p>
+                  {supportCase.kind === "data_subject_request"
+                    ? "Solicitação de titular"
+                    : "Caso de suporte"}
+                  : {supportCase.status}
+                </p>
+                {supportCase.status === "closed" ? null : (
+                  <form
+                    action={updateSupportCaseAction}
+                    className="mt-3 grid gap-2"
+                  >
+                    <input name="caseId" type="hidden" value={supportCase.id} />
+                    <input
+                      name="customerUserId"
+                      type="hidden"
+                      value={user.id}
+                    />
+                    <input name="status" type="hidden" value="closed" />
+                    {supportCase.kind === "data_subject_request" ? (
+                      <label className="flex items-start gap-2 text-muted-foreground text-xs">
+                        <input
+                          name="requesterVerified"
+                          required
+                          type="checkbox"
+                        />
+                        Confirmo que a identidade do titular foi verificada
+                        manualmente.
+                      </label>
+                    ) : null}
+                    <textarea
+                      aria-label={`Resolução do caso ${supportCase.id}`}
+                      className="min-h-16 rounded-md border border-border bg-background px-2 py-1 text-xs"
+                      name="resolution"
+                      placeholder="Resolução manual, sem PII desnecessária"
+                      required
+                    />
+                    <button className="w-fit underline" type="submit">
+                      Encerrar caso
+                    </button>
+                  </form>
+                )}
+              </article>
+            ))
+          )}
+        </div>
       </section>
 
       <section className="rounded-lg border border-border bg-card p-5">

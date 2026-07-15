@@ -1,19 +1,20 @@
 $ vitest run
 
- RUN  v4.1.10 C:/Users/Junior/Documents/0 - Dev/Hub Imports/packages/platform
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.10 [39m[90mC:/Users/Junior/Documents/0 - Dev/Hub Imports/packages/platform[39m
 
- ✓ src/internal/query-results.test.ts (3 tests) 7ms
- ✓ src/platform-dashboard.test.ts (1 test) 11ms
- ✓ src/platform-billing.test.ts (6 tests) 18ms
- ✓ src/platform-events.test.ts (4 tests) 26ms
- ✓ src/platform-directory.test.ts (5 tests) 13ms
- ✓ src/platform-support-notes.test.ts (5 tests) 20ms
- ✓ src/platform-audit-events.test.ts (1 test) 7ms
- ✓ src/platform-admin.test.ts (2 tests) 15ms
- ✓ src/platform-organization-mutations.test.ts (5 tests) 15ms
+ [32m✓[39m src/internal/query-results.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m src/platform-dashboard.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m src/platform-billing.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32m✓[39m src/platform-support-notes.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32m✓[39m src/platform-admin.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32m✓[39m src/platform-audit-events.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m src/platform-support-cases.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32m✓[39m src/platform-directory.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m src/platform-events.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m src/platform-organization-mutations.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 20[2mms[22m[39m
 
- Test Files  9 passed (9)
-      Tests  32 passed (32)
-   Start at  02:38:03
-   Duration  1.68s (transform 1.73s, setup 0ms, import 9.19s, tests 131ms, environment 2ms)
+[2m Test Files [22m [1m[32m10 passed[39m[22m[90m (10)[39m
+[2m      Tests [22m [1m[32m47 passed[39m[22m[90m (47)[39m
+[2m   Start at [22m 09:25:44
+[2m   Duration [22m 1.84s[2m (transform 2.35s, setup 0ms, import 12.10s, tests 143ms, environment 2ms)[22m
 

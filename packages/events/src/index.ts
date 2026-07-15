@@ -7,6 +7,9 @@ import type { IndexColumn } from "drizzle-orm/pg-core";
 
 const MAX_OUTBOX_ATTEMPTS = 5;
 const OUTBOX_LEASE_SECONDS = 300;
+const OUTBOX_RETRY_BASE_SECONDS = 60;
+const OUTBOX_RETRY_MAX_SECONDS = 21_600;
+const OUTBOX_RETRY_JITTER_SECONDS = 30;
 
 const SENSITIVE_HEADER_NAMES = new Set([
   "authorization",
@@ -38,6 +41,37 @@ export interface EnqueueOutboxEventInput {
   topic: string;
 }
 
+export type CommandExecutionReservation =
+  | {
+      commandId: string;
+      kind: "new";
+    }
+  | {
+      commandId: string;
+      errorCode: string | null;
+      kind: "replay";
+      result: Record<string, unknown>;
+      status: "failed" | "succeeded";
+    }
+  | {
+      commandId: string;
+      kind: "processing";
+    };
+
+export interface ReserveCommandExecutionInput {
+  commandType: string;
+  correlationId: string;
+  idempotencyKey: string;
+  organizationId: string;
+}
+
+export interface CompleteCommandExecutionInput {
+  commandId: string;
+  errorCode?: string | null;
+  result: Record<string, unknown>;
+  status: "failed" | "succeeded";
+}
+
 type WebhookEventInsert = typeof webhookEvents.$inferInsert;
 
 interface InsertableDb {
@@ -57,6 +91,83 @@ interface InsertableDb {
 export interface QueryableDb {
   execute: (query: SQL) => Promise<unknown>;
 }
+
+export const reserveCommandExecution = async (
+  db: QueryableDb,
+  input: ReserveCommandExecutionInput
+): Promise<CommandExecutionReservation> => {
+  const rows = toRows(
+    await db.execute(sql`
+      with inserted as (
+        insert into command_executions (
+          organization_id,
+          command_type,
+          idempotency_key,
+          correlation_id
+        )
+        values (
+          ${input.organizationId},
+          ${input.commandType},
+          ${input.idempotencyKey},
+          ${input.correlationId}
+        )
+        on conflict (organization_id, command_type, idempotency_key) do nothing
+        returning id
+      )
+      select id, 'new' as reservation_kind, null::text as status, '{}'::jsonb as result, null::text as error_code
+      from inserted
+      union all
+      select id, 'existing' as reservation_kind, status, result, error_code
+      from command_executions
+      where organization_id = ${input.organizationId}
+        and command_type = ${input.commandType}
+        and idempotency_key = ${input.idempotencyKey}
+        and not exists (select 1 from inserted)
+    `)
+  );
+  const row = rows.at(0);
+
+  if (!row || typeof row.id !== "string") {
+    throw new Error("Command reservation did not return a command id.");
+  }
+
+  if (row.reservation_kind === "new") {
+    return { commandId: row.id, kind: "new" };
+  }
+
+  if (row.status === "succeeded" || row.status === "failed") {
+    return {
+      commandId: row.id,
+      errorCode: toStringValue(row.error_code) || null,
+      kind: "replay",
+      result: toRecordValue(row.result),
+      status: row.status,
+    };
+  }
+
+  return { commandId: row.id, kind: "processing" };
+};
+
+export const completeCommandExecution = async (
+  db: QueryableDb,
+  input: CompleteCommandExecutionInput
+): Promise<boolean> => {
+  const rows = toRows(
+    await db.execute(sql`
+      update command_executions
+      set status = ${input.status},
+          result = ${JSON.stringify(input.result)}::jsonb,
+          error_code = ${input.errorCode ?? null},
+          completed_at = now(),
+          updated_at = now()
+      where id = ${input.commandId}
+        and status = 'processing'
+      returning id
+    `)
+  );
+
+  return rows.length === 1;
+};
 
 export interface ClaimedOutboxEvent {
   attempts: number;
@@ -79,6 +190,8 @@ export interface EventOutboxListItem {
   topic: string;
 }
 
+const OUTBOX_DISPATCH_BATCH_SIZE = 25;
+
 export interface WebhookEventListItem {
   correlationId: string;
   id: string;
@@ -96,6 +209,22 @@ export const buildWebhookEventKey = (
 
 export const hashRawBody = (rawBody: string): string =>
   createHash("sha256").update(rawBody).digest("hex");
+
+export const getOutboxRetryDelaySeconds = (
+  attempts: number,
+  eventId: string
+): number => {
+  const boundedAttempts = Math.max(1, Math.floor(attempts));
+  const exponentialDelay = Math.min(
+    OUTBOX_RETRY_BASE_SECONDS * 2 ** (boundedAttempts - 1),
+    OUTBOX_RETRY_MAX_SECONDS
+  );
+  const jitterSource = createHash("sha256").update(eventId).digest();
+  const jitter =
+    jitterSource.readUInt16BE(0) % (OUTBOX_RETRY_JITTER_SECONDS + 1);
+
+  return exponentialDelay + jitter;
+};
 
 export const redactWebhookHeaders = (
   headers: Record<string, string>
@@ -310,6 +439,26 @@ export const claimOutboxEvent = async (
   };
 };
 
+export const listClaimableOutboxEventIds = async (
+  db: QueryableDb,
+  limit = OUTBOX_DISPATCH_BATCH_SIZE
+): Promise<string[]> => {
+  const rows = toRows(
+    await db.execute(sql`
+      select id
+      from event_outbox
+      where status = 'pending'
+        and available_at <= now()
+      order by created_at asc
+      limit ${Math.min(Math.max(limit, 1), OUTBOX_DISPATCH_BATCH_SIZE)}
+    `)
+  );
+
+  return rows
+    .map((row) => toStringValue(row.id))
+    .filter((eventId) => eventId.length > 0);
+};
+
 export const markOutboxEventProcessed = async (
   db: QueryableDb,
   eventId: string,
@@ -362,18 +511,21 @@ export const markOutboxEventObserved = async (
 };
 
 export const markOutboxEventFailed = async ({
+  attempts,
   claimToken,
   db,
   error,
   eventId,
   terminal = false,
 }: {
+  attempts: number;
   claimToken: string;
   db: QueryableDb;
   error: string;
   eventId: string;
   terminal?: boolean;
 }): Promise<boolean> => {
+  const retryDelaySeconds = getOutboxRetryDelaySeconds(attempts, eventId);
   const rows = toRows(
     await db.execute(sql`
     update event_outbox
@@ -384,7 +536,7 @@ export const markOutboxEventFailed = async ({
         end,
         available_at = case
           when ${terminal} or attempts >= ${MAX_OUTBOX_ATTEMPTS} then available_at
-          else now()
+          else now() + (${retryDelaySeconds} * interval '1 second')
         end,
         claim_token = null,
         claimed_at = null,
@@ -432,6 +584,7 @@ export const retryOutboxEvent = async (
     await db.execute(sql`
     update event_outbox
     set status = 'pending',
+        attempts = 0,
         available_at = now(),
         claim_token = null,
         claimed_at = null,

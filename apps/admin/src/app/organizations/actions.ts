@@ -1,6 +1,9 @@
 "use server";
 
-import { updatePlatformOrganizationStatus } from "@polaris/platform/organization-mutations";
+import {
+  closePlatformOrganization,
+  updatePlatformOrganizationStatus,
+} from "@polaris/platform/organization-mutations";
 import { assertAdminRateLimit } from "@polaris/platform-auth/admin-rate-limit";
 import { revalidatePath } from "next/cache";
 import { requirePlatformAdmin } from "@/lib/platform-admin-auth";
@@ -49,6 +52,33 @@ export async function changeOrganizationStatusAction(formData: FormData) {
     organizationId,
     reason,
     status,
+  });
+
+  revalidatePath("/organizations");
+  revalidatePath(`/organizations/${organizationId}`);
+}
+
+export async function closeOrganizationAction(formData: FormData) {
+  const context = await requirePlatformAdmin({ minimumRole: "owner" });
+  const organizationId = getRequiredFormValue(formData, "organizationId");
+  const reason = getRequiredFormValue(formData, "reason");
+  const confirm = formData.get("confirm");
+
+  if (confirm !== "on") {
+    throw new Error("Organization closure requires confirmation.");
+  }
+
+  await assertAdminRateLimit({
+    action: "organization.close",
+    actorUserId: context.userId,
+    targetId: organizationId,
+  });
+
+  await closePlatformOrganization({
+    actorPlatformAdminId: context.platformAdminId,
+    actorUserId: context.userId,
+    organizationId,
+    reason,
   });
 
   revalidatePath("/organizations");

@@ -48,11 +48,15 @@ export async function createSaleAction(data: {
   return result.saleId;
 }
 
-export async function cancelSaleAction(id: string) {
+export async function cancelSaleAction(
+  id: string,
+  idempotencyKey = crypto.randomUUID()
+) {
   const context = await requireAppContext("sales:write");
 
   await cancelSale({
     actorUserId: context.userId,
+    idempotencyKey,
     organizationId: context.organizationId,
     saleId: id,
   });

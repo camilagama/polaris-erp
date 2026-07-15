@@ -376,8 +376,12 @@ behaviorDescribe("PostgreSQL behavior harness", () => {
         [platformAdminId, "behavior-platform-user"]
       );
       await client.query(
-        "INSERT INTO platform_admin_grants (platform_admin_id, role, reason) VALUES ($1, 'owner', $2)",
-        [platformAdminId, "PostgreSQL behavior test"]
+        "INSERT INTO platform_admin_grants (platform_admin_id, role, reason, expires_at) VALUES ($1, 'owner', $2, $3)",
+        [
+          platformAdminId,
+          "PostgreSQL behavior test",
+          new Date(Date.now() + 60_000),
+        ]
       );
 
       const visibleOrganizations = await executeAsRuntime(client, async () => {
@@ -433,7 +437,9 @@ behaviorDescribe("PostgreSQL behavior harness", () => {
             admin.id,
             "PostgreSQL behavior negative grant test",
             admin.grant === "revoked" ? new Date() : null,
-            admin.grant === "expired" ? new Date(Date.now() - 60_000) : null,
+            admin.grant === "expired"
+              ? new Date(Date.now() - 60_000)
+              : new Date(Date.now() + 60_000),
           ]
         );
 

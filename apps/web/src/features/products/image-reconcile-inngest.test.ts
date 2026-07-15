@@ -36,7 +36,9 @@ describe("product image reconcile Inngest function", () => {
     expect(productImageInngestFunctions).toHaveLength(1);
     expect(createFunctionMock).toHaveBeenCalledWith(
       expect.objectContaining({
+        concurrency: { limit: 2 },
         id: "reconcile-product-images",
+        retries: 3,
         triggers: { cron: "0 4 * * *" },
       }),
       expect.any(Function)

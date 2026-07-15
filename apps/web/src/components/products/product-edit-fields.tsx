@@ -83,7 +83,7 @@ export function ProductEditFields({
         <ProductImageInput
           currentImage={image}
           currentImageAlt={`Imagem de ${productName}`}
-          description="Opcional. Aceita JPG, PNG ou WebP com ate 10 MB."
+          description="Opcional. Aceita JPG, PNG ou WebP com ate 5 MB."
           disabled={imageDisabled}
           id="product-edit-image"
           isMarkedForRemoval={imageMarkedForRemoval}

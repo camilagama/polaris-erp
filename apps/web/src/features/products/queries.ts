@@ -218,7 +218,12 @@ const listProductsForInventoryMovementFilter = (
         name: products.name,
       })
       .from(products)
-      .where(eq(products.organizationId, organizationId))
+      .where(
+        and(
+          eq(products.organizationId, organizationId),
+          isNull(products.softDeletedAt)
+        )
+      )
       .orderBy(asc(products.name), asc(products.createdAt), asc(products.id))
       .limit(250)
   );
@@ -244,6 +249,7 @@ export async function getProductsQuery({
       : null;
   const filters: SQL[] = [
     eq(products.organizationId, organizationId),
+    isNull(products.softDeletedAt),
     status === "archived"
       ? isNotNull(products.archivedAt)
       : isNull(products.archivedAt),
@@ -668,7 +674,11 @@ export async function getProductByIdQuery(
         )
       )
       .where(
-        and(eq(products.id, id), eq(products.organizationId, organizationId))
+        and(
+          eq(products.id, id),
+          eq(products.organizationId, organizationId),
+          isNull(products.softDeletedAt)
+        )
       )
       .then((rows) => rows[0])
   );

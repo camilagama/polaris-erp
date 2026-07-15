@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { recordAuthLoginFailureAuditEvent } from "@/lib/auth-audit";
 import { serverEnv } from "@/lib/env";
 import { checkRateLimit, getRateLimitKeyFromRequest } from "@/lib/rate-limit";
 
@@ -79,6 +80,8 @@ export const GET = async (request: NextRequest) => {
   });
 
   if (!rateLimit.ok) {
+    await recordAuthLoginFailureAuditEvent({ reason: "rate_limited" });
+
     return Response.json(
       { error: "Muitas tentativas de login. Tente novamente em instantes." },
       {
@@ -120,6 +123,8 @@ export const GET = async (request: NextRequest) => {
     : null;
 
   if (!(authResponse?.ok && body?.url)) {
+    await recordAuthLoginFailureAuditEvent({ reason: "initiation_failed" });
+
     const errorUrl = new URL("/sign-in", request.url);
     errorUrl.searchParams.set(
       "error",

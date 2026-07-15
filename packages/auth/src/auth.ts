@@ -77,6 +77,7 @@ const createOrganizationAuthPlugin = () =>
     membershipLimit: 1,
     organizationHooks: {
       beforeAddMember: rejectWorkspaceUserManagement,
+      beforeAcceptInvitation: rejectWorkspaceUserManagement,
       beforeCreateInvitation: rejectWorkspaceUserManagement,
       beforeRemoveMember: rejectWorkspaceUserManagement,
       beforeUpdateOrganization: rejectWorkspaceOrganizationUpdate,
@@ -108,15 +109,27 @@ interface AuthSessionHookPayload {
   userId?: string;
 }
 
+interface AuthSessionDeleteHookPayload {
+  id?: string;
+  userId?: string;
+}
+
 type RecordAuthLoginAuditEvent = (input: {
   context: AuthHookContext | null;
   session: AuthSessionHookPayload;
 }) => Promise<void> | void;
 
+type RecordAuthSessionAuditEvent = (input: {
+  context: AuthHookContext | null;
+  session: AuthSessionDeleteHookPayload;
+}) => Promise<void> | void;
+
 export const createPolarisAuth = ({
   recordAuthLoginAuditEvent,
+  recordAuthSessionAuditEvent,
 }: {
   recordAuthLoginAuditEvent?: RecordAuthLoginAuditEvent;
+  recordAuthSessionAuditEvent?: RecordAuthSessionAuditEvent;
 } = {}) => {
   const authPlugins = [
     dash({
@@ -166,16 +179,28 @@ export const createPolarisAuth = ({
             await recordAuthLoginAuditEvent?.({ context, session });
           },
         },
+        delete: {
+          after: async (
+            session: AuthSessionDeleteHookPayload,
+            context: AuthHookContext | null
+          ) => {
+            await recordAuthSessionAuditEvent?.({ context, session });
+          },
+        },
       },
     } as never,
     emailAndPassword: {
       enabled: false,
     },
+    session: {
+      expiresIn: 60 * 60 * 24 * 7,
+      updateAge: 60 * 60 * 24,
+    },
     account: {
       accountLinking: {
         enabled: true,
         allowDifferentEmails: false,
-        disableImplicitLinking: false,
+        disableImplicitLinking: true,
         trustedProviders: ["google"],
       },
     },

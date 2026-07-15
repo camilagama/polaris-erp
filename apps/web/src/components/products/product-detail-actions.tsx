@@ -11,9 +11,10 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { ProductDatePicker } from "@/components/products/product-date-picker";
 import { ProductEditFields } from "@/components/products/product-edit-fields";
+import { ProductImageInput } from "@/components/products/product-image-input";
 import { uploadProductImageToStaging } from "@/components/products/product-image-upload";
 import { Button } from "@/components/ui/button";
 import {
@@ -43,15 +44,21 @@ import {
 import { toast } from "@/components/ui/sonner";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  addProductImageAction,
   addProductStockAction,
   archiveProductAction,
+  removeAdditionalProductImageAction,
   removeProductImageAction,
   replaceProductImageAction,
+  softDeleteProductAction,
   unarchiveProductAction,
   updateProductAction,
   writeOffProductStockAction,
 } from "@/features/products/actions";
-import type { ProductListItem } from "@/features/products/contracts";
+import type {
+  ProductImageAsset,
+  ProductListItem,
+} from "@/features/products/contracts";
 import { formatDateInputValue } from "@/lib/domain/date";
 
 interface ProductCategoryOption {
@@ -85,10 +92,12 @@ const getWriteOffQuantityError = ({
 
 export function ProductDetailActions({
   categories,
+  images = [],
   product,
   settings,
 }: {
   categories: ProductCategoryOption[];
+  images?: ProductImageAsset[];
   product: ProductListItem;
   settings: {
     idealMarkupPercent: number;
@@ -97,12 +106,16 @@ export function ProductDetailActions({
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const stockAdditionKeyRef = useRef<string | null>(null);
+  const stockWriteOffKeyRef = useRef<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [stocking, setStocking] = useState(false);
   const [writingOff, setWritingOff] = useState(false);
   const [writeOffReviewing, setWriteOffReviewing] = useState(false);
   const [writeOffTouched, setWriteOffTouched] = useState(false);
   const [archiveConfirmationOpen, setArchiveConfirmationOpen] = useState(false);
+  const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
+  const [softDeleteReason, setSoftDeleteReason] = useState("");
   const [editName, setEditName] = useState(product.name);
   const [editCategoryId, setEditCategoryId] = useState(product.categoryId);
   const [editDescription, setEditDescription] = useState(
@@ -110,6 +123,9 @@ export function ProductDetailActions({
   );
   const [editPrice, setEditPrice] = useState(product.price);
   const [editImageFile, setEditImageFile] = useState<File | null>(null);
+  const [additionalImageFile, setAdditionalImageFile] = useState<File | null>(
+    null
+  );
   const [editImageMarkedForRemoval, setEditImageMarkedForRemoval] =
     useState(false);
   const [stockQuantity, setStockQuantity] = useState("1");
@@ -138,6 +154,7 @@ export function ProductDetailActions({
     setEditDescription(product.description ?? "");
     setEditPrice(product.price);
     setEditImageFile(null);
+    setAdditionalImageFile(null);
     setEditImageMarkedForRemoval(false);
     setStockUnitCost(product.costPrice ?? "0");
   }, [
@@ -165,9 +182,16 @@ export function ProductDetailActions({
           await removeProductImageAction(product.id);
         }
 
+        if (additionalImageFile) {
+          const stagedImage =
+            await uploadProductImageToStaging(additionalImageFile);
+          await addProductImageAction(product.id, stagedImage);
+        }
+
         toast.success("Produto atualizado.");
         setEditing(false);
         setEditImageFile(null);
+        setAdditionalImageFile(null);
         setEditImageMarkedForRemoval(false);
         router.refresh();
       } catch (error) {
@@ -183,13 +207,19 @@ export function ProductDetailActions({
   const handleAddStock = () => {
     startTransition(async () => {
       try {
-        await addProductStockAction(product.id, {
-          quantity: Number(stockQuantity),
-          stockedOn,
-          unitCost: stockUnitCost,
-        });
+        stockAdditionKeyRef.current ??= crypto.randomUUID();
+        await addProductStockAction(
+          product.id,
+          {
+            quantity: Number(stockQuantity),
+            stockedOn,
+            unitCost: stockUnitCost,
+          },
+          stockAdditionKeyRef.current
+        );
         toast.success("Estoque adicionado.");
         setStocking(false);
+        stockAdditionKeyRef.current = null;
         router.refresh();
       } catch (error) {
         toast.error(
@@ -210,15 +240,21 @@ export function ProductDetailActions({
 
     startTransition(async () => {
       try {
-        await writeOffProductStockAction(product.id, {
-          happenedOn: writeOffDate,
-          notes: writeOffNotes || undefined,
-          quantity: writeOffQuantityNumber,
-          reason: writeOffReason,
-        });
+        stockWriteOffKeyRef.current ??= crypto.randomUUID();
+        await writeOffProductStockAction(
+          product.id,
+          {
+            happenedOn: writeOffDate,
+            notes: writeOffNotes || undefined,
+            quantity: writeOffQuantityNumber,
+            reason: writeOffReason,
+          },
+          stockWriteOffKeyRef.current
+        );
         toast.success("Baixa registrada.");
         setWritingOff(false);
         setWriteOffReviewing(false);
+        stockWriteOffKeyRef.current = null;
         router.refresh();
       } catch (error) {
         toast.error(
@@ -258,6 +294,42 @@ export function ProductDetailActions({
           error instanceof Error
             ? error.message
             : "Nao foi possivel alterar o status do produto."
+        );
+      }
+    });
+  };
+
+  const handleSoftDeleteProduct = () => {
+    startTransition(async () => {
+      try {
+        await softDeleteProductAction(product.id, {
+          confirmed: true,
+          reason: softDeleteReason,
+        });
+        toast.success("Produto removido definitivamente.");
+        setDeleteConfirmationOpen(false);
+        router.push("/produtos");
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Nao foi possivel remover o produto definitivamente."
+        );
+      }
+    });
+  };
+
+  const handleRemoveAdditionalImage = (version: number) => {
+    startTransition(async () => {
+      try {
+        await removeAdditionalProductImageAction(product.id, version);
+        toast.success("Imagem adicional removida.");
+        router.refresh();
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Nao foi possivel remover a imagem adicional."
         );
       }
     });
@@ -319,6 +391,15 @@ export function ProductDetailActions({
             <HugeiconsIcon icon={Archive01Icon} strokeWidth={2} />
             {product.archivedAt ? "Ativar" : "Arquivar"}
           </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onSelect={() => {
+              setSoftDeleteReason("");
+              setDeleteConfirmationOpen(true);
+            }}
+          >
+            Remover definitivamente
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -328,6 +409,7 @@ export function ProductDetailActions({
 
           if (!open) {
             setEditImageFile(null);
+            setAdditionalImageFile(null);
             setEditImageMarkedForRemoval(false);
             setEditPrice(product.price);
           }
@@ -360,6 +442,39 @@ export function ProductDetailActions({
             productName={editName || product.name}
             settings={settings}
           />
+          {product.image ? (
+            <ProductImageInput
+              description="Disponível no plano pago, até cinco imagens no total."
+              disabled={pending}
+              id="product-additional-image"
+              label="Imagem adicional"
+              onFileChange={setAdditionalImageFile}
+            />
+          ) : null}
+          {images.length > 1 ? (
+            <div className="flex flex-col gap-2">
+              <p className="font-medium text-sm">Imagens adicionais</p>
+              {images.slice(1).map((image) => (
+                <div
+                  className="flex items-center justify-between gap-3"
+                  key={image.version}
+                >
+                  <span className="text-muted-foreground text-sm">
+                    Imagem {image.version}
+                  </span>
+                  <Button
+                    disabled={pending}
+                    onClick={() => handleRemoveAdditionalImage(image.version)}
+                    size="sm"
+                    type="button"
+                    variant="destructive"
+                  >
+                    Remover
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : null}
           <DialogFooter>
             <Button
               disabled={
@@ -599,6 +714,50 @@ export function ProductDetailActions({
               variant="destructive"
             >
               Confirmar arquivamento
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        onOpenChange={setDeleteConfirmationOpen}
+        open={deleteConfirmationOpen}
+      >
+        <DialogContent className="sm:max-w-105">
+          <DialogHeader>
+            <DialogTitle>Remover produto definitivamente?</DialogTitle>
+            <DialogDescription>
+              Esta acao nao pode ser desfeita. O produto precisa estar com
+              estoque zero. O historico operacional sera preservado.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-2">
+            <Label htmlFor="soft-delete-reason">Motivo</Label>
+            <Textarea
+              disabled={pending}
+              id="soft-delete-reason"
+              maxLength={240}
+              onChange={(event) => setSoftDeleteReason(event.target.value)}
+              placeholder="Explique por que este produto sera removido"
+              value={softDeleteReason}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              disabled={pending}
+              onClick={() => setDeleteConfirmationOpen(false)}
+              type="button"
+              variant="outline"
+            >
+              Cancelar
+            </Button>
+            <Button
+              disabled={pending || softDeleteReason.trim().length < 3}
+              onClick={handleSoftDeleteProduct}
+              type="button"
+              variant="destructive"
+            >
+              Confirmar remocao definitiva
             </Button>
           </DialogFooter>
         </DialogContent>

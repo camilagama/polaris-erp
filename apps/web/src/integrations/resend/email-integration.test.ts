@@ -1,7 +1,24 @@
 import { createResendEmailSender, renderWelcomeEmail } from "@polaris/emails";
 import { describe, expect, it, vi } from "vitest";
+import {
+  redactResendWebhookPayload,
+  resolveResendEmailStatus,
+} from "@/integrations/resend/email-service";
+
+vi.mock("server-only", () => ({}));
 
 describe("@polaris/emails", () => {
+  it.each([
+    ["email.delivered", "delivered"],
+    ["email.bounced", "bounced"],
+    ["email.complained", "suppressed"],
+    ["email.suppressed", "suppressed"],
+    ["email.sent", "accepted"],
+    ["email.unknown", null],
+  ] as const)("maps %s to the internal delivery state %s", (eventType, status) => {
+    expect(resolveResendEmailStatus(eventType)).toBe(status);
+  });
+
   it("renders a versioned welcome template", () => {
     const email = renderWelcomeEmail({
       appUrl: "https://app.example.com",
@@ -14,6 +31,25 @@ describe("@polaris/emails", () => {
       template: "welcome",
       templateVersion: "2026-07-09",
       text: expect.stringContaining("https://app.example.com"),
+    });
+  });
+
+  it("keeps only delivery metadata from provider webhooks", () => {
+    expect(
+      redactResendWebhookPayload({
+        created_at: "2026-07-14T15:00:00.000Z",
+        data: {
+          email_id: "email_123",
+          from: "sender@example.com",
+          subject: "Sensitive subject",
+          to: ["recipient@example.com"],
+        },
+        type: "email.delivered",
+      })
+    ).toEqual({
+      data: { emailId: "email_123" },
+      occurredAt: "2026-07-14T15:00:00.000Z",
+      type: "email.delivered",
     });
   });
 

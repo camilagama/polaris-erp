@@ -23,7 +23,11 @@ const importRoute = async ({
   vi.doMock("@/lib/env", () => ({
     serverEnv: { ASAAS_WEBHOOK_TOKEN: token },
   }));
-  vi.doMock("@polaris/db", () => ({ db: { execute } }));
+  const db = {
+    execute,
+    transaction: vi.fn(async (callback) => callback(db)),
+  };
+  vi.doMock("@polaris/db", () => ({ db }));
   vi.doMock("@polaris/events", () => ({
     captureWebhookEvent,
     enqueueOutboxEvent,
@@ -111,7 +115,7 @@ describe("POST /api/webhooks/asaas", () => {
     expect(captureWebhookEvent).not.toHaveBeenCalled();
   });
 
-  it("captures, enqueues, and reconciles valid events idempotently", async () => {
+  it("captures valid events idempotently and leaves reconciliation to the outbox worker", async () => {
     const {
       captureWebhookEvent,
       enqueueOutboxEvent,
@@ -138,14 +142,12 @@ describe("POST /api/webhooks/asaas", () => {
       expect.anything(),
       expect.objectContaining({
         idempotencyKey: "asaas-webhook:evt_123",
-        status: "observed",
+        payload: expect.objectContaining({ providerEventId: "evt_123" }),
+        status: "pending",
         topic: "asaas.webhook",
       })
     );
-    expect(reconcileAsaasBillingEvent).toHaveBeenCalledTimes(2);
-    expect(withInternalJobContext).toHaveBeenCalledWith(
-      "billing_webhook_reconcile",
-      expect.any(Function)
-    );
+    expect(reconcileAsaasBillingEvent).not.toHaveBeenCalled();
+    expect(withInternalJobContext).not.toHaveBeenCalled();
   });
 });

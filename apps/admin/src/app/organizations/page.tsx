@@ -78,17 +78,17 @@ const OrganizationsContent = async ({
             Tenants
           </h1>
           <p className="mt-1 text-muted-foreground text-sm">
-            Busca global read-only por ID técnico ou email de membro.
+            Busca read-only por ID técnico, com dados pessoais redigidos.
           </p>
         </div>
         <search className="w-full max-w-md">
           <form className="flex gap-2">
             <Input
-              aria-label="Buscar organizações"
+              aria-label="Buscar organizacoes"
               className="flex-1"
               defaultValue={query}
               name="q"
-              placeholder="ID ou email"
+              placeholder="ID técnico"
             />
             <Button type="submit" variant="secondary">
               Buscar
@@ -97,8 +97,8 @@ const OrganizationsContent = async ({
         </search>
       </div>
 
-      <div className="rounded-xl border border-border bg-card">
-        <Table>
+      <div className="overflow-x-auto rounded-xl border border-border bg-card">
+        <Table className="min-w-[720px]">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead className="pl-4">Tenant</TableHead>

@@ -1,12 +1,7 @@
 import "server-only";
 
-import { withInternalJobContext } from "@polaris/db/tenant-context";
 import { NextResponse } from "next/server";
-import { reconcileAsaasBillingEvent } from "@/integrations/asaas/billing-reconciliation";
-import {
-  markWebhookIntakeProcessed,
-  observeWebhookIntake,
-} from "@/integrations/webhooks/intake";
+import { observeWebhookIntake } from "@/integrations/webhooks/intake";
 import {
   isWebhookRequestTooLarge,
   readWebhookRequestBody,
@@ -34,6 +29,15 @@ const getString = (
   const value = record[key];
 
   return typeof value === "string" && value.length > 0 ? value : null;
+};
+
+const getNumber = (
+  record: Record<string, unknown>,
+  key: string
+): number | null => {
+  const value = record[key];
+
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
 };
 
 const parseJsonPayload = (rawBody: string): Record<string, unknown> | null => {
@@ -66,21 +70,26 @@ export const redactAsaasWebhookPayload = (
   const creditCard = getRecord(payment, "creditCard");
 
   return {
+    dateCreated: getString(payload, "dateCreated"),
     event: getString(payload, "event"),
     id: getString(payload, "id"),
     payment: {
       billingType: getString(payment, "billingType"),
+      externalReference: getString(payment, "externalReference"),
       id: getString(payment, "id"),
       status: getString(payment, "status"),
       subscription: getString(payment, "subscription"),
+      value: getNumber(payment, "value"),
     },
     paymentMethod: {
       brand: getString(creditCard, "creditCardBrand"),
       last4: getString(creditCard, "creditCardNumber")?.slice(-4) ?? null,
     },
     subscription: {
+      externalReference: getString(subscription, "externalReference"),
       id: getString(subscription, "id"),
       status: getString(subscription, "status"),
+      value: getNumber(subscription, "value"),
     },
   };
 };
@@ -141,7 +150,7 @@ export const handleAsaasWebhook = async (request: Request) => {
     eventId,
     eventType: getString(payload, "event") ?? "unknown",
     headers: Object.fromEntries(request.headers.entries()),
-    payload: redactedPayload,
+    payload: { ...redactedPayload, providerEventId: eventId },
     provider: "asaas",
     rawBody,
   });
@@ -150,17 +159,5 @@ export const handleAsaasWebhook = async (request: Request) => {
     return NextResponse.json({ duplicate: true });
   }
 
-  const reconciliationStatus = await withInternalJobContext(
-    "billing_webhook_reconcile",
-    (tx) => reconcileAsaasBillingEvent(tx, payload, eventId)
-  );
-
-  await markWebhookIntakeProcessed({
-    eventId,
-    lastError: reconciliationStatus === "processed" ? null : "manual_review",
-    provider: "asaas",
-    status: reconciliationStatus === "processed" ? "processed" : "failed",
-  });
-
-  return NextResponse.json({});
+  return NextResponse.json({ accepted: true });
 };

@@ -10,19 +10,8 @@ vi.mock("@/lib/env", () => ({
   },
 }));
 
-vi.mock("@polaris/db", () => ({
-  db: {
-    execute: vi.fn(),
-    select: vi.fn(),
-    transaction: vi.fn(),
-  },
-}));
-
-vi.mock("@/features/products/image-storage", () => ({
-  deleteManyProductImageKeys: vi.fn(),
-  getExpectedProductImageKeys: vi.fn(),
-  listAllStoredProductImageObjects: vi.fn(),
-  listAllStoredProductImageKeys: vi.fn(),
+vi.mock("@/features/products/image-reconcile", () => ({
+  reconcileProductImages: vi.fn(),
 }));
 
 vi.mock("@/lib/rate-limit", () => ({
@@ -35,15 +24,8 @@ vi.mock("@/lib/rate-limit", () => ({
 }));
 
 describe("/api/internal/product-images/reconcile", () => {
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.clearAllMocks();
-
-    const dbModule = await import("@polaris/db");
-    const mockDb = dbModule.db as unknown as {
-      transaction: ReturnType<typeof vi.fn>;
-    };
-
-    mockDb.transaction.mockImplementation(async (callback) => callback(mockDb));
   });
 
   it("returns 401 when the bearer token is invalid (POST)", async () => {
@@ -81,8 +63,8 @@ describe("/api/internal/product-images/reconcile", () => {
   });
 
   it("only accepts the reconcile secret", async () => {
-    const imageStorageModule = await import(
-      "@/features/products/image-storage"
+    const { reconcileProductImages } = await import(
+      "@/features/products/image-reconcile"
     );
     const { POST } = await import(
       "@/app/api/internal/product-images/reconcile/route"
@@ -98,9 +80,7 @@ describe("/api/internal/product-images/reconcile", () => {
     );
 
     expect(response.status).toBe(401);
-    expect(
-      imageStorageModule.listAllStoredProductImageObjects
-    ).not.toHaveBeenCalled();
+    expect(reconcileProductImages).not.toHaveBeenCalled();
   });
 
   it("returns 429 with Retry-After when the reconcile rate limit is exceeded", async () => {
@@ -131,40 +111,21 @@ describe("/api/internal/product-images/reconcile", () => {
     expect(response.headers.get("retry-after")).toBe("30");
   });
 
-  it("deletes public keys that are not referenced by products", async () => {
+  it("reports unreferenced final keys as pending retention without deleting them", async () => {
     const { POST } = await import(
       "@/app/api/internal/product-images/reconcile/route"
     );
-    const dbModule = await import("@polaris/db");
-    const imageStorageModule = await import(
-      "@/features/products/image-storage"
+    const { reconcileProductImages } = await import(
+      "@/features/products/image-reconcile"
     );
 
-    const oldDate = new Date(Date.now() - 20 * 60 * 1000);
-
-    vi.mocked(
-      imageStorageModule.listAllStoredProductImageObjects
-    ).mockResolvedValue([
-      {
-        key: "products/product-1/v1/detail.webp",
-        lastModified: oldDate,
-      },
-      {
-        key: "products/product-2/v1/detail.webp",
-        lastModified: oldDate,
-      },
-    ]);
-    vi.mocked(imageStorageModule.getExpectedProductImageKeys).mockReturnValue([
-      "products/product-1/v1/detail.webp",
-    ]);
-    vi.mocked(dbModule.db.select).mockReturnValue({
-      from: async () => [
-        {
-          id: "product-1",
-          imageVersion: 1,
-        },
-      ],
-    } as never);
+    vi.mocked(reconcileProductImages).mockResolvedValue({
+      deletedCount: 0,
+      orphanedCount: 1,
+      retentionPendingCount: 1,
+      scannedCount: 2,
+      skippedRecentCount: 0,
+    });
 
     const response = await POST(
       new Request("http://localhost/api/internal/product-images/reconcile", {
@@ -178,46 +139,31 @@ describe("/api/internal/product-images/reconcile", () => {
     const payload = await response.json();
 
     expect(response.status).toBe(200);
-    expect(imageStorageModule.deleteManyProductImageKeys).toHaveBeenCalledWith([
-      "products/product-2/v1/detail.webp",
-    ]);
-    expect(payload.deletedCount).toBe(1);
-    expect(payload.orphanedKeys).toBeUndefined();
+    expect(reconcileProductImages).toHaveBeenCalledOnce();
+    expect(payload).toEqual({
+      deletedCount: 0,
+      orphanedCount: 1,
+      retentionPendingCount: 1,
+      scannedCount: 2,
+      skippedRecentCount: 0,
+    });
   });
 
-  it("keeps recently uploaded orphaned keys for the next reconcile pass", async () => {
+  it("returns an empty retention backlog when no final-image orphan exists", async () => {
     const { POST } = await import(
       "@/app/api/internal/product-images/reconcile/route"
     );
-    const dbModule = await import("@polaris/db");
-    const imageStorageModule = await import(
-      "@/features/products/image-storage"
+    const { reconcileProductImages } = await import(
+      "@/features/products/image-reconcile"
     );
 
-    const recentOrphanedKey = "products/product-2/v1/detail.webp";
-
-    vi.mocked(
-      imageStorageModule.listAllStoredProductImageKeys
-    ).mockResolvedValue([recentOrphanedKey]);
-    vi.mocked(
-      imageStorageModule.listAllStoredProductImageObjects
-    ).mockResolvedValue([
-      {
-        key: recentOrphanedKey,
-        lastModified: new Date(),
-      },
-    ]);
-    vi.mocked(imageStorageModule.getExpectedProductImageKeys).mockReturnValue([
-      "products/product-1/v1/detail.webp",
-    ]);
-    vi.mocked(dbModule.db.select).mockReturnValue({
-      from: async () => [
-        {
-          id: "product-1",
-          imageVersion: 1,
-        },
-      ],
-    } as never);
+    vi.mocked(reconcileProductImages).mockResolvedValue({
+      deletedCount: 0,
+      orphanedCount: 0,
+      retentionPendingCount: 0,
+      scannedCount: 1,
+      skippedRecentCount: 0,
+    });
 
     const response = await POST(
       new Request("http://localhost/api/internal/product-images/reconcile", {
@@ -231,11 +177,14 @@ describe("/api/internal/product-images/reconcile", () => {
     const payload = await response.json();
 
     expect(response.status).toBe(200);
-    expect(imageStorageModule.deleteManyProductImageKeys).toHaveBeenCalledWith(
-      []
-    );
-    expect(payload.deletedCount).toBe(0);
-    expect(payload.skippedRecentCount).toBe(1);
+    expect(reconcileProductImages).toHaveBeenCalledOnce();
+    expect(payload).toEqual({
+      deletedCount: 0,
+      orphanedCount: 0,
+      retentionPendingCount: 0,
+      scannedCount: 1,
+      skippedRecentCount: 0,
+    });
   });
 
   it("keeps product image reference queries outside the route handler", () => {

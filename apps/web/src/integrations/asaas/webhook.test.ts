@@ -28,7 +28,7 @@ describe("Asaas webhook foundation", () => {
     ).toBe("evt_123");
   });
 
-  it("redacts card details to brand and last4 only", () => {
+  it("redacts card details while retaining only billing reconciliation metadata", () => {
     expect(
       redactAsaasWebhookPayload({
         event: "PAYMENT_RECEIVED",
@@ -46,21 +46,26 @@ describe("Asaas webhook foundation", () => {
         },
       })
     ).toEqual({
+      dateCreated: null,
       event: "PAYMENT_RECEIVED",
       id: "evt_123",
       payment: {
         billingType: "CREDIT_CARD",
+        externalReference: null,
         id: "pay_123",
         status: "RECEIVED",
         subscription: "sub_123",
+        value: null,
       },
       paymentMethod: {
         brand: "MASTERCARD",
         last4: "8829",
       },
       subscription: {
+        externalReference: null,
         id: null,
         status: null,
+        value: null,
       },
     });
   });
@@ -74,10 +79,9 @@ describe("Asaas webhook foundation", () => {
     expect(handlerSource).not.toContain("request.json()");
     expect(handlerSource).toContain("observeWebhookIntake");
     expect(handlerSource).not.toContain("sendOutboxEventToInngest");
-    expect(handlerSource).toContain("markWebhookIntakeProcessed");
-    expect(handlerSource).toContain("reconcileAsaasBillingEvent");
-    expect(handlerSource).toContain("withInternalJobContext");
-    expect(handlerSource).toContain("billing_webhook_reconcile");
+    expect(handlerSource).not.toContain("markWebhookIntakeProcessed");
+    expect(handlerSource).not.toContain("reconcileAsaasBillingEvent");
+    expect(handlerSource).not.toContain("withInternalJobContext");
     expect(handlerSource).toContain('provider: "asaas"');
   });
 });

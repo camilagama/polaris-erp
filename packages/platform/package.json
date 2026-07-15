@@ -18,6 +18,7 @@
     "./directory": "./src/platform-directory.ts",
     "./events": "./src/platform-events.ts",
     "./organization-mutations": "./src/platform-organization-mutations.ts",
+    "./support-cases": "./src/platform-support-cases.ts",
     "./support-notes": "./src/platform-support-notes.ts"
   },
   "scripts": {

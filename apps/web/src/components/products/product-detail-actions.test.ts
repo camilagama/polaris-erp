@@ -12,6 +12,7 @@ import type { ProductListItem } from "@/features/products/contracts";
 
 const actionMocks = vi.hoisted(() => ({
   archiveProductAction: vi.fn(),
+  softDeleteProductAction: vi.fn(),
   writeOffProductStockAction: vi.fn(),
 }));
 
@@ -25,6 +26,7 @@ vi.mock("@/features/products/actions", () => ({
   archiveProductAction: actionMocks.archiveProductAction,
   removeProductImageAction: vi.fn(),
   replaceProductImageAction: vi.fn(),
+  softDeleteProductAction: actionMocks.softDeleteProductAction,
   unarchiveProductAction: vi.fn(),
   updateProductAction: vi.fn(),
   writeOffProductStockAction: actionMocks.writeOffProductStockAction,
@@ -106,6 +108,15 @@ const setInputValue = (input: HTMLInputElement, value: string) => {
   valueSetter?.call(input, value);
 };
 
+const setTextareaValue = (textarea: HTMLTextAreaElement, value: string) => {
+  const valueSetter = Object.getOwnPropertyDescriptor(
+    window.HTMLTextAreaElement.prototype,
+    "value"
+  )?.set;
+
+  valueSetter?.call(textarea, value);
+};
+
 const findByText = (text: string) =>
   [...document.body.querySelectorAll("*")].find(
     (element) => element.textContent?.trim() === text
@@ -128,6 +139,7 @@ const openActionsMenu = async () => {
 describe("ProductDetailActions", () => {
   afterEach(() => {
     actionMocks.archiveProductAction.mockReset();
+    actionMocks.softDeleteProductAction.mockReset();
     actionMocks.writeOffProductStockAction.mockReset();
     routerMocks.push.mockReset();
     routerMocks.refresh.mockReset();
@@ -184,5 +196,45 @@ describe("ProductDetailActions", () => {
     await clickElement(findButtonByText("Confirmar arquivamento") as Element);
 
     expect(actionMocks.archiveProductAction).toHaveBeenCalledWith("product-1");
+  });
+
+  it("requires a reason and confirmation before final product removal", async () => {
+    actionMocks.softDeleteProductAction.mockResolvedValueOnce("deleted");
+    renderComponent();
+
+    await openActionsMenu();
+    await clickElement(findByText("Remover definitivamente") as Element);
+
+    expect(findByText("Remover produto definitivamente?")).toBeTruthy();
+    expect(
+      findButtonByText("Confirmar remocao definitiva")?.hasAttribute("disabled")
+    ).toBe(true);
+
+    const reasonInput = document.body.querySelector(
+      "#soft-delete-reason"
+    ) as HTMLTextAreaElement;
+
+    await act(async () => {
+      setTextareaValue(reasonInput, "Produto descontinuado");
+      reasonInput.dispatchEvent(
+        new Event("input", { bubbles: true, cancelable: true })
+      );
+      reasonInput.dispatchEvent(
+        new Event("change", { bubbles: true, cancelable: true })
+      );
+      await Promise.resolve();
+    });
+
+    await clickElement(
+      findButtonByText("Confirmar remocao definitiva") as Element
+    );
+
+    expect(actionMocks.softDeleteProductAction).toHaveBeenCalledWith(
+      "product-1",
+      {
+        confirmed: true,
+        reason: "Produto descontinuado",
+      }
+    );
   });
 });

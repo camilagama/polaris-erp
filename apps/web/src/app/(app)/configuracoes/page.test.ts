@@ -16,6 +16,7 @@ vi.mock("@/components/settings/goals-settings-panel", () => ({
 }));
 
 vi.mock("@/features/account/server", () => ({
+  canRequestSubscriptionCancellation: vi.fn(() => false),
   getAccountBillingSummary: vi.fn(async () => ({
     amountCents: 19_900,
     billingEmail: "billing@example.com",

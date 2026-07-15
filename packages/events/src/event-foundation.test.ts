@@ -3,6 +3,7 @@ import {
   captureWebhookEvent,
   claimOutboxEvent,
   enqueueOutboxEvent,
+  getOutboxRetryDelaySeconds,
   hashRawBody,
   markOutboxEventFailed,
   markOutboxEventObserved,
@@ -52,6 +53,17 @@ describe("event foundation helpers", () => {
       "svix-signature": "[redacted]",
       "x-webhook-signature": "[redacted]",
     });
+  });
+
+  it("uses bounded exponential backoff with deterministic jitter", () => {
+    const firstAttemptDelay = getOutboxRetryDelaySeconds(1, "event-1");
+    const fourthAttemptDelay = getOutboxRetryDelaySeconds(4, "event-1");
+
+    expect(firstAttemptDelay).toBeGreaterThanOrEqual(60);
+    expect(firstAttemptDelay).toBeLessThanOrEqual(90);
+    expect(fourthAttemptDelay).toBeGreaterThanOrEqual(480);
+    expect(fourthAttemptDelay).toBeLessThanOrEqual(510);
+    expect(getOutboxRetryDelaySeconds(4, "event-1")).toBe(fourthAttemptDelay);
   });
 
   it("captures webhook events idempotently without storing raw secrets", async () => {
@@ -176,6 +188,7 @@ describe("event foundation helpers", () => {
 
     await expect(
       markOutboxEventFailed({
+        attempts: 1,
         claimToken: "stale-claim",
         db: { execute },
         error: "dispatcher timeout",
@@ -210,6 +223,7 @@ describe("event foundation helpers", () => {
     await markOutboxEventProcessed(db, "event-1", "claim-1");
     await markOutboxEventObserved(db, "event-2", "claim-2", "capture-only");
     await markOutboxEventFailed({
+      attempts: 1,
       claimToken: "claim-3",
       db,
       error: "No dispatcher registered.",
