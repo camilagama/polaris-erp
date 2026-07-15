@@ -2,12 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-interface PaginatedListResult<TItem> {
+export interface PaginatedListResult<TItem> {
   items: TItem[];
   nextCursor: string | null;
 }
 
-interface PaginatedListStateInput<TItem> {
+export interface PaginatedListStateInput<TItem> {
   getItemId: (item: TItem) => string;
   initialCursor: string | null;
   initialItems: TItem[];

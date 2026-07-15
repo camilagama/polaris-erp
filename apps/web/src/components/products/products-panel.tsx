@@ -7,10 +7,10 @@ import {
   Search02Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { usePaginatedListState } from "@polaris/ui/hooks/use-paginated-list";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
-import { usePaginatedListState } from "@/components/paginated-list-state";
 import { ProductEditFields } from "@/components/products/product-edit-fields";
 import { ProductImageFrame } from "@/components/products/product-image-frame";
 import { uploadProductImageToStaging } from "@/components/products/product-image-upload";
@@ -145,104 +145,82 @@ function ProductRowActions({
   );
 }
 
+import { CollapsibleAnalyticsSection } from "@polaris/ui/components/shared/collapsible-analytics-section";
+
 function MobileAnalyticsSection({
   analytics,
 }: {
   analytics: ProductAnalytics;
 }) {
-  const [expanded, setExpanded] = useState(false);
-
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <h2 className="font-heading font-semibold text-xl tracking-tight">
-            Analytics
-          </h2>
-          <p className="text-muted-foreground text-sm">
-            Leitura consolidada de estoque, categorias e desempenho recente.
-          </p>
-        </div>
-        <Button
-          className="md:hidden"
-          onClick={() => setExpanded((current) => !current)}
-          size="sm"
-          type="button"
-          variant="outline"
-        >
-          {expanded ? "Ocultar" : "Mostrar"}
-        </Button>
-      </div>
-
-      <div className={expanded ? "grid gap-4" : "hidden md:grid md:gap-4"}>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[0.85fr_0.95fr_1.8fr]">
-          <div className="flex flex-col gap-4">
-            <Card className="flex flex-1 flex-col justify-center">
-              <CardHeader className="gap-1">
-                <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
-                  Total em estoque
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <strong className="font-heading text-[1.8rem] leading-none tracking-tight">
-                  {analytics.totalUnitsInStock} un.
-                </strong>
-                <CardDescription className="mt-1 text-xs">
-                  Soma das unidades dos produtos ativos.
-                </CardDescription>
-              </CardContent>
-            </Card>
-
-            <Card className="flex flex-1 flex-col justify-center">
-              <CardHeader className="gap-1 pb-2">
-                <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
-                  Compras acumuladas
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <strong className="font-mono text-[1.8rem] leading-none tracking-tight">
-                  {formatCurrency(analytics.totalInventoryInvestment)}
-                </strong>
-                <CardDescription className="mt-1 text-xs">
-                  Soma historica de todas as compras registradas.
-                </CardDescription>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card className="flex flex-col">
-            <CardHeader className="gap-1 pb-2">
+    <CollapsibleAnalyticsSection description="Leitura consolidada de estoque, categorias e desempenho recente.">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[0.85fr_0.95fr_1.8fr]">
+        <div className="flex flex-col gap-4">
+          <Card className="flex flex-1 flex-col justify-center">
+            <CardHeader className="gap-1">
               <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
-                Categorias no estoque
+                Total em estoque
               </CardTitle>
-              <CardDescription className="text-xs">
-                Distribuicao do inventario atual
-              </CardDescription>
             </CardHeader>
-            <CardContent className="flex flex-1 items-center pt-0">
-              <InventoryCategoriesChart data={analytics.inventoryByCategory} />
+            <CardContent className="pt-0">
+              <strong className="font-heading text-[1.8rem] leading-none tracking-tight">
+                {analytics.totalUnitsInStock} un.
+              </strong>
+              <CardDescription className="mt-1 text-xs">
+                Soma das unidades dos produtos ativos.
+              </CardDescription>
             </CardContent>
           </Card>
 
-          <Card className="flex flex-col">
+          <Card className="flex flex-1 flex-col justify-center">
             <CardHeader className="gap-1 pb-2">
               <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
-                Faturamento x compras
+                Compras acumuladas
               </CardTitle>
-              <CardDescription className="text-xs">
-                Ultimos 30 dias
-              </CardDescription>
             </CardHeader>
-            <CardContent className="flex flex-1 items-center pt-0">
-              <ProductCatalogPerformanceChart
-                data={analytics.recentPerformance}
-                emptyLabel="Sem movimentacao recente para exibir faturamento e compras."
-              />
+            <CardContent className="pt-0">
+              <strong className="font-mono text-[1.8rem] leading-none tracking-tight">
+                {formatCurrency(analytics.totalInventoryInvestment)}
+              </strong>
+              <CardDescription className="mt-1 text-xs">
+                Soma historica de todas as compras registradas.
+              </CardDescription>
             </CardContent>
           </Card>
         </div>
+
+        <Card className="flex flex-col">
+          <CardHeader className="gap-1 pb-2">
+            <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
+              Categorias no estoque
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Distribuicao do inventario atual
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-1 items-center pt-0">
+            <InventoryCategoriesChart data={analytics.inventoryByCategory} />
+          </CardContent>
+        </Card>
+
+        <Card className="flex flex-col">
+          <CardHeader className="gap-1 pb-2">
+            <CardTitle className="font-medium text-muted-foreground text-xs uppercase tracking-[0.14em]">
+              Faturamento x compras
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Ultimos 30 dias
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-1 items-center pt-0">
+            <ProductCatalogPerformanceChart
+              data={analytics.recentPerformance}
+              emptyLabel="Sem movimentacao recente para exibir faturamento e compras."
+            />
+          </CardContent>
+        </Card>
       </div>
-    </div>
+    </CollapsibleAnalyticsSection>
   );
 }
 

@@ -1,11 +1,21 @@
 "use client";
 
 import { Search02Icon } from "@hugeicons/core-free-icons";
+import {
+  MobileListCard,
+  MobileListCardAction,
+  MobileListCardBadge,
+  MobileListCardFooter,
+  MobileListCardGrid,
+  MobileListCardGridItem,
+  MobileListCardHeader,
+  MobileListCardTitle,
+} from "@polaris/ui/components/shared/mobile-list-card";
+import { usePaginatedListState } from "@polaris/ui/hooks/use-paginated-list";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { DashboardDateRangeFilter } from "@/components/dashboard/dashboard-date-range-filter";
-import { usePaginatedListState } from "@/components/paginated-list-state";
 import { CreateSaleDialog } from "@/components/sales/create-sale-dialog";
 import { PaymentMethodChart } from "@/components/sales/payment-method-chart";
 import { SalesPerformanceChart } from "@/components/sales/sales-performance-chart";
@@ -429,12 +439,9 @@ export function SalesPanel({
         <>
           <div className="grid gap-3 md:hidden">
             {sales.map((sale) => (
-              <article
-                className="rounded-xl border border-border/60 bg-card p-4"
-                key={sale.id}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
+              <MobileListCard key={sale.id}>
+                <MobileListCardHeader>
+                  <MobileListCardTitle>
                     <Link
                       className="block truncate font-medium text-sm transition-colors hover:text-primary hover:underline"
                       href={`/vendas/${sale.id}`}
@@ -442,44 +449,40 @@ export function SalesPanel({
                     >
                       {sale.customerName || "Sem cliente"}
                     </Link>
-                  </div>
-                  <Badge variant={getStatusVariant(sale.status)}>
-                    {getStatusLabel(sale.status)}
-                  </Badge>
-                </div>
+                  </MobileListCardTitle>
+                  <MobileListCardBadge>
+                    <Badge variant={getStatusVariant(sale.status)}>
+                      {getStatusLabel(sale.status)}
+                    </Badge>
+                  </MobileListCardBadge>
+                </MobileListCardHeader>
 
-                <div className="mt-4 grid grid-cols-2 gap-3">
-                  <div className="rounded-lg border border-border/50 px-3 py-2">
-                    <p className="text-[11px] text-muted-foreground uppercase tracking-[0.16em]">
-                      Data
-                    </p>
-                    <p className="mt-1 font-medium text-sm">
-                      {formatDate(sale.occurredOn)}
-                    </p>
-                  </div>
-                  <div className="rounded-lg border border-border/50 px-3 py-2">
-                    <p className="text-[11px] text-muted-foreground uppercase tracking-[0.16em]">
-                      Total
-                    </p>
-                    <p className="mt-1 font-medium text-sm">
-                      {formatCurrency(sale.totalAmount)}
-                    </p>
-                  </div>
-                </div>
+                <MobileListCardGrid>
+                  <MobileListCardGridItem
+                    label="Data"
+                    value={formatDate(sale.occurredOn)}
+                  />
+                  <MobileListCardGridItem
+                    label="Total"
+                    value={formatCurrency(sale.totalAmount)}
+                  />
+                </MobileListCardGrid>
 
-                <div className="mt-3 flex items-center justify-between text-xs">
+                <MobileListCardFooter>
                   <span className="text-muted-foreground">
                     {getPaymentMethodLabel(sale)}
                   </span>
                   <span className="font-medium">{sale.itemCount} item(ns)</span>
-                </div>
+                </MobileListCardFooter>
 
                 <Separator className="my-4" />
 
-                <Button asChild size="xs" variant="outline">
-                  <Link href={`/vendas/${sale.id}`}>Abrir detalhe</Link>
-                </Button>
-              </article>
+                <MobileListCardAction>
+                  <Button asChild size="xs" variant="outline">
+                    <Link href={`/vendas/${sale.id}`}>Abrir detalhe</Link>
+                  </Button>
+                </MobileListCardAction>
+              </MobileListCard>
             ))}
           </div>
 

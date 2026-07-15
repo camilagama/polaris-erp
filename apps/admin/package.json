@@ -9,7 +9,8 @@
     "@polaris/platform": "workspace:*",
     "@polaris/platform-auth": "workspace:*",
     "@polaris/ui": "workspace:*",
-    "@sentry/nextjs": "^10.63.0"
+    "@sentry/nextjs": "^10.63.0",
+    "@tanstack/react-table": "^8.21.3"
   },
   "scripts": {
     "dev": "bun ../../scripts/run-next-with-local-env.ts admin dev --port 3001",

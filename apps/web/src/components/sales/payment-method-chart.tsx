@@ -1,15 +1,8 @@
 "use client";
 
 import { ShoppingBag02Icon } from "@hugeicons/core-free-icons";
-import { Cell, Pie, PieChart } from "recharts";
-import {
-  type ChartConfig,
-  ChartContainer,
-  ChartLegend,
-  ChartLegendContent,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
+import { DonutChart } from "@polaris/ui/components/shared/donut-chart";
+import type { ChartConfig } from "@/components/ui/chart";
 import { Empty } from "@/components/ui/empty";
 import type { SalesPaymentMethodSummary } from "@/features/sales/contracts";
 import { formatCurrency } from "@/lib/formatters";
@@ -42,70 +35,50 @@ export function PaymentMethodChart({
 
   const chartData = data.map((item) => ({
     fill: METHOD_COLORS[item.paymentMethod],
-    paymentMethod: item.paymentMethod,
-    salesCount: item.salesCount,
-    totalAmount: item.totalAmount,
+    labelKey: item.paymentMethod,
+    value: item.salesCount,
+    totalAmount: item.totalAmount, // Extra prop for custom tooltip
   }));
   const chartConfig = chartData.reduce<ChartConfig>((config, item) => {
-    config[item.paymentMethod] = {
-      color: METHOD_COLORS[item.paymentMethod],
-      label: PAYMENT_METHOD_LABELS[item.paymentMethod],
+    const key = item.labelKey as keyof typeof PAYMENT_METHOD_LABELS;
+    config[key] = {
+      color: METHOD_COLORS[key],
+      label: PAYMENT_METHOD_LABELS[key],
     };
 
     return config;
   }, {});
 
   return (
-    <ChartContainer className="h-56 w-full" config={chartConfig}>
-      <PieChart accessibilityLayer>
-        <ChartTooltip
-          content={
-            <ChartTooltipContent
-              formatter={(value, name, item) => (
-                <div className="grid w-full gap-1">
-                  <div className="flex items-center justify-between gap-4">
-                    <span className="text-muted-foreground">
-                      {chartConfig[String(name)]?.label ?? name}
-                    </span>
-                    <span className="font-medium font-mono text-foreground">
-                      {Number(value)} venda(s)
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between gap-4">
-                    <span className="text-muted-foreground">Valor</span>
-                    <span className="font-medium font-mono text-foreground">
-                      {formatCurrency(Number(item.payload?.totalAmount ?? 0))}
-                    </span>
-                  </div>
-                </div>
-              )}
-              nameKey="paymentMethod"
-            />
-          }
+    <DonutChart
+      config={chartConfig}
+      customTooltipRenderer={(value, name, item) => (
+        <div className="grid w-full gap-1">
+          <div className="flex items-center justify-between gap-4">
+            <span className="text-muted-foreground">
+              {chartConfig[String(name)]?.label ?? name}
+            </span>
+            <span className="font-medium font-mono text-foreground">
+              {Number(value)} venda(s)
+            </span>
+          </div>
+          <div className="flex items-center justify-between gap-4">
+            <span className="text-muted-foreground">Valor</span>
+            <span className="font-medium font-mono text-foreground">
+              {formatCurrency(Number(item.payload?.totalAmount ?? 0))}
+            </span>
+          </div>
+        </div>
+      )}
+      data={chartData}
+      emptyMessage={
+        <Empty
+          className="h-56 border-dashed shadow-none"
+          description="Aguardando registros para exibir os metodos de pagamento."
+          icon={ShoppingBag02Icon}
+          title="Sem pagamentos concluidos"
         />
-        <Pie
-          data={chartData}
-          dataKey="salesCount"
-          innerRadius={44}
-          isAnimationActive={true}
-          nameKey="paymentMethod"
-          outerRadius={68}
-          paddingAngle={3}
-          strokeWidth={4}
-        >
-          {chartData.map((item) => (
-            <Cell fill={item.fill} key={item.paymentMethod} />
-          ))}
-        </Pie>
-        <ChartLegend
-          content={
-            <ChartLegendContent
-              className="flex-wrap gap-2 pt-2 text-[11px]"
-              nameKey="paymentMethod"
-            />
-          }
-        />
-      </PieChart>
-    </ChartContainer>
+      }
+    />
   );
 }

@@ -7,5 +7,9 @@ export default async function AdminSignInPage() {
     redirect("/");
   }
 
-  return <AdminSignInForm />;
+  return (
+    <main className="min-h-screen w-full">
+      <AdminSignInForm />
+    </main>
+  );
 }
