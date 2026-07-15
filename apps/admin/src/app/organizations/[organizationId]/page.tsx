@@ -2,7 +2,7 @@ import { getPlatformOrganizationDetailForAdmin } from "@polaris/platform/directo
 import { listPlatformSupportCasesForAdmin } from "@polaris/platform/support-cases";
 import { listPlatformSupportNotesForAdmin } from "@polaris/platform/support-notes";
 import Link from "next/link";
-import { forbidden, notFound } from "next/navigation";
+import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { requirePlatformAdmin } from "@/lib/platform-admin-auth";
@@ -20,13 +20,7 @@ interface OrganizationDetailPageProps {
   params: Promise<{ organizationId: string }>;
 }
 
-const guardPlatformAdmin = async () => {
-  try {
-    return await requirePlatformAdmin();
-  } catch {
-    forbidden();
-  }
-};
+const guardPlatformAdmin = async () => requirePlatformAdmin();
 
 const formatNumber = (value: number) =>
   new Intl.NumberFormat("pt-BR").format(value);

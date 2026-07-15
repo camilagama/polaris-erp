@@ -1,12 +1,13 @@
 import "server-only";
 
 import {
+  platformAdminEnrollments,
   platformAdminGrants,
   platformAdmins,
   platformAuditEvents,
 } from "@polaris/db/schema";
 import { withInternalJobContext } from "@polaris/db/tenant-context";
-import { sql } from "drizzle-orm";
+import { and, eq, gt, isNull, sql } from "drizzle-orm";
 import {
   toIsoString,
   toNullableString,
@@ -17,33 +18,43 @@ type PlatformAdminRole = "owner" | "operator" | "support";
 
 export interface PlatformAuditEventInput {
   action: string;
+  actorAdminUserId?: string | null;
   actorPlatformAdminId?: string | null;
-  actorUserId?: string | null;
   metadata?: Record<string, unknown>;
   subjectId?: string | null;
   subjectType: string;
 }
 
 export interface BootstrapPlatformAdminInput {
+  adminUserId: string;
   expiresAt: Date;
   grantedByPlatformAdminId?: string | null;
   reason: string;
   role: PlatformAdminRole;
-  userId: string;
 }
 
 export interface GrantPlatformAdminAccessInput {
   actorPlatformAdminId: string;
-  actorUserId: string;
+  actorAdminUserId: string;
   expiresAt: Date;
   reason: string;
   role: PlatformAdminRole;
-  targetUserId: string;
+  targetAdminUserId: string;
+}
+
+export interface CreatePlatformAdminEnrollmentInput {
+  actorAdminUserId: string;
+  actorPlatformAdminId: string;
+  email: string;
+  enrollmentExpiresAt: Date;
+  grantExpiresAt: Date;
+  reason: string;
+  role: PlatformAdminRole;
 }
 
 export interface RevokePlatformAdminGrantInput {
   actorPlatformAdminId: string;
-  actorUserId: string;
+  actorAdminUserId: string;
   grantId: string;
   reason: string;
 }
@@ -55,7 +66,7 @@ export interface PlatformAdminGrantSummary {
   reason: string;
   revokedAt: string | null;
   role: PlatformAdminRole;
-  userId: string;
+  adminUserId: string;
 }
 
 interface InsertValues {
@@ -86,6 +97,130 @@ interface QueryableDb {
   execute: (query: ReturnType<typeof sql>) => Promise<unknown>;
 }
 
+const normalizeAdminEmail = (email: string): string => email.trim().toLowerCase();
+
+export const hasActivePlatformAdminEnrollment = async (
+  email: string
+): Promise<boolean> => {
+  const enrollment = await withInternalJobContext(
+    "platform_admin_admission",
+    (tx) =>
+      tx
+        .select({ id: platformAdminEnrollments.id })
+        .from(platformAdminEnrollments)
+        .where(
+          and(
+            eq(platformAdminEnrollments.email, normalizeAdminEmail(email)),
+            isNull(platformAdminEnrollments.claimedAt),
+            gt(platformAdminEnrollments.enrollmentExpiresAt, new Date())
+          )
+        )
+        .limit(1)
+  );
+
+  return enrollment.length === 1;
+};
+
+export const admitPlatformAdminSession = async (
+  adminUserId: string
+): Promise<void> =>
+  withInternalJobContext("platform_admin_admission", async (tx) => {
+    const activeGrantRows = toRows(
+      await tx.execute(sql`
+        select pa.id
+        from platform_admins pa
+        inner join platform_admin_grants pag on pag.platform_admin_id = pa.id
+        where pa.admin_user_id = ${adminUserId}
+          and pa.status = 'active'
+          and pag.revoked_at is null
+          and pag.expires_at > now()
+        limit 1
+      `)
+    );
+
+    if (activeGrantRows.length > 0) {
+      return;
+    }
+
+    const enrollmentRows = toRows(
+      await tx.execute(sql`
+        select pae.id, pae.role, pae.reason, pae.grant_expires_at
+        from platform_admin_enrollments pae
+        inner join admin_users au on au.email = pae.email
+        where au.id = ${adminUserId}
+          and pae.claimed_at is null
+          and pae.enrollment_expires_at > now()
+        for update
+      `)
+    );
+    const enrollment = enrollmentRows[0];
+
+    if (!enrollment) {
+      throw new Error("Admin identity does not have an active enrollment.");
+    }
+
+    const existingAdminRows = toRows(
+      await tx.execute(sql`
+        select id, status
+        from platform_admins
+        where admin_user_id = ${adminUserId}
+        for update
+      `)
+    );
+    const existingAdmin = existingAdminRows[0];
+
+    if (existingAdmin && existingAdmin.status !== "active") {
+      throw new Error("Disabled platform admins cannot claim a new enrollment.");
+    }
+
+    const platformAdminRows = existingAdmin
+      ? [existingAdmin]
+      : toRows(
+          await tx.execute(sql`
+            insert into platform_admins (admin_user_id, status)
+            values (${adminUserId}, 'active')
+            returning id
+          `)
+        );
+    const platformAdminId = toNullableString(platformAdminRows[0]?.id);
+    const role = toNullableString(enrollment.role);
+    const enrollmentId = toNullableString(enrollment.id);
+    const reason = toNullableString(enrollment.reason);
+    const grantExpiresAt = enrollment.grant_expires_at;
+
+    if (!(platformAdminId && role && enrollmentId && reason && grantExpiresAt)) {
+      throw new Error("Admin enrollment is incomplete.");
+    }
+
+    await tx.execute(sql`
+      insert into platform_admin_grants (
+        platform_admin_id,
+        role,
+        reason,
+        expires_at
+      ) values (
+        ${platformAdminId},
+        ${role},
+        ${reason},
+        ${grantExpiresAt}
+      )
+    `);
+    await tx.execute(sql`
+      update platform_admin_enrollments
+      set claimed_at = now(), updated_at = now()
+      where id = ${enrollmentId}
+        and claimed_at is null
+    `);
+    await recordPlatformAuditEvent(tx as unknown as InsertableDb, {
+      action: "platform_admin.enrollment_claimed",
+      actorAdminUserId: adminUserId,
+      actorPlatformAdminId: platformAdminId,
+      metadata: { enrollmentId, reason, role },
+      subjectId: platformAdminId,
+      subjectType: "platform_admin",
+    });
+  });
+
 const bootstrapPlatformAdminInTransaction = async (
   input: BootstrapPlatformAdminInput,
   tx: InsertableDb
@@ -94,7 +229,7 @@ const bootstrapPlatformAdminInTransaction = async (
 
   await tx.insert(platformAdmins).values({
     id: platformAdminId,
-    userId: input.userId,
+    adminUserId: input.adminUserId,
   });
 
   await tx.insert(platformAdminGrants).values({
@@ -108,7 +243,7 @@ const bootstrapPlatformAdminInTransaction = async (
   await recordPlatformAuditEvent(tx, {
     action: "platform_admin.bootstrap",
     actorPlatformAdminId: input.grantedByPlatformAdminId ?? null,
-    actorUserId: input.userId,
+    actorAdminUserId: input.adminUserId,
     metadata: {
       reason: input.reason,
       role: input.role,
@@ -127,7 +262,7 @@ export const recordPlatformAuditEvent = async (
   await db.insert(platformAuditEvents).values({
     action: input.action,
     actorPlatformAdminId: input.actorPlatformAdminId ?? null,
-    actorUserId: input.actorUserId ?? null,
+    actorAdminUserId: input.actorAdminUserId ?? null,
     metadata: input.metadata ?? {},
     subjectId: input.subjectId ?? null,
     subjectType: input.subjectType,
@@ -180,6 +315,92 @@ const requireFutureExpiry = (expiresAt: Date): void => {
   }
 };
 
+const requireAdminEmail = (email: string): string => {
+  const normalized = normalizeAdminEmail(email);
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+    throw new Error("Platform admin enrollment requires a valid email.");
+  }
+
+  return normalized;
+};
+
+const createPlatformAdminEnrollmentInTransaction = async (
+  input: CreatePlatformAdminEnrollmentInput,
+  tx: GrantTx
+): Promise<string> => {
+  const email = requireAdminEmail(input.email);
+  const reason = requireGrantReason(input.reason);
+  requireFutureExpiry(input.enrollmentExpiresAt);
+  requireFutureExpiry(input.grantExpiresAt);
+
+  const enrollmentRows = toRows(
+    await tx.execute(sql`
+      insert into platform_admin_enrollments (
+        email,
+        role,
+        reason,
+        enrollment_expires_at,
+        grant_expires_at
+      ) values (
+        ${email},
+        ${input.role},
+        ${reason},
+        ${input.enrollmentExpiresAt},
+        ${input.grantExpiresAt}
+      )
+      on conflict (email) do update
+      set
+        role = excluded.role,
+        reason = excluded.reason,
+        enrollment_expires_at = excluded.enrollment_expires_at,
+        grant_expires_at = excluded.grant_expires_at,
+        updated_at = now()
+      where platform_admin_enrollments.claimed_at is null
+      returning id
+    `)
+  );
+  const enrollmentId = toNullableString(enrollmentRows[0]?.id);
+
+  if (!enrollmentId) {
+    throw new Error(
+      "This email already claimed an admin enrollment. Renew its grant from the existing admin record."
+    );
+  }
+
+  await recordPlatformAuditEvent(tx, {
+    action: "platform_admin.enrollment_created",
+    actorAdminUserId: input.actorAdminUserId,
+    actorPlatformAdminId: input.actorPlatformAdminId,
+    metadata: {
+      email,
+      enrollmentExpiresAt: input.enrollmentExpiresAt.toISOString(),
+      grantExpiresAt: input.grantExpiresAt.toISOString(),
+      reason,
+      role: input.role,
+    },
+    subjectId: enrollmentId,
+    subjectType: "platform_admin_enrollment",
+  });
+
+  return enrollmentId;
+};
+
+export const createPlatformAdminEnrollment = (
+  input: CreatePlatformAdminEnrollmentInput,
+  transactionalDb?: GrantTransactionDb
+): Promise<string> => {
+  if (transactionalDb) {
+    return transactionalDb.transaction((tx) =>
+      createPlatformAdminEnrollmentInTransaction(input, tx)
+    );
+  }
+
+  return withInternalJobContext("platform_admin_grant_management", (tx) =>
+    createPlatformAdminEnrollmentInTransaction(input, tx as unknown as GrantTx)
+  );
+};
+
 const createPlatformAdminGrantInTransaction = async (
   input: GrantPlatformAdminAccessInput,
   tx: GrantTx
@@ -189,10 +410,10 @@ const createPlatformAdminGrantInTransaction = async (
 
   const createdRows = toRows(
     await tx.execute(sql`
-      insert into platform_admins (user_id, status)
-      values (${input.targetUserId}, 'active')
-      on conflict (user_id) do update
-      set user_id = platform_admins.user_id
+      insert into platform_admins (admin_user_id, status)
+      values (${input.targetAdminUserId}, 'active')
+      on conflict (admin_user_id) do update
+      set admin_user_id = platform_admins.admin_user_id
       returning id
     `)
   );
@@ -231,7 +452,7 @@ const createPlatformAdminGrantInTransaction = async (
   await recordPlatformAuditEvent(tx, {
     action: "platform_admin.granted",
     actorPlatformAdminId: input.actorPlatformAdminId,
-    actorUserId: input.actorUserId,
+    actorAdminUserId: input.actorAdminUserId,
     metadata: {
       expiresAt: input.expiresAt.toISOString(),
       reason,
@@ -284,7 +505,7 @@ const revokePlatformAdminGrantInTransaction = async (
   await recordPlatformAuditEvent(tx, {
     action: "platform_admin.grant_revoked",
     actorPlatformAdminId: input.actorPlatformAdminId,
-    actorUserId: input.actorUserId,
+    actorAdminUserId: input.actorAdminUserId,
     metadata: { reason },
     subjectId: input.grantId,
     subjectType: "platform_admin_grant",
@@ -320,7 +541,7 @@ export const listPlatformAdminGrants = async (
       select
         pag.id as grant_id,
         pag.platform_admin_id,
-        pa.user_id,
+        pa.admin_user_id,
         pag.role,
         pag.reason,
         pag.expires_at,
@@ -336,13 +557,13 @@ export const listPlatformAdminGrants = async (
     const role = toNullableString(row.role);
     const grantId = toNullableString(row.grant_id);
     const platformAdminId = toNullableString(row.platform_admin_id);
-    const userId = toNullableString(row.user_id);
+    const adminUserId = toNullableString(row.admin_user_id);
 
     if (
       !(
         grantId &&
         platformAdminId &&
-        userId &&
+        adminUserId &&
         role &&
         isPlatformAdminRole(role)
       )
@@ -358,7 +579,7 @@ export const listPlatformAdminGrants = async (
         reason: toNullableString(row.reason) ?? "",
         revokedAt: toIsoString(row.revoked_at),
         role,
-        userId,
+        adminUserId,
       },
     ];
   });

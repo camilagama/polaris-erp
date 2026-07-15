@@ -1,6 +1,7 @@
 "use server";
 
 import {
+  createPlatformAdminEnrollment,
   grantPlatformAdminAccess,
   revokePlatformAdminGrant,
 } from "@polaris/platform/admin";
@@ -38,26 +39,57 @@ const getFutureExpiration = (formData: FormData): Date => {
   return expiresAt;
 };
 
+const getEnrollmentExpiration = (): Date => {
+  const expiration = new Date();
+
+  expiration.setDate(expiration.getDate() + 7);
+  return expiration;
+};
+
+export async function createPlatformAdminEnrollmentAction(formData: FormData) {
+  const context = await requirePlatformAdmin({ minimumRole: "owner" });
+  const email = getRequiredFormValue(formData, "email");
+  const grantExpiresAt = getFutureExpiration(formData);
+  const reason = getRequiredFormValue(formData, "reason");
+  const role = getGrantRole(formData);
+
+  await assertAdminRateLimit({
+    action: "platform-admin.enrollment-create",
+    actorAdminUserId: context.adminUserId,
+    targetId: email.toLowerCase(),
+  });
+  await createPlatformAdminEnrollment({
+    actorAdminUserId: context.adminUserId,
+    actorPlatformAdminId: context.platformAdminId,
+    email,
+    enrollmentExpiresAt: getEnrollmentExpiration(),
+    grantExpiresAt,
+    reason,
+    role,
+  });
+  revalidatePath("/admin-access");
+}
+
 export async function grantPlatformAdminAccessAction(formData: FormData) {
   const context = await requirePlatformAdmin({ minimumRole: "owner" });
   const expiresAt = getFutureExpiration(formData);
   const reason = getRequiredFormValue(formData, "reason");
   const role = getGrantRole(formData);
-  const targetUserId = getRequiredFormValue(formData, "targetUserId");
+  const targetAdminUserId = getRequiredFormValue(formData, "targetAdminUserId");
 
   await assertAdminRateLimit({
     action: "platform-admin.grant",
-    actorUserId: context.userId,
-    targetId: targetUserId,
+    actorAdminUserId: context.adminUserId,
+    targetId: targetAdminUserId,
   });
 
   await grantPlatformAdminAccess({
     actorPlatformAdminId: context.platformAdminId,
-    actorUserId: context.userId,
+    actorAdminUserId: context.adminUserId,
     expiresAt,
     reason,
     role,
-    targetUserId,
+    targetAdminUserId,
   });
   revalidatePath("/admin-access");
 }
@@ -69,13 +101,13 @@ export async function revokePlatformAdminGrantAction(formData: FormData) {
 
   await assertAdminRateLimit({
     action: "platform-admin.grant-revoke",
-    actorUserId: context.userId,
+    actorAdminUserId: context.adminUserId,
     targetId: grantId,
   });
 
   await revokePlatformAdminGrant({
     actorPlatformAdminId: context.platformAdminId,
-    actorUserId: context.userId,
+    actorAdminUserId: context.adminUserId,
     grantId,
     reason,
   });

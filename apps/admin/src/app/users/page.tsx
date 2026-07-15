@@ -1,6 +1,5 @@
 import { listPlatformUsersForAdmin } from "@polaris/platform/directory";
 import Link from "next/link";
-import { forbidden } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { requirePlatformAdmin } from "@/lib/platform-admin-auth";
@@ -17,13 +16,7 @@ const getQuery = async (
   return typeof query === "string" ? query : "";
 };
 
-const guardPlatformAdmin = async () => {
-  try {
-    return await requirePlatformAdmin();
-  } catch {
-    forbidden();
-  }
-};
+const guardPlatformAdmin = async () => requirePlatformAdmin();
 
 const formatNumber = (value: number) =>
   new Intl.NumberFormat("pt-BR").format(value);

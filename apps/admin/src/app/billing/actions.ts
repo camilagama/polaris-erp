@@ -48,13 +48,13 @@ export async function changeBillingSubscriptionStatusAction(
 
   await assertAdminRateLimit({
     action: "billing.subscription.status.change",
-    actorUserId: context.userId,
+    actorAdminUserId: context.adminUserId,
     targetId: subscriptionId,
   });
 
   await updatePlatformBillingSubscriptionStatus({
     actorPlatformAdminId: context.platformAdminId,
-    actorUserId: context.userId,
+    actorAdminUserId: context.adminUserId,
     paymentEvidenceReference,
     reason,
     status,

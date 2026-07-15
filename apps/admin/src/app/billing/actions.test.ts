@@ -61,7 +61,7 @@ describe("changeBillingSubscriptionStatusAction", () => {
   it("requires confirmation before changing billing status", async () => {
     requirePlatformAdminMock.mockResolvedValueOnce({
       platformAdminId: "platform-admin-1",
-      userId: "user-1",
+      adminUserId: "user-1",
     });
 
     const { changeBillingSubscriptionStatusAction } = await import("./actions");
@@ -76,7 +76,7 @@ describe("changeBillingSubscriptionStatusAction", () => {
   it("requires payment evidence before manually activating access", async () => {
     requirePlatformAdminMock.mockResolvedValueOnce({
       platformAdminId: "platform-admin-1",
-      userId: "user-1",
+      adminUserId: "user-1",
     });
 
     const { changeBillingSubscriptionStatusAction } = await import("./actions");
@@ -94,7 +94,7 @@ describe("changeBillingSubscriptionStatusAction", () => {
   it("rate limits and updates subscription status as an operator action", async () => {
     requirePlatformAdminMock.mockResolvedValueOnce({
       platformAdminId: "platform-admin-1",
-      userId: "user-1",
+      adminUserId: "user-1",
     });
     assertAdminRateLimitMock.mockResolvedValueOnce(undefined);
     updatePlatformBillingSubscriptionStatusMock.mockResolvedValueOnce(
@@ -112,12 +112,12 @@ describe("changeBillingSubscriptionStatusAction", () => {
     });
     expect(assertAdminRateLimitMock).toHaveBeenCalledWith({
       action: "billing.subscription.status.change",
-      actorUserId: "user-1",
+      actorAdminUserId: "user-1",
       targetId: "subscription-1",
     });
     expect(updatePlatformBillingSubscriptionStatusMock).toHaveBeenCalledWith({
       actorPlatformAdminId: "platform-admin-1",
-      actorUserId: "user-1",
+      actorAdminUserId: "user-1",
       paymentEvidenceReference: "asaas-pay-1",
       reason: "payment confirmed manually",
       status: "active",

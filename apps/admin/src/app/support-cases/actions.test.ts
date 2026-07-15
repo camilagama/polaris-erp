@@ -45,7 +45,7 @@ describe("createSupportCaseAction", () => {
     vi.clearAllMocks();
     requirePlatformAdminMock.mockResolvedValue({
       platformAdminId: "platform-admin-1",
-      userId: "user-1",
+      adminUserId: "user-1",
     });
   });
 
@@ -69,7 +69,7 @@ describe("createSupportCaseAction", () => {
     });
     expect(assertAdminRateLimitMock).toHaveBeenCalledWith({
       action: "support-case.create",
-      actorUserId: "user-1",
+      actorAdminUserId: "user-1",
       targetId: "org-1",
     });
     expect(createPlatformSupportCaseMock).toHaveBeenCalledWith({

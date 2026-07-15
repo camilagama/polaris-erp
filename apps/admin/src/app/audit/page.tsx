@@ -1,6 +1,5 @@
 import { listPlatformAuditEventsForAdmin } from "@polaris/platform/audit-events";
 import Link from "next/link";
-import { forbidden } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { requirePlatformAdmin } from "@/lib/platform-admin-auth";
@@ -13,13 +12,7 @@ interface AuditPageProps {
   }>;
 }
 
-const guardPlatformAdmin = async () => {
-  try {
-    return await requirePlatformAdmin();
-  } catch {
-    forbidden();
-  }
-};
+const guardPlatformAdmin = async () => requirePlatformAdmin();
 
 const getFilter = async (
   searchParams: AuditPageProps["searchParams"],
@@ -140,7 +133,7 @@ const AuditContent = async ({ searchParams }: AuditPageProps) => {
                 {event.actorPlatformAdminId ?? "sem admin"}
               </span>
               <span className="truncate text-muted-foreground">
-                {event.actorUserId ?? "sem user"}
+                {event.actorAdminUserId ?? "sem user"}
               </span>
               <span className="text-muted-foreground">
                 {formatDateTime(event.createdAt)}

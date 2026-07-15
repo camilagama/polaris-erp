@@ -4,6 +4,7 @@ vi.mock("server-only", () => ({}));
 
 import {
   bootstrapPlatformAdmin,
+  createPlatformAdminEnrollment,
   grantPlatformAdminAccess,
   listPlatformAdminGrants,
   recordPlatformAuditEvent,
@@ -23,7 +24,7 @@ describe("platform admin helpers", () => {
 
     await recordPlatformAuditEvent(db as never, {
       action: "platform_admin.bootstrap",
-      actorUserId: "user-founder",
+      actorAdminUserId: "admin-founder",
       metadata: { reason: "initial setup" },
       subjectId: "user-founder",
       subjectType: "platform_admin",
@@ -32,7 +33,7 @@ describe("platform admin helpers", () => {
     expect(db.values).toHaveBeenCalledWith(
       expect.objectContaining({
         action: "platform_admin.bootstrap",
-        actorUserId: "user-founder",
+        actorAdminUserId: "admin-founder",
         metadata: { reason: "initial setup" },
         subjectId: "user-founder",
         subjectType: "platform_admin",
@@ -52,7 +53,7 @@ describe("platform admin helpers", () => {
         expiresAt: new Date(Date.now() + 60_000),
         reason: "first internal operator",
         role: "owner",
-        userId: "user-founder",
+        adminUserId: "admin-founder",
       },
       db as never
     );
@@ -71,7 +72,7 @@ describe("platform admin helpers", () => {
     expect(tx.values).toHaveBeenCalledWith(
       expect.objectContaining({
         action: "platform_admin.bootstrap",
-        actorUserId: "user-founder",
+        actorAdminUserId: "admin-founder",
         subjectType: "platform_admin",
       })
     );
@@ -88,7 +89,7 @@ describe("platform admin helpers", () => {
           expiresAt: new Date(0),
           reason: "first internal operator",
           role: "owner",
-          userId: "user-founder",
+          adminUserId: "admin-founder",
         },
         db as never
       )
@@ -112,11 +113,11 @@ describe("platform admin helpers", () => {
     await grantPlatformAdminAccess(
       {
         actorPlatformAdminId: "platform-admin-1",
-        actorUserId: "owner-user",
+        actorAdminUserId: "owner-admin",
         expiresAt: new Date(Date.now() + 60_000),
         reason: "Temporary support coverage.",
         role: "support",
-        targetUserId: "support-user",
+        targetAdminUserId: "support-admin",
       },
       db as never
     );
@@ -133,6 +134,36 @@ describe("platform admin helpers", () => {
     );
   });
 
+  it("creates a pre-approved enrollment by exact normalized email", async () => {
+    const tx = {
+      ...createInsertMock(),
+      execute: vi.fn().mockResolvedValueOnce({ rows: [{ id: "enrollment-1" }] }),
+    };
+    const db = { transaction: vi.fn(async (callback) => callback(tx)) };
+
+    await createPlatformAdminEnrollment(
+      {
+        actorAdminUserId: "owner-admin",
+        actorPlatformAdminId: "platform-admin-1",
+        email: "  CONTACTO@AGENCIA.COM ",
+        enrollmentExpiresAt: new Date(Date.now() + 60_000),
+        grantExpiresAt: new Date(Date.now() + 120_000),
+        reason: "Temporary support coverage.",
+        role: "support",
+      },
+      db as never
+    );
+
+    expect(tx.execute).toHaveBeenCalledOnce();
+    expect(tx.values).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "platform_admin.enrollment_created",
+        metadata: expect.objectContaining({ email: "contacto@agencia.com" }),
+        subjectId: "enrollment-1",
+      })
+    );
+  });
+
   it("rejects a permanent or unexplained grant before opening a transaction", () => {
     const db = { transaction: vi.fn() };
 
@@ -140,11 +171,11 @@ describe("platform admin helpers", () => {
       grantPlatformAdminAccess(
         {
           actorPlatformAdminId: "platform-admin-1",
-          actorUserId: "owner-user",
+          actorAdminUserId: "owner-admin",
           expiresAt: new Date(0),
           reason: " ",
           role: "support",
-          targetUserId: "support-user",
+          targetAdminUserId: "support-admin",
         },
         db as never
       )
@@ -165,7 +196,7 @@ describe("platform admin helpers", () => {
     await revokePlatformAdminGrant(
       {
         actorPlatformAdminId: "platform-admin-1",
-        actorUserId: "owner-user",
+        actorAdminUserId: "owner-admin",
         grantId: "grant-2",
         reason: "Coverage window ended.",
       },
@@ -191,7 +222,7 @@ describe("platform admin helpers", () => {
           reason: "Temporary support coverage.",
           revoked_at: null,
           role: "support",
-          user_id: "support-user",
+          admin_user_id: "support-admin",
         },
       ],
     });
@@ -206,7 +237,7 @@ describe("platform admin helpers", () => {
         reason: "Temporary support coverage.",
         revokedAt: null,
         role: "support",
-        userId: "support-user",
+        adminUserId: "support-admin",
       },
     ]);
     expect(JSON.stringify(execute.mock.calls[0]?.[0])).not.toContain("email");

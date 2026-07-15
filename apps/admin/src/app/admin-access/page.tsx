@@ -1,9 +1,8 @@
 import { listPlatformAdminGrantsForOwner } from "@polaris/platform/admin";
-import { forbidden } from "next/navigation";
 import { connection } from "next/server";
 import { requirePlatformAdmin } from "@/lib/platform-admin-auth";
 import {
-  grantPlatformAdminAccessAction,
+  createPlatformAdminEnrollmentAction,
   revokePlatformAdminGrantAction,
 } from "./actions";
 
@@ -21,11 +20,7 @@ const formatDateTime = (value: string | null) =>
 export default async function PlatformAdminAccessPage() {
   await connection();
 
-  try {
-    await requirePlatformAdmin({ minimumRole: "owner" });
-  } catch {
-    forbidden();
-  }
+  await requirePlatformAdmin({ minimumRole: "owner" });
 
   const grants = await listPlatformAdminGrantsForOwner();
 
@@ -40,15 +35,16 @@ export default async function PlatformAdminAccessPage() {
           expiração e auditoria.
         </p>
         <form
-          action={grantPlatformAdminAccessAction}
+          action={createPlatformAdminEnrollmentAction}
           className="mt-5 grid gap-3 md:grid-cols-2"
         >
           <label className="grid gap-2 text-sm">
             ID do usuário autenticado
             <input
               className="rounded-md border border-border bg-background px-3 py-2 font-mono text-sm"
-              name="targetUserId"
+              name="email"
               required
+              type="email"
             />
           </label>
           <label className="grid gap-2 text-sm">
@@ -103,7 +99,7 @@ export default async function PlatformAdminAccessPage() {
             className="grid min-w-[900px] grid-cols-[1.1fr_0.8fr_1fr_1.3fr_1fr] gap-4 border-border border-b px-4 py-3 text-sm"
             key={grant.grantId}
           >
-            <span className="truncate font-mono">{grant.userId}</span>
+            <span className="truncate font-mono">{grant.adminUserId}</span>
             <span>{grant.role}</span>
             <span>{formatDateTime(grant.expiresAt)}</span>
             <span className="truncate">{grant.reason}</span>

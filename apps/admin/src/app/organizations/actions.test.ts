@@ -48,7 +48,7 @@ describe("changeOrganizationStatusAction", () => {
     vi.clearAllMocks();
     requirePlatformAdminMock.mockResolvedValue({
       platformAdminId: "platform-admin-1",
-      userId: "user-1",
+      adminUserId: "user-1",
     });
   });
 
@@ -95,12 +95,12 @@ describe("changeOrganizationStatusAction", () => {
     });
     expect(assertAdminRateLimitMock).toHaveBeenCalledWith({
       action: "organization.status.change",
-      actorUserId: "user-1",
+      actorAdminUserId: "user-1",
       targetId: "org-1",
     });
     expect(updatePlatformOrganizationStatusMock).toHaveBeenCalledWith({
       actorPlatformAdminId: "platform-admin-1",
-      actorUserId: "user-1",
+      actorAdminUserId: "user-1",
       organizationId: "org-1",
       reason: "fraud review",
       status: "suspended",
@@ -115,7 +115,7 @@ describe("closeOrganizationAction", () => {
     vi.clearAllMocks();
     requirePlatformAdminMock.mockResolvedValue({
       platformAdminId: "platform-admin-1",
-      userId: "user-1",
+      adminUserId: "user-1",
     });
   });
 
@@ -132,12 +132,12 @@ describe("closeOrganizationAction", () => {
     });
     expect(assertAdminRateLimitMock).toHaveBeenCalledWith({
       action: "organization.close",
-      actorUserId: "user-1",
+      actorAdminUserId: "user-1",
       targetId: "org-1",
     });
     expect(closePlatformOrganizationMock).toHaveBeenCalledWith({
       actorPlatformAdminId: "platform-admin-1",
-      actorUserId: "user-1",
+      actorAdminUserId: "user-1",
       organizationId: "org-1",
       reason: "Customer requested closure.",
     });

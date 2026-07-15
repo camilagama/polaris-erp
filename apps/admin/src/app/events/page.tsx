@@ -1,18 +1,11 @@
 import { getPlatformEventsOverviewForAdmin } from "@polaris/platform/events";
 import Link from "next/link";
-import { forbidden } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { requirePlatformAdmin } from "@/lib/platform-admin-auth";
 import { retryOutboxEventAction } from "./actions";
 
-const guardPlatformAdmin = async () => {
-  try {
-    return await requirePlatformAdmin();
-  } catch {
-    forbidden();
-  }
-};
+const guardPlatformAdmin = async () => requirePlatformAdmin();
 
 const formatDateTime = (value: string | null) => {
   if (!value) {

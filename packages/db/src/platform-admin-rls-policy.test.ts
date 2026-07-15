@@ -17,6 +17,11 @@ const platformTablesRlsMigrationPath = join(
   "migrations",
   "20260714251000_platform_admin_tables_rls.sql"
 );
+const adminIdentityMigrationPath = join(
+  import.meta.dirname,
+  "migrations",
+  "20260715120000_admin_identity_isolation.sql"
+);
 
 describe("platform admin RLS policy migration", () => {
   it("validates active grants instead of trusting a non-empty setting", async () => {
@@ -69,5 +74,14 @@ describe("platform admin RLS policy migration", () => {
     expect(migration).toContain(
       "\"actor_user_id\" = nullif(current_setting('app.user_id', true), '')"
     );
+  });
+
+  it("moves platform context and audit actors to administrative identities", async () => {
+    const migration = await readFile(adminIdentityMigrationPath, "utf8");
+
+    expect(migration).toContain('ADD COLUMN "admin_user_id" text NOT NULL');
+    expect(migration).toContain('ADD COLUMN "actor_admin_user_id" text');
+    expect(migration).toContain("current_setting('app.admin_user_id', true)");
+    expect(migration).not.toContain("app.user_id");
   });
 });

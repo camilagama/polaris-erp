@@ -175,7 +175,7 @@ export async function POST(request: Request) {
     expiresAt: new Date(Date.now() + E2E_PLATFORM_ADMIN_GRANT_TTL_MS),
     reason: "Playwright admin E2E bootstrap",
     role,
-    userId: user.id,
+    adminUserId: user.id,
   });
   const session = await ctx.internalAdapter.createSession(user.id);
 

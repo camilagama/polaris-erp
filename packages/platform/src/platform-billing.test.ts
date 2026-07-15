@@ -147,7 +147,7 @@ describe("platform billing overview", () => {
       updatePlatformBillingSubscriptionStatus(
         {
           actorPlatformAdminId: "platform-admin-1",
-          actorUserId: "user-1",
+          actorAdminUserId: "user-1",
           reason: " ",
           status: "active",
           subscriptionId: "subscription-1",
@@ -168,7 +168,7 @@ describe("platform billing overview", () => {
     await updatePlatformBillingSubscriptionStatus(
       {
         actorPlatformAdminId: "platform-admin-1",
-        actorUserId: "user-1",
+        actorAdminUserId: "user-1",
         paymentEvidenceReference: "asaas-pay-1",
         reason: "payment confirmed manually",
         status: "active",
@@ -187,7 +187,7 @@ describe("platform billing overview", () => {
       expect.objectContaining({
         action: "billing.subscription.status_changed",
         actorPlatformAdminId: "platform-admin-1",
-        actorUserId: "user-1",
+        actorAdminUserId: "user-1",
         metadata: {
           paymentEvidenceReference: "asaas-pay-1",
           reason: "payment confirmed manually",
@@ -209,7 +209,7 @@ describe("platform billing overview", () => {
       updatePlatformBillingSubscriptionStatus(
         {
           actorPlatformAdminId: "platform-admin-1",
-          actorUserId: "user-1",
+          actorAdminUserId: "user-1",
           paymentEvidenceReference: " ",
           reason: "payment confirmed manually",
           status: "active",
@@ -233,7 +233,7 @@ describe("platform billing overview", () => {
       updatePlatformBillingSubscriptionStatus(
         {
           actorPlatformAdminId: "platform-admin-1",
-          actorUserId: "user-1",
+          actorAdminUserId: "user-1",
           reason: "payment reversed",
           status: "past_due",
           subscriptionId: "subscription-missing",

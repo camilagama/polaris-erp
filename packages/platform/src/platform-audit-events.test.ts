@@ -10,7 +10,7 @@ describe("listPlatformAuditEvents", () => {
         {
           action: "organization.status_changed",
           actor_platform_admin_id: "platform-admin-1",
-          actor_user_id: "user-1",
+          actor_admin_user_id: "admin-user-1",
           created_at: new Date("2026-07-09T12:00:00.000Z"),
           id: "event-1",
           metadata: {
@@ -33,7 +33,7 @@ describe("listPlatformAuditEvents", () => {
       {
         action: "organization.status_changed",
         actorPlatformAdminId: "platform-admin-1",
-        actorUserId: "user-1",
+        actorAdminUserId: "admin-user-1",
         createdAt: "2026-07-09T12:00:00.000Z",
         id: "event-1",
         subjectId: "org-1",

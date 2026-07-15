@@ -34,7 +34,7 @@ export async function createSupportNoteAction(formData: FormData) {
 
   await assertAdminRateLimit({
     action: "support-note.create",
-    actorUserId: context.userId,
+    actorAdminUserId: context.adminUserId,
     targetId: organizationId ?? customerUserId ?? "untargeted",
   });
 

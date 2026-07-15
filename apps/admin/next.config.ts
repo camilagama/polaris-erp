@@ -2,8 +2,9 @@ import { loadEnvConfig } from "@next/env";
 import { resolveCanonicalAppUrl } from "@polaris/auth/app-url";
 import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
+import { fileURLToPath } from "node:url";
 
-loadEnvConfig("../..");
+loadEnvConfig(fileURLToPath(new URL("../../", import.meta.url)));
 
 const TRAILING_SLASH_PATTERN = /\/$/;
 

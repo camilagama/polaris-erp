@@ -65,13 +65,13 @@ describe("authentication audit events", () => {
     });
 
     expect(mockDb.insert).toHaveBeenCalledOnce();
-    expect(tenantContextMocks.withUserContext).toHaveBeenCalledWith(
-      "user-1",
+    expect(tenantContextMocks.withInternalJobContext).toHaveBeenCalledWith(
+      "auth_audit",
       expect.any(Function)
     );
     expect(mockDb.insert.mock.results[0]?.value.values).toHaveBeenCalledWith({
       action: "auth.login_succeeded",
-      actorUserId: "user-1",
+      actorAdminUserId: null,
       metadata: {
         provider: "google",
       },
@@ -119,7 +119,7 @@ describe("authentication audit events", () => {
     );
     expect(mockDb.insert.mock.results[0]?.value.values).toHaveBeenCalledWith({
       action: "auth.login_failed",
-      actorUserId: null,
+      actorAdminUserId: null,
       metadata: {
         provider: "google",
         reason: "callback_failed",

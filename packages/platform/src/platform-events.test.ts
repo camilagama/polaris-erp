@@ -82,7 +82,7 @@ describe("platform events", () => {
     await retryPlatformOutboxEvent(
       {
         actorPlatformAdminId: "platform-admin-1",
-        actorUserId: "user-1",
+        actorAdminUserId: "user-1",
         eventId: "event-1",
         reason: "provider recovered",
       },
@@ -95,7 +95,7 @@ describe("platform events", () => {
       expect.objectContaining({
         action: "outbox.retry_requested",
         actorPlatformAdminId: "platform-admin-1",
-        actorUserId: "user-1",
+        actorAdminUserId: "user-1",
         metadata: {
           eventId: "event-1",
           reason: "provider recovered",
@@ -117,7 +117,7 @@ describe("platform events", () => {
       retryPlatformOutboxEvent(
         {
           actorPlatformAdminId: "platform-admin-1",
-          actorUserId: "user-1",
+          actorAdminUserId: "user-1",
           eventId: "event-1",
           reason: "provider recovered",
         },
@@ -138,7 +138,7 @@ describe("platform events", () => {
       retryPlatformOutboxEvent(
         {
           actorPlatformAdminId: "platform-admin-1",
-          actorUserId: "user-1",
+          actorAdminUserId: "user-1",
           eventId: " ",
           reason: "provider recovered",
         },
@@ -160,7 +160,7 @@ describe("platform events", () => {
       retryPlatformOutboxEvent(
         {
           actorPlatformAdminId: "platform-admin-1",
-          actorUserId: "user-1",
+          actorAdminUserId: "user-1",
           eventId: "event-1",
           reason: " ",
         },

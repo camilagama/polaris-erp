@@ -35,7 +35,7 @@ const createDbMock = () => {
       rows: [
         {
           action: "should-not-leak",
-          actor_user_id: "user-secret",
+          actor_admin_user_id: "admin-user-secret",
           count: null,
           label: "platform_admin.bootstrap",
           metadata: { token: "secret" },
@@ -99,7 +99,7 @@ describe("getPlatformDashboardData", () => {
       },
     ]);
     expect(JSON.stringify(data)).not.toContain("secret");
-    expect(JSON.stringify(data)).not.toContain("actor_user_id");
+    expect(JSON.stringify(data)).not.toContain("actor_admin_user_id");
     expect(JSON.stringify(data)).not.toContain("metadata");
     expect(db.execute).toHaveBeenCalledTimes(3);
     expect(healthMock).not.toHaveBeenCalled();

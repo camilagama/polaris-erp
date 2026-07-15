@@ -42,13 +42,13 @@ export async function changeOrganizationStatusAction(formData: FormData) {
 
   await assertAdminRateLimit({
     action: "organization.status.change",
-    actorUserId: context.userId,
+    actorAdminUserId: context.adminUserId,
     targetId: organizationId,
   });
 
   await updatePlatformOrganizationStatus({
     actorPlatformAdminId: context.platformAdminId,
-    actorUserId: context.userId,
+    actorAdminUserId: context.adminUserId,
     organizationId,
     reason,
     status,
@@ -70,13 +70,13 @@ export async function closeOrganizationAction(formData: FormData) {
 
   await assertAdminRateLimit({
     action: "organization.close",
-    actorUserId: context.userId,
+    actorAdminUserId: context.adminUserId,
     targetId: organizationId,
   });
 
   await closePlatformOrganization({
     actorPlatformAdminId: context.platformAdminId,
-    actorUserId: context.userId,
+    actorAdminUserId: context.adminUserId,
     organizationId,
     reason,
   });

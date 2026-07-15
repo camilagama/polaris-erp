@@ -41,7 +41,7 @@ describe("retryOutboxEventAction", () => {
   it("requires event id before retrying an outbox event", async () => {
     requirePlatformAdminMock.mockResolvedValueOnce({
       platformAdminId: "platform-admin-1",
-      userId: "user-1",
+      adminUserId: "user-1",
     });
 
     const { retryOutboxEventAction } = await import("./actions");
@@ -57,7 +57,7 @@ describe("retryOutboxEventAction", () => {
   it("requires a reason before retrying an outbox event", async () => {
     requirePlatformAdminMock.mockResolvedValueOnce({
       platformAdminId: "platform-admin-1",
-      userId: "user-1",
+      adminUserId: "user-1",
     });
 
     const { retryOutboxEventAction } = await import("./actions");
@@ -73,7 +73,7 @@ describe("retryOutboxEventAction", () => {
   it("rate limits and delegates retry through the platform module", async () => {
     requirePlatformAdminMock.mockResolvedValueOnce({
       platformAdminId: "platform-admin-1",
-      userId: "user-1",
+      adminUserId: "user-1",
     });
     assertAdminRateLimitMock.mockResolvedValueOnce(undefined);
     retryPlatformOutboxEventMock.mockResolvedValueOnce(true);
@@ -89,12 +89,12 @@ describe("retryOutboxEventAction", () => {
     });
     expect(assertAdminRateLimitMock).toHaveBeenCalledWith({
       action: "outbox.retry",
-      actorUserId: "user-1",
+      actorAdminUserId: "user-1",
       targetId: "event-1",
     });
     expect(retryPlatformOutboxEventMock).toHaveBeenCalledWith({
       actorPlatformAdminId: "platform-admin-1",
-      actorUserId: "user-1",
+      actorAdminUserId: "user-1",
       eventId: "event-1",
       reason: "provider recovered",
     });
@@ -105,7 +105,7 @@ describe("retryOutboxEventAction", () => {
     revalidatePathMock.mockClear();
     requirePlatformAdminMock.mockResolvedValueOnce({
       platformAdminId: "platform-admin-1",
-      userId: "user-1",
+      adminUserId: "user-1",
     });
     assertAdminRateLimitMock.mockResolvedValueOnce(undefined);
     retryPlatformOutboxEventMock.mockResolvedValueOnce(false);

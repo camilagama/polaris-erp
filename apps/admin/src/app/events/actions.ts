@@ -22,13 +22,13 @@ export async function retryOutboxEventAction(formData: FormData) {
 
   await assertAdminRateLimit({
     action: "outbox.retry",
-    actorUserId: context.userId,
+    actorAdminUserId: context.adminUserId,
     targetId: eventId,
   });
 
   const retried = await retryPlatformOutboxEvent({
     actorPlatformAdminId: context.platformAdminId,
-    actorUserId: context.userId,
+    actorAdminUserId: context.adminUserId,
     eventId,
     reason,
   });

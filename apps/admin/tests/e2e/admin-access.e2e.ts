@@ -55,15 +55,14 @@ const loginAsPlatformAdmin = async (
     );
 };
 
-test("blocks unauthenticated users from the internal admin", async ({
+test("redirects unauthenticated users to the admin sign-in", async ({
   page,
 }) => {
   await page.goto("/");
 
   await expect(
-    page.getByRole("heading", { name: "Admin interno protegido" })
+    page.getByRole("heading", { name: "Entrar no admin" })
   ).toBeVisible();
-  await expect(page.getByText("Acesso negado")).toBeVisible();
 });
 
 test("allows a bootstrapped platform admin to open the internal dashboard", async ({

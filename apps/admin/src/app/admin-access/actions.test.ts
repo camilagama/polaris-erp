@@ -37,7 +37,7 @@ const createGrantForm = (): FormData => {
   formData.set("expiresAt", new Date(Date.now() + 60_000).toISOString());
   formData.set("reason", "Temporary support coverage.");
   formData.set("role", "support");
-  formData.set("targetUserId", "support-user");
+  formData.set("targetAdminUserId", "support-user");
   return formData;
 };
 
@@ -46,7 +46,7 @@ describe("platform admin access actions", () => {
     vi.clearAllMocks();
     requirePlatformAdminMock.mockResolvedValue({
       platformAdminId: "platform-admin-1",
-      userId: "owner-user",
+      adminUserId: "owner-user",
     });
   });
 
@@ -59,9 +59,9 @@ describe("platform admin access actions", () => {
     expect(grantPlatformAdminAccessMock).toHaveBeenCalledWith(
       expect.objectContaining({
         actorPlatformAdminId: "platform-admin-1",
-        actorUserId: "owner-user",
+        actorAdminUserId: "owner-user",
         role: "support",
-        targetUserId: "support-user",
+        targetAdminUserId: "support-user",
       })
     );
   });
@@ -87,7 +87,7 @@ describe("platform admin access actions", () => {
 
     expect(revokePlatformAdminGrantMock).toHaveBeenCalledWith({
       actorPlatformAdminId: "platform-admin-1",
-      actorUserId: "owner-user",
+      actorAdminUserId: "owner-user",
       grantId: "grant-1",
       reason: "Coverage ended.",
     });

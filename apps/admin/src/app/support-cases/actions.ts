@@ -65,7 +65,7 @@ export async function createSupportCaseAction(formData: FormData) {
 
   await assertAdminRateLimit({
     action: "support-case.create",
-    actorUserId: context.userId,
+    actorAdminUserId: context.adminUserId,
     targetId,
   });
 
@@ -99,7 +99,7 @@ export async function updateSupportCaseAction(formData: FormData) {
 
   await assertAdminRateLimit({
     action: "support-case.update",
-    actorUserId: context.userId,
+    actorAdminUserId: context.adminUserId,
     targetId: caseId,
   });
 
