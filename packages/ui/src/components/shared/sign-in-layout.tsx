@@ -1,8 +1,8 @@
 "use client";
 
-import { Button } from "@polaris/ui/components/ui/button";
-import { Google } from "@polaris/ui/components/ui/svgs/google";
-import { DGImportsLogo } from "@polaris/ui/components/ui/svgs/logo";
+import { Button } from "../ui/button";
+import { Google } from "../ui/svgs/google";
+import { DGImportsLogo } from "../ui/svgs/logo";
 
 export interface SignInLayoutProps {
   appName: string;
