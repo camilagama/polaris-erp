@@ -6,6 +6,7 @@
     "./components/shared/*": "./src/components/shared/*.tsx",
     "./components/ui/*": "./src/components/ui/*.tsx",
     "./components/ui/svgs/*": "./src/components/ui/svgs/*.tsx",
+    "./components/ui/breadcrumb": "./src/components/ui/breadcrumb.tsx",
     "./components/ui/sidebar": "./src/components/ui/sidebar.tsx",
     "./components/ui/svgs/logo": "./src/components/ui/svgs/logo.tsx",
     "./components/shared/base-sidebar": "./src/components/shared/base-sidebar.tsx",

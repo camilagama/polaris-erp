@@ -27,13 +27,16 @@ const unitsChartConfig = {
 
 export function ProductCatalogPerformanceChart({
   data,
+  emptyLabel,
 }: {
   data: ProductCatalogPerformancePoint[];
+  emptyLabel?: string;
 }) {
   return (
     <AreaPerformanceChart
       config={catalogChartConfig}
       data={data}
+      emptyLabel={emptyLabel}
       formatType="currency"
       lines={[
         { dataKey: "soldAmount", fillOpacity: 0.28 },
@@ -43,11 +46,18 @@ export function ProductCatalogPerformanceChart({
   );
 }
 
-export function ProductUnitsSoldChart({ data }: { data: ProductSalesPoint[] }) {
+export function ProductUnitsSoldChart({
+  data,
+  emptyLabel,
+}: {
+  data: ProductSalesPoint[];
+  emptyLabel?: string;
+}) {
   return (
     <AreaPerformanceChart
       config={unitsChartConfig}
       data={data}
+      emptyLabel={emptyLabel}
       formatType="number"
       lines={[{ dataKey: "quantitySold", fillOpacity: 0.22 }]}
     />

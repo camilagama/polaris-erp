@@ -12,6 +12,7 @@ import { signOutAction } from "@/features/auth/actions";
 import { getPlatformAdminContext } from "@/lib/platform-admin-auth";
 import { getSession } from "@/lib/session";
 import { AdminSidebar } from "../../components/admin-sidebar";
+import { AdminThemeToggle } from "../../components/admin-theme-toggle";
 
 const getAdminContext = async () => {
   try {
@@ -65,9 +66,9 @@ async function AdminAppWrapper({ children }: { children: ReactNode }) {
         }}
       />
       <SidebarInset>
-        <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center border-border/60 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/70">
+        <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-3 border-border/60 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/70">
           <SidebarTrigger />
-          <div className="ml-3 min-w-0 sm:ml-4">
+          <div className="ml-1 min-w-0 flex-1 sm:ml-2">
             <p className="truncate font-semibold text-sm sm:text-base">
               Polaris Admin
             </p>
@@ -75,6 +76,7 @@ async function AdminAppWrapper({ children }: { children: ReactNode }) {
               Console operacional
             </p>
           </div>
+          <AdminThemeToggle />
         </header>
         <div className="mx-auto flex w-full max-w-[1600px] flex-1 flex-col px-4 py-4 sm:px-6 sm:py-6">
           {children}

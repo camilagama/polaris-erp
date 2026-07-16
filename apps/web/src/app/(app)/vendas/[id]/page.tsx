@@ -1,6 +1,15 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SaleDetailActions } from "@/components/sales/sale-detail-actions";
 import { Badge } from "@/components/ui/badge";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import {
   Table,
   TableBody,
@@ -70,6 +79,19 @@ export default async function VendaDetalhePage(
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 pb-14 sm:pb-0">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/vendas">Vendas</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{saleTitle}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
       <div className="flex items-center justify-between gap-3 border-border/40 border-b pb-6">
         <div className="flex flex-col gap-1">
           <h1 className="font-semibold text-2xl tracking-tight">{saleTitle}</h1>

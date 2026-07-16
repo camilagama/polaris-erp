@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import "./globals.css";
 import { TooltipProvider } from "@polaris/ui/components/ui/tooltip";
 import { cn } from "@polaris/ui/lib/utils";
+import { ThemeProvider } from "../components/theme-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,7 +29,7 @@ export default function RootLayout({
   return (
     <html
       className={cn(
-        "dark h-full antialiased",
+        "h-full antialiased",
         geistSans.variable,
         geistMono.variable
       )}
@@ -36,7 +37,13 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="flex min-h-full flex-col bg-background font-sans text-foreground">
-        <TooltipProvider>{children}</TooltipProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          disableTransitionOnChange
+        >
+          <TooltipProvider>{children}</TooltipProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

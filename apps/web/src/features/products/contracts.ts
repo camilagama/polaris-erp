@@ -127,5 +127,6 @@ export interface InventoryMovementFilters {
 export interface InventoryMovementsResult {
   filters: InventoryMovementFilters;
   items: InventoryMovementItem[];
+  nextCursor?: string | null;
   products: InventoryMovementFilterProduct[];
 }

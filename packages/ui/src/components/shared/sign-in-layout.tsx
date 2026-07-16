@@ -19,7 +19,7 @@ export function SignInLayout({
   description,
   footerText,
   googleAuthHref,
-  imageUrl = "https://images.unsplash.com/photo-1497436072909-60f360e1d4b1?auto=format&fit=crop&q=80&w=2560",
+  imageUrl,
 }: SignInLayoutProps) {
   return (
     <div className="grid min-h-svh lg:grid-cols-[0.8fr_2fr]">
@@ -59,12 +59,16 @@ export function SignInLayout({
         </div>
       </div>
       <div className="relative hidden bg-muted lg:block">
-        <div
-          className="absolute inset-0 h-full w-full bg-center bg-cover brightness-[0.3] grayscale"
-          style={{
-            backgroundImage: `url("${imageUrl}")`,
-          }}
-        />
+        {imageUrl ? (
+          <div
+            className="absolute inset-0 h-full w-full bg-center bg-cover brightness-[0.3] grayscale"
+            style={{
+              backgroundImage: `url("${imageUrl}")`,
+            }}
+          />
+        ) : (
+          <div className="absolute inset-0 h-full w-full bg-gradient-to-br from-zinc-800 to-zinc-950" />
+        )}
       </div>
     </div>
   );

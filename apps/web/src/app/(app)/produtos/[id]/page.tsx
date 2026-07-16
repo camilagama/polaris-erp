@@ -4,6 +4,14 @@ import { ProductDetailActions } from "@/components/products/product-detail-actio
 import { ProductHistoryPanel } from "@/components/products/product-history-panel";
 import { ProductImageFrame } from "@/components/products/product-image-frame";
 import { ProductUnitsSoldChart } from "@/components/products/product-sales-chart";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { loadProductDetailPage } from "@/features/products/detail-page";
@@ -32,6 +40,19 @@ export default async function ProdutoDetalhePage(
 
   return (
     <div className="flex flex-col gap-6 p-4 pb-20 sm:p-6 sm:pb-6">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/produtos">Produtos</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{product.name}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
         <div className="flex flex-col gap-6 xl:col-span-2">
           <Card className="border-border/50">

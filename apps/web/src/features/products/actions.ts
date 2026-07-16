@@ -1,5 +1,6 @@
 "use server";
 
+import type { InventoryMovementFilters } from "@/features/products/contracts";
 import {
   appendProductImageMetadata,
   clearProductImageMetadata,
@@ -395,4 +396,26 @@ export async function softDeleteProductAction(id: string, input: unknown) {
   }
 
   return deletionResult;
+}
+
+export async function loadMoreInventoryMovementsAction({
+  cursor,
+  filters,
+}: {
+  cursor: string;
+  filters: InventoryMovementFilters;
+}) {
+  const context = await requireAppContext();
+  const { getInventoryMovementsQuery } = await import("./queries");
+
+  const result = await getInventoryMovementsQuery({
+    cursor,
+    filters,
+    organizationId: context.organizationId,
+  });
+
+  return {
+    items: result.items,
+    nextCursor: result.nextCursor ?? null,
+  };
 }

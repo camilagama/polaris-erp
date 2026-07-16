@@ -332,6 +332,7 @@ export async function getProductsQuery({
 }
 
 interface InventoryMovementsQueryInput {
+  cursor?: string;
   filters: InventoryMovementFilters;
   organizationId: string;
 }
@@ -625,6 +626,11 @@ const getMovementQueries = (
   return queries;
 };
 
+const inventoryMovementsCursorSchema = z.object({
+  offset: z.number().int().nonnegative(),
+  version: z.literal(1),
+});
+
 export async function getInventoryMovementsQuery(
   input: InventoryMovementsQueryInput
 ): Promise<InventoryMovementsResult> {
@@ -632,14 +638,34 @@ export async function getInventoryMovementsQuery(
     listProductsForInventoryMovementFilter(input.organizationId),
     Promise.all(getMovementQueries(input)),
   ]);
+
+  const offset = input.cursor
+    ? decodeOpaqueCursor(
+        input.cursor,
+        inventoryMovementsCursorSchema,
+        "Cursor de movimentacoes invalido."
+      ).offset
+    : 0;
+
+  const pageSize = DEFAULT_PAGE_SIZE;
+  const limit = pageSize + 1;
+
   const items = movementGroups
     .flat()
     .sort(byNewestMovement)
-    .slice(0, INVENTORY_MOVEMENTS_LIMIT);
+    .slice(offset, offset + limit);
+
+  const hasMore = items.length > pageSize;
+  const pageItems = hasMore ? items.slice(0, pageSize) : items;
+
+  const nextCursor = hasMore
+    ? encodeOpaqueCursor({ offset: offset + pageSize, version: 1 })
+    : null;
 
   return {
     filters: input.filters,
-    items,
+    items: pageItems,
+    nextCursor,
     products: productsForFilter,
   };
 }

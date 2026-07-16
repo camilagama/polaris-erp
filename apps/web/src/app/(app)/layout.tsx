@@ -1,10 +1,10 @@
 import {
   SidebarInset,
   SidebarProvider,
-  SidebarTrigger,
 } from "@polaris/ui/components/ui/sidebar";
 import { connection } from "next/server";
 import type { ReactNode } from "react";
+import { AppHeader } from "@/components/app-header";
 import { AppSidebar } from "@/components/app-sidebar";
 import { signOutAction } from "@/features/auth/actions";
 import { requirePageAppContext } from "@/lib/app-session";
@@ -30,17 +30,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         }}
       />
       <SidebarInset>
-        <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center border-border/60 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/70">
-          <SidebarTrigger />
-          <div className="ml-3 min-w-0 sm:ml-4">
-            <p className="truncate font-semibold text-sm sm:text-base">
-              Polaris
-            </p>
-            <p className="truncate text-[11px] text-muted-foreground sm:text-xs">
-              Conta individual protegida
-            </p>
-          </div>
-        </header>
+        <AppHeader />
         <div className="mx-auto flex w-full max-w-[1600px] flex-1 flex-col px-4 py-4 sm:px-6 sm:py-6">
           {children}
         </div>

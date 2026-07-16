@@ -46,12 +46,17 @@ const toDraftRange = ({
   from,
   to,
 }: {
-  from: string;
-  to: string;
-}): DateRange => ({
-  from: toDate(from),
-  to: toDate(to),
-});
+  from: string | undefined;
+  to: string | undefined;
+}): DateRange | undefined => {
+  if (!(from || to)) {
+    return;
+  }
+  return {
+    from: from ? toDate(from) : undefined,
+    to: to ? toDate(to) : undefined,
+  };
+};
 
 export function DateRangePicker({
   disabled = false,
@@ -109,13 +114,14 @@ export function DateRangePicker({
           variant="outline"
         >
           <HugeiconsIcon data-icon="inline-start" icon={Calendar01Icon} />
-          {format(toDate(value.from), "dd/MM/yyyy", {
-            locale: ptBR,
-          })}{" "}
-          ate{" "}
-          {format(toDate(value.to), "dd/MM/yyyy", {
-            locale: ptBR,
-          })}
+          {value.from && value.to ? (
+            <>
+              {format(toDate(value.from), "dd/MM/yyyy", { locale: ptBR })} ate{" "}
+              {format(toDate(value.to), "dd/MM/yyyy", { locale: ptBR })}
+            </>
+          ) : (
+            <span className="text-muted-foreground">Selecione o periodo</span>
+          )}
         </Button>
       </PopoverTrigger>
       <PopoverContent
@@ -197,9 +203,11 @@ export function DateRangePicker({
                     }
 
                     onChange({
-                      from: toDateInputValue(draftRange.from),
+                      from: draftRange.from
+                        ? toDateInputValue(draftRange.from)
+                        : "",
                       preset: draftPreset,
-                      to: toDateInputValue(draftRange.to),
+                      to: draftRange.to ? toDateInputValue(draftRange.to) : "",
                     });
                     setOpen(false);
                   }}

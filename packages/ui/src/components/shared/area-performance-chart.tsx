@@ -15,6 +15,7 @@ export interface AreaPerformanceChartProps {
   config: ChartConfig;
   // biome-ignore lint/suspicious/noExplicitAny: Recharts requires any[]
   data: any[];
+  emptyLabel?: string;
   formatType?: "currency" | "number";
   lines: {
     dataKey: string;
@@ -30,7 +31,16 @@ export function AreaPerformanceChart({
   formatType = "currency",
   lines,
   xAxisKey = "label",
+  emptyLabel = "Nenhum dado encontrado.",
 }: AreaPerformanceChartProps) {
+  if (data.length === 0) {
+    return (
+      <div className="flex h-56 w-full items-center justify-center rounded-lg border border-dashed text-muted-foreground text-sm">
+        {emptyLabel}
+      </div>
+    );
+  }
+
   return (
     <ChartContainer className="h-56 w-full" config={config}>
       <AreaChart accessibilityLayer data={data}>
