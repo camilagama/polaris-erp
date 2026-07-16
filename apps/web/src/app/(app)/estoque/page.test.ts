@@ -3,6 +3,12 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    replace: vi.fn(),
+  }),
+}));
+
 vi.mock("@/features/products/queries", () => ({
   getInventoryMovementsQuery: vi.fn(async () => ({
     filters: {
@@ -59,7 +65,8 @@ describe("EstoquePage", () => {
     );
 
     expect(markup).toContain("Movimentacoes de estoque");
-    expect(markup).toContain("Todos os produtos");
+    expect(markup).toContain("Produto");
+    expect(markup).toContain("Tipo");
     expect(markup).toContain("iPhone 15");
     expect(markup).toContain("Baixa");
     expect(markup).toContain("-1 un.");
