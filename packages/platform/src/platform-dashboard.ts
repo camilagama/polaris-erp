@@ -5,6 +5,26 @@ import { withPlatformAdminContext } from "@polaris/db/tenant-context";
 import { type SQL, sql } from "drizzle-orm";
 import { toIsoString, toNumber, toRows } from "./internal/query-results";
 
+const BUSINESS_TIME_ZONE = "America/Sao_Paulo";
+
+const businessDateFormatter = new Intl.DateTimeFormat("en-CA", {
+  day: "2-digit",
+  month: "2-digit",
+  timeZone: BUSINESS_TIME_ZONE,
+  year: "numeric",
+});
+
+const formatBusinessDate = (value: Date): string => {
+  const parts = businessDateFormatter.formatToParts(value);
+  const values = Object.fromEntries(
+    parts
+      .filter(({ type }) => type !== "literal")
+      .map(({ type, value: partValue }) => [type, partValue])
+  );
+
+  return `${values.year}-${values.month}-${values.day}`;
+};
+
 const RECENT_EVENT_LIMIT = 6;
 
 interface PlatformDashboardSummary {
@@ -95,11 +115,11 @@ const getActivityMap = async (
 ): Promise<{ date: string; count: number; level: number }[]> => {
   const rows = toRows(
     await queryableDb.execute(sql`
-      select date(created_at) as date, count(*) as count
+      select date(created_at at time zone ${BUSINESS_TIME_ZONE}) as date, count(*) as count
       from audit_events
       where created_at >= now() - interval '365 days'
-      group by date(created_at)
-      order by date(created_at) asc
+      group by date(created_at at time zone ${BUSINESS_TIME_ZONE})
+      order by date(created_at at time zone ${BUSINESS_TIME_ZONE}) asc
     `)
   );
 
@@ -128,7 +148,7 @@ const getActivityMap = async (
   for (let i = 364; i >= 0; i--) {
     const d = new Date(today);
     d.setDate(d.getDate() - i);
-    const dateStr = d.toISOString().split("T")[0];
+    const dateStr = formatBusinessDate(d);
     const count = activitiesMap.get(dateStr) || 0;
 
     activities.push({
