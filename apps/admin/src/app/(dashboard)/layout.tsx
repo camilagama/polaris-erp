@@ -78,7 +78,7 @@ async function AdminAppWrapper({ children }: { children: ReactNode }) {
           </div>
           <AdminThemeToggle />
         </header>
-        <div className="mx-auto flex w-full max-w-[1600px] flex-1 flex-col px-4 py-4 sm:px-6 sm:py-6">
+        <div className="mx-auto flex w-full max-w-[1650px] flex-1 flex-col px-4 py-4 sm:px-6 sm:py-6">
           {children}
         </div>
       </SidebarInset>
