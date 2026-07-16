@@ -27,7 +27,7 @@ export function DashboardSkeleton() {
               <Skeleton className="h-4 w-32" />
             </CardHeader>
             <CardContent className="flex flex-col gap-4 pt-0">
-              <Skeleton className="h-8 w-20" />
+              <Skeleton className="h-9 w-28" />
               <Skeleton className="h-[160px] w-full rounded-lg" />
             </CardContent>
           </Card>
@@ -39,10 +39,10 @@ export function DashboardSkeleton() {
         {Array.from({ length: 3 }).map((_, i) => (
           <Card className="flex h-[130px] flex-col justify-center" key={i}>
             <CardHeader className="gap-1 pb-2">
-              <Skeleton className="h-3 w-28" />
+              <Skeleton className="h-4 w-24" />
             </CardHeader>
             <CardContent className="flex flex-col gap-3 pt-0">
-              <Skeleton className="h-8 w-32" />
+              <Skeleton className="h-9 w-28" />
               <Skeleton className="h-12 w-full" />
             </CardContent>
           </Card>

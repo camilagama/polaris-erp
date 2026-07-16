@@ -131,15 +131,15 @@ export async function DashboardContent({
 
         <div className="flex h-full flex-col" style={layoutContainmentStyle}>
           <Card className="flex h-full flex-col justify-center">
-            <CardHeader className="gap-1">
+            <CardHeader className="gap-1 pb-2">
               <div className="flex items-center justify-between gap-3">
-                <CardTitle className="font-medium text-[10px] text-muted-foreground uppercase leading-none tracking-[0.14em]">
+                <CardTitle className="font-medium text-muted-foreground text-sm tracking-normal">
                   Retorno / Investimento
                 </CardTitle>
               </div>
             </CardHeader>
-            <CardContent className="flex flex-col gap-1.5">
-              <strong className="font-mono text-2xl tabular-nums leading-none tracking-tight">
+            <CardContent className="flex flex-col gap-1.5 pt-0">
+              <strong className="font-semibold text-3xl tabular-nums leading-none tracking-tight">
                 {marginPercentage.toFixed(1)}%
               </strong>
               <ProfitMarginChart
@@ -159,9 +159,9 @@ export async function DashboardContent({
             style={layoutContainmentStyle}
           >
             {card.id !== "revenue" && (
-              <CardHeader className="gap-1">
+              <CardHeader className="gap-1 pb-2">
                 <div className="flex items-center justify-between gap-3">
-                  <CardTitle className="font-medium text-[10px] text-muted-foreground uppercase leading-none tracking-[0.14em]">
+                  <CardTitle className="font-medium text-muted-foreground text-sm tracking-normal">
                     {card.label}
                   </CardTitle>
                   {card.badge ? (
@@ -179,9 +179,9 @@ export async function DashboardContent({
                 </div>
               </CardHeader>
             )}
-            <CardContent className="flex flex-col gap-1.5">
+            <CardContent className="flex flex-col gap-1.5 pt-0">
               {card.id !== "revenue" && card.id !== "count" && (
-                <strong className="font-mono text-2xl tabular-nums leading-none tracking-tight">
+                <strong className="font-semibold text-3xl tabular-nums leading-none tracking-tight">
                   {card.value}
                 </strong>
               )}
@@ -207,7 +207,7 @@ export async function DashboardContent({
                     return (
                       <div className="flex items-end justify-between gap-4">
                         <div className="flex flex-col gap-1">
-                          <strong className="font-mono text-2xl tabular-nums leading-none tracking-tight">
+                          <strong className="font-semibold text-3xl tabular-nums leading-none tracking-tight">
                             {card.value}
                           </strong>
                           {card.note && (
