@@ -1,7 +1,4 @@
-import {
-  ArrowRight01Icon,
-  MoreHorizontalCircle01Icon,
-} from "@hugeicons/core-free-icons";
+import { MoreHorizontalCircle01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Slot } from "radix-ui";
 import type * as React from "react";
@@ -22,7 +19,7 @@ function BreadcrumbList({ className, ...props }: React.ComponentProps<"ol">) {
   return (
     <ol
       className={cn(
-        "wrap-break-word flex flex-wrap items-center gap-1.5 text-muted-foreground text-xs/relaxed",
+        "wrap-break-word flex flex-wrap items-center gap-1.5 font-medium text-[13px] text-muted-foreground uppercase tracking-widest",
         className
       )}
       data-slot="breadcrumb-list"
@@ -52,7 +49,10 @@ function BreadcrumbLink({
 
   return (
     <Comp
-      className={cn("transition-colors hover:text-foreground", className)}
+      className={cn(
+        "inline-block transition-all duration-200 ease-out hover:text-foreground",
+        className
+      )}
       data-slot="breadcrumb-link"
       {...props}
     />
@@ -64,7 +64,7 @@ function BreadcrumbPage({ className, ...props }: React.ComponentProps<"span">) {
     <span
       aria-current="page"
       aria-disabled="true"
-      className={cn("font-normal text-foreground", className)}
+      className={cn("font-medium text-muted-foreground", className)}
       data-slot="breadcrumb-page"
       {...props}
     />
@@ -79,12 +79,12 @@ function BreadcrumbSeparator({
   return (
     <li
       aria-hidden="true"
-      className={cn("[&>svg]:size-3.5", className)}
+      className={cn("opacity-50", className)}
       data-slot="breadcrumb-separator"
       role="presentation"
       {...props}
     >
-      {children ?? <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} />}
+      {children ?? "/"}
     </li>
   );
 }

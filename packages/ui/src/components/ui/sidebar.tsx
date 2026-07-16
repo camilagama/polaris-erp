@@ -268,7 +268,10 @@ function SidebarTrigger({
 
   return (
     <Button
-      className={cn("active:scale-100", className)}
+      className={cn(
+        "text-muted-foreground hover:bg-transparent hover:text-foreground active:scale-100",
+        className
+      )}
       data-sidebar="trigger"
       data-slot="sidebar-trigger"
       onClick={(event) => {
