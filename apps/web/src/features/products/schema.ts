@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { isoDateSchema } from "@/lib/domain/date";
+import { isoDateSchema } from "@/lib/domain/date-validation";
 
 export const createProductSchema = z.object({
   categoryId: z.string().min(1, "Categoria e obrigatoria."),

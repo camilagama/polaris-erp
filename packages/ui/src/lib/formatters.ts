@@ -1,3 +1,4 @@
+import { BUSINESS_TIME_ZONE } from "@polaris/date";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -18,6 +19,7 @@ const dateTimeFormatter = new Intl.DateTimeFormat("pt-BR", {
   hour: "2-digit",
   minute: "2-digit",
   month: "2-digit",
+  timeZone: BUSINESS_TIME_ZONE,
   year: "numeric",
 });
 

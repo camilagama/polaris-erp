@@ -1,21 +1,11 @@
 import { listPlatformAdminGrantsForOwner } from "@polaris/platform/admin";
+import { formatDateTime } from "@polaris/ui/lib/formatters";
 import { connection } from "next/server";
 import { requirePlatformAdmin } from "@/lib/platform-admin-auth";
 import {
   createPlatformAdminEnrollmentAction,
   revokePlatformAdminGrantAction,
 } from "./actions";
-
-const formatDateTime = (value: string | null) =>
-  value
-    ? new Intl.DateTimeFormat("pt-BR", {
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      }).format(new Date(value))
-    : "Sem data";
 
 export default async function PlatformAdminAccessPage() {
   await connection();

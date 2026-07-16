@@ -1,4 +1,4 @@
-import { addDays, format, parseISO, subDays } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type {
   ProductAnalytics,
@@ -8,10 +8,11 @@ import type {
   ProductSalesPoint,
 } from "@/features/products/contracts";
 import { roundCurrency } from "@/lib/domain/currency";
-import { formatDateInputValue } from "@/lib/domain/date";
+import { formatDateInputValue, shiftBusinessDate } from "@/lib/domain/date";
 
 const MAX_CATEGORY_SLICES = 5;
-const MAX_DAY_BUCKETS = 31;
+const MAX_HISTORY_DAY_BUCKETS = 31;
+const RECENT_PERFORMANCE_DAYS = 30;
 
 interface ProductInventoryRecord {
   archivedAt: Date | null;
@@ -90,15 +91,16 @@ const buildInventoryByCategory = (
 
 const buildDayBuckets = ({ from, to }: { from: string; to: string }) => {
   const buckets: Array<{ key: string; label: string }> = [];
-  let currentDate = parseISO(`${from}T00:00:00`);
-  const toDate = parseISO(`${to}T00:00:00`);
+  let currentDate = from;
 
-  while (currentDate <= toDate) {
+  while (currentDate <= to) {
     buckets.push({
-      key: formatDateInputValue(currentDate),
-      label: format(currentDate, "dd/MM", { locale: ptBR }),
+      key: currentDate,
+      label: format(parseISO(`${currentDate}T12:00:00`), "dd/MM", {
+        locale: ptBR,
+      }),
     });
-    currentDate = addDays(currentDate, 1);
+    currentDate = shiftBusinessDate(currentDate, 1);
   }
 
   return buckets;
@@ -113,8 +115,7 @@ const buildRecentPerformance = ({
   sales: ProductSaleRecord[];
   to: string;
 }): ProductCatalogPerformancePoint[] => {
-  const fromDate = subDays(parseISO(`${to}T00:00:00`), MAX_DAY_BUCKETS - 1);
-  const from = formatDateInputValue(fromDate);
+  const from = shiftBusinessDate(to, -(RECENT_PERFORMANCE_DAYS - 1));
   const bucketMap = new Map<
     string,
     { purchaseAmount: number; soldAmount: number }
@@ -180,7 +181,8 @@ const buildHistoryTrend = (sales: ProductSaleRecord[]): ProductSalesPoint[] => {
   const sortedDates = Array.from(dateSet).sort((left, right) =>
     left.localeCompare(right)
   );
-  const granularity = sortedDates.length <= MAX_DAY_BUCKETS ? "day" : "month";
+  const granularity =
+    sortedDates.length <= MAX_HISTORY_DAY_BUCKETS ? "day" : "month";
   const grouped = new Map<string, number>();
 
   for (const sale of completedSales) {
@@ -195,8 +197,8 @@ const buildHistoryTrend = (sales: ProductSaleRecord[]): ProductSalesPoint[] => {
     .map(([key, quantitySold]) => ({
       label:
         granularity === "day"
-          ? format(parseISO(`${key}T00:00:00`), "dd/MM", { locale: ptBR })
-          : format(parseISO(`${key}-01T00:00:00`), "MMM/yy", {
+          ? format(parseISO(`${key}T12:00:00`), "dd/MM", { locale: ptBR })
+          : format(parseISO(`${key}-01T12:00:00`), "MMM/yy", {
               locale: ptBR,
             }),
       quantitySold,

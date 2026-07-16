@@ -1,4 +1,9 @@
-import { formatDateInputValue, isoDateSchema } from "@/lib/domain/date";
+import {
+  formatDateInputValue,
+  getBusinessMonthBounds,
+  shiftBusinessDate,
+} from "@/lib/domain/date";
+import { isoDateSchema } from "@/lib/domain/date-validation";
 
 export interface DateRangePresetOption<TValue extends string = string> {
   label: string;
@@ -56,24 +61,6 @@ const formatDateRangeLabel = (value: string): string => {
   return `${day}/${month}/${year}`;
 };
 
-const shiftBusinessDate = (value: string, days: number): string => {
-  const [year, month, day] = value.split("-").map(Number);
-  const shifted = new Date(Date.UTC(year, month - 1, day + days));
-
-  return shifted.toISOString().slice(0, 10);
-};
-
-const getMonthBounds = (value: string): { from: string; to: string } => {
-  const [year, month] = value.split("-").map(Number);
-  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
-  const monthString = String(month).padStart(2, "0");
-
-  return {
-    from: `${year}-${monthString}-01`,
-    to: `${year}-${monthString}-${String(lastDay).padStart(2, "0")}`,
-  };
-};
-
 export const normalizeDateRange = <TPreset extends string>({
   from,
   preset,
@@ -111,7 +98,7 @@ export const getDashboardPresetDateRange = <
   }
 
   if (preset === "current-month") {
-    const bounds = getMonthBounds(today);
+    const bounds = getBusinessMonthBounds(today);
 
     return normalizeDateRange({
       from: bounds.from,
@@ -124,7 +111,7 @@ export const getDashboardPresetDateRange = <
     const [year, month] = today.split("-").map(Number);
     const previousMonth = month === 1 ? 12 : month - 1;
     const previousYear = month === 1 ? year - 1 : year;
-    const bounds = getMonthBounds(
+    const bounds = getBusinessMonthBounds(
       `${previousYear}-${String(previousMonth).padStart(2, "0")}-01`
     );
 

@@ -1,4 +1,7 @@
-import { getPlatformDashboardData } from "@polaris/platform/dashboard";
+import {
+  buildActivityDateRange,
+  getPlatformDashboardData,
+} from "@polaris/platform/dashboard";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { healthMock } = vi.hoisted(() => ({
@@ -67,6 +70,12 @@ describe("getPlatformDashboardData", () => {
     healthMock.mockResolvedValue(true);
   });
 
+  it("fills activity days from the Sao Paulo business calendar", () => {
+    const dates = buildActivityDateRange(new Date("2026-01-01T02:30:00Z"), 3);
+
+    expect(dates).toEqual(["2025-12-29", "2025-12-30", "2025-12-31"]);
+  });
+
   it("returns aggregate operational data without exposing sensitive event fields", async () => {
     const db = createDbMock();
     const data = await getPlatformDashboardData(db);
@@ -101,7 +110,7 @@ describe("getPlatformDashboardData", () => {
     expect(JSON.stringify(data)).not.toContain("secret");
     expect(JSON.stringify(data)).not.toContain("actor_admin_user_id");
     expect(JSON.stringify(data)).not.toContain("metadata");
-    expect(db.execute).toHaveBeenCalledTimes(3);
+    expect(db.execute).toHaveBeenCalledTimes(4);
     expect(healthMock).not.toHaveBeenCalled();
   });
 });

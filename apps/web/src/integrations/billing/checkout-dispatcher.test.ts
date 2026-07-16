@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
@@ -18,6 +18,10 @@ import {
 describe("billing checkout dispatcher", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("accepts only a checkout session identifier", () => {
@@ -89,5 +93,48 @@ describe("billing checkout dispatcher", () => {
     expect(
       createAsaasHostedRecurringCheckout.mock.calls[0][0]
     ).not.toHaveProperty("creditCard");
+  });
+
+  it("sends the Sao Paulo business date to the provider", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T02:30:00.000Z"));
+    const execute = vi
+      .fn()
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            amountCents: 4990,
+            checkoutSessionId: "checkout-session-2",
+            description: "Plano mensal - assinatura mensal",
+            expiresAt: new Date("2030-01-01T00:00:00.000Z"),
+            externalReference: "billing-subscription:subscription-2",
+            itemName: "Plano mensal",
+            providerRequestStartedAt: null,
+            status: "pending",
+          },
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] });
+    mocks.withInternalJobContext.mockImplementation(async (_job, callback) =>
+      callback({ execute })
+    );
+    const createAsaasHostedRecurringCheckout = vi.fn().mockResolvedValue({
+      checkoutId: "asaas-checkout-2",
+      checkoutUrl: "https://asaas.example/checkout-2",
+      externalReference: "billing-subscription:subscription-2",
+    });
+
+    await dispatchHostedCardCheckout(
+      { checkoutSessionId: "checkout-session-2" },
+      {
+        adapters: { createAsaasHostedRecurringCheckout },
+        canonicalAppUrl: "https://app.example.com",
+      }
+    );
+
+    expect(createAsaasHostedRecurringCheckout).toHaveBeenCalledWith(
+      expect.objectContaining({ nextDueDate: "2025-12-31" })
+    );
   });
 });

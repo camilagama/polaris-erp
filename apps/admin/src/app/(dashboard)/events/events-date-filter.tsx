@@ -1,5 +1,6 @@
 "use client";
 
+import { formatBusinessDate, shiftBusinessDate } from "@polaris/date";
 import { UrlDateRangeFilter } from "@polaris/ui/components/shared/url-date-range-filter";
 
 interface EventsDateFilterProps {
@@ -13,24 +14,23 @@ export const eventsDatePresetOptions = [
   { label: "Últimos 30 dias", value: "last-30-days" },
 ];
 
-const shiftBusinessDate = (value: string, days: number): string => {
-  const [year, month, day] = value.split("-").map(Number);
-  const shifted = new Date(Date.UTC(year, month - 1, day + days));
-  return shifted.toISOString().slice(0, 10);
+export const resolveEventsPresetRange = (
+  preset: string,
+  now = new Date()
+): { from: string; to: string } => {
+  const today = formatBusinessDate(now);
+
+  if (preset === "last-7-days") {
+    return { from: shiftBusinessDate(today, -6), to: today };
+  }
+  if (preset === "last-30-days") {
+    return { from: shiftBusinessDate(today, -29), to: today };
+  }
+
+  return { from: today, to: today };
 };
 
 export function EventsDateFilter({ from, preset, to }: EventsDateFilterProps) {
-  const resolvePresetRange = (presetValue: string) => {
-    const today = new Date().toISOString().slice(0, 10);
-    if (presetValue === "last-7-days") {
-      return { from: shiftBusinessDate(today, -6), to: today };
-    }
-    if (presetValue === "last-30-days") {
-      return { from: shiftBusinessDate(today, -29), to: today };
-    }
-    return { from: today, to: today };
-  };
-
   const buildQuery = ({
     from: nextFrom,
     preset: nextPreset,
@@ -59,7 +59,7 @@ export function EventsDateFilter({ from, preset, to }: EventsDateFilterProps) {
       from={from}
       preset={preset}
       presets={eventsDatePresetOptions}
-      resolvePresetRange={resolvePresetRange}
+      resolvePresetRange={resolveEventsPresetRange}
       to={to}
     />
   );

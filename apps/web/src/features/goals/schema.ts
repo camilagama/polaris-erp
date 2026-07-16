@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { GoalMetric } from "@/features/goals/contracts";
-import { isoDateSchema } from "@/lib/domain/date";
+import { isoDateSchema } from "@/lib/domain/date-validation";
 
 export const goalMetricSchema = z.enum(["revenue", "profit", "sales_count"]);
 

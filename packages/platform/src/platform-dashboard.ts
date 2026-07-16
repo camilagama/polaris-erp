@@ -1,29 +1,12 @@
 import "server-only";
 
+import { formatBusinessDate, shiftBusinessDate } from "@polaris/date";
 import { db } from "@polaris/db";
 import { withPlatformAdminContext } from "@polaris/db/tenant-context";
 import { type SQL, sql } from "drizzle-orm";
 import { toIsoString, toNumber, toRows } from "./internal/query-results";
 
 const BUSINESS_TIME_ZONE = "America/Sao_Paulo";
-
-const businessDateFormatter = new Intl.DateTimeFormat("en-CA", {
-  day: "2-digit",
-  month: "2-digit",
-  timeZone: BUSINESS_TIME_ZONE,
-  year: "numeric",
-});
-
-const formatBusinessDate = (value: Date): string => {
-  const parts = businessDateFormatter.formatToParts(value);
-  const values = Object.fromEntries(
-    parts
-      .filter(({ type }) => type !== "literal")
-      .map(({ type, value: partValue }) => [type, partValue])
-  );
-
-  return `${values.year}-${values.month}-${values.day}`;
-};
 
 const RECENT_EVENT_LIMIT = 6;
 
@@ -59,6 +42,21 @@ export interface PlatformDashboardData {
 interface QueryableDb {
   execute: (query: SQL) => Promise<unknown>;
 }
+
+export const buildActivityDateRange = (
+  referenceDate: Date,
+  days: number
+): string[] => {
+  const today = formatBusinessDate(referenceDate);
+  const from = shiftBusinessDate(today, -(days - 1));
+  const dates: string[] = [];
+
+  for (let date = from; date <= today; date = shiftBusinessDate(date, 1)) {
+    dates.push(date);
+  }
+
+  return dates;
+};
 
 const getSummary = async (
   queryableDb: QueryableDb
@@ -143,12 +141,8 @@ const getActivityMap = async (
 
   // Ensure 365 days range is always filled
   const activities: { date: string; count: number; level: number }[] = [];
-  const today = new Date();
 
-  for (let i = 364; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    const dateStr = formatBusinessDate(d);
+  for (const dateStr of buildActivityDateRange(new Date(), 365)) {
     const count = activitiesMap.get(dateStr) || 0;
 
     activities.push({

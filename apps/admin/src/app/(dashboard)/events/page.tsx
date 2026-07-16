@@ -1,4 +1,5 @@
 import { DatabaseIcon, Link04Icon } from "@hugeicons/core-free-icons";
+import { formatBusinessDate } from "@polaris/date";
 import { getPlatformEventsOverviewForAdmin } from "@polaris/platform/events";
 import { PageHeader } from "@polaris/ui/components/shared/page-header";
 import { Button } from "@polaris/ui/components/ui/button";
@@ -51,9 +52,9 @@ const EventsContent = async ({
         title="Eventos"
       >
         <EventsDateFilter
-          from={searchParams.from ?? new Date().toISOString().slice(0, 10)}
+          from={searchParams.from ?? formatBusinessDate()}
           preset={searchParams.preset ?? "last-7-days"}
-          to={searchParams.to ?? new Date().toISOString().slice(0, 10)}
+          to={searchParams.to ?? formatBusinessDate()}
         />
       </PageHeader>
 

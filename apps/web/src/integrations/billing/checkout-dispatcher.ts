@@ -6,6 +6,7 @@ import {
   type CreateAsaasHostedCheckoutInput,
   type CreateAsaasHostedCheckoutResult,
 } from "@polaris/billing/providers/asaas";
+import { formatBusinessDate } from "@polaris/date";
 import { withInternalJobContext } from "@polaris/db/tenant-context";
 import { sql } from "drizzle-orm";
 
@@ -266,7 +267,7 @@ export const dispatchHostedCardCheckout = async (
       externalReference: checkout.externalReference,
       itemName: checkout.itemName,
       minutesToExpire: 60,
-      nextDueDate: new Date().toISOString().slice(0, 10),
+      nextDueDate: formatBusinessDate(),
       value: checkout.amountCents / 100,
     });
 

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { isoDateSchema } from "@/lib/domain/date";
+import { isoDateSchema } from "@/lib/domain/date-validation";
 
 const salePaymentMethodValues = ["card", "pix"] as const;
 const salePaymentFeePayerValues = [

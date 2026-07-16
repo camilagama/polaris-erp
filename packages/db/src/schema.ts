@@ -1130,7 +1130,9 @@ export const products = pgTable(
       .references(() => organization.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     description: text("description"),
-    purchasedOn: date("purchased_on").default(sql`CURRENT_DATE`).notNull(),
+    purchasedOn: date("purchased_on")
+      .default(sql`(CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo')::date`)
+      .notNull(),
     categoryId: uuid("category_id")
       .notNull()
       .references(() => categories.id),
@@ -1324,7 +1326,9 @@ export const productStockEntries = pgTable(
     productId: uuid("product_id")
       .notNull()
       .references(() => products.id),
-    stockedOn: date("stocked_on").default(sql`CURRENT_DATE`).notNull(),
+    stockedOn: date("stocked_on")
+      .default(sql`(CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo')::date`)
+      .notNull(),
     quantity: integer("quantity").notNull(),
     unitCost: decimal("unit_cost", { precision: 12, scale: 2 })
       .notNull()
@@ -1363,7 +1367,9 @@ export const productStockWriteOffs = pgTable(
     productId: uuid("product_id")
       .notNull()
       .references(() => products.id),
-    happenedOn: date("happened_on").default(sql`CURRENT_DATE`).notNull(),
+    happenedOn: date("happened_on")
+      .default(sql`(CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo')::date`)
+      .notNull(),
     quantity: integer("quantity").notNull(),
     reason: productWriteOffReasonEnum("reason").notNull(),
     notes: text("notes"),
@@ -1449,7 +1455,9 @@ export const sales = pgTable(
     organizationId: text("organization_id")
       .notNull()
       .references(() => organization.id, { onDelete: "cascade" }),
-    occurredOn: date("occurred_on").default(sql`CURRENT_DATE`).notNull(),
+    occurredOn: date("occurred_on")
+      .default(sql`(CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo')::date`)
+      .notNull(),
     status: saleStatusEnum("status").default("completed").notNull(),
     paymentMethod: salePaymentMethodEnum("payment_method")
       .default("pix")
@@ -1533,8 +1541,8 @@ export const sales = pgTable(
       sql`${table.chargedAmount} >= ${table.totalAmount}`
     ),
     check(
-      "sales_status_cancelled_at_consistent",
-      sql`(${table.status} = 'completed' and ${table.cancelledAt} is null) or (${table.status} = 'cancelled' and ${table.cancelledAt} is not null)`
+      "sales_status_cancellation_consistent",
+      sql`(${table.status} = 'completed' and ${table.cancelledAt} is null and ${table.cancelledOn} is null) or (${table.status} = 'cancelled' and ${table.cancelledAt} is not null and ${table.cancelledOn} is not null)`
     ),
     // Composite indexes: equality first, range last
     index("sales_organization_status_occurred_on_idx").on(

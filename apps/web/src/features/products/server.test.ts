@@ -53,6 +53,17 @@ describe("product server category validation", () => {
     });
   });
 
+  it("builds the recent analytics window as civil business dates", async () => {
+    const { getRecentPerformanceDateRange } = await import(
+      "@/features/products/server"
+    );
+
+    expect(getRecentPerformanceDateRange("2026-01-01")).toEqual({
+      from: "2025-12-03",
+      to: "2026-01-01",
+    });
+  });
+
   it("returns the persisted stock result without writing again on replay", async () => {
     const { addProductStock } = await import("@/features/products/server");
     const tx = { execute: vi.fn() };

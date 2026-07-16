@@ -1,7 +1,6 @@
 "use client";
 
 import { useForm } from "@tanstack/react-form";
-import { endOfMonth, startOfMonth } from "date-fns";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
@@ -41,16 +40,7 @@ import {
 } from "@/features/goals/schema";
 import { formatDateInputValue } from "@/lib/domain/date";
 import { formatCurrencyInput, parseCurrencyInput } from "@/lib/formatters";
-
-const defaultMonthRange = () => {
-  const now = new Date();
-
-  return {
-    periodEnd: formatDateInputValue(endOfMonth(now)),
-    periodStart: formatDateInputValue(startOfMonth(now)),
-    rangePreset: null as string | null,
-  };
-};
+import { defaultMonthRange } from "./goal-period-defaults";
 
 type GoalFormMode = "create" | "edit";
 

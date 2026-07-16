@@ -1,13 +1,16 @@
 "use client";
 
 import {
+  formatBusinessDate,
+  formatBusinessDateLabel,
+  shiftBusinessDate,
+} from "@polaris/date";
+import {
   ContributionGraph,
   ContributionGraphBlock,
   ContributionGraphCalendar,
 } from "@polaris/ui/components/shared/contribution-graph";
 import { useContainerWidth } from "@polaris/ui/hooks/use-container-width";
-import { format, parseISO } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -78,20 +81,17 @@ export function SalesContributionGraphCard({
       Math.floor((containerWidth + BLOCK_MARGIN) / CELL_STEP)
     );
     const maxDays = maxWeeks * 7 - 6;
+    const fallbackTo = formatBusinessDate();
 
     const sourceDays =
       graph.days.length > 0
         ? graph.days
-        : Array.from({ length: maxDays }).map((_, i) => {
-            const d = new Date();
-            d.setDate(d.getDate() - (maxDays - 1 - i));
-            return {
-              date: format(d, "yyyy-MM-dd"),
-              level: 0,
-              salesCount: 0,
-              sold: 0,
-            };
-          });
+        : Array.from({ length: maxDays }).map((_, i) => ({
+            date: shiftBusinessDate(fallbackTo, i - (maxDays - 1)),
+            level: 0,
+            salesCount: 0,
+            sold: 0,
+          }));
 
     const days =
       sourceDays.length > maxDays ? sourceDays.slice(-maxDays) : sourceDays;
@@ -135,13 +135,9 @@ export function SalesContributionGraphCard({
                     const day = visibleData.byDate.get(activity.date);
                     const sold = day?.sold ?? 0;
                     const salesCount = day?.salesCount ?? 0;
-                    const longDate = format(
-                      parseISO(`${activity.date}T12:00:00`),
-                      "PPP",
-                      {
-                        locale: ptBR,
-                      }
-                    );
+                    const longDate = formatBusinessDateLabel(activity.date, {
+                      dateStyle: "long",
+                    });
 
                     return (
                       <Tooltip key={activity.date}>

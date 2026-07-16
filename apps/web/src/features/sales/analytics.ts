@@ -1,5 +1,5 @@
+import { formatBusinessDateLabel, shiftBusinessDate } from "@polaris/date";
 import {
-  addDays,
   addMonths,
   differenceInCalendarDays,
   format,
@@ -15,7 +15,6 @@ import type {
   SalesStatusSummary,
 } from "@/features/sales/contracts";
 import { roundCurrency } from "@/lib/domain/currency";
-import { formatDateInputValue } from "@/lib/domain/date";
 
 const MAX_DAY_BUCKETS = 31;
 
@@ -55,24 +54,22 @@ const getPeriodBuckets = ({
   buckets: Array<{ key: string; label: string }>;
   granularity: SalesPeriodGranularity;
 } => {
-  const fromDate = parseISO(`${from}T00:00:00`);
-  const toDate = parseISO(`${to}T00:00:00`);
+  const fromDate = parseISO(`${from}T12:00:00`);
+  const toDate = parseISO(`${to}T12:00:00`);
   const totalDays = differenceInCalendarDays(toDate, fromDate) + 1;
 
   if (totalDays <= MAX_DAY_BUCKETS) {
     const buckets: Array<{ key: string; label: string }> = [];
 
-    for (
-      let currentDate = fromDate;
-      currentDate <= toDate;
-      currentDate = addDays(currentDate, 1)
-    ) {
+    for (let currentDate = from; currentDate <= to; ) {
       buckets.push({
-        key: formatDateInputValue(currentDate),
-        label: format(currentDate, "dd/MM", {
-          locale: ptBR,
+        key: currentDate,
+        label: formatBusinessDateLabel(currentDate, {
+          day: "2-digit",
+          month: "2-digit",
         }),
       });
+      currentDate = shiftBusinessDate(currentDate, 1);
     }
 
     return {

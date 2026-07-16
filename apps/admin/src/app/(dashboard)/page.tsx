@@ -1,3 +1,4 @@
+import { BUSINESS_TIME_ZONE } from "@polaris/date";
 import { getPlatformDashboardDataForAdmin } from "@polaris/platform/dashboard";
 import {
   AlertBanner,
@@ -34,6 +35,7 @@ const formatEventDate = (value: string | null) => {
     hour: "2-digit",
     minute: "2-digit",
     month: "2-digit",
+    timeZone: BUSINESS_TIME_ZONE,
   }).format(new Date(value));
 };
 
@@ -118,10 +120,11 @@ const AdminDashboard = async () => {
   }
 
   const realChartData = dashboard.activity.slice(-7).map((d) => {
-    const dObj = new Date(`${d.date}T12:00:00`);
-    const label = new Intl.DateTimeFormat("pt-BR", { weekday: "short" }).format(
-      dObj
-    );
+    const dObj = new Date(`${d.date}T12:00:00Z`);
+    const label = new Intl.DateTimeFormat("pt-BR", {
+      timeZone: BUSINESS_TIME_ZONE,
+      weekday: "short",
+    }).format(dObj);
     return {
       label: label.charAt(0).toUpperCase() + label.slice(1),
       salesCount: 0,

@@ -6,6 +6,7 @@
   "dependencies": {
     "@polaris/billing": "workspace:*",
     "@polaris/db": "workspace:*",
+    "@polaris/date": "workspace:*",
     "@polaris/events": "workspace:*",
     "drizzle-orm": "^0.45.2",
     "server-only": "^0.0.1"

@@ -117,6 +117,12 @@ describe("buildProductAnalytics", () => {
       purchaseAmount: 0,
       soldAmount: 0,
     });
+    expect(analytics.recentPerformance).toHaveLength(30);
+    expect(analytics.recentPerformance[0]).toEqual({
+      label: "01/04",
+      purchaseAmount: 0,
+      soldAmount: 0,
+    });
   });
 });
 

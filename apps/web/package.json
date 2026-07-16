@@ -5,6 +5,7 @@
   "dependencies": {
     "@polaris/billing": "workspace:*",
     "@polaris/db": "workspace:*",
+    "@polaris/date": "workspace:*",
     "@polaris/events": "workspace:*",
     "@polaris/emails": "workspace:*",
     "@polaris/e2e-support": "workspace:*",

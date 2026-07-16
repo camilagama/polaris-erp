@@ -1,4 +1,5 @@
 import { listPlatformAuditEventsForAdmin } from "@polaris/platform/audit-events";
+import { formatDateTime } from "@polaris/ui/lib/formatters";
 import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
@@ -21,20 +22,6 @@ const getFilter = async (
   const value = (await searchParams)[key];
 
   return typeof value === "string" ? value : "";
-};
-
-const formatDateTime = (value: string | null) => {
-  if (!value) {
-    return "Sem data";
-  }
-
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(new Date(value));
 };
 
 const AuditContent = async ({ searchParams }: AuditPageProps) => {

@@ -1,6 +1,11 @@
 "use client";
 
 import {
+  formatBusinessDate,
+  formatBusinessDateLabel,
+  shiftBusinessDate,
+} from "@polaris/date";
+import {
   type Activity,
   ContributionGraph,
   ContributionGraphBlock,
@@ -13,8 +18,6 @@ import {
   TooltipTrigger,
 } from "@polaris/ui/components/ui/tooltip";
 import { useContainerWidth } from "@polaris/ui/hooks/use-container-width";
-import { format, parseISO } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { useMemo } from "react";
 
 const BLOCK_SIZE = 11;
@@ -38,19 +41,16 @@ export function ActivityGraph({ data }: ActivityGraphProps) {
       Math.floor((containerWidth + BLOCK_MARGIN) / CELL_STEP)
     );
     const maxDays = maxWeeks * 7 - 6;
+    const fallbackTo = formatBusinessDate();
 
     const sourceActivities =
       data.length > 0
         ? data
-        : Array.from({ length: maxDays }).map((_, i) => {
-            const d = new Date();
-            d.setDate(d.getDate() - (maxDays - 1 - i));
-            return {
-              date: format(d, "yyyy-MM-dd"),
-              count: 0,
-              level: 0,
-            };
-          });
+        : Array.from({ length: maxDays }).map((_, i) => ({
+            date: shiftBusinessDate(fallbackTo, i - (maxDays - 1)),
+            count: 0,
+            level: 0,
+          }));
 
     const visibleActivities =
       sourceActivities.length > maxDays
@@ -78,11 +78,9 @@ export function ActivityGraph({ data }: ActivityGraphProps) {
               {({ activity, dayIndex, weekIndex }) => {
                 const day = visibleData.byDate.get(activity.date);
                 const count = day?.count ?? 0;
-                const longDate = format(
-                  parseISO(`${activity.date}T12:00:00`),
-                  "PPP",
-                  { locale: ptBR }
-                );
+                const longDate = formatBusinessDateLabel(activity.date, {
+                  dateStyle: "long",
+                });
 
                 return (
                   <Tooltip key={activity.date}>

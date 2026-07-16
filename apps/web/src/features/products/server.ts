@@ -35,7 +35,7 @@ import {
   applyStockWriteOff,
 } from "@/features/products/stock";
 import { toCurrencyString } from "@/lib/domain/currency";
-import { formatDateInputValue } from "@/lib/domain/date";
+import { formatDateInputValue, shiftBusinessDate } from "@/lib/domain/date";
 import { getOrganizationPlanEntitlements } from "@/lib/entitlements";
 
 const PRODUCT_QUOTA_LOCK_NAMESPACE = 662_981;
@@ -54,6 +54,11 @@ export interface ProductInitialImageMetadata {
   width: number;
 }
 
+export const getRecentPerformanceDateRange = (today: string) => ({
+  from: shiftBusinessDate(today, -29),
+  to: today,
+});
+
 export const getProductAnalytics = async ({
   organizationId,
   today = formatDateInputValue(),
@@ -61,9 +66,7 @@ export const getProductAnalytics = async ({
   organizationId: string;
   today?: string;
 }): Promise<ProductAnalytics> => {
-  const recentFromDate = new Date(`${today}T00:00:00`);
-  recentFromDate.setDate(recentFromDate.getDate() - 29);
-  const recentFrom = formatDateInputValue(recentFromDate);
+  const recentRange = getRecentPerformanceDateRange(today);
   const [inventoryRows, allPurchaseRows, recentSalesRows] =
     await withTenantContext(organizationId, async (tx) => {
       const inventoryResult = await tx
@@ -110,8 +113,8 @@ export const getProductAnalytics = async ({
           and(
             eq(saleItems.organizationId, organizationId),
             eq(sales.organizationId, organizationId),
-            gte(sales.occurredOn, recentFrom),
-            lte(sales.occurredOn, today)
+            gte(sales.occurredOn, recentRange.from),
+            lte(sales.occurredOn, recentRange.to)
           )
         );
 

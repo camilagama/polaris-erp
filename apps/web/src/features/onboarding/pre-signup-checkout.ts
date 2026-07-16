@@ -2,6 +2,7 @@
 
 import { PAID_MONTHLY_PLAN_ID } from "@polaris/billing";
 import { createAsaasBillingAdapter } from "@polaris/billing/providers/asaas";
+import { formatBusinessDate } from "@polaris/date";
 import { billingPlans, signupCheckoutIntents } from "@polaris/db/schema";
 import { withInternalJobContext } from "@polaris/db/tenant-context";
 import { and, eq } from "drizzle-orm";
@@ -86,7 +87,7 @@ export const startPreSignupPaidCheckout = async (
       externalReference,
       itemName: intent.name,
       minutesToExpire: 60,
-      nextDueDate: new Date().toISOString().slice(0, 10),
+      nextDueDate: formatBusinessDate(),
       value: intent.amountCents / 100,
     });
 

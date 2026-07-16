@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const readAppSource = (path: string) =>
-  readFileSync(join(process.cwd(), "src", "app", path), "utf8");
+  readFileSync(join(process.cwd(), "src", "app", "(dashboard)", path), "utf8");
 
 describe("admin accessibility source checks", () => {
   it("gives filter inputs accessible names", () => {
@@ -41,9 +41,7 @@ describe("admin accessibility source checks", () => {
   it("uses horizontal overflow wrappers for fixed admin grids", () => {
     for (const path of [
       "audit/page.tsx",
-      "organizations/page.tsx",
       "organizations/[organizationId]/page.tsx",
-      "users/page.tsx",
       "users/[userId]/page.tsx",
     ]) {
       const source = readAppSource(path);
@@ -51,5 +49,24 @@ describe("admin accessibility source checks", () => {
       expect(source).toContain("overflow-x-auto");
       expect(source).toContain("min-w-[");
     }
+  });
+
+  it("uses the shared responsive table wrapper for admin lists", () => {
+    const tableSource = readFileSync(
+      join(
+        process.cwd(),
+        "..",
+        "..",
+        "packages",
+        "ui",
+        "src",
+        "components",
+        "ui",
+        "table.tsx"
+      ),
+      "utf8"
+    );
+
+    expect(tableSource).toContain("overflow-x-auto");
   });
 });

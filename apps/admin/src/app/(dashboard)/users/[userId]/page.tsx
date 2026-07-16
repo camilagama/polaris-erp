@@ -1,6 +1,7 @@
 import { getPlatformUserDetailForAdmin } from "@polaris/platform/directory";
 import { listPlatformSupportCasesForAdmin } from "@polaris/platform/support-cases";
 import { listPlatformSupportNotesForAdmin } from "@polaris/platform/support-notes";
+import { formatDateTime } from "@polaris/ui/lib/formatters";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
@@ -20,20 +21,6 @@ const guardPlatformAdmin = async () => requirePlatformAdmin();
 
 const formatNumber = (value: number) =>
   new Intl.NumberFormat("pt-BR").format(value);
-
-const formatDateTime = (value: string | null) => {
-  if (!value) {
-    return "Sem data";
-  }
-
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(new Date(value));
-};
 
 const UserDetailContent = async ({ params }: UserDetailPageProps) => {
   await connection();

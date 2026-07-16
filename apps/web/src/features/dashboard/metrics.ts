@@ -1,5 +1,5 @@
+import { formatBusinessDateLabel, shiftBusinessDate } from "@polaris/date";
 import {
-  addDays,
   addMonths,
   differenceInCalendarDays,
   format,
@@ -218,24 +218,22 @@ const buildPeriodBuckets = ({
   buckets: DashboardPeriodBucket[];
   granularity: DashboardPeriodGranularity;
 } => {
-  const fromDate = parseISO(`${from}T00:00:00`);
-  const toDate = parseISO(`${to}T00:00:00`);
+  const fromDate = parseISO(`${from}T12:00:00`);
+  const toDate = parseISO(`${to}T12:00:00`);
   const totalDays = differenceInCalendarDays(toDate, fromDate) + 1;
 
   if (totalDays <= MAX_DAY_BUCKETS) {
     const buckets: DashboardPeriodBucket[] = [];
 
-    for (
-      let currentDate = fromDate;
-      currentDate <= toDate;
-      currentDate = addDays(currentDate, 1)
-    ) {
+    for (let currentDate = from; currentDate <= to; ) {
       buckets.push({
-        key: formatDateInputValue(currentDate),
-        label: format(currentDate, "dd/MM", {
-          locale: ptBR,
+        key: currentDate,
+        label: formatBusinessDateLabel(currentDate, {
+          day: "2-digit",
+          month: "2-digit",
         }),
       });
+      currentDate = shiftBusinessDate(currentDate, 1);
     }
 
     return {
@@ -510,11 +508,11 @@ export const resolveContributionGraphRange = (bounds: {
 }): DashboardSelectedRange => {
   const today = formatDateInputValue(new Date());
   const graphTo = today <= bounds.to ? today : bounds.to;
-  const graphToDate = parseISO(`${graphTo}T00:00:00`);
+  const graphToDate = parseISO(`${graphTo}T12:00:00`);
   const graphFromDate = startOfMonth(subMonths(graphToDate, 17));
 
   return {
-    from: formatDateInputValue(graphFromDate),
+    from: format(graphFromDate, "yyyy-MM-dd"),
     to: graphTo,
   };
 };
@@ -550,18 +548,11 @@ export const buildDashboardContributionGraph = ({
     });
   }
 
-  const fromDate = parseISO(`${range.from}T00:00:00`);
-  const toDate = parseISO(`${range.to}T00:00:00`);
   const days: DashboardContributionDay[] = [];
   let totalSold = 0;
   let totalSalesCount = 0;
 
-  for (
-    let currentDate = fromDate;
-    currentDate <= toDate;
-    currentDate = addDays(currentDate, 1)
-  ) {
-    const date = formatDateInputValue(currentDate);
+  for (let date = range.from; date <= range.to; ) {
     const bucket = soldByDay.get(date);
     const sold = bucket?.sold ?? 0;
     const salesCount = bucket?.count ?? 0;
@@ -575,6 +566,7 @@ export const buildDashboardContributionGraph = ({
     });
     totalSold = roundCurrency(totalSold + sold);
     totalSalesCount += salesCount;
+    date = shiftBusinessDate(date, 1);
   }
 
   return {

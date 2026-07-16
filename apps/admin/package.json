@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "@polaris/auth": "workspace:*",
+    "@polaris/date": "workspace:*",
     "@polaris/db": "workspace:*",
     "@polaris/e2e-support": "workspace:*",
     "@polaris/platform": "workspace:*",

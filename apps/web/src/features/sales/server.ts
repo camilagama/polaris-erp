@@ -604,11 +604,13 @@ export const cancelSale = ({
       }
     }
 
+    const cancelledAt = new Date();
+    const cancelledOn = formatDateInputValue(cancelledAt);
     const cancelledRows = await tx
       .update(sales)
       .set({
-        cancelledAt: new Date(),
-        cancelledOn: formatDateInputValue(),
+        cancelledAt,
+        cancelledOn,
         status: "cancelled",
       })
       .where(
@@ -623,7 +625,7 @@ export const cancelSale = ({
     await tx.insert(stockMovements).values(
       saleRows.map((item) => ({
         delta: Number(item.quantity),
-        occurredOn: formatDateInputValue(),
+        occurredOn: cancelledOn,
         organizationId,
         productId: item.productId,
         sourceId: item.id,

@@ -15,6 +15,7 @@ const revokedPlatformAdminId = "00000000-0000-4000-8000-000000000003";
 const expiredPlatformAdminId = "00000000-0000-4000-8000-000000000004";
 const outboxLeaseEventId = "00000000-0000-4000-8000-000000000005";
 const outboxLeaseIdempotencyKey = "behavior-outbox-lease";
+const temporalOrganizationId = "behavior-temporal";
 const migrationTimeoutMs = 180_000;
 const cleanupTimeoutMs = 30_000;
 const rlsPolicyErrorPattern = /row-level security policy/i;
@@ -196,6 +197,72 @@ behaviorDescribe("PostgreSQL behavior harness", () => {
     } finally {
       await client.query("DELETE FROM organization WHERE id = $1", [
         primaryOrganizationId,
+      ]);
+      client.release();
+    }
+  });
+
+  it("uses the Sao Paulo business date regardless of the PostgreSQL session timezone", async () => {
+    const client = await pool.connect();
+
+    try {
+      await client.query(
+        "INSERT INTO organization (id, name, slug) VALUES ($1, $2, $3)",
+        [
+          temporalOrganizationId,
+          "Temporal behavior organization",
+          "behavior-temporal",
+        ]
+      );
+      await client.query("BEGIN");
+      await client.query("SET LOCAL TIME ZONE 'UTC'");
+      const utcSession = await client.query<{ occurred_on: string }>(
+        "INSERT INTO sales (organization_id, idempotency_key) VALUES ($1, $2) RETURNING occurred_on",
+        [temporalOrganizationId, "behavior-temporal-utc"]
+      );
+      await client.query("ROLLBACK");
+
+      await client.query("BEGIN");
+      await client.query("SET LOCAL TIME ZONE 'America/Sao_Paulo'");
+      const saoPauloSession = await client.query<{ occurred_on: string }>(
+        "INSERT INTO sales (organization_id, idempotency_key) VALUES ($1, $2) RETURNING occurred_on",
+        [temporalOrganizationId, "behavior-temporal-sao-paulo"]
+      );
+      await client.query("ROLLBACK");
+
+      expect(utcSession.rows[0]?.occurred_on).toBe(
+        saoPauloSession.rows[0]?.occurred_on
+      );
+    } finally {
+      await client.query("DELETE FROM organization WHERE id = $1", [
+        temporalOrganizationId,
+      ]);
+      client.release();
+    }
+  });
+
+  it("requires both cancellation fields for a cancelled sale", async () => {
+    const client = await pool.connect();
+
+    try {
+      await client.query(
+        "INSERT INTO organization (id, name, slug) VALUES ($1, $2, $3)",
+        [
+          temporalOrganizationId,
+          "Temporal behavior organization",
+          "behavior-temporal",
+        ]
+      );
+
+      await expect(
+        client.query(
+          "INSERT INTO sales (organization_id, status, cancelled_at) VALUES ($1, 'cancelled', now())",
+          [temporalOrganizationId]
+        )
+      ).rejects.toMatchObject({ code: "23514" });
+    } finally {
+      await client.query("DELETE FROM organization WHERE id = $1", [
+        temporalOrganizationId,
       ]);
       client.release();
     }
