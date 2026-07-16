@@ -35,7 +35,7 @@ export function ProductDatePicker({
       <PopoverTrigger asChild>
         <Button
           className={cn(
-            "w-full justify-start font-normal",
+            "w-full justify-start font-normal active:translate-y-0 active:scale-100",
             !value && "text-muted-foreground"
           )}
           id={id}

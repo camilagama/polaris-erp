@@ -104,7 +104,7 @@ export function DateRangePicker({
       <PopoverTrigger asChild>
         <Button
           className={cn(
-            "min-w-56 justify-start text-left font-normal sm:min-w-72",
+            "min-w-56 justify-start text-left font-normal active:translate-y-0 active:scale-100 sm:min-w-72",
             triggerClassName,
             disabled && "opacity-70"
           )}
