@@ -2,7 +2,7 @@
 
 import { startTransition, useEffect, useRef, useState } from "react";
 
-const getNextRoundedContainerWidth = (
+export const getNextRoundedContainerWidth = (
   previousWidth: number | null,
   measuredWidth: number
 ) => {

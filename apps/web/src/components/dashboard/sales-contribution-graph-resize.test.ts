@@ -1,5 +1,5 @@
+import { getNextRoundedContainerWidth } from "@polaris/ui/hooks/use-container-width";
 import { describe, expect, it } from "vitest";
-import { getNextRoundedContainerWidth } from "@/components/dashboard/sales-contribution-graph-resize";
 
 describe("getNextRoundedContainerWidth", () => {
   it("rounds measured widths before updating state", () => {
