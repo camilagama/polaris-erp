@@ -1,0 +1,1214 @@
+# Plano de fundação do Polaris ERP
+
+**Estado:** revisão dos 70 pontos concluída; implementação pendente  
+**Iniciado em:** 2026-09-24  
+**Revisão integral:** 2026-09-26  
+**Fonte de escopo:** `C:\Users\Junior\Desktop\relatorio de fundação.md`
+
+## Processo de revisão
+
+Cada um dos 70 pontos do relatório foi avaliado separadamente:
+
+1. Conferir a afirmação contra o estado atual do Polaris e do Hub.
+2. Distinguir fatos locais, configurações remotas e pontos ainda desconhecidos.
+3. Pesquisar documentação atual e práticas relevantes de outros projetos e equipes.
+4. Apresentar uma recomendação ajustada ao estágio e aos objetivos do Polaris.
+5. Resolver as decisões em aberto com o usuário antes de registrar o ponto como aceito.
+6. Ordenar as mudanças aprovadas por dependência, risco e esforço (P61–P70).
+
+As recomendações do relatório são hipóteses de trabalho, não instruções de implementação.
+
+## Como usar o plano na execução
+
+- Os 70 pontos abaixo registram **decisões aceitas e sua justificativa**, não execução concluída. O checkout, o CI e os provedores devem ser verificados novamente na implementação; data ou SHA de uma auditoria anterior não prova o estado atual de um serviço.
+- P61–P64 e P69 são o roteiro de execução. P70 define dois marcos distintos: retomar desenvolvimento amplo e, depois, operar com dados reais. Tarefas sem dependência direta podem avançar em paralelo, desde que cada mudança tenha evidência própria e preserve os gates existentes.
+- Uma tarefa é concluída quando o artefato previsto existe, a verificação adequada passa e a evidência fica vinculada ao PR/SHA ou ao registro operacional P43. Configuração remota, instalação de ferramentas e custo recorrente exigem confirmação no provedor e não são inferidos de YAML, README ou um teste local.
+- Novas ferramentas propostas após a revisão dos 70 pontos estão no adendo final. Elas não alteram automaticamente os gates aceitos; dependem dos critérios explícitos de adoção naquele adendo.
+
+**Ordem curta de trabalho:** (1) recuperar baseline, hook e perfis de verificação; alinhar PG18 e dependências estáveis (P2/P20–22/P34/P52/P54/P61); (2) separar/endurecer CI e operações, medir, transferir o repo e proteger `main` após checks verdes (P3/P23–27/P61–64); (3) em paralelo, reconciliar contrato de ambiente, documentação, fronteiras de código e semântica temporal (P5/P7–18/P35–42/P58–59/P63); (4) comprovar Gate A antes de features amplas (P69/P70); (5) provisionar Staging, recuperação, migração e release por SHA, fechando Gate B antes de dados reais/go-live (P4/P43–49/P65/P70). Otimizações de cache, SAST, snapshots visuais e Graphify seguem seus critérios de medição; Blacksmith não é aplicável ao ownership aprovado.
+
+## Decisões revisadas
+
+### Ponto 1 — diagnóstico geral
+
+**Estado:** aceito com correções em 2026-09-24.
+
+**Diagnóstico de trabalho:** o Polaris tem uma base técnica estruturada. As lacunas verificadas estão principalmente na atualidade da documentação e na formalização do release dentro do repositório. As afirmações sobre configurações remotas de governança e certificação externa precisam ser separadas de evidências do checkout. A alegação específica de exceção no baseline de testes não foi confirmada.
+
+**Evidências e ressalvas:**
+
+- `package.json`, `apps/web`, `apps/admin`, os pacotes compartilhados e `.github/workflows/ci.yml` comprovam a estrutura e a existência de guardrails. A quantidade de testes versionados não prova, isoladamente, qualidade nem aprovação atual.
+- `docs/README.md`, `docs/documentation-coverage.md` e `README.md` referenciam `886eda0`, enquanto `main` local e remoto está em `5f3f91a4ca47d7105a2cfc84ae63d12f3eb1912e` (2026-07-16), que contém alterações posteriores. A lacuna de atualização documental é verificável.
+- O repositório contém um workflow versionado de CI com jobs operacionais manuais. Não foi encontrado workflow de promoção/release no checkout; isso não determina sozinho se existem configurações externas na Vercel.
+- A afirmação do relatório de que `main` está sem proteção foi confirmada em 2026-09-24: a API de branches retorna `protected: false` para `main`. As APIs de detalhes de branch protection e rulesets respondem que o repositório privado precisa do plano GitHub Pro ou ser público para habilitar esse recurso. O branch está desprotegido; os detalhes de checks obrigatórios não estão disponíveis no plano atual.
+- Não foi encontrada evidência versionada para exceções em testes ou uso de `--no-verify`. A consulta aos runs remotos mostra que o último CI no `main` (2026-07-16) falhou em `Typecheck`; os jobs dependentes de E2E/PostgreSQL foram ignorados. Isso comprova um baseline CI vermelho naquela execução, não uma exceção autorizada de teste. O baseline de advisories tinha revisão prevista para 2026-08-14; não executei o CI novamente.
+- A ausência de evidência local de certificação não prova que as integrações externas estejam incompletas. O estado operacional externo permanece desconhecido.
+- A comparação com o Hub procede quanto à existência remota de regras protegendo `main` e `staging`, além de regras de PR e release no workflow. O Hub também tem ressalvas atuais: o SHA de `staging` auditado não apresentava o check `CI` requerido pelo fluxo de promoção, e as políticas remotas dos Environments divergiam do documento de release.
+
+**Pesquisa de apoio:** [pesquisa do ponto 1 sobre governança e release](research-ponto-01-governanca-release.md).
+
+## Registro dos demais pontos
+
+### Ponto 2 — decisões de stack a preservar
+
+**Estado:** aceito em 2026-09-24, com escopo definido.
+
+**Direção aprovada:** aproveitar a fase de teste e fundação para atualizar as tecnologias atuais para releases estáveis recentes, incluindo majors estáveis. RCs, betas e canaries ficam fora da base principal. Substituições de tecnologia ou fornecedor podem ser propostas quando a comparação mostrar trade-offs positivos para o Polaris; não são uma troca automática só por existir uma alternativa mais nova.
+
+**Critério de execução a detalhar no plano final:** separar migrações por camada e validar cada etapa antes da seguinte, para localizar regressões. Reavaliar versões e advisories no momento da implementação.
+
+**Pesquisa de apoio:** [pesquisa do ponto 2 sobre versões e migração da stack](research-ponto-02-stack.md).
+
+### Ponto 3 — proteger `main`
+
+**Estado:** aprovado em 2026-09-24. A implementação remota ainda não foi executada.
+
+**Evidência inicial:** em 2026-09-24, `gh api repos/juniordinizm/polaris-erp/branches/main` retornou `protected: false`; a API de configurações de proteção respondeu que é necessário GitHub Pro ou tornar o repositório público. O CI versionado separa os checks de PR (`verify`, `e2e`, `postgres-behavior`, `admin-e2e`) dos jobs operacionais manuais. A última execução remota consultada, em 2026-07-16, falhou em `verify` no passo `Typecheck`, e os jobs dependentes foram ignorados. Portanto, a lista final de checks obrigatórios depende de resolver o baseline e conferir os contextos estáveis.
+
+**Decisão aprovada pelo usuário:** manter GitHub e transferir o repositório privado para a conta pessoal GitHub Pro do irmão. O irmão ficará como owner/admin e responsável por manter o Pro e as configurações; o usuário ficará como colaborador com write e trabalhará por branches/PRs. A transferência ainda depende da aceitação do irmão na conta destino.
+
+**Política de branch aprovada:** exigir PR para `main`; bloquear push direto, force-push e deleção; exigir os checks de CI selecionados depois de restaurar o CI verde. Não exigir aprovação humana porque o usuário é o único revisor. Conversas resolvidas ficam opcionais no início. Aplicar a proteção também ao owner/admin quando a configuração escolhida permitir, pois a regra clássica do GitHub isenta admins por padrão; conferir o estado efetivo após configurar. Bypass administrativo não será usado como rotina. [GitHub — protected branches](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches).
+
+**Ordem para implementação:** (1) corrigir/restaurar o baseline de CI; (2) transferir o repo e confirmar que branches, PRs, secrets e webhooks foram preservados; (3) irmão aceitar o convite do proprietário anterior como colaborador, caso necessário; (4) owner configurar proteção de `main`, sem aprovação requerida; (5) executar um PR de verificação e confirmar que pushes diretos ficam bloqueados e checks são exigidos; (6) reconectar/configurar Vercel quando a hospedagem for criada após a fundação.
+
+**Clarificação operacional:** Polaris ainda não está publicado nem conectado à Vercel; não há deploy atual para preservar. A conexão Vercel pode ser criada depois da fundação pelo proprietário GitHub do repo.
+
+**Pesquisa de apoio:** [pesquisa do ponto 3 sobre proteger `main`](research-ponto-03-protecao-main.md).
+
+### Ponto 4 — branch `staging`
+
+**Estado:** aceito em 2026-09-24, com acompanhamento futuro.
+
+**Evidência local:** o remoto Polaris tem apenas `main`; a CI roda em push/PR para `main`, com testes PostgreSQL/RLS e E2E separados para web/admin. O runbook descreve branches Neon preview/dev/E2E, mas não comprova ambientes ou deploys ativos. O usuário informou que Vercel ainda não está conectada e poderá ser configurada depois da fundação.
+
+**Comparação com Hub:** Hub usa uma branch persistente `staging`, um ambiente Vercel persistente e promoção de SHA para `main`; não usa Vercel PR Previews nem branches Neon por PR. É um modelo válido, mas mais específico que a abstração do relatório.
+
+**Recomendação preliminar:** manter PRs curtos para `main` protegida e CI. Quando Vercel/Neon forem configuradas, decidir se Preview por PR e banco isolado atendem aos fluxos ou se webhooks/OAuth/aceite integrado precisam de uma URL persistente. Se necessário, a estratégia de branch depende do plano Vercel: branch duradoura `staging` pode gerar Preview com URL/variáveis de branch; Custom Environment persistente requer Vercel Pro/Enterprise e pode acompanhar uma branch sem tornar o ambiente e a linha Git o mesmo conceito.
+
+**Decisões do usuário:** não criar uma branch Git `staging` como requisito inicial; usar PRs curtos para `main` e observar a necessidade conforme o projeto avança. Criar/configurar uma homologação persistente antes do go-live, escolhendo hospedagem, callbacks, variáveis e branches de banco quando essa configuração for desenhada.
+
+**Pesquisa de apoio:** [pesquisa do ponto 4 sobre `staging`, ambientes e previews](research-ponto-04-staging.md).
+
+### Ponto 5 — contrato dos ambientes
+
+**Estado:** aceito em 2026-09-24, com quatro ambientes canônicos.
+
+**Evidência local:**
+
+- `verify` usa placeholders para builds/checks; `postgres-behavior` usa PostgreSQL 16 efêmero para aplicar migrations e validar RLS/constraints; E2E web/admin usam `E2E_DATABASE_URL` e `ADMIN_E2E_DATABASE_URL` vindos de secrets, então nem toda CI usa DB efêmero.
+- Preview por PR e homologação Vercel não estão provisionados. O usuário confirmou que Vercel ainda não está conectada.
+- Testes unitários de Asaas/Woovi usam `fetch` falso; não comprovam acesso a sandboxes remotos. A certificação real de providers é manual.
+- A auditoria observou que `.env.example` aponta endpoints Asaas/Woovi para hosts de produção por padrão, embora o relatório classifique Local como sandbox/dev. As credenciais de exemplo estão vazias; não li `.env.local` e preservei a modificação de `.env.example` que já existia. O contrato local “sandbox/dev” não é atualmente garantido apenas pelo valor de host de exemplo.
+- `.env.example` rotula `E2E_DATABASE_URL` como opcional, enquanto o helper de E2E exige esse valor. Isso é inconsistência documental/configuração a considerar na consolidação dos ambientes.
+
+**Referência do Hub:** seu runbook descreve Development, E2E, Staging e Production; Preview aparece como candidato efêmero separado. O Hub mistura alguns providers compartilhados/sandbox no staging por exceções documentadas. O modelo deve ser ajustado ao Polaris, sem copiar essas exceções.
+
+**Recomendação preliminar:** formalizar Local, CI, Staging e Produção como os quatro contratos. CI deve distinguir builds/unit com fakes, PostgreSQL efêmero para migrations/RLS e E2E contra uma base não produtiva isolada. Preview será um deploy efêmero ligado a PR/SHA, usando Neon isolada quando habilitado; não será um quinto ambiente canônico. Staging será persistente antes do go-live e não compartilhará DB mutável com Preview; Produção usará credenciais live isoladas, Neon protegida e roles runtime/migration separadas. Distinguir ambiente implantado, SHA do código e branch Neon; não exigir branch Git `staging`.
+
+**Decisões do usuário:** simplificar para quatro ambientes como no Hub: **Local, CI, Staging e Produção**. Staging é a homologação persistente aprovada antes do go-live. PR Preview fica como modalidade de deploy efêmero no fluxo não produtivo, não como quinto ambiente canônico. Fora de Produção, usar dados sintéticos e providers fake/sandbox. Manter por enquanto as URLs E2E dedicadas e não produtivas; criar Neon branches descartáveis por PR quando Preview for configurado.
+
+**Correções planejadas para a consolidação documental/configuração:** separar a explicação do CI entre placeholders/fakes, PostgreSQL efêmero para comportamento/migrations e bancos isolados para E2E; alinhar `.env.example` para não sugerir endpoints live em Local e marcar `E2E_DATABASE_URL` conforme sua obrigatoriedade. O `.env.example` já estava modificado e foi preservado nesta revisão.
+
+**Pesquisa de apoio:** [pesquisa do ponto 5 sobre o contrato dos ambientes](research-ponto-05-environments.md).
+
+### Ponto 6 — nomes dos buckets R2
+
+**Estado:** aceito em 2026-09-24, condicionado a inventário Cloudflare antes de migração física.
+
+**Evidência local:** `R2_BUCKET_STAGING` recebe uploads brutos pré-assinados sob o prefixo `staging/{organizationId}/{userId}/{uuid}`. O servidor valida, processa e grava WebP finais em `R2_BUCKET_FINAL`, depois tenta apagar o upload. Portanto, `STAGING` indica fase temporária da imagem, não o ambiente Vercel/Neon. `.env.example` e a documentação chamam o destino final de imagens processadas/variantes privadas.
+
+**Risco/escopo:** renomear somente env keys é mudança contratual local (código, schema de env, preflight, CI, Turbo, testes e docs) e não move objetos. Substituir bucket físico exige confirmar inventário externo, configurar CORS/lifecycle e copiar dados se existentes. Mudar o object-key prefix também exige compatibilidade/migração das keys; não está persistido em DB para imagens finais, mas pode haver uploads temporários em trânsito. O estado real dos buckets R2 não foi verificado.
+
+**Achado adjacente a reconciliar antes de qualquer migração física:** a documentação afirma que o reconcile diário apaga imagens órfãs, enquanto `image-reconcile.ts` atualmente retorna `deletedCount: 0` e conta as órfãs. Não assumir que a reconciliação limpará dados durante cutover sem resolver essa divergência.
+
+**Recomendação preliminar:** usar nomes de variável por função (`R2_BUCKET_RAW_UPLOADS`, `R2_BUCKET_PROCESSED_IMAGES`) e nomes de recursos físicos por produto/função/ambiente. Só provisionar buckets físicos novos após inventário; se já existirem, preferir renomear apenas o contrato lógico, salvo benefício que justifique cópia planejada. Alterar o prefixo `staging/` para `uploads/` apenas depois de confirmar ausência de objetos em trânsito ou incluir período compatível/expiração.
+
+**Decisões do usuário:** aprovou as variáveis `R2_BUCKET_RAW_UPLOADS` e `R2_BUCKET_PROCESSED_IMAGES`; aprovou usar `uploads/` para novas chaves temporárias e nomes físicos por produto, função e ambiente. Antes de trocar buckets físicos ou apagar dados, inventariar recursos/objetos e planejar copy/cutover; se já houver buckets, manter os nomes físicos até esse plano.
+
+**Risco adjacente:** reconciliador atual não apaga órfãs apesar de a documentação afirmar isso; corrigir/verificar antes de depender dele para limpeza de bucket ou cutover.
+
+**Pesquisa de apoio:** [pesquisa do ponto 6 sobre nomes/lifecycle R2](research-ponto-06-r2-naming.md).
+
+### Ponto 7 — documentação canônica
+
+**Estado:** aceito em 2026-09-24, adaptado à estrutura existente.
+
+**Evidência inicial:** Polaris já tem `docs/README.md` como índice, um `README.md` raiz que aponta para ele e mais de cem documentos distribuídos por arquitetura, módulos, regras de negócio, banco, API, operações, segurança e testes. A documentação não precisa começar de uma árvore nova. O índice e documentos centrais ainda declaram o SHA `886eda0`/verificação de 2026-07-14, enquanto o checkout está em `5f3f91a4`; `docs:check` valida links locais, não frescor nem autoridade. O README raiz e o índice têm ordens de leitura diferentes. `aidd_docs/memory/project-state.md` também tem afirmações datadas sobre Vercel que não representam o estado que o usuário acabou de informar.
+
+**Recomendação preliminar:** preservar a taxonomia existente, manter `docs/README.md` como mapa documental único e fazer o README raiz encaminhar ao mapa sem duplicar ordem de leitura. Definir uma hierarquia curta por tipo de afirmação: código/schema/migrations/testes para comportamento implementado; decisões aprovadas para intenção de produto/arquitetura; configuração remota consultada com data para estado de provedores; planos, auditorias e relatórios datados como proposta/snapshot até promoção explícita. Atualizar primeiro o SHA/data e classificar o material existente; mover diretórios somente se duplicidade ou navegação difícil forem demonstradas. Metadados/checks de freshness ficam para os pontos 12–13.
+
+**Comparação com Hub:** o Hub fornece exemplos de índice, autoridade e classificação de histórico, mas seu checker de docs tem mais regras e também não detecta conteúdo semanticamente defasado. A cópia deve ser conceitual e menor.
+
+**Decisões do usuário:** preservar as categorias atuais de `docs/`; manter `docs/README.md` como único mapa documental e `README.md` como entrada curta que aponta para ele. Adotar a hierarquia de autoridade por tipo de afirmação descrita acima; não duplicar informação ou reorganizar pastas sem evidência de dificuldade de navegação.
+
+**Pesquisa de apoio:** [pesquisa do ponto 7 sobre documentação canônica](research-ponto-07-canonical-docs.md).
+
+### Ponto 8 — `CONTEXT.md` como glossário do domínio
+
+**Estado:** aceito em 2026-09-24, com escopo e autoridade definidos.
+
+**Evidência:** o Polaris tinha dois glossários com escopos/hierarquias confusos: `docs/glossary.md` documenta termos técnicos observados no código e contém roles desatualizadas; `docs/business-rules/glossary.md` já reúne termos de negócio, mas seu título “normativo” conflita com o README da área de descoberta, que classifica esses documentos como não normativos. O glossário de negócio também não aparece no índice `normative/`. O Hub usa um `CONTEXT.md` raiz canônico, referenciado no índice e em `AGENTS.md`; seu vocabulário é de outro produto e não deve ser copiado.
+
+**Direção aprovada:** manter um `CONTEXT.md` na raiz como fonte canônica do vocabulário de produto/domínio, sem transformá-lo em resumo geral, instrução de agente, especificação ou cópia de regras. Usar termos em português e apontar identificadores em inglês quando ajudarem a localizar o código. “Organização” é o conceito interno; `tenant` fica reservado ao mecanismo técnico de isolamento; `workspace` não será usado como sinônimo de Organização. Você valida a linguagem do produto. Termos legais, fiscais, contábeis ou regulatórios ficam pendentes até validação apropriada.
+
+**Estrutura documental a implementar após o plano dos 70 pontos:** `CONTEXT.md` substitui o conteúdo de vocabulário de negócio duplicado; `docs/business-rules/glossary.md` passa a apontar para essa fonte; `docs/glossary.md` continua técnico/arquitetural e deve ter seu escopo e divergências corrigidos. `docs/README.md` indexa o arquivo canônico; `AGENTS.md` instrui agentes a consultá-lo em tarefas que dependam da linguagem de domínio. As regras em `docs/business-rules/normative/` continuam autoridade para comportamento. Só adicionar termos depois de validar seu significado; exemplos como “Vendedor” e sua relação com owner/pagador de taxa permanecem pendentes.
+
+**Pesquisa de apoio:** [pesquisa do ponto 8 sobre vocabulário de domínio](research-ponto-08-contexto-glossario.md).
+
+### Ponto 9 — ampliar `PRODUCT.md`
+
+**Estado:** aceito em 2026-09-24, com direção de produto e limites documentais definidos.
+
+**Evidência:** `PRODUCT.md` já declara público geral (pequenos vendedores/revendedores locais), substituição de planilhas, gestão de vendas/estoque e princípios de experiência. O usuário confirmou que o público e o problema foram validados; os artefatos dessa validação não foram localizados neste review. Regras normativas já definem a fronteira do lançamento (`SCOPE-001`), papéis, billing, invariantes e comportamento. `docs/product/01-regras-de-negocio.md` e `docs/product/roadmap.md` ainda contêm descrições anteriores sobre autenticação, roles e billing; precisam ser reconciliados, não reproduzidos em `PRODUCT.md`.
+
+**Direção aprovada:** confiabilidade de estoque e vendas é requisito básico; rapidez e facilidade em relação às planilhas são o principal benefício; análises de margem/desempenho são resultado posterior. Os limites propostos no relatório (marketplace público, ERP fiscal completo, operação pública multivendedor) devem ser tratados apenas como fora do lançamento atual, não como proibições permanentes. `PRODUCT.md` será um brief estratégico conciso com problema/público, resultado prioritário, jornadas macro, limites do lançamento, critérios/sinais de sucesso e links para as fontes canônicas. Não deve duplicar glossário, invariantes, estados de billing, schema, critérios detalhados de aceite ou arquitetura. Sinais numéricos ficam para quando houver métrica apropriada e baseline.
+
+**Trabalho correlato para a execução consolidada:** reconciliar `docs/product/01-regras-de-negocio.md` e `docs/product/roadmap.md` com as regras normativas aprovadas; registrar a fonte da validação de público/problema no brief ou em pesquisa de produto, caso disponível.
+
+**Pesquisa de apoio:** [pesquisa do ponto 9 sobre o contrato de produto](research-ponto-09-product-contract.md).
+
+### Ponto 10 — sistema explícito de regras de domínio
+
+**Estado:** aceito em 2026-09-24, com reutilização dos IDs canônicos e separação do snapshot de descoberta.
+
+**Evidência:** Polaris já possui IDs normativos por domínio em `docs/business-rules/normative/approved-rules.md`, decisões `DEC-BR-001` a `DEC-BR-085` e perfis/matrizes de aderência. O relatório não percebe esse sistema e propõe `REG-*`, uma família redundante. A lacuna está nos IDs provisórios de `rules-inventory.md`, reutilizados para significados AS-IS diferentes dos IDs normativos. A matriz de cobertura existe, mas não aponta sistematicamente para caminhos de código e casos de teste concretos. `docs:check` verifica links, não unicidade ou rastreabilidade de IDs; fontes/testes em `apps/` e `packages/` não incluem referências explícitas aos IDs.
+
+**Direção aprovada:** manter os IDs atuais de regras (`AUTH-001`, `ORG-001`, `STOCK-001` etc.) e `DEC-BR-NNN` para decisões; não criar `REG-*` paralelo. Não renumerar/reutilizar IDs: conservar o ID quando o significado continua o mesmo; quando a obrigação/escopo mudar materialmente, criar sucessor e marcar o anterior como substituído. A matriz deve ligar cada regra a caminhos/símbolos de código e testes concretos. Mudanças comportamentais devem referenciar os IDs afetados nos artefatos de revisão; não exigir que cada comentário de código/teste repita o ID.
+
+**Decisão sobre descoberta:** manter `rules-inventory.md` como snapshot histórico AS-IS, não como catálogo ativo de regras. A escolha se baseia em seus links atuais: ele apoia descoberta e auditorias datadas, enquanto `approved-rules.md`, perfis individuais e matriz de aderência são as fontes normativas e atuais. Remover o inventário da navegação de regras ativas; preservar o snapshot e referências provenientes de auditorias históricas com rótulo explícito. Seus IDs permanecem locais ao snapshot, não canônicos; não criar `OBS-*` para esse material arquivado.
+
+**Estrutura documental a implementar após o plano dos 70 pontos:** explicitar em `normative/README.md` a separação entre regras vigentes, registro de decisões e evidência histórica; revisar a indicação de status/caminhos em `decision-register.md` e `governance.md`; marcar o inventário de descoberta como snapshot histórico e ajustar links; detalhar evidências concretas na matriz; avaliar um check leve para IDs únicos, referências existentes e supersession válido. A governança ampla só será promovida depois de reconciliar o documento que hoje está marcado como proposta.
+
+**Pesquisa de apoio:** [pesquisa do ponto 10 sobre IDs e rastreabilidade](research-ponto-10-domain-rule-ids.md).
+
+### Ponto 11 — registros de decisão arquitetural (ADR)
+
+**Estado:** aceito em 2026-09-24, com convenção e backfill seletivo aprovados.
+
+**Evidência preliminar:** o Polaris não possui ADRs no checkout. `docs/business-rules/decision-register.md` registra decisões de produto/domínio, enquanto `docs/architecture/*` descreve principalmente estado e limites técnicos, sem capturar sistematicamente contexto, alternativas, rationale e consequências. O Hub tem 17 ADRs, mas seu snapshot apresenta defasagem, uma duplicação no índice e variação de formato; copiar quantidade/template sem avaliar esses custos seria inadequado.
+
+**Recomendação preliminar:** adotar ADRs leves apenas para escolhas técnicas significativas, separadas de `DEC-BR` e regras normativas. Registrar em um diretório indexado no `docs/README.md`, com contexto, decisão, alternativas reais, consequências, estado/data e links de implementação. Não reconstruir rationale inexistente. Três candidatos fortes são: fronteira RLS/autorização tenant-plataforma, outbox transacional e adaptadores de billing; Neon e escolha do fornecedor R2 devem esperar a análise de stack do P2; monorepo e `@polaris/date` não qualificam sem evidência adicional de trade-off relevante.
+
+**Decisão aprovada:** usar `docs/adr/` para ADRs técnicas significativas, concisas e distintas das decisões de produto/negócio `DEC-BR`. Uma ADR registrará contexto, escolha, alternativas reais, consequências, status/data e links de evidência; decisões substituídas serão ligadas à sucessora. Backfill não deve inventar rationale histórica.
+
+**Backfill aprovado para a execução consolidada:** (1) fronteira de segurança RLS/autorização tenant-plataforma; (2) outbox transacional para eventos externos; (3) adaptadores de billing com estado normalizado. Usar apenas rationale confirmado por documentação/código ou pelo usuário; se a motivação histórica exata não estiver provada, declarar essa lacuna ou registrar uma decisão presente com data atual. Adiar ADR de seleção de Neon/R2 até a revisão de stack do P2; não criar ADR agora para o monorepo ou `@polaris/date` sem nova evidência de trade-off relevante.
+
+**Pesquisa de apoio:** [pesquisa do ponto 11 sobre ADRs](research-ponto-11-adrs.md).
+
+### Ponto 12 — freshness da documentação
+
+**Estado:** aceito em 2026-09-24, com metadados seletivos e aviso não bloqueante.
+
+**Evidência preliminar:** `README.md`, `docs/README.md`, `docs/documentation-coverage.md` e vários guias de arquitetura, banco, módulos e segurança ainda registram o snapshot `886eda0`, verificado em 2026-07-14. O checkout `main` está em `5f3f91a4ca47`, 39 commits adiante e inclui mudanças posteriores, como a fundação temporal. O `docs:check` passa, mas só valida links Markdown locais; isso não é prova de frescor semântico. O Hub também registra `last_verified_commit`, mas seu checker só verifica se aquele SHA existe, não se a documentação foi revista contra o `HEAD`.
+
+**Direção aprovada:** usar SHA/data no índice de cobertura para identificar o snapshot da auditoria, não como selo global de que cada página está atual. Atualizar docs junto à mudança quando ela alterar comportamento documentado. Aplicar owner/data/fontes mapeadas somente a páginas canônicas e de maior risco (segurança, banco, release/integrações e contratos de produto); históricos e ADRs devem permanecer snapshots identificados pela data/status original. Mudança nos caminhos-fonte mapeados gera aviso e revisão direcionada no PR, sem bloqueio universal por avanço de SHA.
+
+**Decisão aprovada:** metadados de owner, última verificação e fontes mapeadas serão seletivos, para páginas canônicas de maior risco; históricos e ADRs preservam data/status próprios. Mudanças em fontes mapeadas geram aviso e revisão direcionada no PR, sem bloqueio universal por freshness. O SHA global continua identificando auditorias de cobertura, não certificando freshness de todas as páginas.
+
+**Pesquisa de apoio:** [pesquisa do ponto 12 sobre freshness docs-as-code](research-ponto-12-doc-freshness.md).
+
+### Ponto 13 — ampliar `docs:check`
+
+**Estado:** aceito em 2026-09-24, com falhas estruturais bloqueadoras e freshness separada.
+
+**Evidência preliminar:** `docs:check` executa somente `scripts/check-markdown-links.ts`. O script verifica arquivos locais citados em links Markdown inline dentro de `README.md` e `docs/**/*.md`; ignora fragmentos/anchors, URLs externas, frontmatter, freshness e IDs/referências. Não cobre `PRODUCT.md`, `DESIGN.md`, `AGENTS.md`, o futuro `CONTEXT.md` nem `plans/`. O `check-docs.ts` do Hub faz mais, mas ainda aceita SHAs antigos por apenas verificar que existem e mantém uma lista manual grande de documentos canônicos.
+
+**Direção aprovada:** manter `docs:check` rápido, offline e bloqueador para integridade estrutural determinística: links e âncoras locais, metadados nas páginas críticas selecionadas e referências/IDs quando adotados. Incluir os documentos canônicos da raiz e `docs/`, não todos os snapshots e planos históricos. Freshness de fontes mapeadas e disponibilidade de URLs externas serão avisos em lanes separadas, sem falha universal de CI; snippets executáveis podem ser uma etapa posterior. Planos e snapshots históricos não receberão metadados atuais por padrão.
+
+**Pesquisa de apoio:** [pesquisa do ponto 13 sobre validação docs-as-code](research-ponto-13-docs-check.md).
+
+### Ponto 14 — autoridade de `aidd_docs/`
+
+**Estado:** aceito em 2026-09-24, mantendo os snapshots no local atual.
+
+**Evidência preliminar:** `AGENTS.md` diz que docs, memória, specs e planos vivem em `aidd_docs/` e, com o bloco de memória vazio, manda ler todo `aidd_docs/memory/`. Há apenas `project-state.md` nessa memória, revisto em 2026-07-13; ele afirma que o projeto admin da Vercel está ativo, contradizendo a informação atual do usuário de que Polaris ainda não foi conectado/publicado na Vercel. `production-closed-test.md` e `codebase-deep-review-2026-07-13.md` também são snapshots de julho. Enquanto isso, as fontes atuais de produto, design, regras, guias e planos estão em `README.md`, `PRODUCT.md`, `DESIGN.md`, `docs/` e `plans/`; o usuário aprovou `docs/README.md` como mapa canônico único.
+
+**Recomendação preliminar:** corrigir `AGENTS.md` para encaminhar ao `docs/README.md` e carregar apenas os documentos canônicos relevantes à tarefa; remover a leitura obrigatória de toda `aidd_docs/memory/`. Preservar `aidd_docs/` como histórico/contexto auxiliar, consultado sob demanda e sempre revalidado, sem migração ou exclusão em massa. Reconciliar o `project-state.md` obsoleto na execução consolidada.
+
+**Direção aprovada:** `docs/README.md` é o mapa canônico; `AGENTS.md` deve apontar para ele e carregar guias conforme o tipo de tarefa. Remover a afirmação de que specs/planos atuais vivem em `aidd_docs/` e o carregamento automático de toda a memória. Preservar `aidd_docs/` no lugar, como histórico/contexto auxiliar sob demanda, revalidando afirmações atuais contra código, docs ou estado externo. Reconciliar/identificar o snapshot de julho sem migração em massa.
+
+**Pesquisa de apoio:** [pesquisa do ponto 14 sobre autoridade e memória de agentes](research-ponto-14-aidd-docs-authority.md).
+
+### Ponto 15 — instruções do agente e manutenção da documentação
+
+**Estado:** aceito em 2026-09-24; a implementação será consolidada com P14 e P7.
+
+**Evidência:** `docs/maintenance.md` já exige atualizar documentação no mesmo PR quando uma mudança afeta comportamento, contrato, dados, autorização, operação ou risco, e fornece uma matriz/checklist detalhados. O `AGENTS.md` já contém regras gerais de evidência e verificação, mas sua seção documental ainda aponta para `aidd_docs/`; após P14, precisa encaminhar a `docs/README.md` e, para mudanças documentais, a `docs/maintenance.md`. O `docs/README.md` menciona manutenção na descrição de cobertura, mas não tem link para o guia. O Hub adota ponteiro ao índice e regra de atualização, porém o snapshot local também tem deriva entre README/índice; sua estrutura não deve ser copiada literalmente.
+
+**Recomendação preliminar:** aproveitar a regra que já existe em `docs/maintenance.md`, sem duplicar sua matriz no `AGENTS.md`. Acrescentar no AGENTS um ponteiro por tarefa ao `docs/README.md` e um ponteiro condicional ao guia de manutenção, com lembrete conciso de atualizar fonte canônica no mesmo PR quando contrato/comportamento documentado mudar. Incluir `docs/maintenance.md` no mapa `docs/README.md`. Rever na execução os gatilhos relacionados ao glossário à luz de P8; a regra detalhada permanece no guia de manutenção.
+
+**Direção aprovada:** adicionar no `AGENTS.md` ponteiros concisos ao índice canônico e ao guia de manutenção; atualizar o índice para listar `docs/maintenance.md`. Manter o lembrete de atualizar fontes canônicas no mesmo PR quando a semântica/contrato documentado mudar; conservar a matriz/checklist detalhada apenas em `docs/maintenance.md`.
+
+**Pesquisa de apoio:** [pesquisa do ponto 15 sobre instruções de agente](research-ponto-15-agent-instructions.md).
+
+### Ponto 16 — reduzir o `AGENTS.md` raiz
+
+**Estado:** aceito em 2026-09-24, com revisão regra por regra e sem meta de linhas.
+
+**Evidência preliminar:** `AGENTS.md` tem 246 linhas e é aplicável a todo trabalho no repositório. Inclui orientações para Solid/Svelte/Vue/Qwik apesar da stack Next/React, listas extensas de estilo que se sobrepõem em parte ao Ultracite/Biome, e regras de teste/verificação repetidas em mais de uma seção. Também contém instruções de alto valor persistente (evidência, preservação de trabalho, mudanças cirúrgicas, no-commit/push sem pedido, verificação) e o requisito de consultar docs Next versionadas antes de escrever Next.js. Porém `node_modules/next/dist/docs` não existe no checkout atual, então essa orientação precisa de fallback documental. O `package.json` distingue `bun x ultracite check` de `bun run check`/`check:all`, e `fix` pode alterar arquivos; esses escopos não devem ser misturados. O AGENTS do Hub tem 251 linhas, então não serve como prova de concisão nem alvo literal.
+
+**Recomendação preliminar:** reduzir redundância, não buscar uma contagem fixa de linhas. Manter no root autoridade/prioridade documental, ponteiros (P14–P15), workflow e segurança operacional, critérios de verificação, regras que a ferramenta não impõe e instruções de framework realmente específicas. Remover orientações para linguagens não usadas; conferir cobertura do Ultracite antes de eliminar regras específicas; condensar listas TypeScript/React/testing/review genéricas em princípios de alto valor e delegar detalhes condicionais a docs especializadas. Preservar instrução Next com fallback para documentação oficial/Context7 quando os guias locais não existirem. Não criar ainda `AGENTS.md` aninhados: decidir necessidade/localidade no P17.
+
+**Pesquisa de apoio:** [pesquisa do ponto 16 sobre escopo e tamanho de AGENTS.md](research-ponto-16-agents-md-size.md).
+
+**Direção aprovada:** revisar o conteúdo regra por regra, manter instruções globais de alto valor, remover instruções de tecnologias não usadas e condensar somente as regras cuja cobertura pelo tooling tenha sido confirmada. Não estabelecer um limite fixo de linhas. A necessidade de instruções aninhadas será decidida no P17.
+
+### Ponto 17 — instruções `AGENTS.md` locais
+
+**Estado:** aceito em 2026-09-24; manter somente o `AGENTS.md` raiz nesta fase.
+
+**Evidência preliminar:** não há arquivos `AGENTS.md` em `apps/` ou `packages/`; só o root. As apps compartilham Next/React e os guias por módulo/web/admin já descrevem contratos. `packages/events` tem operações especializadas de outbox/webhook, mas elas estão cobertas por `docs/api/webhooks.md` e `docs/operations/jobs-and-workflows.md`. `packages/db` concentra schema, migrations, RLS e comandos próprios `db:migrate`, `db:push` e `test:postgres`, sendo o candidato local mais forte. A documentação de migrations/ambientes cobre esses fluxos; o README proíbe db push/migrations contra produção, mas não há regra canônica sobre todos os ambientes persistentes.
+
+**Pesquisa/recomendação preliminar:** Codex acumula arquivos de instrução do root até o diretório atual e permite orientação mais específica; outras ferramentas diferem em discovery/precedência, e alguns ambientes têm suporte aninhado opcional. Estudos empíricos sobre context files são mistos, então não criar arquivos por simetria. Minha recomendação é manter somente o root por enquanto e usar ponteiros condicionais às fontes canônicas existentes. `packages/db` é o candidato mais forte para revisão futura, mas os guias atuais já explicam migrations, RLS e ambientes; se for definida uma regra adicional para `db:push` em bancos persistentes, documentá-la primeiro como política canônica. Criar arquivo local apenas se houver uma regra específica de subtree que precise ser automaticamente carregada e não possa ser resolvida por um ponteiro curto.
+
+**Pesquisa de apoio:** [pesquisa do ponto 17 sobre AGENTS aninhados](research-ponto-17-nested-agents.md).
+
+**Decisão aprovada:** não criar arquivos `AGENTS.md` aninhados agora. O root manterá as regras globais e apontará a guias por tarefa. Reavaliar apenas se surgir evidência de uma regra durável e exclusiva de uma subárvore que não possa ser atendida por documentação canônica condicional. A política de `db:push` em bancos persistentes deve ser definida e documentada antes de qualquer AGENT local.
+
+### Ponto 18 — fluxo de trabalho de IA
+
+**Estado:** aceito em 2026-09-24; distinguir etapas universais de etapas condicionais por tipo de tarefa.
+
+**Evidência preliminar:** `AGENTS.md` já manda consultar fonte antes de editar, provar bugs, fazer mudanças cirúrgicas, testar/verificar e reportar resultado; `docs/maintenance.md` já define quando atualizar docs, fontes e diff/CI. O CI roda verificação em PR/push para `main`, e preflight/deploy/homologação têm comandos/gates próprios. O script `verify:quick` citado por P18 não existe em `package.json` nem foi localizado no repo.
+
+**Recomendação preliminar:** usar um ciclo comum conciso para mudanças de código: entender o resultado e o critério de aceite; consultar apenas regras, arquitetura, implementação e testes pertinentes; fazer uma mudança coerente e revisar o diff; verificar pelo sinal mais próximo e suficiente; relatar evidências e limites. Reproduzir/provar antes de corrigir apenas em bugfixes. Planejar antes de codificar quando requisitos ou abordagem estiverem incertos, ou a mudança for transversal, de alto impacto ou difícil de reverter; tamanho sozinho não é o gatilho. Em features maiores, esclarecer cenário, escopo e critérios de aceite antes da implementação. Atualizar documentação canônica no mesmo PR quando semântica/contrato mudar. PR e CI para mudanças destinadas à `main`; staging/preflight apenas para release ou validação dependente de ambiente. Não instituir uma lista de 13 passos universais. Usar scripts existentes; avaliar `verify:quick`/`verify` separadamente no P20.
+
+**Achados adicionais:** “identificar invariantes” e revisar diff de código não estão explícitos como passos; PR já dispara CI no workflow. Staging/homologação não é etapa por PR e permanece etapa de release após configuração de hospedagem. O comando `verify:quick` não existe e não deve ser documentado como executável.
+
+**Comparação com o Hub:** o Hub tem `verify:quick` e `verify` implementados como perfis nomeados em `scripts/verify.ts` e `src/tooling/verification-profiles.ts`; o perfil rápido executa verificação de migrations, typecheck, check e testes, enquanto o completo acrescenta docs, build e Knip. Isso melhora a descoberta dos comandos naquele repositório, mas os gates e custos precisam ser avaliados para o Polaris no P20 antes de copiar o contrato. O `AGENTS.md` do Hub também cobre inspeção, prova de bugs, verificação estreita e manutenção documental, além de regras específicas do próprio Hub, como consulta ao runbook CodeRabbit para alterações de código/configuração e higiene de worktrees; estas últimas não são requisitos universais de P18.
+
+**Pesquisa de apoio:** [pesquisa do ponto 18 sobre workflow de coding agents](research-ponto-18-ai-workflow.md).
+
+**Decisão aprovada:** adotar o fluxo adaptativo descrito acima como orientação para o futuro `AGENTS.md`. Planejamento depende de incerteza, impacto, transversalidade ou dificuldade de reversão; reprodução é específica de bugfix; os aliases de verificação ficam para o P20; PR/CI integram mudanças à `main`; homologação fica ligada a release ou validação dependente de ambiente.
+
+### Ponto 19 — worktrees para tarefas com agentes
+
+**Estado:** aceito em 2026-09-25; separar CI de operações manuais.
+
+**Proposta do relatório:** padronizar `1 task = 1 branch = 1 worktree` para desenvolvimento paralelo com IA, a fim de reduzir interferência entre agentes, sujeira no working tree e conflitos de PR.
+
+**Evidência no Polaris:** o checkout está em `main` e `git worktree list --porcelain` mostra apenas o worktree principal. O working tree contém `.env.example` modificado e os planos desta revisão não rastreados; um worktree Git padrão criado do commit não os levaria consigo. A criação gerenciada pelo app Codex pode aplicar alterações locais selecionadas, enquanto a ferramenta `create_worktree` usada nesta sessão declara que não copia alterações não commitadas; por isso o processo concreto precisa ser conferido. `.env.local` e dependências são ignorados pelo Git, então um worktree novo exige provisionar ambiente/dependências conscientemente. Não há política ou automação de worktrees no `AGENTS.md` nem no setup atual.
+
+**Comparação com o Hub:** o `AGENTS.md` do Hub define higiene e remoção cautelosa de worktrees, branches e stashes, mas o fluxo diário documenta branch dedicada sem exigir worktree por tarefa. Há dois worktrees observados e ambos têm alterações locais; não devem ser tratados como descartáveis com base apenas em seu nome ou estado de tracking. Guias do Hub também deixam claro que trocar worktree/branch não troca o banco de desenvolvimento. A existência de instruções de limpeza, portanto, não valida uma regra universal de criação.
+
+**Trade-offs pesquisados:** worktrees dão diretórios, índices e branches de trabalho separados e ajudam quando tarefas que editam código ocorrem em paralelo. Permanecem ligados ao mesmo repositório; não isolam automaticamente bancos, portas, provedores ou outros serviços externos. Dependências, artefatos e arquivos locais ignorados podem precisar de setup próprio; secrets não devem ser copiados sem avaliação. Worktrees por tarefas sequenciais, pequenas ou somente de leitura adicionam setup e limpeza sem o mesmo ganho. O suporte integrado em ferramentas de coding agents indica que é um mecanismo comum de isolamento para paralelismo, não uma exigência para toda tarefa.
+
+**Recomendação preliminar:** manter a branch por mudança/PR conforme P3; usar worktree e branch separadas para cada fluxo independente de escrita de código que precisa avançar em paralelo. Não exigir worktree para análise somente de leitura nem trabalho pequeno e sequencial. Antes de criar, conferir `git status`, escolher o commit-base explicitamente e decidir como preservar mudanças locais relevantes; o comportamento de transportar alterações depende de como o worktree é criado, então não presumir que dados não commitados ou ignorados acompanharão. Provisionar dependências e configuração local conscientemente. Se tarefas iniciarem serviços ou usarem DB mutável, separar portas e dados por fluxo ou executá-las em sequência. Inspecionar alterações e estado da worktree antes de cleanup, sem remoção forçada ou presumida.
+
+**Pesquisa de apoio:** [pesquisa do ponto 19 sobre branches e worktrees](research-ponto-19-worktrees.md).
+
+**Decisão aprovada:** worktree é padrão para fluxos independentes de escrita de código executados em paralelo. Tarefas sequenciais usam o checkout da branch de mudança; leitura e pesquisa não exigem worktree. Antes de paralelizar, verificar o estado local e o método de criação, e isolar recursos mutáveis como bancos e portas ou serializar a execução.
+
+### Ponto 20 — comandos canônicos de verificação
+
+**Estado:** aceito em 2026-09-25.
+
+**Proposta do relatório:** criar `bun run verify:quick` para o ciclo diário e `bun run verify` para verificação completa; avaliar execução de tarefas afetadas com Turborepo, mantendo gates completos para release.
+
+**Evidência no Polaris:** não existem os aliases `verify:quick`/`verify` nem um runner de perfis. Os scripts raiz `check`, `typecheck` e `test` filtram somente `@polaris/web`; há versões `:admin` separadas. `typecheck:all` e `test:all` executam essas tarefas por todo o workspace, mas `test:all` significa Vitest, não Postgres nem E2E. `check:all` seleciona web e admin, porém ambos chamam o mesmo `bun x ultracite check` na raiz, podendo repetir uma varredura que já é global. `build:all` cobre os builds web/admin disponíveis; `knip` roda como tarefa web com configuração de repo. As variantes `:all` são escopo de uma tarefa, não perfil completo de verificação.
+
+**CI atual:** o job principal em PR/push para `main` inclui audit baseline/boundaries, lint, typecheck, unit, Knip, docs, contrato de env e builds web/admin. Web E2E, comportamento PostgreSQL e admin E2E são jobs adicionais executados após o job principal no workflow; isso não prova que seus contexts já estejam marcados como checks requeridos na proteção remota de `main`. RLS smoke, preflight, deployment smoke e checklists operacionais são manuais. O hook pre-push atual executa apenas check/test web-only; sua política é P21. Portanto, um alias local “full” não deve ser chamado de equivalente à CI completa se não cobrir os jobs ambientais adicionais.
+
+**Comparação com o Hub:** `verify:quick`/`verify` existem como perfis sequenciais, mas o runner não usa Turbo nem entende `--affected`. Quick roda migration-check, typecheck, Ultracite e Vitest; full soma docs, build e Knip. A CI do Hub também tem gates adicionais, então a existência dos aliases comprova descoberta de comandos, não paridade total com CI. Além disso, os aliases `check`/`typecheck`/`test` no Hub não têm o mesmo escopo dos scripts web-only do Polaris.
+
+**Trade-offs de `--affected`:** a documentação do Turbo descreve mudança entre referências Git e dependentes. Em CI de PR a base pode ser detectada pelo GitHub; localmente a base padrão é `main`/`master` ou configurada em `TURBO_SCM_BASE`, e histórico raso pode ampliar a seleção para todos. Root config/lockfile e `globalDependencies` também ampliam para todas as tarefas; `--filter` intersecta com afetados, então filtrar `@polaris/web` pode omitir admin. Docs e scripts root precisam de verificações explícitas. O lockfile atual fixa Turbo `2.10.4`; revalidar após P2. Não presumir que a comparação entre refs cobre alterações ainda não commitadas.
+
+**Recomendação preliminar:** criar aliases canônicos com cobertura explícita de todo o workspace. `verify:quick`: `docs:check`, uma varredura global do Ultracite, `typecheck:all` e `test:all`, sem Postgres/E2E/build. Inicialmente evitar `--affected` como única garantia; só adotá-lo após validar base, histórico, comportamento com alterações locais e cobertura de dependentes, além de medir que a economia compensa. `verify`: quick mais baseline/boundaries, contrato de env, build all, Knip e Postgres comportamental contra banco local não produtivo. Manter E2E web/admin como gates de CI separados; declarar que `verify` é o gate local full e não substitui o conjunto de checks obrigatórios de PR. Na implementação, reutilizar definições de gates com o job estático de CI onde isso não causar duplicação dos jobs de banco/E2E paralelos.
+
+**Pesquisa de apoio:** [pesquisa do ponto 20 sobre comandos de verificação](research-ponto-20-verification-commands.md).
+
+**Decisão aprovada:** adotar `verify:quick` para `docs:check`, uma verificação global do Ultracite, `typecheck:all` e `test:all` em todo o workspace. Não usar `--affected` como escopo inicial; reavaliar após medição e validação da base Git, histórico e seleção de dependentes. `verify` será o gate local full descrito na recomendação; E2E web/admin permanecem gates separados do CI.
+
+### Ponto 21 — cobertura do hook `pre-push`
+
+**Estado:** aceito em 2026-09-25.
+
+**Proposta do relatório:** substituir os comandos web-only atuais no `pre-push` por `verify:quick` ou, no mínimo, por check/typecheck/test de todos os workspaces. Manter os hooks como conveniência local e a CI como autoridade.
+
+**Evidência no Polaris:** `lefthook.yml` configura `pre-push` com `bun run check` e `bun run test`. Ambos são filtros web-only; o hook não executa `typecheck` nem os testes admin. O script `check` chama Ultracite na raiz, portanto a cobertura de lint parece mais ampla que o escopo do Turbo, mas isso não cobre typecheck/testes do admin. `package.json` instala Lefthook via `prepare`, exceto em CI/Vercel ou checkout sem `.git`; no checkout inspecionado, `.git/hooks` contém apenas exemplos e `core.hooksPath` não está definido, então a configuração do hook não está ativa neste ambiente. Confirmar a instalação durante a execução do plano.
+
+**CI atual:** o job principal em PR/push roda lint, typecheck e unit para web e admin, além de audits, docs, env e builds. PostgreSQL comportamental e E2E web/admin são jobs separados do workflow. A CI continua sendo o gate de integração conforme P3; o hook dá feedback local e não substitui os checks do PR.
+
+**Comparação com o Hub:** no checkout `staging` do Hub, `lefthook.yml` define apenas `pre-commit` para autofix; não há `pre-push` configurado/ativo. Os perfis manuais Quick/Full executam gates em sequência e deixam Postgres/E2E para jobs próprios de CI. Portanto, o pre-push proposto no relatório é uma política específica para Polaris, não um padrão transferido do Hub.
+
+**Trade-off:** após P20, `verify:quick` cobre docs, Ultracite global uma vez, typecheck e Vitest de todo o workspace. Chamá-lo no pre-push fecha as lacunas web/admin e evita listas duplicadas no Lefthook. Ele roda em todo push local e pode tornar a espera perceptível; não há medição de duração ainda. O hook pode avaliar estado adicional presente no checkout além das refs enviadas, enquanto a CI valida o commit no workflow.
+
+**Recomendação preliminar:** substituir os dois comandos atuais por um único `bun run verify:quick`, depois de garantir que Lefthook está efetivamente instalado. Medir a duração em uso representativo na implementação. Manter o hook se o tempo for aceitável; se a espera for alta, preservar `verify:quick` como comando manual e reduzir o hook ao gate curto definido pelo usuário. Manter CI e proteção de `main` como autoridade de integração.
+
+**Pesquisa de apoio:** [pesquisa do ponto 21 sobre o hook pre-push](research-ponto-21-pre-push.md).
+
+**Decisão aprovada:** depois de existir `verify:quick`, o `pre-push` o executará como um único comando. Na implementação, confirmar que Lefthook está instalado no checkout e medir a duração em uso representativo. Manter CI e os checks do PR como autoridade de integração; se o tempo local ficar alto, manter `verify:quick` manual e reduzir o hook.
+
+### Ponto 22 — baseline vermelho e `--no-verify`
+
+**Estado:** aceito em 2026-09-25; corrigir a causa, sem quarentena como atalho.
+
+**Proposta do relatório:** tratar falhas preexistentes de testes e uso de `--no-verify` como problema de processo, preservar os gates e recuperar um baseline verde antes de seguir adicionando fundação.
+
+**Evidência remota no Polaris:** a PR #1, “feat(web): onboarding com Free resiliente e checkout pré-cadastro”, foi aberta e mesclada em 2026-07-15. A descrição da PR registra três falhas “preexistentes” em testes de bootstrap/admin/preflight e que o hook levou ao uso de `--no-verify`; também declara que typecheck/build passaram localmente. Isso confirma o autorrelato escrito na PR, mas não identifica os três testes nem demonstra que eram preexistentes. A CI no commit base antes da PR (run `29417503626`) já falhou em `Typecheck`; a CI no HEAD da PR (`90c3e0f`, run `29446634302`) também falhou com `TS2304: Cannot find name 'PageProps'` em sete arquivos web. Em ambas, unit tests e jobs dependentes foram ignorados. Há divergência entre o resultado local descrito e a CI, sem evidência para explicar a causa. Isso confirma Typecheck vermelho anterior à PR, mas não confirma nem refuta as três falhas unitárias descritas. Os logs versionados de alguns pacotes compartilhados exibem testes passando, mas não cobrem todos os apps nem isolam a alegação.
+
+**Estado do baseline atual:** o HEAD local/remoto de `main` permanece em `5f3f91a` (2026-07-16). A última execução remota listada para esse SHA é a CI run #29 (`29524367993`), também falha em `Typecheck` com `TS2304: Cannot find name 'PageProps'` em sete arquivos web; unit tests, admin tests, E2E e PostgreSQL foram ignorados por dependência do job principal. Não encontrei commits nem execuções posteriores em `main` até a consulta de 2026-09-25. Assim, o baseline registrado para o commit atual continua vermelho em typecheck e não há resultado contemporâneo para as suítes ignoradas. A PR #1 foi mesclada apesar da CI falhar; a auditoria de P1 também encontrou `main` sem proteção. A política de P3 para restaurar o CI antes de configurar checks requeridos continua necessária.
+
+**Hipótese técnica para a correção:** a CI executa `tsc` antes do build e não mostra etapa `next typegen`. A documentação atual do Next informa que `PageProps` global é gerado por `next dev`, `next build` ou `next typegen`. Falta de geração de tipos de rota explica plausivelmente o `TS2304`, mas precisa ser confirmada numa execução após P2; não tratar isso como falha de teste a ser quarentenada.
+
+**Escopo da regra de branches:** Polaris não tem uma branch Git persistente `staging` aprovada nesta fase (P4). Exigir baseline verde agora se aplica a `main`; a homologação persistente e seus gates entram antes do go-live conforme P4/P5. Não inferir que `staging` precisa existir para aplicar a regra.
+
+**Comparação com o Hub:** a documentação canônica do Hub também define CI como gate de PR/release, exige validar o SHA candidato e proíbe `.skip` para mascarar suítes. O workflow mantém integrações Postgres/E2E isoladas; um retry de Playwright é registrado em métricas e não transforma silenciosamente o resultado em sucesso. Não foi encontrada lane/política persistente de quarentena. Um plano antigo registrou um falso alarme em um teste que já não existe na árvore atual, então o Hub também exige revalidar snapshots históricos contra o estado atual.
+
+**Recomendação preliminar:** manter zero falhas silenciosas no baseline de `main`. Resolver primeiro o Typecheck que falha no último SHA; a hipótese a validar é gerar os tipos Next antes de `tsc`. Depois executar os gates que foram ignorados e restaurar a CI antes de habilitar branch protection. Para cada falha conhecida, corrigir a causa; remover um teste somente se ele for comprovadamente inválido e a mudança registrar rationale. O usuário rejeitou quarentena como atalho para adiantar a fundação. Não transformar as três falhas relatadas em allowlist sem identificar/reproduzir. Reexecução pode diagnosticar flakiness, mas não substitui a falha original sem explicação verificável. Tratar `--no-verify` como bypass local, nunca como resultado de CI ou autorização de merge.
+
+**Pesquisa de apoio:** [pesquisa do ponto 22 sobre baseline e falhas conhecidas](research-ponto-22-baseline.md).
+
+**Decisão aprovada:** não usar quarentena para avançar a fundação. Corrigir a causa das falhas conhecidas; remover um teste apenas se for comprovadamente inválido, com justificativa. A implementação deve começar pela falha de Typecheck atual, validar a hipótese `next typegen` antes de `tsc`, executar os gates completos no SHA candidato e só então tratar o baseline como restaurado. A regra verde se aplica a `main` agora; eventual branch `staging` fica para revisão quando for criada.
+
+### Ponto 23 — separar CI de operações de produção
+
+**Estado:** aceito em 2026-09-25; separar CI e dispatches operacionais.
+
+**Proposta do relatório:** manter validações de código em CI e separar smoke tests, preflight, certificação de produção e restore drills em fluxos operacionais manuais ou protegidos por ambiente.
+
+**Evidência no Polaris:** `ci.yml` é acionado por push/PR em `main` e `workflow_dispatch` sem inputs. Além dos jobs normais de verify/E2E/PostgreSQL, os seis jobs operacionais usam apenas `if: github.event_name == 'workflow_dispatch'`. Um dispatch manual da CI executa esses seis jobs junto com os jobs de CI; não há seleção explícita de operação. Nenhum job declara `permissions`, `environment` ou `concurrency`. O `production-preflight` recebe nomes de secrets de produção; o `rls-smoke` conecta a um banco configurado e tenta rollback; `deployment-smoke` acessa URLs externas. `restore-drill-checklist` e `production-certification-checklist` validam evidências e variáveis; não executam restore nem certificação em provedores. Não há automação de deploy/backup/restore implementada e Vercel ainda não está conectada.
+
+**Comparação com o Hub:** o Hub tem workflows separados para CI, staging, migração e promoção/produção, com branch, SHA e operação já definidos por runbooks e configuração real de Vercel/Neon. É um modelo mais maduro e não deve ser copiado como nove arquivos de workflow para Polaris antes de escolher e configurar hospedagem, callbacks, banco e recuperação (P4/P5).
+
+**Documentação e trade-offs:** GitHub permite selecionar a branch/ref ao despachar manualmente; `workflow_dispatch` exige write access e o checkout padrão usa a ref do evento. Como os jobs operacionais atuais não restringem `github.ref`, a separação de arquivos por si só não impediria código de outra ref de rodar com credenciais. GitHub recomenda permissões mínimas para `GITHUB_TOKEN`; os segredos de Environment só chegam a jobs que referenciam o Environment depois das regras configuradas. Em repositório privado, GitHub Pro habilita Environment, secrets e branch filters; required reviewers/wait timers não estão disponíveis no plano Pro para repo privado, em linha com a decisão de não exigir aprovação humana. A separação melhora o escopo de triggers e evita que um dispatch de operação inicie toda a CI, mas os controles de segurança ficam em ref permitida, permissions e escopo de secrets.
+
+**Recomendação preliminar:** manter `.github/workflows/ci.yml` para push/PR de código, mais um único workflow manual `operations.yml` com input obrigatório `operation` e condições para executar somente o job escolhido. Manter `workflow_dispatch` na CI apenas se for útil para repetir validação de código. Antes de associar credenciais de produção, criar/configurar o Environment privado depois da transferência para a conta Pro; limitar jobs a `main` protegida ou SHA de release, declarar `permissions: contents: read` salvo necessidade demonstrada e guardar secrets no Environment correspondente. Não criar agora workflows próprios de deploy, backup ou restore; revisitá-los depois das escolhas de P4/P5. O owner precisa configurar o Environment no GitHub antes de o YAML referenciá-lo, para evitar um Environment implícito sem regras.
+
+**Pesquisa de apoio:** [pesquisa do ponto 23 sobre CI e operações](research-ponto-23-ci-operations.md).
+
+**Decisão aprovada:** manter a CI de código em `ci.yml` para PR/push; separar operações manuais em `operations.yml` com seleção explícita de uma operação por dispatch. Configurar ref permitida, Environment e permissões mínimas antes de associar secrets de produção, após transferência para a conta Pro. Não criar automações de deploy/backup/restore até P4/P5 definirem os serviços.
+
+### Ponto 24 — segredos de produção fora da CI comum
+
+**Estado:** aceito em 2026-09-25.
+
+**Proposta do relatório:** workflows disparados por PR não devem receber secrets de produção; credenciais devem ser escopadas a workflows/jobs de operações protegidos por ref e Environment.
+
+**Evidência no Polaris:** o job automático `verify` usa placeholders e não referencia secrets de produção. E2E web/admin usa `E2E_DATABASE_URL` e `ADMIN_E2E_DATABASE_URL`; PostgreSQL comportamental usa serviço efêmero. Os secrets operacionais de produção aparecem nos jobs de `workflow_dispatch`; o `production-preflight` também recebe E2E/RLS URLs para verificar separação e roles. Manter essas URLs E2E dedicadas e não produtivas conforme P5; confirmar alvos das URLs de smoke/RLS quando os ambientes forem configurados. O YAML não revela se os nomes de secrets têm valores cadastrados nem seus destinos.
+
+**Escopo e controles atuais:** o workflow não declara `permissions:` nem `environment:`. Após P23, production secrets devem sair da CI de PR/push e ficar apenas no Environment/job operacional que os usa. O dispatch manual pode selecionar outra ref, portanto restringir a execução a `main` protegida/SHA de release e configurar a allowlist do Environment; a separação do arquivo, por si só, não protege credenciais. Em repositório privado GitHub Pro permite Environments/secrets/branch rules, mas não required reviewers; não planejar aprovação humana.
+
+**Comparação com o Hub:** a CI do Hub não usa `secrets.*`, e a documentação separa os bancos descartáveis de CI dos dados/URLs de produção. As operações usam Environments, mas o isolamento não é completo: `production-backup` contém credenciais e não tem branch policy; `NEON_API_KEY` e `VERCEL_TOKEN` permanecem em escopo de repositório; o Environment `vercel-staging` permite `main` enquanto o deploy workflow é disparado por `staging`. Isso reforça a separação como direção, mas também mostra por que é preciso auditar refs e escopo efetivos em vez de copiar nomes/workflows.
+
+**Recomendação preliminar:** preservar CI normal sem credenciais de produção; reservar `E2E_DATABASE_URL`, `ADMIN_E2E_DATABASE_URL` e PostgreSQL efêmero para testes não produtivos. No futuro `operations.yml`, mapear cada secret somente ao job operacional que precisa dele e escopar production credentials ao Environment `production`. Criar/configurar o Environment nas Settings depois da transferência para a conta Pro e antes de referenciá-lo no YAML. Manter `E2E_DATABASE_URL` na preflight apenas para a checagem explícita de isolamento e nunca apontá-la a dados/serviços de produção. Revalidar nomes e targets quando P4/P5 escolher hospedagem, banco e callbacks.
+
+**Pesquisa de apoio:** [pesquisa do ponto 24 sobre secrets de produção](research-ponto-24-production-secrets.md).
+
+**Decisão aprovada:** CI de PR/push sem production secrets. Guardar credenciais de produção no Environment `production`, usadas somente por jobs operacionais com refs permitidas. Manter URLs E2E separadas e não produtivas; configurar secrets/Environment após a transferência para o GitHub Pro e as escolhas de P4/P5.
+
+### Ponto 25 — permissões mínimas do `GITHUB_TOKEN`
+
+**Estado:** aceito em 2026-09-25.
+
+**Proposta do relatório:** adicionar `permissions: contents: read` no CI e conceder somente as permissões adicionais exigidas por cada workflow/job.
+
+**Evidência no Polaris:** existe somente `.github/workflows/ci.yml`; ele não declara `permissions:` no nível do workflow ou de jobs. Os dez jobs fazem checkout com `actions/checkout@v4`, e os demais passos configuram Bun ou executam verificações e operações externas. A auditoria não encontrou uso de `GITHUB_TOKEN`, `github.token`, Octokit, CLI `gh` para escrita, chamadas à API do GitHub ou `git push`. O workflow usa secrets de banco/provedores externos em E2E e operações; eles são credenciais distintas e não justificam permissões de escrita no `GITHUB_TOKEN`. O valor padrão efetivo do token nas Settings remotas não foi consultado.
+
+**Comparação com o Hub:** `.github/workflows/ci.yml` do Hub declara `permissions: contents: read` no nível do workflow, igual à recomendação do relatório. Seus workflows com operações GitHub concedem permissões adicionais quando há chamadas identificadas de leitura/escrita. A auditoria encontrou algumas permissões workflow-level mais amplas que todos os jobs precisam, portanto o padrão útil é declarar um baseline restrito e escopar exceções por job; não copiar cegamente cada bloco existente.
+
+**Documentação e exemplos atuais:** GitHub documenta que `permissions` no topo do workflow se aplica a todos os jobs; no nível de job permite exceções mais estreitas. Ao declarar qualquer escopo, os demais ficam sem acesso. O README atual de `actions/checkout` recomenda `contents: read`. O workflow de build/release do Next.js/Vercel usa permissões por job: somente o job de publicação recebe `contents: write`, enquanto jobs de build declaram seus escopos próprios e um job de alerta sem acesso ao token usa `permissions: {}`. Discussões de usuários confirmam que permissões extras devem ser reavaliadas ao compor reusable workflows; servem como experiência operacional, não substituem a documentação oficial.
+
+**Recomendação preliminar:** adicionar `permissions: contents: read` ao nível de workflow em `ci.yml`; todos os jobs atuais precisam ler o repositório para checkout, e a declaração remove permissões implícitas de outros escopos. Aplicar o mesmo baseline a cada workflow futuro que faça checkout, inclusive `operations.yml` se aprovado em P23. Para jobs que não precisem do token, permitir `permissions: {}`; conceder escopos adicionais somente ao job que demonstrar a chamada correspondente. Segredos de produção no Environment `production` e credenciais externas continuam separados desse token. Ao chamar reusable workflows, conceder no job chamador os escopos necessários; um workflow chamado não consegue elevar permissões além das recebidas, e fluxos aninhados só podem manter ou reduzir os escopos.
+
+**Pesquisa de apoio:** [pesquisa do ponto 25 sobre permissões do `GITHUB_TOKEN`](research-ponto-25-token-permissions.md).
+
+**Decisão aprovada:** declarar `permissions: contents: read` nos workflows que fazem checkout. Jobs que não precisem do token podem usar `permissions: {}`; escopos adicionais devem ser concedidos somente ao job que demonstrar necessidade. Ao chamar reusable workflows, conceder os escopos necessários no job chamador, sem presumir que o workflow chamado poderá elevá-los.
+
+### Ponto 26 — fixar GitHub Actions por SHA
+
+**Estado:** aceito em 2026-09-25, com Q1, Q2 e Q3 aprovadas.
+
+**Proposta do relatório:** substituir referências de actions por tags mutáveis, como `actions/checkout@v4` e `oven-sh/setup-bun@v2`, por SHAs completos, seguindo o padrão encontrado no Hub.
+
+**Evidência no Polaris:** `.github/workflows/ci.yml` tem vinte referências externas: dez a `actions/checkout@v4` e dez a `oven-sh/setup-bun@v2`. Todas usam tags major, sem SHA ou comentário de versão. Não há reusable workflows nem actions locais; não há configuração versionada de Dependabot/Renovate. Configuração remota de apps do GitHub não foi consultada.
+
+**Comparação com o Hub:** o snapshot auditado tem 25 referências externas, todas por SHA completo com comentário de versão na mesma linha. `.github/dependabot.yml` agenda atualizações semanais de `github-actions` para `staging`; o padrão é útil, mas o Polaris não adotou branch persistente `staging`. O snapshot do Hub usa `actions/checkout@v5.1.0`, abaixo da release estável mais recente observada nesta revisão; copiar o método, não congelar as versões do Hub.
+
+**Documentação, trade-offs e alternativas:** GitHub identifica o SHA completo como a única referência imutável para uma action e recomenda verificar que o commit vem do repositório oficial. Comentários semver na mesma linha preservam legibilidade e permitem que Dependabot faça version updates de refs SHA. Em contrapartida, Dependabot Alerts não gera alertas para actions pinadas por SHA; version updates regulares e monitoramento de advisories devem ser tratados separadamente. Na data desta revisão, as releases estáveis candidatas são `actions/checkout@v7.0.1` e `oven-sh/setup-bun@v2.2.0`; a versão final e seus SHAs devem ser revalidados na implementação conforme P2. O `github/gh-actions-lock` oficial pode automatizar lock e verificação de dependências, mas está em Technical Preview/pre-1.0 e tem limitações atuais; não é candidato à fundação estável neste momento.
+
+**Q1 aprovada:** pinning de todas as referências externas por SHA completo verificado no upstream, com comentário `# vX.Y.Z`; habilitar a exigência de SHA completo nas configurações do repositório após a transferência, se disponível.
+
+**Q3 aprovada:** adiar `gh-actions-lock` enquanto estiver em Technical Preview/pre-1.0 e reavaliar quando estabilizar.
+
+**Q2 em avaliação:** o usuário propôs que version updates passem por `staging` ou Preview, com auto-merge antes da análise e promoção posterior para `main`. Essa escolha pode reabrir P4, que atualmente adia a branch Git `staging`. Dependabot `target-branch` só direciona version update PRs; security updates continuam para a branch padrão. A CI do Polaris hoje só mira `main`; E2E exige `E2E_DATABASE_URL` e `ADMIN_E2E_DATABASE_URL`, que PRs Dependabot não recebem como Actions secrets. O fluxo Hub demonstra PR/CI para `staging` e promoção de SHA validado, mas não contém auto-merge de Dependabot. Preview é deploy efêmero de um PR, não uma branch-alvo para merge.
+
+**Recomendação para decidir Q2:** manter P4 por enquanto. Até Preview/staging e os checks E2E com credenciais não produtivas estarem configurados, manter Dependabot em PRs para `main`, sem auto-merge antes da análise. Se o usuário optar por um lane automático antes de `main`, revisar P4 para adotar branch Git persistente `staging`, exigir todos os checks completos antes do auto-merge nessa branch e promover manualmente o SHA homologado para `main`; prover Dependabot secrets E2E isolados ou outra execução não produtiva completa, sem pular/quarentenar testes. Na implementação, reavaliar `persist-credentials: false` nos checkouts sem Git autenticado posterior.
+
+**Pesquisa de apoio:** [pesquisa do ponto 26 sobre pinning de GitHub Actions](research-ponto-26-action-sha.md).
+
+**Pesquisa de apoio Q2:** [Dependabot, branches de destino e auto-merge](research-ponto-26-dependabot-staging.md).
+
+**Decisão aprovada:** pinning de todas as referências externas por SHA completo upstream-verificado, com comentário `# vX.Y.Z`, e exigência de SHA completo nas Settings após a transferência, se disponível. Adiar `gh-actions-lock` até estabilizar. Manter P4 por enquanto: Dependabot abre PRs para `main`; sem auto-merge até Vercel, banco e E2E não produtivos estarem configurados. Quando Preview estiver disponível, inspecionar o PR e fazer merge manual. Reavaliar o fluxo de staging antes do go-live; auto-merge em uma eventual branch `staging` exigirá CI/E2E completos, checks obrigatórios e promoção manual do SHA homologado para `main`.
+
+### Ponto 27 — cancelar execuções obsoletas de CI
+
+**Estado:** aceito em 2026-09-25.
+
+**Proposta do relatório:** adicionar `concurrency` ao workflow de CI e cancelar runs antigos quando um novo commit do mesmo PR/ref chegar, economizando runners em validações já obsoletas.
+
+**Evidência no Polaris:** o único workflow é `.github/workflows/ci.yml`; não declara `concurrency`. Ele combina `push` e `pull_request` em `main`, `workflow_dispatch`, quatro jobs de CI e seis operações manuais condicionadas a dispatch. Um grupo workflow-level com cancelamento poderia encerrar a execução inteira, inclusive operação manual, se o grupo/ref coincidir. P23 já aprovou separar operações em `operations.yml` antes de associar credenciais; aplicar cancelamento amplo antes dessa separação é arriscado. O grupo por PR/ref também não serializa diferentes PRs que usem uma mesma URL E2E compartilhada. A auditoria estática encontrou IDs E2E aleatórios, mas sem teardown; um run cancelado pode deixar registros órfãos, e não confirmei se as URLs E2E atuais apontam para bancos distintos.
+
+**Comparação com o Hub:** os onze workflows auditados declaram concurrency. A CI usa `ci-${github.workflow}-${github.event.pull_request.number || github.ref}` com `cancel-in-progress: true`; os dez workflows operacionais usam `cancel-in-progress: false`. Nenhum configura `queue: max`. O padrão diferencia CI descartável de backup, migration, reset, cleanup, workers e deploy. Ressalva: os nomes de grupos operacionais do Hub geralmente são próprios por workflow, não um lock comum a todos os workflows que acessam o mesmo ambiente; grupos diferentes não se bloqueiam entre si.
+
+**Semântica e riscos:** o GitHub mantém por padrão no máximo um run ativo e um pendente em cada grupo; um novo pendente substitui o anterior. `cancel-in-progress: true` também interrompe o ativo, mas não desfaz efeitos externos já aplicados. `queue: max` aceita até 100 pendentes e não pode ser combinado com cancelamento do ativo. Os eventos `pull_request` e `push` usam refs diferentes; a chave por número de PR/ref cancela updates do mesmo PR e pushes repetidos da mesma ref, sem fundir o check do PR com o push pós-merge em `main`.
+
+**Recomendação preliminar:** depois de P23 separar operações, adicionar concurrency workflow-level ao CI puro, com grupo que inclua o nome do workflow e o número do PR ou a ref, e `cancel-in-progress: true` para substituir validações obsoletas. Se o `workflow_dispatch` permanecer na CI para reexecução manual, isolá-lo em grupo próprio ou definir sua política explicitamente. Não cancelar operações mutáveis; quando P4/P5 definirem recursos e destinos, usar locks com nome compartilhado por ambiente/recurso entre os jobs que possam colidir, `cancel-in-progress: false` e fila somente quando preservar operações pendentes for apropriado. Revisar se testes E2E com as URLs dedicadas toleram cancelamento/concorrem entre PRs; concurrency por PR não os serializa globalmente.
+
+**Pesquisa de apoio:** [pesquisa do ponto 27 sobre concurrency](research-ponto-27-concurrency.md).
+
+**Decisão aprovada:** depois de P23 separar CI e operações, cancelar apenas runs de CI obsoletos do mesmo workflow e PR/ref. Se `workflow_dispatch` permanecer na CI, isolá-lo em grupo próprio. Não cancelar operações ativas; quando seus alvos forem definidos em P4/P5, serializar por recurso compartilhado sem cancelamento ativo, escolhendo a fila conforme o tipo de operação. Antes de ativar o cancelamento E2E, confirmar que uma execução interrompida deixa apenas dados descartáveis/isolados.
+
+### Ponto 28 — Dependency Review
+
+**Estado:** aceito em 2026-09-25, com Q1 e Q2 aprovadas.
+
+**Proposta do relatório:** adicionar GitHub Dependency Review para comparar dependências alteradas por PR e bloquear vulnerabilidades high/critical, avaliando moderate mais tarde.
+
+**Evidência no Polaris:** a CI chama `bun run audit:baseline`, que executa `bun audit --json`, compara URLs dos advisories com `docs/security/dependency-advisory-baseline.json` e falha para advisories novos. Não encontrei `actions/dependency-review-action`, arquivo de configuração Dependabot ou `package-lock.json`; o lockfile usado é `bun.lock`. A baseline registra `reviewBy: 2026-08-14`, já vencido, e três advisories aceitos temporariamente (low/moderate). O script rejeita a baseline expirada antes de executar a auditoria. Portanto, há um gate versionado, mas ele precisa ser restaurado conforme P22; não executar testes/workflows nesta revisão.
+
+**Comparação com o Hub:** o Hub usa `bun audit --production` na CI e Dependabot para atualização de Bun/Actions, mas não encontrei Dependency Review Action nem gate/licença específico. A comparação sugere que audit via Bun já é um padrão de CI útil, embora o Hub limite o audit às dependências de produção e mantenha uma regra isolada para Browserslist.
+
+**Disponibilidade e cobertura:** Dependency Review Action falha se encontra vulnerabilidade, mas só impede merge quando seu check é exigido pela proteção da branch. Para repos privados a feature requer GitHub Code Security/Advanced Security; a rota P3 é um repo privado em conta pessoal GitHub Pro, sem essa licença. Além disso, Dependency Review usa o Dependency Graph: a tabela oficial lista npm com `package-lock.json`, mas não Bun/`bun.lock`. Embora Dependabot aceite `bun.lock` para updates, isso não comprova que Dependency Review tenha cobertura do grafo Bun. O action é um gate sobre mudanças de PR, enquanto o audit existente examina a árvore atual, inclusive dependências não alteradas.
+
+**Recomendação preliminar:** não adicionar GitHub Dependency Review Action no cenário privado Pro e Bun atual: não há entitlement documentado e a cobertura de `bun.lock` não está confirmada. Conforme P22, corrigir os três advisories temporariamente aceitos, remover suas exceções quando resolvidos e renovar a revisão da baseline sem apenas estender o prazo. Manter `bun audit:baseline` no job `verify` requerido após a restauração; o script atual bloqueia advisories não aceitos em qualquer severidade. Não impor política de licença sem validação jurídica/documental. Reavaliar Dependency Review se a propriedade/plano passar a ter Code Security ou o repositório se tornar público, e somente depois de validar em PR que o grafo gerado cobre `bun.lock`.
+
+**Pesquisa de apoio:** [pesquisa do ponto 28 sobre Dependency Review e auditoria Bun](research-ponto-28-dependency-review.md).
+
+**Q1 aprovada:** não adicionar GitHub Dependency Review Action sob o repo privado em conta pessoal GitHub Pro nem pagar Code Security como parte desta fundação. A cobertura da action para `bun.lock` não está documentada. Reavaliar se a propriedade/plano do repo ou o suporte oficial a Bun mudarem.
+
+**Q2 aprovada:** restaurar `bun audit:baseline` conforme P22: corrigir os três advisories temporariamente aceitos, remover exceções quando resolvidos e não apenas estender `reviewBy`. Depois da baseline limpa, qualquer advisory novo deve bloquear o CI, independentemente da severidade. Não adicionar política de licenças sem validação.
+
+### Ponto 29 — CodeQL para JavaScript/TypeScript
+
+**Estado:** aceito em 2026-09-25.
+
+**Proposta do relatório:** adicionar análise CodeQL para JavaScript/TypeScript como uma camada SAST para auth, webhooks, uploads/storage, billing, SQL e multi-tenancy.
+
+**Evidência no Polaris:** o workspace contém `apps/web`, `apps/admin` e pacotes compartilhados em Bun workspaces, predominantemente TypeScript/TSX. `.github/workflows/ci.yml` não contém CodeQL, upload SARIF nem outro SAST; os checks atuais cobrem lint/format, tipos, testes, higiene e advisories de dependências. `bun audit:baseline` é SCA e `audit:boundaries` verifica pontos específicos de auditoria; nenhum substitui análise semântica do fluxo de dados.
+
+**Comparação com o Hub:** CodeQL aparece ativo remotamente no Hub e há execuções históricas bem-sucedidas, mas não há workflow/configuração versionados. A API não mostrou check CodeQL nos SHAs atuais de `main`/`staging` e os rulesets consultados exigem somente `CI`; os detalhes do default setup remoto não puderam ser lidos. É um exemplo de uso de CodeQL, não evidência de cobertura atual ou gate bloqueador a copiar.
+
+**Cobertura e elegibilidade:** CodeQL é tecnicamente adequado a JS/TS e tem modelos para Next.js; JS/TS não exige build para análise. Porém, CodeQL/code scanning em repositório privado exige GitHub Code Security com Team/Enterprise. A configuração P3 aprovada mantém o Polaris privado numa conta pessoal GitHub Pro, e P28 aprovou não comprar Code Security nesta fundação; portanto, o workflow CodeQL proposto não é elegível no plano atual.
+
+**Alternativa e trade-off:** Semgrep Free Edition é candidata a SAST sem licença adicional de GitHub, com limite anunciado de até 10 repositórios privados/10 contribuidores. Na modalidade CI autogerida, o código permanece no runner, mas metadados de findings são enviados ao serviço Semgrep. Isso adiciona uma dependência de fornecedor; Semgrep Community Edition e suas regras têm condições de licença específicas para SaaS, então não tratar `semgrep scan --config auto` como substituto automaticamente liberado. `bun audit` permanece separado: SCA de dependências não é SAST.
+
+**Recomendação preliminar:** não adicionar CodeQL ao repo privado pessoal Pro nem torná-lo required sob o plano atual. Avaliar um POC delimitado do Semgrep Free Edition em CI autogerida, após P22 restaurar o baseline, para medir cobertura JS/TS, falsos positivos, tempo e política de dados. Se adotado, pin sua action/insumos conforme P26, manter fonte no runner, limitar segredo Semgrep ao job de scan e decidir se findings serão required somente após revisão dos resultados. Se não quiser um novo fornecedor, deixar SAST adiado até Code Security ficar elegível.
+
+**Decisão aprovada:** não adicionar CodeQL enquanto o repositório permanecer privado em conta pessoal GitHub Pro sem Code Security. Após restaurar o baseline P22, executar um POC do Semgrep Free Edition em CI autogerida, sem Managed Scans; manter o código no runner e limitar o que é enviado ao serviço aos metadados de findings. Revisar cobertura, ruído, duração, termos e tratamento do token antes de decidir se o check passa a ser obrigatório. Se o POC não for aprovado, adiar SAST até mudar o plano/entitlement; não usar regras Community Edition sem validar os termos específicos para SaaS.
+
+**Pesquisa de apoio:** [pesquisa do ponto 29 sobre CodeQL/SAST](research-ponto-29-codeql.md).
+
+### Ponto 30 — CodeRabbit assistivo; CI como autoridade
+
+**Estado:** aceito em 2026-09-25, com Q1 aprovada.
+
+**Proposta do relatório:** manter CodeRabbit como reviewer assistivo e CI como autoridade; não tornar a disponibilidade de um agente externo requisito absoluto.
+
+**Evidência no Polaris:** não há `.coderabbit.yaml`/`.coderabbit.yml` nem referências versionadas ao CodeRabbit. `.github/workflows/ci.yml` já cobre verificações, testes, builds e operações manuais. A árvore local não confirma se há GitHub App instalado ou quais status checks são exigidos pelas regras remotas de `main`.
+
+**Comparação com o Hub:** o runbook `docs/operations/code-review-with-coderabbit.md` define a revisão como opcional, permite seguir quando CLI/serviço estiver indisponível, diz que um resultado limpo não autoriza merge e desaconselha tornar o check do CodeRabbit obrigatório. O release flow mantém CI e critérios de release como autoridade. A política aproveita essa separação sem copiar a branch `staging` nem os detalhes operacionais específicos do Hub.
+
+**Ferramentas e trade-offs:** o irmão possui GitHub Copilot Student. Há evidência atual de contas Student usando Copilot Code Review, mas a cobertura do plano não fica inequívoca na matriz pública; verificar que Copilot aparece no seletor de reviewers da conta antes de depender do recurso. Se disponível, o irmão pode solicitar manualmente uma revisão nos PRs de Junior; o consumo é atribuído ao solicitante. Não presumir revisão automática de PRs de autor sem acesso ao Copilot. Revisões Copilot usam AI Credits e minutos de GitHub Actions, então monitorar cotas e não habilitar overage sem limite deliberado. CodeRabbit Free permite revisão de código por CLI/IDE sob demanda; a revisão automática de PR privado pelo app GitHub é paga. A CLI precisa estar instalada e autenticada para ser chamada pelo agente.
+
+**Decisão aprovada:** manter CI e os critérios de release aprovados como autoridade automatizada. Quando Copilot Code Review estiver disponível na conta Student, o irmão poderá solicitá-lo manualmente como comentário assistivo no PR; se estiver indisponível ou sem cota, seguir com os demais critérios. Usar CodeRabbit Free CLI como segunda opinião sob demanda do agente para mudanças de maior risco, findings incertos, ausência do Copilot ou pedido explícito; não executar as duas revisões em todos os PRs no início. Não tornar check, resposta, aprovação ou disponibilidade de nenhum reviewer de IA obrigatórios; não habilitar aprovação Copilot nem fluxo automático de Request Changes como gate. Findings devem ser verificados antes de qualquer correção, e secrets, tokens e URLs confidenciais devem permanecer fora dos diffs enviados aos serviços. Revisar limites, custos e configurações de dados vigentes quando a CLI ou a revisão no PR forem preparadas.
+
+**Pesquisa de apoio:** [pesquisa do ponto 30 sobre CodeRabbit e Copilot Student](research-ponto-30-coderabbit.md).
+
+### Ponto 31 — aproveitar melhor o Turborepo
+
+**Estado:** aceito em 2026-09-25, com Q1 aprovada.
+
+**Proposta do relatório:** habilitar Remote Cache para compartilhar resultados entre máquinas/agentes/CI e avaliar `--affected` para `verify:quick`, mantendo a validação completa de release.
+
+**Evidência no Polaris:** o workspace já usa Turbo para o grafo de tarefas, dependências, cache local e outputs de build. `turbo.json` define as relações entre build/test/check/typecheck/knip e desabilita cache em E2E, PostgreSQL e operações com side effects. Não há Remote Cache ligado à CI. O lock resolve Turbo 2.10.4. O `Hub` não usa Turborepo, portanto não é uma implementação para copiar.
+
+**Trade-offs e dependências:** a Vercel oferece Remote Cache gratuito sob fair use, independente de hospedar o app nela; o serviço compartilha outputs e logs entre team e CI, com expiração automática em sete dias. O serviço requer conta/team, scope de compartilhamento e autenticação externa de CI. Antes de ativar, P32 deve auditar hash de variáveis, inputs, outputs e logs, além de reduzir o escopo de credenciais e confirmar que nenhum secret é cacheado/impresso. Tasks com escopo global executadas sob filtros por app também devem ser revisadas para evitar cache/duplicação incorretos.
+
+**Decisão aprovada:** manter Turborepo. Registrar Vercel Remote Cache como primeira opção, a habilitar somente depois da auditoria P32 de hashes, envs, outputs e logs e após definir owner/team/scope e credenciais limitadas para CI. A hospedagem do app na Vercel não é requisito para este cache. Preservar a decisão P20: `verify:quick` cobre o workspace todo, sem `--affected`. Reconsiderar `--affected` somente depois de medir a duração e validar a base Git em PR/push, dependentes e gates executados fora do Turbo; a validação de release permanece completa.
+
+**Pesquisa de apoio:** [pesquisa do ponto 31 sobre Turborepo e Remote Cache](research-ponto-31-turborepo.md).
+
+### Ponto 32 — auditar envs do Turborepo antes do Remote Cache
+
+**Estado:** aceito em 2026-09-25, com Q1 aprovada.
+
+**Proposta do relatório:** revisar variável por variável o `turbo.json`, pois `globalPassThroughEnv` é amplo; valores que alteram outputs devem influenciar o hash, e secrets devem ser pass-through somente nas tasks necessárias.
+
+**Evidência no Polaris:** `turbo.json` tem 53 variáveis em `globalPassThroughEnv`, 11 em `globalEnv` e `.env*`/`knip.config.ts` em `globalDependencies`. Strict mode já é o padrão do Turbo. Quatro variáveis de Sentry não têm consumidor encontrado em código/workflows. `ASAAS_CARD_CHECKOUT_ENABLED` e `RLS_SMOKE_EXPECTED_RUNTIME_ROLE` aparecem em consumidores mas não estão na allowlist. O Hub não usa Turborepo; seus workflows mantêm CI comum sem secrets e injetam secrets em jobs operacionais/Environments.
+
+**Risco concreto:** `apps/web/next.config.ts` e `apps/admin/next.config.ts` habilitam upload de source maps quando `SENTRY_AUTH_TOKEN`, `SENTRY_ORG` e `SENTRY_PROJECT` existem. Como `build` é cacheável e esses valores são apenas pass-through, um cache hit pode pular o upload. O CI atual não fornece essas credenciais; o risco surge ao habilitar essa integração em CI ou deploy.
+
+**Decisão aprovada:** manter strict mode. Inventariar nomes de variáveis e seus consumidores, sem ler valores `.env`/secrets; reduzir `globalPassThroughEnv`/`globalEnv` a escopos por task. Valores que alterem outputs devem entrar no hash via `env`/`globalEnv`; `passThroughEnv` deve ficar para valores necessários à task que não mudam seu output, especialmente em operações sem cache. Restringir `.env*` às tasks/apps que realmente os consomem e `knip.config.ts` à task `knip`; remover vars sem consumidor após confirmar, e incluir as vars faltantes somente onde o uso real exigir. Resolver o upload Sentry para que cache não omita o side effect, preferencialmente separando-o em uma operação não cacheável; se continuar no build, impedir cache hit quando o upload for requerido. Não ativar Remote Cache até a classificação, correção e validação de hashes, outputs, logs e upload estarem concluídas. Então executar a dependência P31 para habilitar Remote Cache conforme decisão aprovada.
+
+**Pesquisa de apoio:** [pesquisa do ponto 32 sobre envs, hashes e Turbo](research-ponto-32-turbo-env.md).
+
+### Ponto 33 — padronizar Node.js e Bun
+
+**Estado:** aceito em 2026-09-25, com Q1 aprovada.
+
+**Proposta do relatório:** remover a chamada incidental de `node` do hook `prepare`, mantendo Bun como ferramenta do projeto, e declarar/documentar o Node esperado pela Vercel.
+
+**Evidência no Polaris:** `package.json` fixa Bun `1.3.11`, mas não declara `engines.node`; não há `.node-version`/`.nvmrc`. O `prepare` chama `node scripts/install-git-hooks.mjs`. CI fixa Bun `1.3.11`, mas não fixa Node. `vercel.json` usa Bun para install/build e não declara Node. O ambiente auditado reportou Node 22.20.0 e Bun 1.4.0, divergentes dos contratos declarados.
+
+**Comparação com o Hub:** o Hub declara `engines.node: 24.x` e `packageManager: bun@1.3.11`, e chama Bun no `prepare`. Não tem `.node-version` nem `actions/setup-node`, portanto seu exemplo não prova paridade de Node na CI; Polaris adotará uma pinagem mais explícita.
+
+**Versão selecionada e trade-off:** Node 24.x é a linha LTS atual e é default/suportada pela Vercel; Node 26 é Current e não é a escolha de runtime de produção. Next.js 16 requer Node 20.9+. O Node continua relevante para Next/CLIs com shebang e para o runtime de produção, então converter só o hook para Bun não padronizaria o Node usado nas outras superfícies.
+
+**Decisão aprovada:** adotar Node 24.x como runtime suportado. Declarar `engines.node: "24.x"`, adicionar um `.node-version` canônico para desenvolvimento local e `actions/setup-node` nos jobs CI que usam CLIs Node, lendo esse arquivo; fixar a action por SHA verificado conforme P26. Quando os projetos Vercel forem criados, confirmar Node 24.x no runtime e que o manifest efetivo do Root Directory declara essa versão. Alterar `prepare` para `bun scripts/install-git-hooks.mjs`, sem reescrever o `.mjs` para TypeScript. Alinhar `@types/node` ao major 24. Manter Bun como package manager/runtime do projeto e resolver a divergência Bun local/manifest/CI dentro da migração de stack aprovada em P2.
+
+**Pesquisa de apoio:** [pesquisa do ponto 33 sobre Node.js e Bun](research-ponto-33-node.md).
+
+### Ponto 34 — hook Codex e Impeccable
+
+**Estado:** aceito em 2026-09-25, com a clarificação de que Impeccable será introduzido no Polaris.
+
+**Proposta do relatório:** garantir que o hook Codex do repositório funcione em clone limpo ou seja explicitamente opcional, sem depender silenciosamente de uma skill instalada só na máquina.
+
+**Evidência:** `.codex/hooks.json` está versionado em Polaris e Hub, mas ambos apontam para `.agents/skills/impeccable/scripts/hook.mjs`, que não existe em nenhum dos dois repositórios. A skill Impeccable atualmente instalada na máquina também não contém esse caminho; ela oferece um CLI e instruções para instalar/configurar o hook. O comando atual é relativo ao cwd da sessão.
+
+**Documentação atual:** OpenAI Docs define hooks de projeto como não gerenciados: exigem confiança explícita; comandos executam com o cwd da sessão; paths de repo devem resolver pela raiz Git; o script precisa existir no ambiente. A documentação oficial do Impeccable recomenda instalar a skill por projeto, habilitar hooks via sua ferramenta e aprovar/trust `PostToolUse` e `Stop` no Codex; seu `doctor` detecta script ausente. [OpenAI Docs — Hooks](https://learn.chatgpt.com/docs/hooks), [Impeccable — instalação](https://impeccable.style/tutorials/getting-started), [Impeccable — hooks](https://impeccable.style/docs/hooks/).
+
+**Decisão aprovada:** não manter o `.codex/hooks.json` atual com a referência quebrada. Introduzir Impeccable como skill de projeto no Polaris durante a fundação, usando a instalação oficial em escopo de projeto e gerando novamente a configuração do hook pela ferramenta oficial. Versionar/distribuir tudo o que o hook realmente precisa; resolver script pela raiz Git e garantir que clone limpo não falhe se a ferramenta estiver ausente. Codex ainda exige confiança explícita do usuário via `/hooks`; o hook de design é assistivo e não gate de CI/release. Até a integração do Impeccable estar presente e validada, remover a entrada obsoleta do hook. Se a instalação não fornecer artefatos portáveis no repo, manter uso manual/local ou escolher uma distribuição compartilhada (como submodule) antes de reintroduzir hook de projeto. Não copiar o estado atual do Hub.
+
+**Pesquisa de apoio:** [pesquisa do ponto 34 sobre hook Codex e Impeccable](research-ponto-34-codex-hook.md).
+
+### Ponto 35 — `DESIGN.md` como contrato de interface
+
+**Estado:** aceito em 2026-09-25, com Impeccable confirmado como parte da fundação.
+
+**Proposta do relatório:** evoluir `DESIGN.md` para documentar tokens e fundamentos visuais, shells e layout, apresentação de dados, tabelas, formulários, estados, gráficos e comportamentos responsivos.
+
+**Evidência no Polaris:** `DESIGN.md` já contém um contrato parcial, então a revisão deve corrigi-lo e completá-lo, não substituir o arquivo por um guia genérico. `packages/ui/src/globals.css` implementa os tokens compartilhados e temas claro/escuro usados por `apps/web` e `apps/admin`; ambos iniciam em tema escuro. Há divergências entre o texto e a implementação: o documento chama de “Roxo Escuro” um token secundário que é cinza-claro, presume superfícies brancas e proíbe sombras apesar de haver sombras funcionais em overlays, tooltips e notificações. Também prescreve fonte monoespaçada para valores monetários embora o código use números tabulares e formatadores compartilhados. `.impeccable/design.json` já está versionado e contém dados que se sobrepõem a tokens/regras, apesar de a integração da skill ainda não estar instalada no projeto.
+
+**Comparação com Hub:** o `DESIGN.md` do Hub mostra como organizar um contrato de interface com regras e estados explícitos, mas seu volume, identidade visual, paleta, domínio, páginas e componentes são próprios daquele produto. Aproveitar a estrutura e o nível de clareza; não copiar seu conteúdo nem expandir o arquivo do Polaris até o mesmo tamanho sem necessidade.
+
+**Decisão aprovada:** revisar `DESIGN.md` como contrato conciso, acionável e ligado às fontes reais do Polaris. Organizar o conteúdo por escopo e precedência; fundamentos visuais e temas; layout comum e diferenças entre web/admin; dados, tabelas e gráficos; formulários, status e interações; estados de carregamento, vazio, erro, sucesso, desabilitado, permissão negada, conteúdo longo e telas estreitas. Corrigir a nomenclatura dos tokens e descrever o tema escuro padrão e o suporte ao tema claro. Preferir regras funcionais a proibições absolutas: sem elevação decorativa por padrão, permitindo sombras que expliquem a hierarquia de overlays e feedback. Para números, documentar alinhamento e dígitos tabulares, remetendo aos formatadores; para gráficos, escolher baseline e apresentação segundo o tipo de métrica. Manter `packages/ui/src/globals.css` como fonte de implementação dos tokens, `PRODUCT.md` como contrato de produto e `CONTEXT.md` como vocabulário do domínio. Detalhes normativos de acessibilidade ficam no ponto 36, com referências cruzadas para evitar duplicação.
+
+**Impeccable:** introduzir a skill no Polaris conforme o ponto 34. Usar `/impeccable document` como apoio para observar e redigir uma primeira versão; revisar o resultado contra o produto, CSS, componentes e decisões aprovadas. Reconciliar o `DESIGN.md` gerado e `.impeccable/design.json` para não manter cópias conflitantes de tokens ou regras. Não migrar para o formato DTCG sem uma necessidade concreta de intercâmbio entre ferramentas; os CSS custom properties já alimentam as duas aplicações.
+
+**Pesquisa de apoio:** [pesquisa do ponto 35 sobre o contrato de design](research-ponto-35-design-contract.md).
+
+### Ponto 36 — contrato conciso de acessibilidade
+
+**Estado:** aceito em 2026-09-25, com Q1–Q3 aprovadas.
+
+**Proposta do relatório:** tornar verificáveis as expectativas de acessibilidade, cobrindo navegação por teclado, foco visível, HTML semântico, labels e nomes acessíveis, alvos de interação, estados que não dependem só de cor, tabelas e diálogos.
+
+**Evidência no Polaris:** `PRODUCT.md` pede legibilidade e bom contraste de forma genérica; `AGENTS.md` já contém regras gerais sobre HTML semântico, teclado e labels, e `DESIGN.md` já menciona foco em alguns componentes. Primitivos compartilhados usam estilos `focus-visible`, componentes Radix e markup nativo. Ainda não há um contrato curto que reúna os critérios; os testes estáticos de acessibilidade do admin são seletivos e não encontrei varredura Axe. O `Button` oferece variantes de 20 px que aparecem em algumas telas e merecem revisão do alvo efetivo e das exceções WCAG; a API de tabela também expõe `onRowClick` só por ponteiro, mas não encontrei uso atual dessa opção. Esses achados são candidatos para corrigir/verificar, não uma declaração de falha em todas as telas.
+
+**Comparação com Hub:** o Hub formaliza critérios no `DESIGN.md` e usa Axe em jornadas Playwright de CI, além de verificações de teclado. Aproveitar o formato do contrato e a combinação de automação/manual; não copiar os limiares de severidade nem as regras específicas do Hub sem validar escopo e comportamento no Polaris.
+
+**Decisão aprovada:** adotar WCAG 2.2 nível AA como referência interna para a interface web e admin, sem afirmar conformidade do produto inteiro antes de avaliação completa. Criar uma seção compacta em `DESIGN.md`, complementar às regras gerais de `AGENTS.md`; manter em `PRODUCT.md` o princípio de inclusão com ponteiro para a regra operacional. Aplicar os critérios a toda interface nova ou alterada e revisar/corrigir as jornadas existentes antes da primeira produção, sem colocar defeitos conhecidos em quarentena. Cobrir no contrato: teclado e foco; semântica/nome/função/estado; rótulos, instruções e erros; mensagens de status; estados sem dependência exclusiva de cor; contraste nos dois temas; alvos de pelo menos 24×24 CSS px quando exigido pelo critério AA, aplicando apenas as exceções documentadas; cabeçalhos e relações de tabela; e nome/foco/fechamento de diálogos. Não elevar exigências AAA — como Focus Appearance ou alvos universais de 44×44 px — a mínimos AA.
+
+**Verificação aprovada:** adicionar Axe às jornadas E2E representativas como check de CI depois de corrigir o baseline inicial e configurar os bancos E2E não produtivos. Complementar com revisão manual de teclado e foco nas mudanças interativas e verificação direcionada de leitor de tela para widgets complexos. O scanner não certifica conformidade; não fazer alegação WCAG AA do produto sem avaliação completa das páginas e processos no escopo.
+
+**Pesquisa de apoio:** [pesquisa do ponto 36 sobre acessibilidade](research-ponto-36-accessibility.md).
+
+### Ponto 37 — `@polaris/ui` como fundação visual única
+
+**Estado:** aceito em 2026-09-25, com Q1–Q3 aprovadas.
+
+**Proposta do relatório:** manter primitives compartilhadas em `packages/ui`, composições específicas em app/feature e não criar um segundo design system local.
+
+**Evidência no Polaris:** `apps/web` e `apps/admin` já dependem de `@polaris/ui`; não encontrei outro diretório local de primitives nas aplicações. `packages/ui` mantém exports declarados e os testes `package-interface.test.ts`/`package-boundary.test.ts` cobrem partes da interface do pacote. Porém, aliases `@/components/ui/*`, `@/hooks/*` e `@/lib/utils` nos `tsconfig` apontam diretamente para `packages/ui/src` e contornam as verificações que operam sobre imports com `@polaris/ui/...`. A memória `aidd_docs/memory/project-state.md` ainda diz que `@polaris/ui` não foi extraído, embora a estrutura atual prove o contrário; reconciliar essa afirmação no trabalho de memória/documentação já aprovado.
+
+**Limite observado:** `components/shared` reúne primitives e padrões úteis entre apps, mas também composições de negócio. O dashboard admin apresenta atividade da plataforma e alimenta `SalesCountChart` e `RevenueProfitChart` com métricas de vendas/lucro zeradas. `ContributionGraph` tem rótulo padrão “vendas”. Isso demonstra que compartilhar código não garante compartilhar o mesmo significado. `ThemeToggle` e `AdminThemeToggle` são quase duplicados e podem ser consolidados se a política de tema continuar igual. As composições visuais específicas devem ficar em `apps/<app>/src/components/<área>` ou `_components` junto à rota; não movê-las automaticamente para `apps/web/src/features`, que tem uma fronteira arquitetural própria.
+
+**Comparação com Hub:** o Hub é um app único, sem `packages/ui`, e mantém primitives em `src/components/ui`. Seu contrato é boa referência para não duplicar tokens e componentes canônicos; a topologia não deve ser copiada para o monorepo de duas aplicações do Polaris.
+
+**Decisão aprovada:** manter `@polaris/ui` como fonte única de tokens, primitives e padrões de UI que compartilhem intenção, interação e contrato. Deixar no app/rota as páginas, rótulos, dados, regras e composições específicas de domínio. Promover um padrão conforme responsabilidade estável e uso/contrato real, sem limiar rígido de consumidores e sem abstrair apenas por expectativa futura. Não duplicar Buttons, Inputs, tokens ou primitivas equivalentes localmente. Usar subpaths públicos declarados de `@polaris/ui` em todas as importações entre apps e pacote; retirar os aliases locais que contornam essa fronteira e reforçar o teste para rejeitar esses imports em web e admin.
+
+**Correções aprovadas para a implementação:** manter primitives genéricas de gráfico em `@polaris/ui`, mas levar as composições de vendas/lucro para a área de negócio correta. A área admin deve usar métricas e rótulos próprios da plataforma ou remover/adiar a visualização até existirem dados reais, sem reutilizar gráficos de vendas com zeros. Tornar os rótulos de `ContributionGraph` contextuais. Consolidar `ThemeToggle` entre apps se a verificação confirmar a mesma política e comportamento. Atualizar a memória arquitetural stale como parte da reconciliação documental aprovada.
+
+**Pesquisa de apoio:** [pesquisa do ponto 37 sobre a fronteira de UI](research-ponto-37-shared-ui.md).
+
+### Ponto 38 — não criar um pacote `domain` genérico
+
+**Estado:** aceito em 2026-09-25, com critério refinado.
+
+**Proposta do relatório:** manter a prudência de não criar packages por estética; exigir uma fronteira conceitual estável e compartilhamento/necessidade reais, evitando dezenas de pacotes microscópicos.
+
+**Evidência no Polaris:** não há `packages/domain` nem `@polaris/domain`. O monorepo já tem packages com propósitos concretos (`auth`, `billing`, `date`, `db`, `events`, `platform`, `platform-auth` etc.) e features de ERP em `apps/web/src/features`. Testes verificam fronteiras entre features, rotas, UI e acesso ao banco. `@polaris/platform` é focado na administração e tem um consumidor app direto; seu limite mostra que um único app consumidor pode ser suficiente quando o package isola uma capacidade/ownership real. A revisão de código de julho rejeitou o pacote amplo por falta de uma seam justificável; a conclusão continua coerente, mas o argumento de número de adapters não deve virar um requisito universal para extração.
+
+**Comparação com Hub:** o Hub é um app Next único, sem workspaces de apps/packages; organiza áreas por `src/features`. Isso é referência para manter capacidades locais coesas, não uma justificativa contra ou a favor de packages num monorepo de duas aplicações.
+
+**Decisão aprovada:** não criar agora um `@polaris/domain` genérico nem packages vazios para catálogo, vendas, produtos ou metas. Manter regras e composições dentro das features proprietárias ou nos packages atuais com responsabilidade explícita. Futuramente, criar `packages/<capacidade>` apenas quando a capacidade tiver vocabulário validado, coesão/invariantes próprios, API estável e benefício arquitetural concreto (consumo com mesmo significado, isolamento de dependências/runtime, teste/ownership ou outra fronteira demonstrável). Dois apps consumidores são evidência forte, não condição obrigatória; também não basta duas telas importarem uma função por conveniência. Evitar abstrações especulativas e packages microscópicos. A reconciliação da memória de julho será feita conforme o trabalho documental aprovado, preservando o fato correto de que `@polaris/domain` não existe.
+
+**Pesquisa de apoio:** [pesquisa do ponto 38 sobre packages de domínio](research-ponto-38-domain-package.md).
+
+### Ponto 39 — contrato executável de fronteiras do workspace
+
+**Estado:** aceito em 2026-09-25, com Q1–Q2 aprovadas.
+
+**Proposta do relatório:** formalizar um grafo simples em que as aplicações dependem de packages, não importam source uma da outra e packages não importam apps; validar as direções com testes/scripts pequenos.
+
+**Evidência no Polaris:** já há testes Vitest específicos para várias camadas do web, para imports Admin→Web e para partes da interface do `@polaris/ui`. A cobertura do workspace ainda é parcial: não há check recíproco Web→Admin nem packages→Admin; Admin→Web não cobre todos os imports relativos; verificação de dependências/exports está concentrada em UI. `audit:boundaries` na CI é um check diferente, sobre chamadas de auditoria transacional. Os testes web/admin já rodam no job `verify`, portanto o contrato pode bloquear CI sem workflow novo.
+
+**Comparação com Hub:** o Hub é um app único, sem grafo `apps/*`/`packages/*`; tem testes estreitos para fronteiras locais, mas não um contrato de dependências entre múltiplas aplicações e packages. Usá-lo como referência para checks pequenos, não como modelo de monorepo.
+
+**Decisão aprovada:** documentar esta matriz: `apps/web` e `apps/admin` podem depender de packages por dependências/subpaths declarados; apps não importam source umas das outras em nenhuma direção; packages não importam source de apps; dependências package-to-package são declaradas e o grafo não tem ciclos. Não impor uma camada ordenada rígida entre todos os packages neste ponto. Manter os contratos internos existentes por camada e registrar a matriz em `docs/architecture/overview.md`, com ponteiro curto nas instruções de agentes.
+
+**Verificação aprovada:** ampliar os helpers/testes Vitest existentes para cobrir a matriz, incluindo imports por alias, relativos, re-exports e dinâmicos relevantes, usando a AST do TypeScript e os `tsconfig` reais onde regex não for suficiente. Reforçar a validação de dependências e exports públicos, alinhando-a ao P37. Manter os checks sob a suíte atual executada pela CI; não adicionar Nx, dependency-cruiser ou outro framework por enquanto. `turbo boundaries` e suas tags continuam experimentais segundo a documentação atual; reavaliar quando estiverem estáveis ou se as regras crescerem além do teste próprio. O `audit:boundaries` transacional não será reutilizado como nome/implementação desse contrato.
+
+**Pesquisa de apoio:** [pesquisa do ponto 39 sobre fronteiras](research-ponto-39-boundaries.md).
+
+### Ponto 40 — template curto de pull request
+
+**Estado:** aceito em 2026-09-25, com Q1 aprovada.
+
+**Proposta do relatório:** criar um template curto para registrar objetivo, mudanças, risco, banco/migrations, providers, documentação, validação e homologação, especialmente útil em PRs preparados por IA.
+
+**Evidência e contexto:** Polaris não tinha template de PR; o Hub já tem um. Os prompts de base `staging`, hotfix e CodeRabbit obrigatório do Hub não se aplicam ao fluxo Polaris. O template do GitHub preenche o corpo do PR; CI e proteção de branch continuam sendo controles separados. As decisões P3/P4/P5/P30 definem PRs para `main`, sem aprovação humana obrigatória, homologação antes do go-live após configuração dos ambientes e reviewers de IA opcionais.
+
+**Decisão aprovada:** criar um único `.github/pull_request_template.md` em português com prompts centrais de problema/resultado esperado, solução/escopo e verificação relevante para revisão humana. Incluir um bloco condicional para impactos de banco/migrations/RLS, providers/ambiente, documentação e rollout/reversão quando aplicável; nunca pedir valores de secrets ou dados reais. Não repetir lint/typecheck/test/build que a CI já mostra, não exigir CodeRabbit/Copilot ou aprovação humana, não fixar base `staging`/hotfix e não exigir homologação em PRs enquanto o ambiente não estiver configurado. Preview/Staging será informado quando existir e for relevante. O campo de risco usará os níveis definidos no ponto 41.
+
+**Pesquisa de apoio:** [pesquisa do ponto 40 sobre template de PR](research-ponto-40-pr-template.md).
+
+### Ponto 41 — classificação de mudança por risco
+
+**Estado:** aceito em 2026-09-25, com Q1–Q2 aprovadas.
+
+**Proposta do relatório:** usar três níveis (`low`, `medium`, `high`) e associar a cada um um nível proporcional de verificação.
+
+**Decisão aprovada — classificação:** classificar pelo efeito plausível, alcance, reversibilidade e incerteza, não pelo caminho/extensão dos arquivos nem pelo tamanho do diff. Usar o maior nível aplicável; uma combinação só eleva a classe quando cria um novo modo de falha ou aumenta o blast radius. Se houver dúvida material entre níveis, usar o superior até delimitar o efeito.
+
+- **Low:** apresentação/copy/refatoração localizada sem alteração de regra relevante, dados, permissões, integração externa ou operação/deploy.
+- **Medium:** comportamento de negócio, endpoint ou integração com alcance e recuperação limitados, sem tocar fronteiras críticas de identidade, tenancy, finanças, schema/dados ou produção.
+- **High:** auth/autorização privilegiada, isolamento entre organizações/RLS, billing/estados financeiros/webhooks, migrations/backfills/deleções difíceis de reverter, secrets/workflows de produção ou efeitos externos amplos/difíceis de reverter. Alterações visuais em fluxo sensível não são Low apenas por serem visuais; um provider simulado pode ser Medium, enquanto cobrança real ou efeito financeiro é High.
+
+**Verificação aprovada:** manter os mesmos checks de CI e o mesmo `verify:quick`/pre-push aprovados em P20/P21 para todos os PRs; nenhum nível serve de bypass ou substitui CI. `Low` não adiciona uma camada fixa além da verificação base e do teste focal quando há comportamento. `Medium` pede evidência focada no caminho alterado (unit/integration/E2E conforme o invariante) e atualização documental se mudar contrato. `High` pede testes especializados do invariante afetado (auth/tenant/RLS, migration/dados, billing/provider ou workflow/secrets), compatibilidade e plano de recuperação/rollback/forward-fix quando relevante. Smoke em Staging é exigido antes de produção quando o ambiente estiver configurado; até lá, validar em CI/local não produtivo e não alegar teste de produção. Não exigir aprovação humana adicional, label obrigatória, bypass ou uso obrigatório de reviewers de IA.
+
+**Relação com P40:** o template registra um único nível de risco com justificativa concisa, sem copiar esta matriz ou a lista de verificações. Os procedimentos específicos por domínio permanecem nas fontes técnicas/runbooks correspondentes.
+
+**Pesquisa de apoio:** [pesquisa do ponto 41 sobre classificação de risco](research-ponto-41-risk.md).
+
+### Ponto 42 — Definition of Done por risco
+
+**Estado:** aceito em 2026-09-25, com Q1 aprovada.
+
+**Proposta do relatório:** tornar explícito em `AGENTS.md` o que cada nível Low/Medium/High precisa provar antes de declarar o trabalho concluído.
+
+**Evidência:** `AGENTS.md` já tem um critério geral de conclusão, mas não aponta à matriz aprovada no P41 nem exige teste focal para mudança comportamental. `docs/testing/strategy.md` já descreve as camadas e limitações dos testes, e é a fonte adequada para abrigar a matriz operacional. `docs/README.md` ainda não lista esse guia diretamente. `docs/maintenance.md` cobre atualização documental e deve manter esse escopo. P15/P16 orientam usar ponteiros curtos e evitar duplicação no arquivo raiz.
+
+**Decisão aprovada:** manter `docs/testing/strategy.md` como fonte única para a matriz Low/Medium/High de P41 e suas evidências proporcionais. Indexá-la em `docs/README.md`. Em `AGENTS.md`, preservar o critério geral de conclusão e acrescentar um ponteiro acionável: em implementação/refatoração/mudança de comportamento, classificar o risco, consultar a estratégia e provar o comportamento afetado com teste focal; compilação/typecheck isolados não demonstram comportamento correto. Não copiar a matriz inteira para `AGENTS.md`. Manter `docs/maintenance.md` dedicado à matriz de atualização documental. Enquanto P20/P21 ainda não forem implementados, não apresentar `verify:quick`/`verify` ou hooks futuros como comandos existentes.
+
+**Pesquisa de apoio:** [pesquisa do ponto 42 sobre Definition of Done](research-ponto-42-dod.md).
+
+### Ponto 43 — registro vivo de prontidão de produção
+
+**Estado:** aceito em 2026-09-25, com Q1–Q3 aprovadas.
+
+**Proposta do relatório:** criar uma matriz atualizada de configuração, testes, evidências e última verificação para os sistemas necessários à produção.
+
+**Evidência no Polaris:** não existe registro único de status de produção. `docs/operations/environments-and-deployment.md` já distingue configuração/preflight de evidência externa e afirma que o restore drill versionado não prova uma restauração concluída. `check-production-readiness.ts` valida o preflight local; `check-production-certification.ts` valida valores/evidências declarados no ambiente; `check-restore-drill.ts` valida campos de um checklist. Nenhum desses scripts comprova sozinho conectividade com Vercel/Neon/providers nem execução bem-sucedida de backup/restore. O usuário confirmou que Polaris ainda não foi publicado na Vercel. Para os demais providers, ausência de evidência local não determina seu estado real.
+
+**Comparação com Hub:** `docs/operations/release-state.md` registra checkpoints datados com SHA implantado/verificado/documentado, ambiente e evidências externas. É uma boa referência para escopo e proveniência, mas pode ficar desatualizado; o conteúdo sensível, histórico detalhado e sequência operacional do Hub não deve ser copiado. Polaris já tem runbooks que permanecem fontes dos procedimentos.
+
+**Decisão aprovada:** criar `docs/operations/production-readiness.md` como registro curto de estado e evidências, apontando para regras/runbooks existentes e sem duplicar seus passos. Adicionar um link a partir de `docs/operations/environments-and-deployment.md` e indexar o arquivo em `docs/README.md`. Cada item identifica gate/sistema e ambiente, condição de aceite e procedimento, configuração remota e resultado de validação como fatos distintos, evidência sanitizada, data UTC, responsável/próxima ação e gatilho de revalidação.
+
+**Estados aprovados:** `não provisionado`, `desconhecido` (sem verificação externa), `configurado, não validado`, `validado em não produção`, `validado em produção`, `bloqueado` e `fora do escopo`/`adiado` com motivo. Não deixar campos vazios que pareçam “passou”; não inferir configuração externa a partir de código, schema ou CI efêmera. Evidências não podem conter secrets, URLs com credenciais, PII, payloads ou dumps.
+
+**Escopo e atualização aprovados:** incluir gates requeridos pelo lançamento escolhido; integrações candidatas sem decisão de go-live ficam adiadas/fora de escopo com motivo, sem presumir que todo provider implementado seja obrigatório. Revalidar após mudanças de domínio/configuração, secret scope/rotação, callbacks, branch/role/schema/RLS, provider, deploy ou exercício de recuperação, e antes da produção. Não adotar prazo universal de expiração; aplicar cadência própria apenas quando exigida pelo controle ou provider. Não transformar o registro em diário de cada deploy; apontar para IDs/SHA/workflows e histórico existentes.
+
+**Pesquisa de apoio:** [pesquisa do ponto 43 sobre prontidão de produção](research-ponto-43-production-readiness.md).
+
+### Ponto 44 — estratégia de backup e recuperação
+
+**Estado:** aceito em 2026-09-25, com Q1–Q3 aprovadas.
+
+**Proposta do relatório:** elevar backup e restauração a prioridade anterior à produção; configurar Neon PITR/backup, documentar o procedimento, executar um restore drill real e definir RPO/RTO.
+
+**Evidência no Polaris:** não há automação versionada que faça backup ou restore de produção. `scripts/check-restore-drill.ts` valida campos de evidência declarados; o job manual da CI não conecta ao Neon nem executa `pg_restore`. `docs/operations/environments-and-deployment.md` já explicita esse limite. As imagens finais de produto são bytes duráveis em R2, fora do PostgreSQL; PITR e `pg_dump` não as recuperam. Uploads de `staging` são temporários por desenho.
+
+**Comparação com Hub:** o Hub demonstra uma implementação de `pg_dump` cifrado em bucket R2 separado, credenciais segregadas e restore em destino descartável com medição. Aproveitar esses controles e a prova de restauração, sem copiar sua frequência, retenção, nomes de recursos, custo ou configuração de credenciais.
+
+**Decisão aprovada:** antes de armazenar dados reais de produção, configurar Neon PITR e manter cópia periódica `pg_dump` cifrada antes do upload em bucket R2 privado e dedicado, separado dos buckets de imagens. PITR será a via para recuperar erros recentes dentro da janela disponível; snapshots Neon podem servir como checkpoints de operações arriscadas ou retenção adicional se plano e custo justificarem, mas não substituem a cópia externa. Definir frequência, retenção e plano Neon de forma que o último backup externo verificado atenda ao objetivo de negócio, após medir tamanho, crescimento, churn/WAL, transferência e restauração; não copiar sizing do Hub nem presumir que o plano Free seja adequado.
+
+**Objetivos iniciais aprovados:** para perda total do projeto Neon, RPO máximo de 1 hora e RTO máximo de 8 horas até banco e aplicação estarem operacionais. A frequência do backup externo deve manter o último artefato verificado dentro desse RPO e sinalizar falhas/atrasos; se a medição pré-produção mostrar que a meta não é atendida, ajustar a arquitetura, plano ou processo antes do go-live, sem declarar a meta cumprida apenas por agenda configurada. Para erro operacional recente com Neon disponível, usar PITR até o ponto imediatamente anterior ao incidente, dentro do histórico configurado.
+
+**Escopo e validação aprovados:** incluir imagens finais de produto no plano de recuperação com cópia/retention ou procedimento de reconstrução/reenvio validado junto aos metadados do banco. Uploads temporários de `staging` ficam fora do objetivo enquanto forem descartáveis. Executar restore drills em branch/banco não produtivo descartável, sem endpoint público, validando archive/hash, cifra e chave, schema/migrations, invariantes críticos e prontidão da aplicação; medir idade do backup, perda observada e tempo de recuperação. Nunca restaurar sobre produção durante o drill. Separar credenciais de backup/restauração por bucket e privilégio, guardar chave privada fora do repositório, CI e storage, e definir retenção/lifecycle/lock sem expor o bucket nem impedir operações legítimas de retenção. Registrar configuração e evidências sanitizadas no registro de prontidão P43; repetir antes do go-live e após mudanças relevantes em ferramentas, chaves, destino, schema ou processo de recuperação.
+
+**Ajuste da revisão integral:** medir o RPO do último dump externo completo, legível e restaurável no instante do incidente, incluindo atraso e falha de agenda; uma frequência nominal de uma hora não comprova o RPO máximo aprovado de uma hora. Definir também o cenário de perda/exclusão dos objetos finais R2: bucket separado na mesma conta não isola comprometimento ou perda da conta Cloudflare. A proteção de objetos deve ser escolhida segundo esse cenário e comprovada no drill, sem presumir que um `pg_dump` os recupere. [PostgreSQL — backup](https://www.postgresql.org/docs/current/backup.html), [Cloudflare — R2 Bucket Lock](https://developers.cloudflare.com/r2/buckets/bucket-locks/).
+
+**Pesquisa de apoio:** [pesquisa do ponto 44 sobre backup e recuperação](research-ponto-44-backup-restore.md).
+
+### Ponto 45 — migrations deliberadas, fora do build
+
+**Estado:** aceito em 2026-09-25, com Q1–Q3 aprovadas.
+
+**Proposta do relatório:** manter migrations separadas do build e do deploy automático da aplicação, com uma sequência deliberada de schema, migration versionada, replay em CI, homologação, backup/recuperação, migration de produção e smoke.
+
+**Evidência no Polaris:** `vercel.json` chama `bun run build`; não há migration nesse comando. `@polaris/db` já separa `db:generate`, `db:migrate` e `db:push`; `db:migrate` exige `DATABASE_URL_DIRECT` distinto de `DATABASE_URL`, mas o guard atual não confirma que a conexão aponta para o host/branch pretendido. O job CI `postgres-behavior` aplica as 42 migrations atuais em PostgreSQL 16 descartável e executa testes de comportamento/RLS; isso valida replay do zero, não upgrade ou configuração de uma branch Neon real. Não há workflow versionado que aplique migrations em produção.
+
+**Comparação com Hub:** o Hub mantém migration em operação/job separado do build, valida o branch e o SHA e serializa execução. Serve como referência de controle, mas sua automação, credenciais e fluxo de promoção não devem ser copiados sem considerar as decisões P4/P23–P27 do Polaris.
+
+**Divergência documental:** `docs/runbooks/deploy-vercel.md` e `docs/runbooks/saas-organization-migration-runbook.md` não expressam uma única sequência completa entre migration, runtime, deploy e smoke. Consolidar esses runbooks durante a implementação para cada mudança saber se é compatível antes do deploy ou exige fases separadas.
+
+**Decisão aprovada:** não executar migrations no build de PR/Preview/Production nem em hooks de instalação/build. Manter `generate` → revisão/ajuste de SQL → migration versionada no repositório → replay e testes em CI → `migrate` como aplicação deliberada. Não editar arquivos de migration já aplicados; corrigir com uma migration nova. A regra específica para `db:push` fica no ponto 46.
+
+Aplicar migrations de produção por operação operacional separada, iniciada por `workflow_dispatch`, com um único alvo/ação por execução, SHA de release aprovado e credenciais no Environment `production`, sem exigir aprovação humana adicional. Antes de executar, validar de forma segura o projeto/host/branch esperado, sem registrar connection strings ou credenciais nos logs; `DATABASE_URL_DIRECT` separado do runtime não basta para confirmar o alvo. Serializar por recurso do banco e não cancelar uma migration em andamento. A automação deverá respeitar a divisão de CI e operações e o escopo de secrets já aprovados em P23–P27.
+
+**Sequência aprovada:** desenvolver e revisar SQL; reaplicar todas as migrations em PostgreSQL efêmero na CI; ensaiar a mudança em branch Neon descartável por PR quando configurada; usar Staging persistente após provisionar a infraestrutura escolhida; confirmar a evidência de recuperação P44 antes da produção; executar migration de produção compatível ou faseada; implantar a aplicação; executar smoke de banco e funcional; registrar SHA, migration, resultado e evidência sanitizada em P43. Até Vercel/Neon/E2E e Staging estarem configurados, não declarar esses gates concluídos.
+
+Para mudanças compatíveis, adicionar o schema antes de implantar código que depende dele. Para rename, remoção, backfill ou outra alteração incompatível, dividir em fases `expand` → migração/backfill seguro → `contract`, mantendo compatibilidade entre versões durante a transição. Não tratar rollback de código como rollback do banco; preparar forward-fix ou recuperação apropriada ao risco. Avaliar locks e efeitos de cada SQL sobre tabelas com dados, sobretudo índices e backfills.
+
+**Pesquisa de apoio:** [pesquisa do ponto 45 sobre o ciclo de vida de migrations](research-ponto-45-migration-lifecycle.md).
+
+### Ponto 46 — restringir `db:push` a bancos locais descartáveis
+
+**Estado:** aceito em 2026-09-25, com Q1–Q2 aprovadas.
+
+**Proposta do relatório:** formalizar que `db:push` só pode alterar banco descartável/local autorizado; Staging e Production recebem migrations versionadas.
+
+**Evidência no Polaris:** root, `apps/web` e `packages/db` expõem `db:push`. O wrapper atual exige `DATABASE_URL_DIRECT` PostgreSQL distinto de `DATABASE_URL`, mas não verifica host, projeto, branch ou persistência do alvo. `README.md` proíbe o comando em Production, enquanto `apps/web/src/db/README.md` o permite genericamente “em desenvolvimento” e o lista nos comandos úteis. O único `AGENTS.md` atual não possui regra específica de banco.
+
+**Comparação com Hub:** o Hub também mantém o script disponível, mas suas instruções de database/release proíbem seu uso para releases e adotam migrations forward-only. O comando disponível não equivale à permissão de usá-lo em qualquer ambiente.
+
+**Trade-off verificado:** a documentação Drizzle não apresenta uma proibição técnica universal: o FAQ recomenda `push` para banco local, enquanto a página específica descreve usos possíveis de schema sync inclusive em produção/blue-green. Para o Polaris, o histórico de SQL versionado, os invariantes de RLS e a necessidade de provar o mesmo upgrade em CI pesam mais que a conveniência de sincronizar schema remoto diretamente.
+
+**Decisão aprovada:** restringir `db:push` a PostgreSQL local descartável. Em qualquer banco remoto — inclusive branches Neon temporárias por PR — usar `db:generate`, revisar/versionar SQL e aplicar com `db:migrate`; assim CI, homologação e produção percorrem a mesma trilha auditável. Não usar `db:push` em branch compartilhada de desenvolvimento, Preview, Staging ou Production.
+
+Implementar uma proteção no comando suportado que recuse hosts fora de uma allowlist local explícita antes de chamar Drizzle, falhando de forma segura sem imprimir URL/credenciais e sem override genérico de ambiente. O wrapper deve cobrir os atalhos da raiz e de `apps/web`; invocar `drizzle-kit push` diretamente continua fora do fluxo suportado e deve ser proibido nas instruções. Criar `packages/db/AGENTS.md` com a regra operacional, acrescentar ponteiro curto nas instruções raiz conforme a árvore aprovada e corrigir `apps/web/src/db/README.md` para distinguir banco local descartável de ambientes remotos persistentes. Manter o aviso já existente no `README.md` e harmonizar referências em documentação.
+
+**Pesquisa de apoio:** [pesquisa do ponto 46 sobre a política de `db:push`](research-ponto-46-db-push-policy.md).
+
+### Ponto 47 — releases identificam SHA e deployments
+
+**Estado:** aceito em 2026-09-25, com Q1–Q2 aprovadas.
+
+**Proposta do relatório:** vincular o SHA validado às implantações reais de Web/Admin e ao conjunto de migrations, para a release representar uma versão verificável do sistema e não apenas o estado atual de uma branch.
+
+**Evidência no Polaris:** ainda não há Vercel publicada nem workflow de deploy; a CI constrói Web e Admin, cada um com configuração Vercel própria. O runbook atual recomenda validar Preview e depois `vercel deploy --prod`, sem registrar a identidade do build produzido. Não existe registro que una SHA, deployments e estado aplicado do banco.
+
+**Comparação com Hub:** o Hub vincula staging, CI, SHA candidato, deployment de produção, migrations, smoke e deployment anterior de rollback. Seu registro `release-state.md` é um snapshot operacional datado e não prova o estado remoto atual do Polaris.
+
+**Decisão aprovada — registro:** usar SHA Git completo como identidade primária do código e registrar junto: execução/checks de CI; para cada projeto Vercel (`web` e `admin`), deployment ID/URL/target/estado e SHA reportado, que precisa corresponder ao candidato; conjunto ordenado/identificadores e estado aplicado das migrations; smokes e evidência sanitizada; e deployment/SHA anterior como referência de recuperação. Não exigir semver agora, nem usar branch, `latest` ou horário de build como identidade de release.
+
+**Decisão aprovada — promoção:** preferir um staged deployment de Production criado a partir do SHA selecionado, sem atribuição automática do domínio; validar o deployment com smoke seguro e protegido e promover o deployment ID exato sem rebuild. Na Vercel, promover um Preview a Production aciona um novo build com variáveis de Production; não é promoção do mesmo artefato. Staged Production já é construído com variáveis e serviços de Production, mesmo sem tráfego do domínio, então não serve para homologação mutável: essa prova pertence ao Staging isolado de P4/P5. Se o fluxo futuro reconstruir, registrar o novo deployment como artefato distinto e confirmar que o SHA-fonte continua igual ao candidato. Configuração de proteção/CLI/Git integration fica para quando o projeto Vercel for provisionado; nenhum estado remoto foi inferido. [Vercel — promoção de Preview](https://vercel.com/docs/deployments/promote-preview-to-production), [Vercel — staged Production](https://vercel.com/docs/cli/deploying-from-cli#deploying-a-staged-production-build).
+
+Web e Admin terão IDs de deployment próprios associados à mesma release. Não presumir que a promoção de dois projetos seja atômica; P48 definirá a coordenação, a ordem e o tratamento de releases que afetem apenas uma aplicação.
+
+**Pesquisa de apoio:** [pesquisa do ponto 47 sobre identidade de release por SHA](research-ponto-47-release-sha.md).
+
+### Ponto 48 — deploys separados, releases coordenadas por impacto
+
+**Estado:** aceito em 2026-09-25, com Q1–Q2 aprovadas.
+
+**Proposta do relatório:** manter Web e Admin como projetos/deployments distintos, reunindo os dois numa release coordenada para que código, banco e aplicações não avancem em combinações incompatíveis.
+
+**Evidência no Polaris:** há builds e configurações Vercel separadas para Web e Admin, mas ainda não há projetos Vercel publicados nem workflow de deploy. Os apps compartilham `@polaris/auth`, `@polaris/db`, `@polaris/date`, `@polaris/e2e-support` e `@polaris/ui`; Admin ainda consome `@polaris/platform`. A CI atual constrói e verifica ambos. O runbook faz referência a ambos, mas seus comandos de deploy não selecionam explicitamente os dois projetos.
+
+**Comparação com Hub:** o Hub tem um único app e deployment Vercel, então seu fluxo de SHA e promoção é referência para checks, não para coordenar múltiplos projetos.
+
+**Decisão aprovada:** manter Web e Admin como projetos separados. Mudança comprovadamente local a uma aplicação pode publicar somente essa aplicação, registrando o deployment ID/SHA atual da outra como inalterado e justificando a compatibilidade. Mudanças em schema/RLS/migrations, autenticação, pacotes compartilhados, configuração global ou contratos usados por ambos exigem builds e validações dos apps afetados a partir do mesmo SHA, e a release só se completa quando todos os smokes passam.
+
+Manter CI completa dos dois apps por enquanto, sem filtro por caminho ou otimização `--affected`. Depois que a Vercel for provisionada, conferir Root Directories e inclusão de workspaces externos; considerar o skip nativo de projetos não afetados somente após validar que o grafo de dependências reconhece todos os pacotes compartilhados.
+
+**Promoção não atômica:** deixar todos os candidatos afetados construídos e validados antes da primeira promoção; promover os projetos em sequência e executar smoke por app. Se uma promoção ou smoke falhar, parar, registrar o estado parcial e seguir recuperação compatível com a release e o banco, sem afirmar que dois domínios foram atualizados numa transação única.
+
+**Pesquisa de apoio:** [pesquisa do ponto 48 sobre deploys separados e releases coordenadas](research-ponto-48-coordinated-app-releases.md).
+
+### Ponto 49 — proteger o perímetro do Admin na Vercel
+
+**Estado:** aceito em 2026-09-25, com Q1–Q3 aprovadas.
+
+**Proposta do relatório:** manter duas barreiras para o Admin: Vercel Authentication protege o perímetro do deployment; Better Auth e a autorização `platform_admin` protegem identidade e permissão dentro do Polaris.
+
+**Evidência no Polaris:** `apps/admin` tem configuração Vercel própria e domínio dedicado previsto, mas ainda não foi publicado; configuração remota não pode ser inferida do repositório. `apps/admin/src/lib/platform-admin-auth.ts` exige sessão e `packages/platform-auth/src/admin-guard.ts` exige cadastro/grant ativo, não revogado e não expirado, com role mínima. Páginas e Server Actions atuais invocam esse guard. O layout `(dashboard)` atualmente renderiza `children` quando não encontra contexto; endurecer para falhar fechado e manter verificações próprias nas Server Actions/Route Handlers. O smoke do Admin trata HTTP 401/403 como proteção externa, mas não prova sozinho o escopo configurado na Vercel. Login real e sessão entre origens ainda não foram confirmados.
+
+**Comparação com Hub:** Hub é um app/projeto único, sem Admin separado. Seus documentos desativavam Vercel Authentication por restrições/custos anteriores para proteger domínios; isso não é modelo transferível. Em 2026-09-09 a Vercel anunciou `All Deployments` com Vercel Authentication, incluindo produção, sem add-on em todos os planos.
+
+**Decisão aprovada — perímetro:** configurar `Vercel Authentication` com escopo `All Deployments` somente no projeto Vercel do Admin, cobrindo Preview, URLs geradas e o domínio customizado de Production. `Standard Protection` exclui domínios de produção e, portanto, não basta para o Admin. Não aplicar `All Deployments` como default de time sem verificar o projeto Web: Preview/URLs geradas do Web ficam protegidas, mas seu domínio de Production será público quando o produto for lançado.
+
+O acesso ao deployment do Admin fica limitado aos operadores internos que tenham conta Vercel e acesso ao projeto/time. A fundação assume um grupo pequeno de operadores autorizados na Vercel; quem não tem esse acesso não poderá iniciar o login do Polaris. Não usar shareable links, exceções de domínio ou bypass de automação para abrir o Admin Production. A configuração de acesso e quantidade de operadores será revalidada ao provisionar hosting.
+
+**Decisão aprovada — autorização do produto:** manter Better Auth, grant ativo de `platform_admin` e verificação de role mínima como controles independentes da Vercel. Nenhum acesso Vercel concede privilégio do Polaris; nenhum bypass de perímetro remove a autorização interna. Fazer o layout do grupo `(dashboard)` falhar fechado quando sessão/contexto/grant não for válido e continuar validando Server Actions e Route Handlers de forma independente.
+
+**Validação e evidência:** registrar em P43 o projeto alvo, `All Deployments`, domínio/ambientes, data UTC, operador e evidência sanitizada. Antes de Production, testar Preview/URLs geradas e domínio customizado do Admin; negar visitante sem acesso Vercel, negar membro Vercel sem grant `platform_admin`, permitir operador com grant/role válidos, e confirmar que o fluxo Better Auth/OAuth e os smokes funcionam com a barreira ativa. Quando Web for publicado, confirmar que seu domínio de Production continua público. Não inferir configuração remota por `vercel.json`, UI da aplicação ou um único status HTTP.
+
+**Pesquisa de apoio:** [pesquisa do ponto 49 sobre perímetro do Admin](research-ponto-49-admin-perimeter.md).
+
+### Ponto 50 — identificar o snapshot operacional de julho como histórico
+
+**Estado:** aceito em 2026-09-25, mantendo o local aprovado em P14.
+
+**Proposta do relatório:** manter o valor histórico de `production-closed-test.md`, mas impedir que operadores/agentes meses depois tratem seus IDs de serviços, configuração e comandos como estado operacional vigente.
+
+**Evidência no Polaris:** `aidd_docs/production-closed-test.md` está marcado como atualizado em 2026-07-12 e contém IDs/hosts Vercel/Neon, envs, webhook e comandos de configuração/promoção. Isso contradiz a informação atual de que o Polaris ainda não foi publicado/conectado à Vercel. O snapshot também cita `R2_BUCKET_PUBLIC`, enquanto código e `.env.example` usam `R2_BUCKET_FINAL`. Não encontrei valores literais de secrets no arquivo. O `AGENTS.md` não carrega esse arquivo automaticamente: com o bloco de memória vazio, só orienta ler `aidd_docs/memory/`; o snapshot está fora dessa pasta e não é referenciado pelo `project-state.md` atual.
+
+**Autoridade documental:** o P14 já aprovou preservar `aidd_docs/` no lugar, como histórico/contexto auxiliar sob demanda, sem migração em massa. O P12 definiu snapshots históricos como material com data/status próprios, não páginas canônicas com freshness. `docs/architecture/external-integrations.md` e `docs/operations/environments-and-deployment.md` são fontes atuais e dizem que configuração remota não se infere do repositório; o registro P43 será a autoridade operacional de status/evidências.
+
+**Comparação com Hub:** o Hub separa revisões não canônicas no índice e rotula snapshots, mas sua pasta `docs/reviews` e seus status/frontmatters não são uniformes. Adotar a distinção histórica/canônica, não criar agora a mesma árvore de diretórios. Em Polaris, mover o snapshot contrariaria P14 e exigiria reparar referências sem mudar o fato de que o estado remoto é desconhecido.
+
+**Decisão aprovada:** manter `aidd_docs/production-closed-test.md` no local atual e preservar seu conteúdo como registro histórico. Acrescentar no topo `status: historical`, a data do snapshot `2026-07-12`, aviso de que IDs/hosts/envs/comandos não descrevem o estado atual e não devem ser usados para configurar ou executar deploy, e ponteiro para P43 e runbooks vigentes. Não mover para `docs/reviews/`, não carregá-lo no bootstrap do agente e não copiar seus valores antigos para fontes canônicas. Reconciliar a memória `aidd_docs/memory/project-state.md` conforme P14, sem afirmar configuração remota não verificada.
+
+**Pesquisa de apoio:** [pesquisa do ponto 50 sobre snapshot operacional](research-ponto-50-operational-snapshot.md).
+
+### Ponto 51 — preservar e distinguir documentos históricos
+
+**Estado:** aceito em 2026-09-25, com Q1–Q2 aprovadas.
+
+**Proposta do relatório:** preservar relatórios e planos antigos, separando-os das fontes canônicas para que não sejam lidos como regras ou estado atual.
+
+**Evidência no Polaris:** `docs/README.md` é o mapa canônico aprovado, mas ainda contém snapshots de cobertura antigos e não classifica com clareza contratos vigentes, evidência operacional, decisões e histórico. `AGENTS.md` ainda dá prioridade a `aidd_docs/` e carrega `aidd_docs/memory/project-state.md`, que contém afirmações remotas antigas. `docs/reports/` e `docs/superpowers/plans/` contêm estados e avisos mistos; planos podem conter comandos imperativos. P12–P15 já definem metadados seletivos, freshness não universal, `docs/README.md` como mapa e ponteiros curtos no `AGENTS.md`.
+
+**Comparação com Hub:** o Hub mostra um mapa de autoridade e marca planos substituídos com `execution_status`, `superseded_by` e “Não executar”, mas seus status e `docs/reviews/` também são inconsistentes. Aproveitar os controles pontuais, sem copiar a taxonomia inteira nem criar pastas por simetria.
+
+**Decisão aprovada — autoridade e lifecycle:** classificar em `docs/README.md` fontes canônicas vigentes, estado/evidências operacionais P43, decisões aceitas/ADRs e material histórico/planos. Em `AGENTS.md`, apontar ao mapa e declarar que snapshots/relatórios antigos são contexto da auditoria, não instruções nem prova de estado atual; antes de executar plano antigo, confirmar lifecycle e fonte canônica. Snapshots stale de risco recebem `status: historical`, data/SHA disponíveis e ponteiro atual; planos substituídos recebem `execution_status: superseded`, `superseded_by` e aviso “Não executar”; planos ativos/concluídos recebem lifecycle explícito. ADRs conservam o lifecycle P11. Fazer inventário/backfill dirigido por risco, sem migração ou metadados em massa, preservando conteúdo/local conforme P14/P50 e sem aplicar `owner`/`last_verified` de fonte vigente a históricos.
+
+**Relação com P13:** validar status/links estruturalmente somente nas classes acordadas. Históricos não recebem freshness nem owner atual por padrão; status não é inferido pelo nome da pasta, e `accepted` não torna relatório uma fonte vigente. O `docs/README.md` é fonte viva, ainda que os dados de cobertura/commit nele sejam snapshot a atualizar conforme P12.
+
+**Pesquisa de apoio:** [pesquisa do ponto 51 sobre autoridade e lifecycle histórico](research-ponto-51-historical-docs.md).
+
+### Ponto 52 — atualizar a stack na fundação e congelar o SHA de homologação
+
+**Estado:** aceito em 2026-09-25, mantendo P2 e aprovando o início condicional do freeze.
+
+**Proposta do relatório:** fazer audit, atualizar patches/minors de baixo risco e verificar tudo antes de Production; evitar mudanças grandes na reta final.
+
+**Reconciliação com P2:** P2 já autorizou atualizar as tecnologias escolhidas para releases estáveis recentes, inclusive majors estáveis, durante a fundação. Prereleases ficam fora; substituições de produto/framework/fornecedor exigem análise de trade-off positiva separada. P52 define a janela de freeze, não revoga esse escopo.
+
+**Evidência no Polaris:** o repositório ainda está em fundação e não tem Staging/homologação persistente configurado; portanto, o freeze não começa agora. As versões declaradas/resolvidas são snapshots, e o Hub não é baseline de latest. No corte desta revisão, Next `16.2.10` está na faixa do advisory crítico de `next/og` Node `ImageResponse`, corrigida em `16.3.6`; a busca direta não encontrou `next/og`/`ImageResponse` em `apps/` ou `packages/`, então a condição concreta de exploração não foi confirmada. A política P2 continua a favor de atualizar a linha estável antes de Production, sem afirmar exposição não verificada.
+
+**Decisão aprovada — upgrades:** durante a fundação, atualizar versões selecionadas para releases estáveis atuais, inclusive majors já autorizadas, em PRs/batches pequenos por superfície de risco. Revisar suporte, changelog, advisories, peer dependencies e guias de migração; executar os gates relevantes aprovados após cada etapa. Não fazer um único PR gigante. Atualização de Next/React/Drizzle/Better Auth/Tailwind é distinta de trocar framework/ORM/auth/fornecedor; substituições permanecem sujeitas a comparação própria. RC/beta/canary, incluindo Drizzle 1.0 RC, ficam fora da base estável.
+
+**Freeze aprovado:** não congelar dependências durante a fundação. Iniciar freeze de mudanças rotineiras somente quando um SHA exato entrar na homologação final para Production. Durante esse período, manter o candidato estável até a promoção; P26 continua definindo a cadência/destino dos PRs Dependabot. Correções de segurança aplicáveis e blockers de release podem entrar durante o freeze; geram novo SHA candidato e exigem repetir verificações, smokes e evidências afetadas. Não colocar advisories em quarentena apenas por causa do freeze. Encerrar o freeze após Production estabilizada; a manutenção pós-lançamento será definida em P53.
+
+**Comparação com Hub:** versões do Hub são de um checkout datado e não constituem lista de latest. Polaris pode estar à frente em algumas dependências e atrás em outras; escolher a versão alvo por fonte oficial/compatibilidade, não por paridade com Hub.
+
+**Pesquisa de apoio:** [pesquisa do ponto 52 sobre janela de dependências](research-ponto-52-dependency-window.md); [advisory oficial Next.js](https://github.com/vercel/next.js/security/advisories/GHSA-vcvr-r3jv-pc5j).
+
+### Ponto 53 — cadência contínua de dependências
+
+**Estado:** aceito em 2026-09-26, com Q1–Q2 aprovadas.
+
+**Proposta do relatório:** processar alertas de segurança imediatamente, atualizações patch semanal/quinzenal, minor mensal e major em planejamento/ADR, evitando grandes limpezas anuais.
+
+**Evidência no Polaris:** não há `.github/dependabot.yml` no repositório. Polaris usa Bun workspaces com `bun.lock` raiz; a CI instala com lockfile congelado e constrói/testa Web e Admin. P26 define Dependabot em PRs para `main`, merge manual depois dos checks e sem auto-merge enquanto a infraestrutura E2E/Staging ainda não estiver pronta. O Hub tem update checks semanais para Bun e GitHub Actions com target `staging`, groups de patch/minor e limite de PRs; seu branch/target não se transfere ao Polaris.
+
+**Documentação atual:** GitHub suporta `package-ecosystem: bun` com Bun >=1.1.39; a agenda de version updates é configurada por ecosystem, com intervalos como weekly/monthly. Security updates são disparados por advisories e não esperam essa agenda/cooldown. Groups podem separar patch/minor de major, mas não aplicam frequências diferentes aos grupos.
+
+**Decisão aprovada — version updates:** adotar checks semanais de Dependabot para o ecossistema Bun e GitHub Actions. Agrupar patches e minors separadamente para facilitar revisão, manter majors em PRs individuais e não ignorá-los em definitivo. PRs permanecem em `main`, passam pela CI e são mesclados manualmente conforme P26; sem auto-merge. Não usar `target-branch: staging` antes de reabrir P4 e provisionar seus gates.
+
+**Decisão aprovada — segurança:** tratar updates de segurança fora do schedule, priorizar conforme P41 e corrigir sem quarentena conforme P22. Dependabot pode abrir PR automaticamente, mas ele ainda precisa dos checks e merge manual. Se não houver fix, registrar a mitigação, responsável e próximo passo; não transformar advisory em baseline indefinido.
+
+**Majors pós-fundação:** durante a fundação, P2/P52 continuam autorizando releases estáveis, inclusive majors, em batches verificados. Após Production, atualizar majors por plano de migração/compatibilidade e validação específica, sem auto-merge. ADR é necessário quando a mudança altera uma decisão arquitetural ou substitui tecnologia/fornecedor, não para cada bump de versão.
+
+**Cadência:** weekly é o ponto inicial para evitar drift e grandes limpezas. Reavaliar volume de PRs e tempo de triagem depois de operar o fluxo; reduzir frequência de version updates se o ruído superar o benefício, sem atrasar correções de segurança. P26 continua sendo autoridade para branches, staging e merge.
+
+**Pesquisa de apoio:** [pesquisa do ponto 53 sobre cadência de dependências](research-ponto-53-dependency-cadence.md).
+
+### Ponto 54 — alinhar o major PostgreSQL da CI ao alvo Neon
+
+**Estado:** aceito em 2026-09-26, com Q1–Q2 aprovadas.
+
+**Proposta do relatório:** conferir o major PostgreSQL do Production antes do lançamento e usar o mesmo major no serviço PostgreSQL da CI, pois o projeto testa RLS, grants, migrations, constraints e comportamento SQL.
+
+**Evidência no Polaris:** `.github/workflows/ci.yml` usa `postgres:16` no job `postgres-behavior`, que reaplica migrations e verifica comportamento PostgreSQL/RLS. O repositório não prova o major de uma branch Neon real. As migrations usam `pg_trgm`; não foi encontrada extensão ou sintaxe que force permanecer no PG16. O Hub usa PG18 na CI, mas seu checkout é um snapshot e não prova versão atual do Neon de nenhum dos projetos.
+
+**Fontes atuais:** PostgreSQL 18.6 é a major estável atual suportada; PostgreSQL 19 ainda está em Beta 4. A Neon informa que novos projetos usam PostgreSQL 18 por padrão. Um projeto Neon permanece fixado à major criada; upgrade posterior exige migração para novo projeto, e as ferramentas Labs de upgrade da Neon continuam experimentais/não recomendadas para produção.
+
+**Decisão aprovada:** escolher PostgreSQL 18 como major alvo para um novo Neon Production no estágio atual e alinhar o serviço PostgreSQL da CI, E2E, Staging e Production ao mesmo major. Usar PG18 porque é a stable atual e o padrão Neon para projetos novos, não por paridade cega com o Hub. PG19 Beta fica fora da base de produção segundo P2.
+
+Antes do go-live, verificar a major e as extensões do branch Neon real por fonte read-only autorizada e registrar a evidência em P43. Se já houver branch persistente em major diferente, decidir e executar a migração/alinhamento antes de gravar dados reais; não deixar CI, E2E e Production em majors divergentes sem exceção documentada. Revalidar a stable atual no momento do provisionamento e só mudar o target se uma nova major GA tiver compatibilidade confirmada. Os testes de migration/RLS/constraints deverão passar contra o major escolhido.
+
+**Pesquisa de apoio:** [pesquisa do ponto 54 sobre a versão PostgreSQL](research-ponto-54-postgres-version.md).
+
+### Ponto 55 — preservar artefatos úteis de E2E
+
+**Estado:** aceito em 2026-09-26, com Q1–Q2 aprovadas.
+
+**Proposta do relatório:** quando E2E falhar, preservar Playwright report, resultados, trace, screenshot, vídeo quando útil e log de servidor para triagem sem reprodução imediata.
+
+**Evidência no Polaris:** `.github/workflows/ci.yml` tem jobs E2E separados de Web e Admin com URLs de banco E2E próprias e OAuth dummy, mas não faz upload de artifacts. `apps/web/playwright.config.ts` e `apps/admin/playwright.config.ts` usam `trace: on-first-retry`, sem screenshot/video explícitos, reporter HTML/JSON ou outputDir personalizado. `.last-run.json` gerados estão rastreados no Git.
+
+**Comparação com Hub:** Hub gera HTML/JSON, traces, resultados e log do Next; envia sempre os artifacts por 14 dias. É um exemplo útil de triagem, mas o trace/log pode conter conteúdo de rede/tela e dados. Polaris adotará retenção menor e upload condicionado à falha.
+
+**Decisão aprovada:** em cada job E2E, configurar trace `retain-on-failure`, screenshot `only-on-failure` e reporter HTML/JSON explícito; manter vídeo desligado inicialmente porque trace já contém screencast e snapshots. Uploadar report/resultados/test-results somente quando o job E2E falhar, com artifacts separados para Web/Admin e identificados pelo run. Server log só pode entrar se for curado e sanitizado; não enviar workspace, `.env*`, secrets, dumps, arquivos `.next` ou logs indiscriminados. Retenção inicial dos artifacts: 7 dias; ajustar depois conforme necessidade de triagem e política GitHub.
+
+**Privacidade e higiene:** usar somente bancos E2E não produtivos e dados sintéticos. Não confiar em masking de logs para limpar binários/traces; traces podem conter DOM, screencast, headers e corpos de requests/responses. Artifacts do GitHub são baixáveis por quem tem leitura do repositório e não devem ser compartilhados por URLs públicas. Remover os `.last-run.json` gerados já rastreados e ignorar outputs Playwright; manter artifacts fora do versionamento e do deployment.
+
+**Pesquisa de apoio:** [pesquisa do ponto 55 sobre artifacts de E2E](research-ponto-55-e2e-artifacts.md).
+
+### Ponto 56 — regressão visual pequena e seletiva
+
+**Estado:** aceito em 2026-09-26, com Q1–Q2 aprovadas.
+
+**Proposta do relatório:** não adicionar Chromatic nem outra plataforma inteira agora; adotar poucos screenshots visuais de superfícies críticas, evitando centenas de snapshots frágeis.
+
+**Evidência no Polaris:** `@playwright/test` 1.61.1 já está no lockfile e os jobs E2E usam Chromium no Linux, mas não há `toHaveScreenshot`, baselines, Storybook, Chromatic ou Percy. Há jornadas E2E existentes para login/dashboard Web, catálogo/vendas e acesso ao Admin. O dashboard Web, o console Admin e billing mostram contagens, atividade ou estados derivados de dados; os testes também geram alguns IDs dinâmicos e o estado do banco E2E pode persistir entre runs. Não presumir que essas telas estejam prontas para golden screenshots sem fixtures repetíveis.
+
+**Comparação com Hub e mercado:** Hub não mantém baselines visuais. Serve como referência de E2E, fixtures e runner explicitamente fixado em `ubuntu-24.04`, não como origem de imagens para Polaris. Playwright nativo cobre o volume inicial sem novo fornecedor. Chromatic/Percy oferecem diff e revisão em nuvem, mas adicionam credenciais, workflow de revisão e transferência de conteúdo visual; reavaliar se o volume, a revisão distribuída ou a matriz de browsers justificarem isso.
+
+**Decisão aprovada — ferramenta e escopo:** adotar `expect(page).toHaveScreenshot()` nativo, sem Chromatic/Percy no início. Depois de reconciliar `DESIGN.md` conforme P35 e estabilizar as telas escolhidas, começar com poucas capturas de estados reprodutíveis: login Web, catálogo ou um estado representativo da venda e console Admin com fixture controlada. Incluir o shell/dashboard Web apenas quando seus dados forem determinísticos. Incluir billing somente se for crítico ao lançamento e houver estado sintético reproduzível. Não capturar todos os passos dos fluxos nem páginas com dados voláteis.
+
+**Baselines e CI aprovados:** primeira matriz somente Chromium/Linux; fixar o runner visual em `ubuntu-24.04` e usar a versão Playwright correspondente ao lockfile. Definir viewport, locale, timezone, tema e fixtures. Não gerar ou atualizar baselines no Windows local. Armazenar baselines junto aos testes no Git; atualizar explicitamente apenas por mudança visual intencional e revisar cada diff no PR. Não atualizar automaticamente em CI nem elevar thresholds globais para mascarar instabilidade. Após aceitar o primeiro conjunto de baselines, a verificação visual da seleção aprovada é gate obrigatório de CI. Resolver instabilidade com dados/ambiente determinísticos, não quarentena.
+
+**Privacidade e complementaridade:** usar apenas contas, conteúdo e transações sintéticas; não criar baselines a partir de Production. E2E failure artifacts seguem a política de P55. Regressão visual complementa, sem substituir, assertions funcionais e os critérios de acessibilidade aprovados em P36.
+
+**Pesquisa de apoio:** [pesquisa do ponto 56 sobre regressão visual](research-ponto-56-visual-regression.md).
+
+### Ponto 57 — evidências operacionais por integração
+
+**Estado:** aceito em 2026-09-26, com Q1–Q2 aprovadas.
+
+**Proposta do relatório:** validar Sentry, Inngest, Resend, R2, Upstash, health de Web/Admin, OAuth e webhooks de pagamento como parte da prontidão operacional.
+
+**Evidência no Polaris:** o workflow `production-certification-checklist` e `scripts/check-production-certification.ts` validam campos e valores declarados, não consultam os provedores. Há smokes HTTP para Web/Admin, mas o OAuth Web só é seguido até o redirect inicial do Google; `401/403` do Admin protegido prova a barreira Vercel, não a saúde interna do runtime. `/api/internal/health/r2` verifica `HeadBucket` do bucket de staging e CORS; não prova PUT/GET de objeto. O endpoint web de health consulta DB. `docs/operations/observability.md` confirma que dashboards/alertas/retention de Sentry ainda dependem de evidência externa.
+
+**Comparação com Hub:** os runbooks e checklists do Hub mostram operações controladas para Sentry e ciclo de vida de Resend, além de evidências associadas a ambiente/SHA. Os registros disponíveis são snapshots de 2026-09-03, não provam o estado remoto atual. Aproveitar a proveniência e a distinção entre aceitação, entrega e alerta; não copiar os providers, os gates nem os efeitos operacionais do Hub.
+
+**Decisão aprovada — autoridade e escopo:** incorporar os requisitos P57 ao único registro de prontidão P43, sem checklist ou runbook paralelo. Gate obrigatório somente para uma capacidade incluída no lançamento avaliado; se estiver fora do escopo, registrar isso e o gatilho para reabrir. Autenticação e health dos apps exigidos pelo lançamento continuam gates. Ajustar o contrato futuro de certificação para aceitar itens explicitamente adiados/fora de escopo justificados, sem tratar a lista inteira de campos atuais como requisito universal.
+
+**Evidência aprovada:** separar (1) contrato/código e configuração versionada, (2) configuração externa observada no provider e (3) resultado de validação executada contra ambiente/SHA identificados. HTTP 200, configuração presente, CI verde ou timestamp manual isolados não provam entrega nem execução externa. Smokes read-only e canários com efeitos devem ser identificados separadamente. Canário mutável usa dados/recursos sintéticos isolados e começa em Staging; uma operação em Production só ocorre se necessária para provar configuração exclusiva de Production, com escopo explícito e efeito controlado. Nunca enviar pagamento, evento financeiro ou e-mail para cliente apenas para fechar um gate. Registrar evidência sanitizada no modelo P43 e revalidar por gatilho, não a cada commit.
+
+**Health e OAuth:** manter o smoke público de Web, mas tratar o redirect OAuth como início do fluxo, não como login comprovado; completar callback/sessão em Staging com identidade de teste para os clientes OAuth necessários ao lançamento. Para Admin, provar separadamente o perímetro Vercel e o runtime através de verificação autenticada; `401/403` sozinho não é health de aplicação.
+
+**Woovi — bloqueio de prontidão:** documentação oficial consultada em 2026-09-26 define `x-webhook-signature` como assinatura RSA da Woovi; o HMAC usa o header distinto `X-OpenPix-Signature`. O ping de cadastro documentado traz `data_criacao` e `event`, mas o handler atual calcula HMAC no primeiro header e exige um ID ausente nesse ping. Não marcar Woovi como pronta nem habilitá-la no lançamento até reconciliar implementação e contrato e passar homologação sandbox. Se Woovi não fizer parte do lançamento, registrar fora de escopo e um gatilho para reabrir; não declarar que o gate passou. Asaas e Woovi devem ser avaliadas separadamente conforme os meios efetivamente oferecidos no lançamento. Não enviar webhooks financeiros de teste a Production.
+
+**Segurança dos canários:** Sentry usa evento sintético sanitizado e confirmação de alerta/destino; Inngest confirma sync e usa somente função/evento sem efeito de negócio; Resend distingue `accepted` de delivery e usa endereço de teste ou inbox interno allowlisted; R2 usa objeto único no bucket de Staging com leitura e exclusão exata; Upstash usa chave/identificador isolado, sem consumir cota de usuários; pagamento/webhook usa sandbox e acompanha captura/reconciliação esperada. Não registrar secrets, PII, payloads, headers nem URLs com credenciais.
+
+**Pesquisa de apoio:** [pesquisa do ponto 57 sobre observabilidade e gates de release](research-ponto-57-observability-release.md). A incompatibilidade Woovi deve ser corrigida e validada antes de considerar esse provider habilitado.
+
+### Ponto 58 — semântica temporal e fuso de negócio
+
+**Estado:** aceito em 2026-09-26, com Q1–Q3 aprovadas.
+
+**Proposta do relatório:** centralizar timezone e documentar armazenamento, negócio, exibição, datas civis, limites de dia/mês e relatórios antes que cada feature crie sua própria semântica.
+
+**Evidência no Polaris:** a regra canônica já existe em `TIME-001`/`DEC-BR-049`: `America/Sao_Paulo` é a zona global do lançamento. `@polaris/date` centraliza data de negócio, rótulos, avanço civil e limites mensais; o schema distingue vários campos `date` de `timestamptz`. Portanto o ponto está parcialmente implementado e deve completar/alinhar a política existente, sem criar uma segunda regra. A decisão atual não inclui uma coluna ou configuração de fuso por Organização.
+
+**Comparação com Hub e mercado:** Hub também centraliza um fuso global São Paulo e oferece helpers explícitos, mas sua tela de auditoria mistura presets do navegador com casts sensíveis ao fuso de sessão; não copiar esse caminho. A oferta por loja do Shopify ilustra uma alternativa de fuso por negócio, não uma obrigação de mercado. O Brasil inclui zonas UTC−3, UTC−4 e UTC−5, então São Paulo global pode classificar datas civis diferentes do relógio local para negócios no oeste do país.
+
+**Decisão aprovada — escopo:** manter `America/Sao_Paulo` como fuso global para o lançamento, preservando DEC-BR-049; não introduzir agora timezone por Organização nem inferir timezone pelo navegador/IP. Essa escolha dá um calendário operacional único. O efeito conhecido deve permanecer explícito: uma operação perto da meia-noite em UTC−4/UTC−5 pode pertencer ao dia seguinte no calendário São Paulo. Não apresentar as datas como fuso local da loja.
+
+**Semântica aprovada:** data civil de negócio é `YYYY-MM-DD`/PostgreSQL `DATE`, sem horário ou conversão para instante. Um evento pontual é um instante persistido como `timestamptz`, normalizado em UTC pelo PostgreSQL; esse tipo não preserva a zona/offset original de entrada. A data de negócio derivada de um instante usa explicitamente `America/Sao_Paulo`; timezone da sessão PostgreSQL, servidor ou navegador não determina datas de venda, estoque, metas, quotas ou relatórios. Datas e timestamps devem ser formatados como tipos diferentes.
+
+**Períodos e exibição aprovados:** agrupar instantes por dia/mês em `America/Sao_Paulo`; campos já persistidos como `DATE` permanecem datas civis. Consultas por período sobre timestamps usam intervalo semiaberto `[início local, início do próximo período)`, convertido para instantes na zona explícita; evitar `23:59:59.999` e somar sempre 24 horas a um início local. “Últimos N dias” significa dias de calendário do fuso São Paulo, salvo quando o rótulo disser claramente que é uma janela móvel. Exibir timestamps em `America/Sao_Paulo`; uma preferência de fuso por usuário pode ser considerada no futuro apenas para apresentação e nunca muda a data operacional ou o resultado do relatório.
+
+**Mudança futura e histórico aprovados:** a zona global permanece fixa para o lançamento. Uma futura mudança da decisão exige registro/auditoria, data efetiva explícita e tratamento definido para relatórios derivados de timestamps. Datas civis já persistidas não podem ser recalculadas ou reclassificadas silenciosamente; uma futura migração para fuso por Organização também exigirá regra de efetividade e preservação do histórico antes de expor a configuração.
+
+**Correções temporais identificadas para a implementação da fundação:** `apps/web/src/features/products/queries.ts` deriva a data do estorno por `date(cancelled_at)`, dependente do fuso da sessão, embora `sales.cancelled_on` já guarde a data civil; passar a usar o campo persistido. O filtro `from/to` de Admin Events é recebido na página, mas não chega a `getPlatformEventsOverviewForAdmin`; concluir a consulta com limites explícitos de São Paulo. Manter defaults SQL, wrapper de compatibilidade, helpers e formatadores alinhados à regra canônica, e explicitar/corrigir o intervalo de anos suportado por `@polaris/date` (`Date.UTC` remapeia anos de 0 a 99).
+
+**Glossário e autoridade:** ao implementar P8, definir termos como `Instante` e `DataCivil/Data de Negócio` no glossário `CONTEXT.md`, sem copiar ali algoritmo, SQL ou configuração; TIME-001/DEC-BR-049 continuam autoridade da regra de negócio e a documentação técnica descreve o armazenamento e os limites.
+
+**Pesquisa de apoio:** [pesquisa do ponto 58 sobre semântica temporal](research-ponto-58-timezone.md). Fontes primárias: [PostgreSQL Date/Time Types](https://www.postgresql.org/docs/18/datatype-datetime.html), [lei brasileira de fusos horários](https://www.planalto.gov.br/ccivil_03/_ato2011-2014/2013/lei/l12876.htm), [Shopify — timezone da loja](https://help.shopify.com/en/manual/intro-to-shopify/initial-setup/setup-business-settings).
+
+### Ponto 59 — apresentação visual de dados temporais
+
+**Estado:** aceito em 2026-09-26, com Q1–Q3 aprovadas.
+
+**Proposta do relatório:** complementar `DESIGN.md` com a apresentação de datas sem horário, timestamps, períodos de negócio e rótulos relativos.
+
+**Evidência no Polaris:** `DESIGN.md` ainda não tem regra temporal. `packages/date` e `packages/ui` já definem helpers pt-BR e timestamp explícito em `America/Sao_Paulo`, mas `formatDate(value: Date | string)` mistura data civil e instante e usa timezone local de runtime ao receber `Date`. `apps/admin/src/app/(dashboard)/organizations/organizations-table.tsx` passa `createdAt` (`timestamptz`) a `formatDate`, divergindo de P58. O painel Admin também mantém formatter de timestamp próprio. O Web usa `formatDate` predominantemente para valores civis. Não encontrei formatter relativo atual nos dois projetos.
+
+**Comparação com Hub e acessibilidade:** Hub confirma que locale pt-BR e fuso de negócio explícito são dimensões separadas; seu formatter genérico também mantém risco de misturar `DATE` e instante, então aproveitar a centralização, não a assinatura ambígua. W3C recomenda associar instruções compreensíveis ao formato exigido em campos de data. `<time datetime>` pode oferecer valor legível por máquina, mas não substitui texto exato disponível para pessoas ou tecnologia assistiva.
+
+**Decisão aprovada — contrato visual:** incorporar uma seção curta de dados temporais em `DESIGN.md` como parte do P35. Data civil `YYYY-MM-DD` aparece como `dd/MM/yyyy` em pt-BR e não é convertida por timezone. Instantes aparecem como data e hora em `America/Sao_Paulo`, sem variar por fuso do navegador/usuário. Períodos já seguem a regra P58; `DESIGN.md` registra apenas como devem ser mostrados e aponta para TIME-001/DEC-BR-049, sem duplicar armazenamento ou lógica de SQL.
+
+**Indicação de fuso aprovada:** em telas/relatórios densos em timestamps, incluindo auditoria, financeiro e operações, informar uma vez “Horários no fuso de São Paulo”; não repetir em cada célula nem depender de abreviações como `BRT`. Locale e timezone permanecem conceitos independentes.
+
+**Precisão aprovada:** valores absolutos são primários em finanças, auditoria, vendas, estoque e operações. Rótulos relativos ficam fora da fundação; se adicionados futuramente a uma lista recente de atividade, são apenas complemento e o horário absoluto permanece visível e acessível sem hover. Usar `<time datetime>` quando útil como semântica legível por máquina, sem substituir a apresentação humana.
+
+**Correções visuais para a implementação:** separar formatação de `DATE` e de instant em funções/contratos distintos; corrigir a data `createdAt` da tabela de Organizações para usar `America/Sao_Paulo`, e alinhar o formatter duplicado do dashboard Admin à mesma política. Manter instruções de formato acessíveis nos campos de data. Não iniciar auditoria visual, modificar telas ou abrir navegador neste ponto de planejamento.
+
+**Pesquisa de apoio:** [pesquisa do ponto 59 sobre apresentação temporal](research-ponto-59-temporal-display.md). Fontes: [MDN `Intl.DateTimeFormat`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat/DateTimeFormat), [WHATWG `<time>`](https://html.spec.whatwg.org/dev/text-level-semantics.html#the-time-element), [W3C — instruções de formato](https://www.w3.org/WAI/tutorials/forms/instructions/), [Shopify Live View](https://help.shopify.com/en/manual/reports-and-analytics/shopify-reports/live-view).
+
+### Ponto 60 — árvore-alvo como mapa reconciliado
+
+**Estado:** aceito em 2026-09-26, com Q1 aprovada.
+
+**Proposta do relatório:** ilustrar a estrutura final desejada, sem exigir que todas as pastas e workflows apareçam em um único commit.
+
+**Evidência no Polaris:** a raiz já contém os documentos e aplicações principais, mas o desenho não é inventário completo: omite diretórios de negócio, banco, módulos, runbooks, `aidd_docs/`, `plans/` e pacotes ativos como `config`, `e2e-support` e `emails`. O repositório tem hoje somente `ci.yml`; várias pastas/arquivos desenhados não existem. O Hub tem outra arquitetura (monólito em `src/`) e workflows operacionais específicos da sua infraestrutura, portanto o desenho não deve ser copiado literalmente.
+
+**Decisão aprovada:** usar P60 como mapa conceitual com quatro estados — existente, aprovado mas ainda ausente, condicional a uma decisão/configuração anterior e não aprovado — nunca como checklist automática de criação. Omissões no diagrama não apagam arquivos ou categorias atuais. Não criar pastas vazias nem mover conteúdo apenas para coincidir com o desenho; preservar a taxonomia corrente de `docs/` e `aidd_docs/` conforme P7/P14/P50/P51.
+
+**Itens aprovados ausentes a refletir no mapa:** `CONTEXT.md` (P8), `docs/adr/` para decisões válidas (P11), `.github/pull_request_template.md` (P40), `docs/operations/production-readiness.md` (P43) e `.github/workflows/operations.yml` separado de `ci.yml`, com uma operação selecionada por dispatch (P23). `packages/db/AGENTS.md` é uma exceção específica aprovada por P46 para a regra executável de `db:push`; implementá-la junto dessa proteção, sem estender instruções aninhadas por simetria.
+
+**Itens condicionais ou excluídos:** `deploy-staging` depende das escolhas/provisionamento de P4/P5; deploy, preparação de release, smoke, backup e restore seguem P23/P43–48 e inicialmente ficam como operações selecionáveis no único `operations.yml`, não como oito workflows paralelos. Não criar `apps/web/AGENTS.md`, `apps/admin/AGENTS.md` ou `packages/events/AGENTS.md` agora (P15–17); `docs/domain/`, `docs/integrations/`, `docs/reviews/` e `docs/archive/` não são aprovados e duplicariam/relocariam a taxonomia existente (P7/P14/P50/P51). Não incluir Dependency Review nem CodeQL sob o entitlement atual (P28/P29). `scripts/verify.ts` e `scripts/check-docs.ts` são nomes ilustrativos; implementar os contratos aprovados em P20/P13, escolhendo caminhos compatíveis com os scripts e comandos existentes.
+
+**Pesquisa de apoio:** [crosswalk do ponto 60 entre a árvore proposta, o repositório e as decisões aprovadas](research-ponto-60-target-tree.md). P60 consolida decisões já pesquisadas em P4, P7–20, P23–29, P40, P43–51; não introduz uma nova plataforma ou padrão técnico que exija outra pesquisa externa.
+
+### Ponto 61 — ordem de implementação da fundação
+
+**Estado:** aceito em 2026-09-26, com Q1 aprovada e a ordem revisada conforme P3/P4/P20–23/P34/P52/P54/P60.
+
+**Proposta do relatório:** primeiro proteger `main` e uma nova `staging`, exigir CI, bloquear push direto/force-push, corrigir o baseline, reparar o hook Codex e definir ambientes.
+
+**Evidência no Polaris:** o job `verify` executa `audit:baseline` antes dos checks de código; o JSON versionado define `reviewBy: 2026-08-14`, então essa validação falha por expiração no próximo run independentemente do estado atual dos advisories. Isso não é evidência de uma execução remota nova. `.codex/hooks.json` chama `node .agents/skills/impeccable/scripts/hook.mjs`, mas `.agents/` é ignorado pelo Git e não existe neste checkout, portanto a referência não é clone-safe. O serviço PostgreSQL comportamental na CI ainda usa `postgres:16`, divergindo do PG18 aprovado em P54. P3 exige primeiro transferir o repositório para a conta Pro do irmão para proteger `main`; P4 explicitamente mantém a branch `staging` suspensa até escolher/configurar Vercel, banco, callbacks e E2E não produtivos. O mapa Local/CI/Staging/Production já está aprovado em P5, mas não prova provisioning.
+
+**Decisão aprovada — sequência:** (1) remover a referência quebrada do hook enquanto a distribuição de Impeccable não for clone-safe; corrigir a baseline segundo P22, sem quarentena, e implementar `verify:quick`/`verify` em escopo do workspace conforme P20; (2) alinhar o serviço PostgreSQL da CI a PG18 conforme P54 e atualizar tecnologias para estáveis em batches pequenos conforme P2/P52, repetindo verificações afetadas; (3) manter validação push/PR em `ci.yml` e criar o workflow único `operations.yml` de P23 com seleção de uma operação, sem injetar secrets de Production antes de ref/Environment/infra configurados; (4) depois da transferência, o owner configura proteção de `main` para PR, bloqueio de push direto/force-push/deleção e os checks estáveis, sem aprovação humana, e verifica o controle com um PR; (5) habilitar pre-push somente depois de instalar o hook, confirmar Lefthook e medir `verify:quick` conforme P21; (6) só configurar ambiente persistente de Staging — e então decidir se uma branch Git persistente é necessária — após os alvos de P4/P5 estarem definidos e antes do go-live.
+
+**Dependências e limites:** configurar a regra remota de `main` antes de a conta Pro e o baseline verde estarem prontos inverte as dependências de P3; exigir contexts ainda instáveis pode bloquear merge sem um gate válido. Criar/proteger `staging` agora contradiz P4 e não é aprovado. “Definir ambientes” nesta fase significa manter o contrato documental de P5; não significa cadastrar secrets, conectar Vercel/Neon ou alegar E2E/Provider verificado. P2/P52 permitem upgrades estáveis durante toda a fundação; o freeze inicia somente quando um SHA entra na homologação final.
+
+**Pesquisa de apoio:** [crosswalk do ponto 61 sobre sequência e dependências](research-ponto-61-implementation-order.md). A ordem consolida decisões já aceitas; não executamos comandos de verificação nem consultamos estado remoto nesta revisão.
+
+### Ponto 62 — sequência da Fase 1 do workflow
+
+**Estado:** aceito em 2026-09-26, com Q1 aprovada e sequência ajustada aos pontos P20/P21/P23/P25–27/P40/P41.
+
+**Proposta do relatório:** implementar `verify:quick`, `verify`, Lefthook, concurrency, permissões, SHA pinning, template de PR, nomes de branch e labels de risco.
+
+**Evidência no Polaris:** `package.json` ainda não declara `verify:quick` nem `verify`; os scripts de check/test atuais são web-only, e as variantes admin/all não formam por si só perfis completos. `lefthook.yml` chama `check`/`test` antes de push. O único workflow mistura CI e dispatch de operações e não declara `concurrency` nem `permissions`; actions usam tags (`@v4`, `@v2`) em vez de SHA completo. Não há template versionado, regra local de nome de branch ou labels de risco confirmados no checkout; configuração remota não foi consultada.
+
+**Dependências e sequência aprovada:** depois de restaurar baseline P22, implementar `verify:quick` e `verify` conforme P20 (workspace inteiro, sem `--affected`). Só depois apontar Lefthook para `verify:quick`, instalar/confirmar o hook e medir duração conforme P21. Separar `ci.yml` e `operations.yml` primeiro conforme P23; então adicionar concurrency somente à CI, sem cancelar jobs de operação e com cancelamento por workflow/PR/ref, confirmando isolamento de E2E antes de cancelar runs que poderiam compartilhar banco (P27). Definir permissões mínimas P25 e SHA pins P26 em todos os workflows antes de ligar production credentials. Atualizações de pins permanecem manuais/agrupadas segundo P53 e P26. Nenhuma dessas regras altera o gate de produção P43.
+
+**PR e branches aprovados:** criar o template único `pull_request_template.md` de P40; registrar no corpo um nível de risco com justificativa segundo P41, sem labels obrigatórias ou gates baseados em label. Branches são curtas, descritivas e relacionadas a uma mudança/PR (P3/P19); não exigir prefixo de tipo, número de ticket nem validação de nome em CI. A convenção fica fora do caminho crítico; ferramentas podem adotar seus próprios prefixos sem torná-los requisito do repositório.
+
+**O que foi ajustado no relatório:** concurrency antes da separação P23 não é a ordem aprovada; `permissions` e SHA pins são controles de workflow e devem preceder credentials; templates/nomes de branch são complementos de revisão, não parte do perfil de verificação; labels de risco contradizem P41.
+
+**Pesquisa de apoio:** [crosswalk do ponto 62 sobre workflow determinístico](research-ponto-62-workflow-sequence.md). GitHub documenta regras de proteção por branch/pattern e templates de PR, mas não define um padrão universal de nomes; exemplos de contribuidores variam por integração/tamanho de equipe.
+
+### Ponto 63 — sequência de consolidação documental
+
+**Estado:** aceito em 2026-09-26, com Q1 aprovada e escopo reconciliado a P7–17/P35–36/P43/P50–51/P58–60.
+
+**Proposta do relatório:** transformar a documentação em fontes previsíveis: índice, frontmatter, CONTEXT/PRODUCT/DESIGN, ADRs, históricos organizados e instruções do agente.
+
+**Evidência no Polaris:** `docs/README.md`, `PRODUCT.md`, `DESIGN.md` e `AGENTS.md` já existem; `CONTEXT.md`, `docs/adr/` e `docs/operations/production-readiness.md` ainda não. Há 111 Markdown sob `docs/`, sem frontmatter YAML inicial no inventário auditado. O repo já possui taxonomia extensa em `docs/architecture`, `business-rules`, `database`, `modules`, `product`, `reports`, `runbooks`, `operations`, `security`, `testing`, `api` e `superpowers`; `aidd_docs/` tem memória e material histórico. Mover `aidd_docs/` quebraria pelo menos uma referência relativa e contraria P14/P50/P51.
+
+**Comparação com Hub:** Hub tem `CONTEXT.md`, `docs/domain`, `docs/integrations`, `docs/reviews`, `docs/archive` e scripts próprios, mas é um monólito com outros limites e já foi constatado que seus índices/estados também têm deriva. Usar princípios de índice/autoridade e vocabulário, sem copiar a árvore ou migrar Polaris para as pastas do Hub.
+
+**Decisão aprovada — ordem:** (1) reconciliar `docs/README.md` e README raiz como mapa de autoridade, incluindo P43; (2) criar o `CONTEXT.md` raiz com vocabulário de domínio validado, sem especificação ou detalhes de implementação; (3) reconciliar `PRODUCT.md` ao brief estratégico P9 e `DESIGN.md` às decisões P35/P36/P58/P59; (4) criar `docs/adr/` e backfill apenas dos três temas aprovados em P11, sem rationale inventado; (5) atualizar `AGENTS.md` com ponteiros concisos ao mapa/manutenção depois que os destinos existirem; (6) rotular fontes e históricos por risco conforme P12/P51; (7) finalizar a expansão de `docs:check` sobre as classes selecionadas, sem impor freshness universal a históricos ou planos; (8) adicionar a exceção única `packages/db/AGENTS.md` somente junto à proteção executável P46.
+
+**Preservação e limites aprovados:** manter `aidd_docs/production-closed-test.md` no local atual com `status: historical` (P50) e preservar a taxonomia documental e os conteúdos existentes. Não mover AIDD para `docs/reviews`/`docs/archive`, não criar `docs/domain`/`docs/integrations` por simetria, não aplicar frontmatter/freshness/owner em massa e não fazer o `AGENTS.md` carregar todos os documentos canônicos a cada tarefa. Não criar `AGENTS.md` em Web/Admin/Events (P17); `packages/db` é a única exceção específica aprovada por P46.
+
+**ADRs e metadados:** backfill limitado a RLS/autorização tenant-plataforma, outbox transacional e adaptadores de billing, usando rationale confirmado. Status/lifecycle e frontmatter aplicam-se apenas às páginas/classe de risco selecionadas; decisões de negócio continuam em DEC-BR, ADRs mantêm seu próprio lifecycle, históricos mantêm local e data de snapshot.
+
+**Pesquisa de apoio:** [crosswalk do ponto 63 sobre sequência documental](research-ponto-63-docs-sequence.md). P63 é reconciliação de decisões já pesquisadas em P7–17, P35–36, P43, P50–51 e P58–60; não exige uma nova migração de taxonomia.
+
+### Ponto 64 — CI e segurança após estabilizar o workflow
+
+**Estado:** aceito em 2026-09-26, com Q1 aprovada e itens reordenados por suas dependências.
+
+**Proposta do relatório:** separar operações, adicionar Dependency Review/CodeQL, artifacts Playwright, Turbo Remote Cache, `--affected`, rever env hashing e alinhar PostgreSQL CI/Production.
+
+**Evidência no Polaris:** só há `.github/workflows/ci.yml`; E2E Web/Admin não fazem upload de reports/traces/screenshots. O workflow não declara Remote Cache ou `--affected`; `turbo.json` tem listas amplas de env pass-through e side effects que P32 precisa auditar. O job PostgreSQL ainda usa 16, embora P54 já tenha aprovado major 18. A baseline P22 deve ser restaurada antes do POC Semgrep P29.
+
+**Decisão aprovada — tarefas anteriores:** a separação de `ci.yml` e `operations.yml`, os perfis de verificação, permissions, SHA pins e concurrency seguem a ordem P61/P62. Alterar e fixar Actions acontece antes de injetar credenciais operacionais; concurrency só cancela CI depois da separação P23. Alinhar o serviço PostgreSQL da CI a 18 é trabalho inicial P54, não item adiado desta fase.
+
+**Decisão aprovada — artifacts e SAST:** implementar artifacts E2E failure-only segundo P55: Web/Admin separados, reports/test-results, trace `retain-on-failure`, screenshot `only-on-failure`, vídeo off inicialmente e retenção de 7 dias, com conteúdo sintético e sem secrets/dumps. Após baseline P22 verde, executar o POC Semgrep Free Edition autogerido aprovado em P29; avaliar cobertura, falsos positivos, duração, termos e dados antes de decidir se o check será obrigatório. Não adicionar Dependency Review nem CodeQL sob as decisões P28/P29 atuais.
+
+**Decisão aprovada — Turbo:** manter `verify:quick` cobrindo o workspace inteiro, sem `--affected`. Reconsiderar somente após medir duração e validar base Git, mudanças locais, dependentes e gates externos (P20/P31). Antes de ativar Vercel Remote Cache P31, completar a auditoria P32 de `env`/`passThroughEnv`, hashes, inputs/outputs, logs, uploads Sentry e side effects; depois configurar owner/team/scope e credenciais CI limitadas. Se os controles não forem adequados, manter cache local e adiar Remote Cache.
+
+**Medição antes de otimizar a infraestrutura de CI:** após CI verde e jobs separados, registrar para alguns PRs representativos duração total, tempo em fila, duração por job (instalação, checks, builds, Playwright/PostgreSQL), consumo mensal de minutos e taxas de cache disponíveis. Esse baseline fundamenta P20/P31/P32 e a eventual comparação de runners do adendo; promessa comercial de velocidade não é medida do Polaris. O GitHub Pro pessoal inclui minutos de Actions, e a cobrança recai sobre o owner do repositório; o orçamento deve ser observado com ele. [GitHub — billing de Actions](https://docs.github.com/en/billing/concepts/product-billing/github-actions).
+
+**Fora desta fase:** não tratar P54 como pendente; não comprar GitHub Code Security nem adicionar Dependency Review/CodeQL; não habilitar Remote Cache antes de P32; não introduzir `--affected` por conveniência; e não compartilhar artifacts E2E de sucesso ou dados de Production.
+
+**Pesquisa de apoio:** [crosswalk do ponto 64 entre CI/segurança e decisões aprovadas](research-ponto-64-ci-security-phase.md). As fontes e avaliações primárias específicas permanecem nos estudos P20–32 e P54–55; P64 é uma consolidação de ordem/dependências.
+
+### Ponto 65 — gate de Production Operations
+
+**Estado:** aceito em 2026-09-26, com Q1 aprovada e escopo condicionado ao lançamento.
+
+**Proposta do relatório:** antes do go-live, provar Vercel Web/Admin, Neon protegido, runtime role/RLS, Staging, OAuth, R2, Upstash, Inngest, Sentry/alerta, Resend, pagamentos, backup/restore, smoke e rollback.
+
+**Evidência no Polaris:** há código de preflight e smokes parciais, mas nenhum deploy Vercel confirmado. O checker de certificação aceita valores declarados e timestamps, não chama os providers; hoje ainda exige campos Asaas/Woovi/R2/Upstash/Sentry mesmo quando um recurso é fora de escopo. O health do Web prova DB reachability, o smoke Google apenas o redirect inicial e Admin `401/403` apenas a proteção externa. R2 health verifica bucket/CORS, não PUT/GET. Backup/restore real ainda não foi implementado; o script de restore drill valida formulário/evidência declarada, não restaura dados.
+
+**Decisão aprovada — autoridade e escopo:** `docs/operations/production-readiness.md` de P43 será o único registro de gates e evidências. Gates-base aplicáveis ao produto — homologação persistente, banco PG18/RLS/runtime role, migrations versionadas, recuperação P44 antes de dados reais, release por SHA e smokes — precisam estar validados. Gates de providers são obrigatórios apenas quando aquela capacidade estiver no lançamento avaliado; caso contrário, P43 registra `fora do escopo/adiado`, motivo e gatilho para reabrir. Corrigir o checker atual para aceitar esse escopo em vez de exigir todos os providers universalmente.
+
+**Sequência aprovada:** (1) definir as capacidades do lançamento e os gates P43; (2) provisionar e completar Staging persistente, com dados sintéticos e serviços sandbox/fake adequados; (3) provar PG18 parity, migrations, runtime role/RLS, OAuth e canários somente para as capacidades aplicáveis; (4) completar PITR/backup cifrado e restore drill em alvo descartável, medir objetivos RPO/RTO e validar recuperação de imagens antes de dados reais; (5) selecionar SHA candidato, executar CI/replay, revisar SQL/compatibilidade e preparar deployments Production staged dos apps afetados; (6) validar o alvo e a prontidão de recuperação, executar a migration de Production como operação separada; (7) validar e promover o deployment ID exato sem rebuild, Web/Admin sequencialmente após todos os candidatos estarem prontos; (8) rodar smoke por app, registrar SHA, migrations, deployments, resultados e deployment anterior no P43. Se a promoção/smoke do segundo app falhar, parar, registrar o estado parcial e recuperar com caminho compatível; rollback do app não reverte migration ou dados.
+
+**Canários e providers:** operações com efeito começam em Staging, com recursos sintéticos isolados. Não gerar pagamentos nem e-mails para clientes para satisfazer checklist. Em Production, somente canário explicitamente necessário, seguro, com escopo e confirmação próprios. Asaas e Woovi são gates separados conforme o meio de pagamento oferecido. Se Woovi estiver no escopo, permanece bloqueada até reconciliar o contrato de assinatura/ping e passar sandbox; se excluída, marcar isso em P43. Para Admin em lançamento, provar separadamente Vercel Authentication P49 e sessão/grant `platform_admin` no app; o health/perímetro não se substituem.
+
+**Pesquisa de apoio:** [crosswalk do ponto 65 sobre readiness de produção](research-ponto-65-production-operations.md). Evidência externa, status e limites dos smokes estão detalhados em P43–P57; nenhum status remoto foi inferido nesta revisão.
+
+### Ponto 66 — fluxo diário e promoção de release
+
+**Estado:** aceito em 2026-09-26, com Q1–Q2 aprovadas.
+
+**Proposta do relatório:** após a fundação, usar branch/worktree de tarefa, teste focal, `verify:quick`, PR para Staging, CI/revisão, merge, deployment/homologação em Staging e release para `main`/Production.
+
+**Evidência no Polaris:** CI triggers currently target push/PR to `main`; no `staging` branch or deploy workflows exist. `verify:quick` is approved in P20 but not implemented; Lefthook remains web-filtered and P21 makes its activation conditional on the verified profile and measured duration. Staging and Vercel/Neon/E2E setup remain conditional on P4/P5. P47/P48 define SHA/deployment identity and non-atomic Web/Admin promotions; they do not approve the report’s branch flow.
+
+**Fluxo diário aprovado:** after P61/P62 prerequisites, `origin/main` → a short task branch → targeted verification → `bun run verify:quick` once implemented (whole workspace, no `--affected`) → PR to `main` → required CI checks → author self-review of diff/evidence → merge. No mandatory human approval; AI review stays optional. Use a worktree only for independent parallel code-writing tasks (P19); sequential tasks use the current task branch and read-only research needs no worktree. Do not require a `staging` branch or automatic staging deployment for every PR.
+
+**Release flow approved:** persistent Staging is an environment required before go-live, but the Git branch/deployment arrangement remains undecided until Vercel, DB, callbacks, and non-production E2E targets are provisioned (P4/P5). Once selected, homologate the release candidate SHA in Staging. If a future `staging` branch is adopted, a merge/rebase/squash into `main` may produce a different SHA; the final SHA on protected `main` must then be re-homologated and must match the SHA deployed/promoted under P47. Follow the P43 readiness register and P45 migration sequence; create/validate staged Production deployments from the selected SHA, promote exact deployment IDs without rebuild when supported, prepare all impacted Web/Admin candidates before the first promotion, and smoke each sequential promotion. If a later app fails, stop, record the partial state and recover compatibly (P48/P65). A Git branch, PR preview, Staging deployment, and Production deployment are distinct states.
+
+**Pesquisa de apoio:** [crosswalk do ponto 66 sobre fluxo diário e release](research-ponto-66-daily-release-flow.md). P66 reaproveita as decisões P3/P4/P5/P19–23/P43/P45/P47–48/P61–62; o fluxo Hub de `staging` é uma referência, não o padrão Polaris atual.
+
+### Ponto 67 — conceitos do Hub a reutilizar
+
+**Estado:** aceito em 2026-09-26, com Q1 aprovada.
+
+**Proposta do relatório:** reaproveitar os conceitos de organização do Hub, sem copiar seus arquivos, porque produto e maturidade operacional são diferentes.
+
+**Evidência/comparação:** a lista P67 agrega decisões já examinadas em P1–P66. Hub usa um monólito com árvore documental, workflows, 17 ADRs e fluxo `staging` próprios; são exemplos locais, não um padrão a transplantar. Parte dos conceitos úteis já está aprovada no Polaris e ainda aguarda implementação.
+
+**Decisão aprovada — classificação:** registrar P67 como mapa dos conceitos e decisões existentes, sem criar uma fase ou tarefas paralelas. Índice/canônicos, `CONTEXT.md`, `PRODUCT.md`, `DESIGN.md`, ADRs seletivos, profiles de verificação, proteção de `main`, workflows CI/operations, migrations separadas, backup/restore, evidência de Production e lifecycle histórico seguem os pontos específicos aprovados. Staging é ambiente obrigatório antes do go-live; branch Git persistente continua condicional a P4/P5. CodeRabbit permanece assistivo; regras na CI significam apenas checks determinísticos aprovados, não codificar toda regra de domínio em YAML.
+
+**Não copiar:** layout Hub de `docs/domain/integrations/reviews/archive`, 17 ADRs, seus onze workflows, `staging` como branch imediata, frontmatter/freshness universal, regras de limpeza de worktrees/branches próprias do Hub, cadência/nome/configuração de backups, regras de LMS, reviewers obrigatórios ou histórico de rollout/hotfix. Cada caminho/controle deve seguir a classificação P60 e as decisões P7–66; nenhum arquivo ou provedor remoto do Hub prova estado do Polaris.
+
+**Pesquisa de apoio:** [crosswalk do ponto 67 entre conceitos do Hub e decisões Polaris](research-ponto-67-hub-transfer.md). O ponto reaproveita auditorias internas do Hub e as decisões P1–66; não traz requisito técnico novo.
+
+### Ponto 68 — limites explícitos para copiar do Hub
+
+**Estado:** aceito em 2026-09-26, com Q1 aprovada.
+
+**Proposta do relatório:** declarar o que não deve ser transplantado do Hub para evitar substituir pouca formalização por burocracia incompatível com o Polaris.
+
+**Decisão aprovada:** usar a relação de P68 como limite negativo do crosswalk P67, não como proibição eterna nem nova fase. Não copiar a quantidade de workflows/documentos/ADRs, diretórios do Hub, conjunto completo de regras AGENTS, cron schedules, topologia Neon, cadência/nome de backup, processo integral de hotfix/reconciliação nem regras do domínio LMS. Aplicar somente a versão Polaris já aprovada: um `operations.yml` inicial e gates seletivos (P23); taxonomia documental atual e metadata/lifecycle por risco (P7/P12/P51/P63); AGENTS raiz e exceção `packages/db` P46 (P17); backup e recovery medidos para P44; Neon/branches definidos por P4/P5/P54; ADRs seletivos P11; release e evidências P43/P45/P47/P48/P65/P66.
+
+**Revisão futura:** qualquer item fora do escopo pode ser reavaliado se surgir uma necessidade concreta, capacidade de plataforma ou risco novo, registrando trade-off e atualizando a decisão aplicável. “Não copiar agora” não apaga os requisitos de segurança, recuperação, prontidão e rastreabilidade que já foram aprovados para o lançamento.
+
+**Pesquisa de apoio:** [crosswalk do ponto 68 sobre itens específicos do Hub não transferidos](research-ponto-68-hub-nontransfer.md). P68 reitera decisões de P4/P7/P11–17/P23–29/P43–51/P57/P60–67; nenhuma estrutura ou configuração remota do Hub foi copiada.
+
+### Ponto 69 — priorização final por dependências
+
+**Estado:** aceito em 2026-09-26, com Q1 aprovada.
+
+**Proposta do relatório:** reduzir as 70 recomendações a dez mudanças de maior retorno, classificadas como P0/P1, antes de voltar a features grandes.
+
+**Evidência e correções:** a tabela P0/P1 mistura blockers de baseline, decisões remotas que dependem da transferência, documentação, gates de Production e otimizações condicionais. “Criar/proteger `staging`” conflita com P4; exigir proteção de `main` antes da transferência e CI verde inverte P3/P22; tirar `aidd_docs/memory` de sua posição de autoridade não significa apagar/mover `aidd_docs` (P14/P50/P51); CodeQL e Dependency Review foram recusados (P28/P29); nested AGENTS são restritos por P17/P46.
+
+**Priorização aprovada — bloqueadores da fundação antes de acelerar features:** corrigir o hook Codex quebrado até que a distribuição Impeccable seja clone-safe; restaurar o baseline P22 sem quarentena; implementar `verify:quick`/`verify` em workspace completo e pre-push conforme P20/P21; alinhar CI a PostgreSQL 18 e concluir upgrades estáveis em batches conforme P2/P52/P54; separar CI/operações e aplicar permissions, SHA pins e concurrency conforme P23–27/P61–64. Após transferência ao irmão e checks verdes, o owner protege `main` conforme P3.
+
+**Governança/documentação paralela à fundação:** reconciliar docs index e autoridade sem mover diretórios; criar o CONTEXT delimitado; fechar PRODUCT/DESIGN; backfill somente ADRs autorizadas e melhorar rastreabilidade de regras; implementar PR template/DoD e `docs:check` seletivo conforme P7–17/P35–42/P50–63. `aidd_docs/` permanece e a leitura de memória/histórico fica seletiva.
+
+**Contratos de ambiente e correções transversais ainda na fundação:** cumprir P5 no contrato local e no `.env.example`: exemplos de Asaas/Woovi devem apontar a sandbox ou exigir escolha explícita de endpoint, e `E2E_DATABASE_URL` deve aparecer como obrigatório para E2E, sem confundir build/CI estático com os jobs que usam DB. Preservar mudanças locais já existentes nesse arquivo ao implementar. Reconciliar a memória arquitetural stale sobre `@polaris/ui` (P37); fechar os aliases que contornam seus exports e ampliar a matriz executável de imports entre apps/packages (P37/P39). Corrigir as divergências temporais concretas de P58/P59 — data civil de estorno, filtro de eventos Admin e formatação de `createdAt` — contra a regra TIME-001 já aprovada. São mudanças de contrato e comportamento verificáveis, não uma nova arquitetura abstrata.
+
+**Gates antes de dados reais e Production:** configurar Staging persistente após P4/P5 e antes do go-live; provar prontidão P43, backup/restore/RPO/RTO P44, migrations P45/P46, PG18 e release SHA/deploy/smoke P47/P48/P54/P65/P66. Gates de provider permanecem limitados às capacidades do lançamento conforme P57; Admin segue P49 quando lançado. Branch Git `staging` não é pré-requisito e só será reavaliada após configuração da infraestrutura.
+
+**Melhorias condicionais, não blockers universais:** artifacts E2E failure-only P55 integram a configuração dos jobs; visual snapshots P56 entram depois do DESIGN P35 e de fixtures determinísticas; o POC Semgrep P29 começa depois de baseline verde e só vira gate se os resultados justificarem; Remote Cache P31 só após auditoria P32 e credenciais/scope limitados; `--affected` só após medir e validar dependentes/gates P20/P31. Não adicionar CodeQL, Dependency Review, labels obrigatórias ou AGENTS por simetria.
+
+**Evidência para encerrar cada frente:** baseline/stack exigem comandos e CI verdes no SHA candidato, com versões estáveis e divergências registradas; workflow/governança exigem PR real com checks requeridos e tentativa controlada de push direto bloqueada depois da transferência; contrato de ambiente exige revisão do exemplo e teste focal dos alvos E2E; arquitetura/tempo exigem testes focais dos invariantes afetados e checks de fronteira; docs exigem leitura de consistência, links e fontes sem duplicação; Production exige as provas externas e o registro P43. As ações externas pertencem ao owner/provedor apropriado e ficam com estado `desconhecido` ou `não provisionado` até confirmação.
+
+**Pesquisa de apoio:** [priorização revisada do ponto 69](research-ponto-69-priorities.md). P69 é a ordem executiva dos pontos P1–68, não uma nova autorização para itens rejeitados nem um ranking de impacto independente de dependências.
+
+### Ponto 70 — critérios de conclusão em dois gates
+
+**Estado:** aceito em 2026-09-26, com Q1 aprovada.
+
+**Proposta do relatório:** declarar o que significa estar organizado para voltar a acelerar desenvolvimento com IA, incluindo proteção de branch, CI, docs, migrations, operações, backup/restore, rollback e SHA rastreável.
+
+**Decisão aprovada — Gate A: pronto para retomar features amplas:** baseline corrigida sem quarentena; `verify:quick`/`verify` do workspace definidos e estáveis; PostgreSQL CI alinhado a PG18; upgrades estáveis autorizados aplicados em batches; CI separado de operações e protegido por permissions/SHA/concurrency aprovadas; PR para `main` e regras remotas configuradas pelo owner após transferência e checks verdes; migrations versionadas/replay em CI e `db:push` restrito ao local; contrato Local/CI e `.env.example` de P5 reconciliados; fronteiras de UI/apps/packages de P37/P39 verificadas; divergências temporais concretas de P58/P59 corrigidas; mapa documental, CONTEXT/PRODUCT/DESIGN, ADRs seletivas, AGENTS e `docs:check` reconciliados conforme P63. Evidência: SHA com gates de CI verdes, verificação focal dos contratos corrigidos, PR que demonstra a regra de `main` e revisão documental consistente. Isso não significa que Staging, Vercel, providers ou restore de Production estejam certificados.
+
+**Decisão aprovada — Gate B: pronto para go-live e dados reais:** persistent Staging provisionado/homologado; P43 com todos os gates aplicáveis validados e os demais explicitamente adiados/fora de escopo com motivo/gatilho; PostgreSQL 18 parity, branch/role/runtime RLS e autenticação real provados; operações de migration Production separadas e target-validated conforme P45/P46; P44 PITR + backup cifrado + restore drill real em alvo descartável com RPO/RTO medidos antes de dados reais; SHA candidato, migrations, deployment IDs/URLs/targets, smoke/evidência sanitizada e deployment anterior registrados conforme P47; candidatos Web/Admin prontos antes da primeira promoção, promoções sequenciais sem rebuild quando suportado e smoke por app conforme P48; perimeter Vercel e autorização in-app Admin validados conforme P49; rollback do app e recuperação de banco descritos/testados sem presumir que rollback de deployment reverta schema/dados. Canários e providers seguem P57, condicionados ao lançamento e sem pagamento/e-mail real de teste.
+
+**Infra e ressalvas:** Staging é um ambiente e deve existir antes do go-live; a branch Git `staging` continua condicional a P4/P5. A Vercel oferece Preview branch e Custom Environment como estratégias distintas, e uma Custom Environment persistente exige plano compatível. A documentação atual também alerta que o primeiro deployment de um projeto é Production e que staged Production usa variáveis/serviços de Production; portanto configurar proteção/domínios/vars antes do primeiro deploy e usar Staging para mutações/canários é parte do Gate B. Não tratar Preview, Staging e staged Production como sinônimos.
+
+**Próximo uso do plano:** este documento conclui a revisão sequencial dos 70 pontos e registra os gates; não os implementa nem verifica estado remoto. A execução pode começar pela ordem P69/P61, com evidências por tarefa e sem declarar Gate B aprovado antes das provas externas P43.
+
+**Pesquisa de apoio:** [crosswalk do ponto 70 entre prontidão de desenvolvimento e go-live](research-ponto-70-readiness-gates.md). Fontes atuais: [Vercel — Environments](https://vercel.com/docs/deployments/environments), [GitHub — Rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets).
+
+## Adendo da revisão integral: ferramentas propostas depois dos 70 pontos
+
+Este adendo avalia Graphify e Blacksmith sem renumerar o relatório original nem alterar decisões aceitas por analogia. A pesquisa local e os limites de cada fonte estão registrados em [auditoria integral](research-revisao-integral.md), [crosscheck externo](research-revisao-crosscheck-externo.md), [Graphify](research-revisao-graphify.md) e [Blacksmith](research-revisao-blacksmith.md).
+
+### Graphify: piloto local de descoberta, sem gate novo
+
+**Decisão de plano:** vale um piloto pequeno depois de estabilizar a fundação documental e as fronteiras P8/P18/P37/P39. Graphify não entra no Gate A/B, na CI nem como fonte canônica agora. Sua saída é um índice derivado para localizar relações, sujeito a confirmação no código, no schema, nos testes e nos documentos canônicos.
+
+**Por quê:** o projeto declara parsing local por AST de TS/TSX, JS, SQL e documentos, grafo consultável por CLI e integração com Codex; essa capacidade pode ajudar no monorepo Web/Admin/packages. É um benefício plausível, ainda não medido no Polaris. A distribuição oficial é o pacote Python `graphifyy`, com comando `graphify`, e adiciona runtime/ferramenta fora da stack Bun. Há issues públicos sobre atualização incremental desincronizada e relações falsas; arestas `INFERRED` não podem ser tratadas como fatos de runtime. O benchmark divulgado é do próprio projeto e não demonstra ganho neste repo. [Graphify — README](https://github.com/Graphify-Labs/graphify), [issue de atualização](https://github.com/Graphify-Labs/graphify/issues/2053), [issue de relações](https://github.com/Graphify-Labs/graphify/issues/2137).
+
+**Piloto verificável:** em checkout isolado, fixar a versão da ferramenta e limitar o corpus a código/documentos não sensíveis; excluir `.env*`, dumps, logs, backups, resultados E2E e outputs gerados. Começar pelo parsing estrutural local, sem backend semântico de docs/mídia ou envio externo. Comparar 8–12 consultas reais sobre auth, tenant/RLS, schema, events/outbox e fronteiras de UI com leitura direta das fontes; registrar falsos positivos/negativos, tempo de construção/consulta e manutenção. Repetir após um rebuild e um update incremental controlado, verificando equivalência das relações relevantes. Se houver ganho líquido e fidelidade suficiente, decidir então instalação da skill Codex no projeto, política de atualização e se algum artefato derivado deve ser versionado; `.agents/` está ignorado no checkout atual, portanto qualquer instalação de projeto precisa ser distribuível e clone-safe conforme P34. Não fazer o agente consultar o grafo por obrigação antes de cada leitura nem distribuir um snapshot que possa envelhecer silenciosamente. Respeitar a proibição local de abrir URL de visualização; avaliar pelos comandos/arquivos textuais.
+
+### Blacksmith: não adotar na topologia GitHub aprovada
+
+**Decisão de plano:** manter runners GitHub-hosted. O [quickstart oficial](https://docs.blacksmith.sh/introduction/quickstart) diz que Blacksmith atende organizações GitHub e não repositórios pessoais. P3 aprovou transferir Polaris para a conta **pessoal** GitHub Pro do irmão; portanto, Blacksmith não é instalável nesse destino. Não mudar a propriedade ou a governança do repo apenas para experimentar runner.
+
+**Trade-off documentado:** Blacksmith anuncia 3.000 minutos gratuitos mensais e Linux x64 a US$ 0,004/min; GitHub Pro inclui 3.000 minutos de Actions e a tarifa publicada de Linux x64 2-core é US$ 0,006/min além da franquia. A alegação de execução 2× mais rápida é do fornecedor e não foi medida no Polaris. O custo em dinheiro pode ser zero com a franquia GitHub; velocidade e orçamento só podem ser julgados após o baseline de duração/uso de P64. A integração Blacksmith também solicita permissões do GitHub App e executaria jobs que hoje incluem operações com secrets; seus [incidentes publicados](https://status.blacksmith.sh/) mostram uma dependência operacional adicional. [Blacksmith — pricing](https://www.blacksmith.sh/pricing), [GitHub — billing](https://docs.github.com/en/billing/concepts/product-billing/github-actions), [Blacksmith — segurança](https://www.blacksmith.sh/security).
+
+**Gatilho de reavaliação:** somente se o repo já migrar para uma organização por motivo independente **e** a medição de P64 mostrar espera/custo relevante. Nesse caso, comparar algumas execuções equivalentes em Ubuntu fixo, primeiro num job de CI sem secrets de produção; conferir cobrança real, tempos frios/quentes, cache, service containers, permissões do app, tratamento de dados e retorno imediato a runner GitHub. Operações com credenciais permanecem no runner atual até revisão separada. Nenhum workflow, secret ou conta será alterado por este adendo.
