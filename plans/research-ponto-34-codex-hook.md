@@ -42,3 +42,7 @@ Fonte: [OpenAI Docs — Hooks](https://learn.chatgpt.com/docs/hooks).
 - Remover a configuração elimina um erro/integração inexistente e mantém clones previsíveis, mas deixa de tentar uma revisão visual automática após cada edição.
 - Torná-lo portátil preserva automação visual, mas exige adicionar e manter um script versionado, cobrir ausência do detector e revalidar a confiança de hooks em Codex.
 - Como o hook atual não roda por falta do target, remover o JSON não retira uma verificação funcional comprovada.
+
+## Execução parcial — 2026-09-26
+
+Na worktree `codex/foundation-hook`, removi `.codex/hooks.json` após confirmar que o único comando apontava a `.agents/skills/impeccable/scripts/hook.mjs`, inexistente e sob uma pasta ignorada pelo Git. Assim, a referência quebrada deixou de ser distribuída. A integração Impeccable em escopo de projeto e sua validação de clone limpo continuam pendentes; esta alteração não as declara concluídas.
