@@ -113,7 +113,7 @@ jobs:
     needs: verify
     services:
       postgres:
-        image: postgres:16
+        image: postgres:18.6
         env:
           POSTGRES_DB: polaris_behavior
           POSTGRES_PASSWORD: postgres

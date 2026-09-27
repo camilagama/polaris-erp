@@ -338,6 +338,17 @@ describe("CI workflow", () => {
     expect(workflow).toMatch(ADMIN_E2E_DATABASE_URL_SECRET_PATTERN);
   });
 
+  it("runs PostgreSQL behavior checks on the current stable PostgreSQL 18 patch", () => {
+    const workflow = readCiWorkflow();
+
+    expect(workflow).toContain("image: postgres:18.6");
+    expect(workflow).not.toContain("image: postgres:16");
+    expect(workflow).toContain("bun run test:postgres");
+    expect(workflow).toContain(
+      '--health-cmd "pg_isready -U postgres -d polaris_behavior"'
+    );
+  });
+
   it("documents production preflight envs in the env example", () => {
     const envExample = readEnvExample();
 
