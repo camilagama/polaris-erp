@@ -148,8 +148,8 @@ describe("CI workflow", () => {
     };
     const bunVersion = packageJson.packageManager?.replace("bun@", "");
 
-    expect(bunVersion).toBe("1.3.11");
-    expect(workflow).toContain("bun-version: 1.3.11");
+    expect(bunVersion).toBe("1.4.2");
+    expect(workflow).toContain("bun-version: 1.4.2");
     expect(workflow).not.toContain("bun-version: latest");
   });
 
