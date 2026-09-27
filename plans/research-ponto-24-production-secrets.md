@@ -34,4 +34,21 @@ P23 constatou que o Hub também separa CI e operações. A auditoria específica
 4. **Permissões:** default mínimo para `GITHUB_TOKEN` e elevar apenas no job que demonstrar necessidade. Não usar permissão de escrita no workflow inteiro por conveniência.
 5. **Plano:** criar e configurar o Environment em Settings após a transferência para a conta Pro, antes de cadastrar credentials ou referenciá-lo no YAML. Não inventar reviewer approval obrigatório; a política Pro privada e a decisão P3 são sem aprovação humana.
 
-**Limites:** não li valores de secrets nem consultei a configuração remota de GitHub Environments; o repo atual ainda não está publicado/conectado à Vercel conforme o usuário. Nenhum workflow foi executado.
+**Limites do levantamento inicial:** nenhum valor de secret foi lido. À época, a configuração remota de Environments não tinha sido consultada; essa lacuna foi preenchida na revalidação read-only datada abaixo. Vercel ainda não está conectada conforme o usuário. Nenhum workflow operacional foi executado.
+
+## Revalidação documental e estado remoto — 2026-09-27
+
+P23 foi implementado desde a auditoria original: `ci.yml` agora cobre push/PR; `operations.yml` tem uma escolha única de operação, guardas de `main`, nenhum `secrets.*` nem `environment:` e strings vazias para os campos de conexão/URL. O job `production-preflight` mantém os nomes do contrato para `env:check`, mas todos os campos que poderiam conectar a Production/E2E/RLS ou invocar integrações estão vazios. RLS e os dois smoke jobs também recebem URLs vazias. Os scripts foram executados com esses campos ausentes e falharam em suas validações de configuração antes de conectar ou fazer requisições. Os checklists continuam usando `vars` e não fazem operações em serviços.
+
+Consultas remotas read-only via GitHub CLI retornaram:
+
+- Repository: `juniordinizm/polaris-erp`, privado, `viewerPermission: ADMIN`; o owner atual ainda não é a conta do irmão.
+- Branch `main`: `protected: false`.
+- Environment `Production`: existe, mas `protection_rules: []` e `deployment_branch_policy: null`.
+- Environment secrets e variables: `total_count: 0` para ambos. Foram consultados apenas metadados/contagens; nenhum valor de secret foi acessado.
+
+A documentação oficial confirma que ambientes, secrets e branch deployment rules de repositórios privados exigem GitHub Pro/Team/Enterprise; em um repositório pessoal, apenas o owner pode configurar o Environment. Os secrets só ficam disponíveis a jobs que referenciam o Environment depois que as regras aplicáveis passam. [Managing environments](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments), [Deployments and environments](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments), [Secrets reference](https://docs.github.com/en/actions/reference/security/secrets).
+
+Também confirmamos um risco de ordem: se um workflow referenciar um Environment ausente, o GitHub pode criá-lo sem regras ou secrets. O Environment `Production` existe, mas seu estado remoto atual não tem proteção ou secrets; referenciá-lo agora não fornece o isolamento aprovado. [Managing environments](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments).
+
+**Conclusão para execução:** manter P23 como fail-closed e não introduzir `environment: production` nem mapear credenciais ainda. P24 fica condicionado à transferência já aprovada para a conta Pro, à proteção de `main` segundo P3 e à configuração/validação owner-side da allowlist de branch/tag no Environment `Production`. Depois, mapear cada credential apenas ao job que a consome e revalidar alvos de banco, smoke, E2E e integrações segundo P4/P5/P43. Required reviewers não entram: há um único revisor e a política do plano privado não os disponibiliza.
