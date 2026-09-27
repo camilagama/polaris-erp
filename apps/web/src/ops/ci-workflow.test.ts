@@ -5,6 +5,9 @@ import { describe, expect, it } from "vitest";
 const CI_WORKFLOW_PATH = fileURLToPath(
   new URL("../../../../.github/workflows/ci.yml", import.meta.url)
 );
+const OPERATIONS_WORKFLOW_PATH = fileURLToPath(
+  new URL("../../../../.github/workflows/operations.yml", import.meta.url)
+);
 const CI_WORKFLOW_TEST_PATH = fileURLToPath(
   new URL("./ci-workflow.test.ts", import.meta.url)
 );
@@ -46,6 +49,8 @@ const PRODUCTION_READINESS_PLAN_PATH = fileURLToPath(
 );
 
 const readCiWorkflow = () => readFileSync(CI_WORKFLOW_PATH, "utf8");
+const readOperationsWorkflow = () =>
+  readFileSync(OPERATIONS_WORKFLOW_PATH, "utf8");
 const readDeployRunbook = () => readFileSync(DEPLOY_RUNBOOK_PATH, "utf8");
 const readEnvExample = () => readFileSync(ENV_EXAMPLE_PATH, "utf8");
 const readManualBillingSop = () =>
@@ -91,16 +96,6 @@ const listActiveSourceFiles = (directoryPath: string): string[] => {
   return files;
 };
 
-const RLS_DATABASE_URL_SECRET_PATTERN =
-  /DATABASE_URL:\s*\$\{\{\s*secrets\.RLS_DATABASE_URL\s*\}\}/;
-const PRODUCTION_PREFLIGHT_DATABASE_URL_SECRET_PATTERN =
-  /DATABASE_URL:\s*\$\{\{\s*secrets\.PRODUCTION_DATABASE_URL\s*\}\}/;
-const DEPLOYMENT_SMOKE_URL_SECRET_PATTERN =
-  /DEPLOYMENT_SMOKE_URL:\s*\$\{\{\s*secrets\.DEPLOYMENT_SMOKE_URL\s*\}\}/;
-const INTERNAL_R2_HEALTH_SECRET_PATTERN =
-  /INTERNAL_R2_HEALTH_SECRET:\s*\$\{\{\s*secrets\.INTERNAL_R2_HEALTH_SECRET\s*\}\}/;
-const ADMIN_DEPLOYMENT_SMOKE_URL_SECRET_PATTERN =
-  /ADMIN_DEPLOYMENT_SMOKE_URL:\s*\$\{\{\s*secrets\.ADMIN_DEPLOYMENT_SMOKE_URL\s*\}\}/;
 const ADMIN_E2E_DATABASE_URL_SECRET_PATTERN =
   /admin-e2e:[\s\S]*E2E_DATABASE_URL:\s*\$\{\{\s*secrets\.ADMIN_E2E_DATABASE_URL\s*\}\}/;
 const REMOVED_ADMIN_PERIMETER_ENV_PATTERN = /CLOUD[F]LARE_ACCESS/;
@@ -143,6 +138,7 @@ const REMOVED_VERCEL_CRON_TOKENS = [
 describe("CI workflow", () => {
   it("pins Bun in CI to the packageManager version", () => {
     const workflow = readCiWorkflow();
+    const operationsWorkflow = readOperationsWorkflow();
     const packageJson = JSON.parse(readPackageJson()) as {
       packageManager?: string;
     };
@@ -151,78 +147,94 @@ describe("CI workflow", () => {
     expect(bunVersion).toBe("1.4.2");
     expect(workflow).toContain("bun-version: 1.4.2");
     expect(workflow).not.toContain("bun-version: latest");
+    expect(operationsWorkflow).toContain("bun-version: 1.4.2");
+    expect(operationsWorkflow).not.toContain("bun-version: latest");
   });
 
-  it("exposes RLS smoke as a manual secret-gated job", () => {
-    const workflow = readCiWorkflow();
+  it("keeps manual operations separate, single-selected, main-only, and without credentials", () => {
+    const ciWorkflow = readCiWorkflow();
+    const operationsWorkflow = readOperationsWorkflow();
+    const operations = [
+      "rls-smoke",
+      "restore-drill-checklist",
+      "production-certification-checklist",
+      "deployment-smoke",
+      "admin-deployment-smoke",
+      "production-preflight",
+    ];
 
-    expect(workflow).toContain("workflow_dispatch:");
+    expect(ciWorkflow).not.toContain("workflow_dispatch:");
+    expect(ciWorkflow).not.toContain("production-preflight:");
+    expect(operationsWorkflow).toContain("workflow_dispatch:");
+    expect(operationsWorkflow).toContain("type: choice");
+    expect(operationsWorkflow).toContain("required: true");
+    expect(operationsWorkflow).toContain("default: select-operation");
+    expect(operationsWorkflow).toContain("- select-operation");
+    expect(operationsWorkflow).toContain("refs/heads/main");
+    expect(operationsWorkflow).toContain("Select one operation");
+    expect(operationsWorkflow).not.toContain("  push:");
+    expect(operationsWorkflow).not.toContain("  pull_request:");
+    expect(operationsWorkflow).not.toContain("secrets.");
+    expect(operationsWorkflow).not.toContain("environment:");
+
+    for (const operation of operations) {
+      expect(ciWorkflow).not.toContain(`${operation}:`);
+      expect(operationsWorkflow).toContain(`${operation}:`);
+      expect(operationsWorkflow).toContain(
+        `inputs.operation == '${operation}'`
+      );
+      expect(operationsWorkflow).toContain(
+        `if: \${{ github.ref == 'refs/heads/main' && inputs.operation == '${operation}' }}`
+      );
+    }
+
+    expect(operationsWorkflow).toContain(
+      `if: \${{ github.ref != 'refs/heads/main' || inputs.operation == 'select-operation' }}`
+    );
+  });
+
+  it("exposes RLS smoke as a selected operation without a database URL before P24", () => {
+    const workflow = readOperationsWorkflow();
+
     expect(workflow).toContain("rls-smoke:");
-    expect(workflow).toContain("github.event_name == 'workflow_dispatch'");
-    expect(workflow).toContain("secrets.RLS_DATABASE_URL");
-    expect(workflow).toMatch(RLS_DATABASE_URL_SECRET_PATTERN);
+    expect(workflow).toContain("inputs.operation == 'rls-smoke'");
     expect(workflow).toContain("bun run db:smoke:rls");
+    expect(workflow).toContain('DATABASE_URL: ""');
+    expect(workflow).not.toContain("secrets.RLS_DATABASE_URL");
   });
 
-  it("exposes production preflight as a manual secret-gated job", () => {
-    const workflow = readCiWorkflow();
+  it("exposes production preflight from operations without production secrets yet", () => {
+    const workflow = readOperationsWorkflow();
 
     expect(workflow).toContain("production-preflight:");
-    expect(workflow).toContain("github.event_name == 'workflow_dispatch'");
+    expect(workflow).toContain("inputs.operation == 'production-preflight'");
     expect(workflow).toContain("bun run prod:preflight");
-    expect(workflow).toContain("secrets.PRODUCTION_DATABASE_URL");
-    expect(workflow).toContain("secrets.PRODUCTION_DATABASE_URL_DIRECT");
-    expect(workflow).toContain("secrets.ADMIN_APP_URL");
     expect(workflow).toContain("vars.SUPPORT_EMAIL");
+    expect(workflow).toContain('DATABASE_URL: ""');
+    expect(workflow).toContain('DATABASE_URL_DIRECT: ""');
+    expect(workflow).toContain('RLS_DATABASE_URL: ""');
+    expect(workflow).toContain('DEPLOYMENT_SMOKE_URL: ""');
     expect(workflow).not.toMatch(REMOVED_ADMIN_PERIMETER_ENV_PATTERN);
-    expect(workflow).toContain("secrets.PRODUCTION_BETTER_AUTH_URL");
-    expect(workflow).toContain("secrets.PRODUCTION_NEXT_PUBLIC_APP_URL");
-    expect(workflow).toContain("secrets.GOOGLE_CLIENT_ID");
-    expect(workflow).toContain("secrets.GOOGLE_CLIENT_SECRET");
-    expect(workflow).toContain("secrets.INNGEST_EVENT_KEY");
-    expect(workflow).toContain("secrets.INNGEST_SIGNING_KEY");
-    expect(workflow).toContain("secrets.NEXT_PUBLIC_GOOGLE_CLIENT_ID");
-    expect(workflow).toContain("secrets.UPSTASH_REDIS_REST_URL");
-    expect(workflow).toContain("secrets.UPSTASH_REDIS_REST_TOKEN");
-    expect(workflow).toContain("secrets.R2_ACCOUNT_ID");
-    expect(workflow).toContain("secrets.R2_ACCESS_KEY_ID");
-    expect(workflow).toContain("secrets.R2_SECRET_ACCESS_KEY");
-    expect(workflow).toContain("secrets.R2_BUCKET_STAGING");
-    expect(workflow).toContain("secrets.R2_BUCKET_FINAL");
-    expect(workflow).toContain("secrets.SENTRY_DSN");
-    expect(workflow).toContain("secrets.NEXT_PUBLIC_SENTRY_DSN");
-    expect(workflow).toContain("secrets.DEPLOYMENT_SMOKE_URL");
-    expect(workflow).toContain("secrets.E2E_DATABASE_URL");
-    expect(workflow).toContain("secrets.RLS_DATABASE_URL");
-    expect(workflow).toMatch(PRODUCTION_PREFLIGHT_DATABASE_URL_SECRET_PATTERN);
-    expect(workflow).toMatch(DEPLOYMENT_SMOKE_URL_SECRET_PATTERN);
+    expect(workflow).not.toContain("secrets.");
   });
 
-  it("exposes deployment smoke as a manual secret-gated job", () => {
-    const workflow = readCiWorkflow();
+  it("exposes deployment smoke operations without connecting them before P24", () => {
+    const workflow = readOperationsWorkflow();
 
     expect(workflow).toContain("deployment-smoke:");
-    expect(workflow).toContain("github.event_name == 'workflow_dispatch'");
+    expect(workflow).toContain("inputs.operation == 'deployment-smoke'");
     expect(workflow).toContain("bun run deploy:smoke");
-    expect(workflow).toContain("secrets.DEPLOYMENT_SMOKE_URL");
-    expect(workflow).toContain("secrets.INTERNAL_R2_HEALTH_SECRET");
-    expect(workflow).toMatch(DEPLOYMENT_SMOKE_URL_SECRET_PATTERN);
-    expect(workflow).toMatch(INTERNAL_R2_HEALTH_SECRET_PATTERN);
-  });
-
-  it("exposes admin deployment smoke as a manual Vercel-protection aware job", () => {
-    const workflow = readCiWorkflow();
-
+    expect(workflow).toContain('DEPLOYMENT_SMOKE_URL: ""');
+    expect(workflow).toContain('INTERNAL_R2_HEALTH_SECRET: ""');
     expect(workflow).toContain("admin-deployment-smoke:");
-    expect(workflow).toContain("github.event_name == 'workflow_dispatch'");
+    expect(workflow).toContain("inputs.operation == 'admin-deployment-smoke'");
     expect(workflow).toContain("bun run deploy:smoke:admin");
-    expect(workflow).toContain("secrets.ADMIN_DEPLOYMENT_SMOKE_URL");
     expect(workflow).toContain("vars.ADMIN_DEPLOYMENT_SMOKE_PROTECTED");
-    expect(workflow).toMatch(ADMIN_DEPLOYMENT_SMOKE_URL_SECRET_PATTERN);
+    expect(workflow).toContain('ADMIN_DEPLOYMENT_SMOKE_URL: ""');
   });
 
   it("exposes restore drill evidence as a manual checklist job", () => {
-    const workflow = readCiWorkflow();
+    const workflow = readOperationsWorkflow();
 
     expect(workflow).toContain("restore-drill-checklist:");
     expect(workflow).toContain("bun run ops:restore-drill:checklist");
@@ -233,7 +245,7 @@ describe("CI workflow", () => {
   });
 
   it("exposes production certification evidence as a manual checklist job", () => {
-    const workflow = readCiWorkflow();
+    const workflow = readOperationsWorkflow();
     const packageJson = JSON.parse(readPackageJson()) as {
       scripts?: Record<string, string>;
     };

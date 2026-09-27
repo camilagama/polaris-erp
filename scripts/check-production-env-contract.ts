@@ -18,7 +18,7 @@ export const getProductionPreflightWorkflowSection = (
 
   if (jobStart === -1) {
     throw new Error(
-      "CI workflow does not define the production-preflight job."
+      "Operations workflow does not define the production-preflight job."
     );
   }
 
@@ -37,7 +37,7 @@ const formatMissingVariables = (variables: readonly string[]): string =>
 const main = (): void => {
   const exampleEnv = readFileSync(join(workspaceRoot, ".env.example"), "utf8");
   const workflow = readFileSync(
-    join(workspaceRoot, ".github/workflows/ci.yml"),
+    join(workspaceRoot, ".github/workflows/operations.yml"),
     "utf8"
   );
   const exampleVariables = collectVariableNames(
@@ -69,7 +69,7 @@ const main = (): void => {
 
   if (missingFromWorkflow.length > 0) {
     errors.push(
-      `production-preflight CI env is missing: ${formatMissingVariables(missingFromWorkflow)}`
+      `production-preflight operations env is missing: ${formatMissingVariables(missingFromWorkflow)}`
     );
   }
 

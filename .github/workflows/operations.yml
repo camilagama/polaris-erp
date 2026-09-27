@@ -1,0 +1,201 @@
+name: Operations
+
+# Keep production credentials out until P24 configures the private Environment and ref policy.
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Select one operation to run from main.
+        required: true
+        default: select-operation
+        type: choice
+        options:
+          - select-operation
+          - rls-smoke
+          - restore-drill-checklist
+          - production-certification-checklist
+          - deployment-smoke
+          - admin-deployment-smoke
+          - production-preflight
+
+jobs:
+  validate-dispatch:
+    if: ${{ github.ref != 'refs/heads/main' || inputs.operation == 'select-operation' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require the main ref
+        if: ${{ github.ref != 'refs/heads/main' }}
+        run: |
+          echo "::error::Operations can only run from refs/heads/main."
+          exit 1
+
+      - name: Require an explicit operation
+        if: ${{ inputs.operation == 'select-operation' }}
+        run: |
+          echo "::error::Select one operation before dispatching this workflow."
+          exit 1
+
+  rls-smoke:
+    if: ${{ github.ref == 'refs/heads/main' && inputs.operation == 'rls-smoke' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: RLS runtime smoke
+        run: bun run db:smoke:rls
+        env:
+          DATABASE_URL: ""
+
+  restore-drill-checklist:
+    if: ${{ github.ref == 'refs/heads/main' && inputs.operation == 'restore-drill-checklist' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Restore drill evidence checklist
+        run: bun run ops:restore-drill:checklist
+        env:
+          RESTORE_DRILL_CONFIRMED_AT: ${{ vars.RESTORE_DRILL_CONFIRMED_AT }}
+          RESTORE_DRILL_SOURCE_BRANCH: ${{ vars.RESTORE_DRILL_SOURCE_BRANCH }}
+          RESTORE_DRILL_RESTORE_BRANCH: ${{ vars.RESTORE_DRILL_RESTORE_BRANCH }}
+          RESTORE_DRILL_VALIDATED_BY: ${{ vars.RESTORE_DRILL_VALIDATED_BY }}
+
+  production-certification-checklist:
+    if: ${{ github.ref == 'refs/heads/main' && inputs.operation == 'production-certification-checklist' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Production certification evidence checklist
+        run: bun run ops:production-certification:checklist
+        env:
+          PRODUCTION_CERT_ADMIN_VERCEL_AUTH_AT: ${{ vars.PRODUCTION_CERT_ADMIN_VERCEL_AUTH_AT }}
+          PRODUCTION_CERT_ADMIN_VERCEL_OUTSIDE_ROOT_INCLUDED: ${{ vars.PRODUCTION_CERT_ADMIN_VERCEL_OUTSIDE_ROOT_INCLUDED }}
+          PRODUCTION_CERT_ADMIN_VERCEL_ROOT_DIRECTORY: ${{ vars.PRODUCTION_CERT_ADMIN_VERCEL_ROOT_DIRECTORY }}
+          PRODUCTION_CERT_ASAAS_SANDBOX_AT: ${{ vars.PRODUCTION_CERT_ASAAS_SANDBOX_AT }}
+          PRODUCTION_CERT_INNGEST_SYNC_AT: ${{ vars.PRODUCTION_CERT_INNGEST_SYNC_AT }}
+          PRODUCTION_CERT_INNGEST_RECONCILE_CRON: ${{ vars.PRODUCTION_CERT_INNGEST_RECONCILE_CRON }}
+          PRODUCTION_CERT_INNGEST_RECONCILE_FUNCTION_ID: ${{ vars.PRODUCTION_CERT_INNGEST_RECONCILE_FUNCTION_ID }}
+          PRODUCTION_CERT_MANUAL_BILLING_SLA_HOURS: ${{ vars.PRODUCTION_CERT_MANUAL_BILLING_SLA_HOURS }}
+          PRODUCTION_CERT_MANUAL_BILLING_SOP_AT: ${{ vars.PRODUCTION_CERT_MANUAL_BILLING_SOP_AT }}
+          PRODUCTION_CERT_NEON_POOLER_ENABLED: ${{ vars.PRODUCTION_CERT_NEON_POOLER_ENABLED }}
+          PRODUCTION_CERT_NEON_PRODUCTION_BRANCH_PROTECTED: ${{ vars.PRODUCTION_CERT_NEON_PRODUCTION_BRANCH_PROTECTED }}
+          PRODUCTION_CERT_PROVIDER_SANDBOX_AT: ${{ vars.PRODUCTION_CERT_PROVIDER_SANDBOX_AT }}
+          PRODUCTION_CERT_QUERY_PLAN_AT: ${{ vars.PRODUCTION_CERT_QUERY_PLAN_AT }}
+          PRODUCTION_CERT_QUERY_PLAN_MIN_ROWS: ${{ vars.PRODUCTION_CERT_QUERY_PLAN_MIN_ROWS }}
+          PRODUCTION_CERT_QUERY_PLAN_SEARCH_TERM: ${{ vars.PRODUCTION_CERT_QUERY_PLAN_SEARCH_TERM }}
+          PRODUCTION_CERT_R2_HEALTH_AT: ${{ vars.PRODUCTION_CERT_R2_HEALTH_AT }}
+          PRODUCTION_CERT_RESTORE_DRILL_AT: ${{ vars.PRODUCTION_CERT_RESTORE_DRILL_AT }}
+          PRODUCTION_CERT_RESTORE_DRILL_SOURCE_BRANCH: ${{ vars.PRODUCTION_CERT_RESTORE_DRILL_SOURCE_BRANCH }}
+          PRODUCTION_CERT_RESTORE_DRILL_RESTORE_BRANCH: ${{ vars.PRODUCTION_CERT_RESTORE_DRILL_RESTORE_BRANCH }}
+          PRODUCTION_CERT_RLS_FORCED_TABLES: ${{ vars.PRODUCTION_CERT_RLS_FORCED_TABLES }}
+          PRODUCTION_CERT_SENTRY_ALERT_AT: ${{ vars.PRODUCTION_CERT_SENTRY_ALERT_AT }}
+          PRODUCTION_CERT_SENTRY_EVENT_ID: ${{ vars.PRODUCTION_CERT_SENTRY_EVENT_ID }}
+          PRODUCTION_CERT_UPSTASH_RATE_LIMIT_AT: ${{ vars.PRODUCTION_CERT_UPSTASH_RATE_LIMIT_AT }}
+          PRODUCTION_CERT_VALIDATED_BY: ${{ vars.PRODUCTION_CERT_VALIDATED_BY }}
+          PRODUCTION_CERT_WOOVI_SANDBOX_AT: ${{ vars.PRODUCTION_CERT_WOOVI_SANDBOX_AT }}
+
+  deployment-smoke:
+    if: ${{ github.ref == 'refs/heads/main' && inputs.operation == 'deployment-smoke' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Deployment HTTP smoke
+        run: bun run deploy:smoke
+        env:
+          DEPLOYMENT_SMOKE_URL: ""
+          INTERNAL_R2_HEALTH_SECRET: ""
+
+  admin-deployment-smoke:
+    if: ${{ github.ref == 'refs/heads/main' && inputs.operation == 'admin-deployment-smoke' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Admin deployment HTTP smoke
+        run: bun run deploy:smoke:admin
+        env:
+          ADMIN_DEPLOYMENT_SMOKE_URL: ""
+          ADMIN_DEPLOYMENT_SMOKE_PROTECTED: ${{ vars.ADMIN_DEPLOYMENT_SMOKE_PROTECTED }}
+
+  production-preflight:
+    if: ${{ github.ref == 'refs/heads/main' && inputs.operation == 'production-preflight' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Production preflight
+        run: bun run prod:preflight
+        env:
+          ADMIN_APP_URL: ""
+          ADMIN_BETTER_AUTH_SECRET: ""
+          ADMIN_GOOGLE_CLIENT_ID: ""
+          ADMIN_GOOGLE_CLIENT_SECRET: ""
+          BETTER_AUTH_SECRET: ""
+          BETTER_AUTH_URL: ""
+          DATABASE_URL: ""
+          DATABASE_URL_DIRECT: ""
+          DEPLOYMENT_SMOKE_URL: ""
+          E2E_DATABASE_URL: ""
+          GOOGLE_CLIENT_ID: ""
+          GOOGLE_CLIENT_SECRET: ""
+          INNGEST_EVENT_KEY: ""
+          INNGEST_SIGNING_KEY: ""
+          INTERNAL_R2_HEALTH_SECRET: ""
+          NEXT_PUBLIC_APP_URL: ""
+          NEXT_PUBLIC_GOOGLE_CLIENT_ID: ""
+          NEXT_PUBLIC_SENTRY_DSN: ""
+          PRODUCT_IMAGE_RECONCILE_SECRET: ""
+          R2_ACCESS_KEY_ID: ""
+          R2_ACCOUNT_ID: ""
+          R2_BUCKET_FINAL: ""
+          R2_BUCKET_STAGING: ""
+          R2_SECRET_ACCESS_KEY: ""
+          RLS_DATABASE_URL: ""
+          SENTRY_DSN: ""
+          SUPPORT_EMAIL: ${{ vars.SUPPORT_EMAIL }}
+          UPSTASH_REDIS_REST_TOKEN: ""
+          UPSTASH_REDIS_REST_URL: ""
