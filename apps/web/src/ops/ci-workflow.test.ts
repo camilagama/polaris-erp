@@ -348,6 +348,7 @@ describe("CI workflow", () => {
       "DATABASE_POOL_MAX",
       "DEPLOYMENT_SMOKE_URL",
       "E2E_DATABASE_URL",
+      "POSTGRES_BEHAVIOR_DATABASE_URL",
       "PERFORMANCE_MIN_ROWS",
       "PERFORMANCE_ORGANIZATION_ID",
       "PERFORMANCE_REQUIRE_REPRESENTATIVE",
@@ -495,5 +496,9 @@ describe("CI workflow", () => {
     expect(packageJson.scripts?.["check:all"]).toBe("turbo run check");
     expect(packageJson.scripts?.["typecheck:all"]).toBe("turbo run typecheck");
     expect(packageJson.scripts?.["test:all"]).toBe("turbo run test");
+    expect(packageJson.scripts?.["verify:quick"]).toBe(
+      "bun scripts/verify.ts quick"
+    );
+    expect(packageJson.scripts?.verify).toBe("bun scripts/verify.ts full");
   });
 });

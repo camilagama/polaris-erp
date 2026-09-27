@@ -9,7 +9,7 @@ interface EventsDateFilterProps {
   to: string;
 }
 
-export const eventsDatePresetOptions = [
+const eventsDatePresetOptions = [
   { label: "Últimos 7 dias", value: "last-7-days" },
   { label: "Últimos 30 dias", value: "last-30-days" },
 ];

@@ -10,8 +10,11 @@ const nextWorkflowJobPattern = /\n {2}[a-z][a-z-]*:\n/;
 const collectVariableNames = (source: string, pattern: RegExp): Set<string> =>
   new Set([...source.matchAll(pattern)].map((match) => match[1]));
 
-const getProductionPreflightWorkflowSection = (workflow: string): string => {
-  const jobStart = workflow.indexOf("  production-preflight:\n");
+export const getProductionPreflightWorkflowSection = (
+  workflow: string
+): string => {
+  const normalizedWorkflow = workflow.replaceAll("\r\n", "\n");
+  const jobStart = normalizedWorkflow.indexOf("  production-preflight:\n");
 
   if (jobStart === -1) {
     throw new Error(
@@ -19,10 +22,10 @@ const getProductionPreflightWorkflowSection = (workflow: string): string => {
     );
   }
 
-  const remainingWorkflow = workflow.slice(jobStart + 1);
+  const remainingWorkflow = normalizedWorkflow.slice(jobStart + 1);
   const nextJobOffset = remainingWorkflow.search(nextWorkflowJobPattern);
 
-  return workflow.slice(
+  return normalizedWorkflow.slice(
     jobStart,
     nextJobOffset === -1 ? undefined : jobStart + 1 + nextJobOffset
   );
@@ -75,9 +78,11 @@ const main = (): void => {
   );
 };
 
-try {
-  main();
-} catch (error) {
-  console.error(error instanceof Error ? error.message : error);
-  process.exitCode = 1;
+if (import.meta.main) {
+  try {
+    main();
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : error);
+    process.exitCode = 1;
+  }
 }

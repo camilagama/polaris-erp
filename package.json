@@ -36,6 +36,8 @@
     "typecheck": "turbo run typecheck --filter=@polaris/web",
     "typecheck:admin": "turbo run typecheck --filter=@polaris/admin",
     "typecheck:all": "turbo run typecheck",
+    "verify:quick": "bun scripts/verify.ts quick",
+    "verify": "bun scripts/verify.ts full",
     "fix": "turbo run fix --filter=@polaris/web",
     "prepare": "node scripts/install-git-hooks.mjs",
     "knip": "turbo run knip --filter=@polaris/web",

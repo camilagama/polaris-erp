@@ -1,6 +1,24 @@
 {
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "extends": ["ultracite/biome/core", "ultracite/biome/next"],
+  "formatter": {
+    "lineEnding": "auto"
+  },
+  "javascript": {
+    "formatter": {
+      "lineEnding": "auto"
+    }
+  },
+  "json": {
+    "formatter": {
+      "lineEnding": "auto"
+    }
+  },
+  "css": {
+    "formatter": {
+      "lineEnding": "auto"
+    }
+  },
   "vcs": {
     "enabled": true,
     "clientKind": "git",
