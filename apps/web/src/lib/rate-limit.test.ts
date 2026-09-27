@@ -35,6 +35,7 @@ const stubRequiredEnv = () => {
   vi.stubEnv("BETTER_AUTH_URL", "https://app.example.com");
   vi.stubEnv("NEXT_PUBLIC_APP_URL", "https://app.example.com");
   vi.stubEnv("NODE_ENV", "production");
+  vi.stubEnv("SENTRY_DSN", "https://public@example.com/1");
   vi.stubEnv("UPSTASH_REDIS_REST_URL", "https://upstash.example.com");
   vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "upstash-token");
 };
