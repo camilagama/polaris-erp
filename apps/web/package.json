@@ -19,7 +19,7 @@
     "test": "vitest run",
     "test:postgres": "bun ../../scripts/require-postgres-behavior-database.ts && vitest run src/integrations/asaas/billing-reconciliation.postgres.test.ts",
     "test:e2e": "bun ../../scripts/check-e2e-db-schema.ts && playwright test",
-    "typecheck": "tsc --noEmit --project tsconfig.json",
+    "typecheck": "next typegen && tsc --noEmit --project tsconfig.json",
     "check": "cd ../.. && bun x ultracite check",
     "fix": "cd ../.. && bun x ultracite fix",
     "knip": "cd ../.. && bun x knip",
