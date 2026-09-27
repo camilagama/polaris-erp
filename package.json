@@ -101,7 +101,7 @@
     "turbo": "^2.11.4",
     "typescript": "^6.0.3",
     "ultracite": "^7.8.4",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.11"
   },
   "ignoreScripts": [
     "sharp",
