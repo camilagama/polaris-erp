@@ -26,6 +26,6 @@
     "typecheck": "tsc --noEmit --project tsconfig.json"
   },
   "devDependencies": {
-    "drizzle-kit": "^0.31.10"
+    "drizzle-kit": "^0.31.11"
   }
 }

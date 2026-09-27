@@ -1,34 +1,5 @@
 {
-  "generatedAt": "2026-07-14",
+  "generatedAt": "2026-09-27",
   "owner": "Platform engineering",
-  "reviewBy": "2026-08-14",
-  "acceptedAdvisories": [
-    {
-      "packageName": "@babel/core",
-      "severity": "low",
-      "url": "https://github.com/advisories/GHSA-4x5r-pxfx-6jf8",
-      "exposure": "transitive via @sentry/nextjs bundler plugin; build/instrumentation path only",
-      "mitigation": "Keep Sentry at the latest compatible release and do not process untrusted source maps in local build tooling.",
-      "owner": "Platform engineering",
-      "decision": "temporary acceptance until the Sentry bundler dependency updates"
-    },
-    {
-      "packageName": "esbuild",
-      "severity": "moderate",
-      "url": "https://github.com/advisories/GHSA-67mh-4wv8-2f99",
-      "exposure": "transitive via drizzle-kit and its @esbuild-kit loader; local development and migration tooling only",
-      "mitigation": "Do not expose the local Drizzle/esbuild development server to untrusted networks; re-evaluate with the next compatible drizzle-kit release.",
-      "owner": "Platform engineering",
-      "decision": "temporary acceptance because the loader pins the incompatible 0.18.x series"
-    },
-    {
-      "packageName": "esbuild",
-      "severity": "low",
-      "url": "https://github.com/advisories/GHSA-g7r4-m6w7-qqqr",
-      "exposure": "transitive via drizzle-kit/tsx in local tooling on Windows; not part of deployed Next output",
-      "mitigation": "Run tooling only in trusted workspaces and re-evaluate with the next compatible drizzle-kit release.",
-      "owner": "Platform engineering",
-      "decision": "temporary acceptance because the loader pins an affected 0.27.x series"
-    }
-  ]
+  "acceptedAdvisories": []
 }
