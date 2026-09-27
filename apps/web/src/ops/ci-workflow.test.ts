@@ -98,6 +98,12 @@ const listActiveSourceFiles = (directoryPath: string): string[] => {
 
 const ADMIN_E2E_DATABASE_URL_SECRET_PATTERN =
   /admin-e2e:[\s\S]*E2E_DATABASE_URL:\s*\$\{\{\s*secrets\.ADMIN_E2E_DATABASE_URL\s*\}\}/;
+const TOP_LEVEL_WORKFLOW_PERMISSIONS_PATTERN =
+  /^permissions:\r?\n {2}contents: read$/m;
+const VALIDATE_DISPATCH_NO_TOKEN_PERMISSIONS_PATTERN =
+  / {2}validate-dispatch:\r?\n {4}if:.*\r?\n {4}permissions: \{\}/;
+const PERSIST_CREDENTIALS_DISABLED_PATTERN =
+  /^ {10}persist-credentials: false\r?$/gm;
 const REMOVED_ADMIN_PERIMETER_ENV_PATTERN = /CLOUD[F]LARE_ACCESS/;
 const ACTIVE_SOURCE_EXTENSIONS = new Set([
   ".cjs",
@@ -190,6 +196,35 @@ describe("CI workflow", () => {
 
     expect(operationsWorkflow).toContain(
       `if: \${{ github.ref != 'refs/heads/main' || inputs.operation == 'select-operation' }}`
+    );
+  });
+
+  it("limits workflow tokens to read-only repository contents and avoids persisting checkout credentials", () => {
+    const workflows = [readCiWorkflow(), readOperationsWorkflow()];
+    const ciWorkflow = workflows[0] ?? "";
+    const operationsWorkflow = workflows[1] ?? "";
+
+    for (const workflow of workflows) {
+      expect(workflow).toMatch(TOP_LEVEL_WORKFLOW_PERMISSIONS_PATTERN);
+      expect(workflow).not.toContain("contents: write");
+      expect(workflow).not.toContain("read-all");
+      expect(workflow).not.toContain("write-all");
+    }
+
+    expect(ciWorkflow.match(/^ {6}- uses: actions\/checkout@/gm)).toHaveLength(
+      4
+    );
+    expect(ciWorkflow.match(PERSIST_CREDENTIALS_DISABLED_PATTERN)).toHaveLength(
+      4
+    );
+    expect(
+      operationsWorkflow.match(/^ {6}- uses: actions\/checkout@/gm)
+    ).toHaveLength(6);
+    expect(
+      operationsWorkflow.match(PERSIST_CREDENTIALS_DISABLED_PATTERN)
+    ).toHaveLength(6);
+    expect(operationsWorkflow).toMatch(
+      VALIDATE_DISPATCH_NO_TOKEN_PERMISSIONS_PATTERN
     );
   });
 
