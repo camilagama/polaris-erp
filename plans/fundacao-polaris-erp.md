@@ -582,6 +582,8 @@ P22 satisfaz a pré-condição da baseline: `bun run audit:baseline` passou em 2
 
 **Evidência operacional em 2026-09-27:** `coderabbit review --committed --base-commit 019c3b4 --dir .github/workflows --agent` revisou somente `.github/workflows/semgrep-poc.yml`, concluiu sem findings e sem opção de créditos pagos. Isso prova que a CLI Free funciona neste host para este diff; não prova ausência de defeitos nem disponibilidade em outros hosts.
 
+**Implementação aprovada em 2026-09-27:** `AGENTS.md` agora instrui o agente a usar CodeRabbit CLI em mudanças de alto risco quando instalado/autenticado, revisar apenas o diff relevante, proteger dados sensíveis e validar findings. Se a CLI faltar ou atingir limite, a verificação normal continua; não usar créditos pagos sem autorização. Nenhum GitHub App, `.coderabbit.yaml`, reviewer obrigatório ou gate foi adicionado. O usuário aprovou esta orientação; P30 está implementado.
+
 **Pesquisa de apoio:** [pesquisa do ponto 30 sobre CodeRabbit e Copilot Student](research-ponto-30-coderabbit.md).
 
 ### Ponto 31 — aproveitar melhor o Turborepo
