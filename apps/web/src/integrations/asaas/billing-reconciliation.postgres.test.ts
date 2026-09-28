@@ -77,6 +77,7 @@ behaviorDescribe("Asaas billing reconciliation on PostgreSQL", () => {
       "@polaris/db/tenant-context"
     );
     const payload = {
+      dateCreated: "2026-09-28 12:00:00",
       event: "PAYMENT_RECEIVED",
       id: providerEventId,
       payment: {
