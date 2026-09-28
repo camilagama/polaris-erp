@@ -15,7 +15,6 @@ export interface VerificationStep {
 const REPOSITORY_ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
 
 const SAFE_VERIFY_ENV: Record<string, string> = {
-  ADMIN_E2E_DATABASE_URL: "",
   DATABASE_URL: "",
   DATABASE_URL_DIRECT: "",
   E2E_DATABASE_URL: "",

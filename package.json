@@ -18,9 +18,9 @@
   "scripts": {
     "dev": "turbo run dev --filter=@polaris/web",
     "dev:admin": "turbo run dev --filter=@polaris/admin",
-    "build": "turbo run build --filter=@polaris/web",
-    "build:admin": "turbo run build --filter=@polaris/admin",
-    "build:all": "turbo run build",
+    "build": "bun scripts/run-turbo-build.ts web",
+    "build:admin": "bun scripts/run-turbo-build.ts admin",
+    "build:all": "bun scripts/run-turbo-build.ts all",
     "start": "turbo run start --filter=@polaris/web",
     "start:admin": "turbo run start --filter=@polaris/admin",
     "test": "turbo run test --filter=@polaris/web",
@@ -86,8 +86,8 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@next/env": "16.3.6",
     "@biomejs/biome": "^2.5.3",
+    "@next/env": "16.3.6",
     "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4.3.2",
     "@types/node": "^26.1.0",
@@ -101,7 +101,7 @@
     "lefthook": "^2.1.9",
     "postcss": "8.5.28",
     "tailwindcss": "^4.3.2",
-    "turbo": "^2.11.4",
+    "turbo": "^2.11.5",
     "typescript": "^6.0.3",
     "ultracite": "^7.8.4",
     "vitest": "^4.1.11"

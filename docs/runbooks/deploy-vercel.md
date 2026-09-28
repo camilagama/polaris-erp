@@ -41,10 +41,6 @@ Configure em Production e replique/adapte para Preview:
 | `SENTRY_DSN` | Sentry server-side. |
 | `NEXT_PUBLIC_SENTRY_DSN` | Sentry client-side. |
 | `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN` | Source maps no build. |
-| `SENTRY_TRACES_SAMPLE_RATE` | Opcional. Override server-side de tracing, numero entre `0` e `1`. Padrao: `0.1` em producao, `1` em desenvolvimento. |
-| `NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE` | Opcional. Override client-side de tracing, numero entre `0` e `1`. |
-| `NEXT_PUBLIC_SENTRY_REPLAYS_SESSION_SAMPLE_RATE` | Opcional. Replay de sessoes normais, numero entre `0` e `1`. Padrao: `0`. |
-| `NEXT_PUBLIC_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE` | Opcional. Replay em sessoes com erro, numero entre `0` e `1`. Padrao: `1`. |
 | `ALLOW_PLAYWRIGHT_BOOTSTRAP` | Nunca em producao real; apenas E2E com banco isolado. |
 | `INNGEST_EVENT_KEY` | Chave de eventos do Inngest usada para enviar eventos do outbox em producao. |
 | `INNGEST_SIGNING_KEY` | Chave de assinatura do Inngest usada para autenticar invocacoes cloud da rota `/api/inngest`. |

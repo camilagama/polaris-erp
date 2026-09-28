@@ -61,6 +61,8 @@ O Hub não tem `turbo.json`, Turbo dependency ou Remote Cache; não é precedent
 
 ## Revalidação em 2026-09-28
 
+Esta seção registra a configuração observada **antes da implementação P32**. O estado aplicado ao worktree está registrado ao final do documento.
+
 **Escopo:** inspeção feita somente no worktree `C:\Users\Junior\.codex\worktrees\foundation-hook\polaris-erp`. Buscas cobriram `apps/`, `packages/`, `scripts/` e `.github/`, excluindo qualquer arquivo com nome `.env*`, `node_modules`, saídas de build e `.git`. Nenhum valor de `.env.local`, outro `.env*`, GitHub secret ou credencial foi lido ou impresso. Linhas de teste, docs, workflow e runtime foram classificadas separadamente.
 
 ### Versão e semântica
@@ -137,30 +139,32 @@ A seguir, todas as referências de código/workflow localizadas. “Runtime/cód
 
 `build.inputs` é `[$TURBO_DEFAULT$, ".env*"]`; outputs são `.next/**`, excluindo `.next/cache/**` e `.next/dev/**`. `globalDependencies` adiciona seus paths globais ao hash das tasks, enquanto `inputs` restringe o conjunto de arquivos input da task; não confundir os dois escopos. Referências: [Turborepo configuration](https://turborepo.com/docs/reference/configuration), [environment variables](https://turborepo.com/docs/crafting-your-repository/using-environment-variables).
 
-### Cache, logs e tasks com efeito externo
+### Cache, logs e tasks com efeito externo antes da implementação
 
 - Cacheáveis por padrão (config não define `cache: false`): `build`, `test`, `check`, `typecheck`, `knip`. `test`, `check`, `typecheck`, `knip` definem `outputs: []`: ainda podem ter resultado e logs cacheados e não devem ter efeito necessário preso à execução. `build` armazena `.next/**` com as exclusões indicadas.
 - Explicitamente não cacheáveis: `dev`, `start`, `test:e2e`, `test:postgres`, `fix`, `db:generate`, `db:migrate`, `db:push`, `prod:preflight`, `deploy:smoke`, `db:smoke:rls`, `db:analyze:listings`, `db:studio`. `dev`, `start`, `db:studio` também são persistentes.
 - Não há env allowlist local por task, portanto mesmo as tasks `cache: false` recebem as 53 vars globais. As cacheáveis `test`/`check`/`typecheck`/`knip` podem ainda ter sucesso/falha dependente de pass-through sem hash se seus scripts/ambiente o usarem; nenhum consumidor deve ser entendido como universal.
 - Vercel documenta compartilhamento de artifacts de saída e logs; Turbo recomenda `cache: false` para tasks com side effects. Isso sustenta que cache hit pula efeitos externos que só ocorreriam durante a execução. Fontes primárias: [Vercel Remote Caching](https://vercel.com/docs/monorepos/remote-caching) (atualizada em 2026-08-13) e [Turborepo guidance for side-effect tasks](https://github.com/vercel/turborepo/blob/main/skills/turborepo/references/configuration/gotchas.md).
 
-### Upload de source maps do Sentry
+### Upload de source maps do Sentry antes da implementação
 
 `apps/web/next.config.ts` e `apps/admin/next.config.ts` calculam `sentryCanUpload` pela presença conjunta de `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT`, passam os três para `withSentryConfig` e usam `sourcemaps.disable: !sentryCanUpload`. Assim, o upload de sourcemaps durante `build` é side effect real quando credenciais estão configuradas. Os três nomes estão somente em `globalPassThroughEnv`, não em `globalEnv`/`build.env`; mudança de credencial não invalida o hash. Como `build` é cacheável, cache hit pode restaurar `.next` e omitir upload. Correção futura deve isolar upload em task não cacheável ou desabilitar cache de build no fluxo que exige upload; `passThroughEnv` sozinho não resolve.
 
-### `SAFE_VERIFY_ENV` e consumidores fora da allowlist
+### `SAFE_VERIFY_ENV` e consumidores fora da allowlist antes da implementação
 
 - `scripts/verify.ts` monta child env na ordem `{ ...process.env, ...SAFE_VERIFY_ENV, ...step.env }`. `SAFE_VERIFY_ENV` zera URLs de DB listadas e `TURBO_TEAM`/`TURBO_TOKEN`; um `step.env` específico pode restaurar somente nomes da etapa. O perfil full tem código que pode obter `DATABASE_URL` e `POSTGRES_BEHAVIOR_DATABASE_URL` do `.env.local`; não executamos esse fluxo nem abrimos o arquivo. Builds usam valores sintéticos definidos no próprio script. Nas etapas Turbo de verify, token/time não herdam valores do processo.
 - `ASAAS_CARD_CHECKOUT_ENABLED` está fora das 64 variáveis Turbo. Há consumidor de app em `apps/web/src/app/(app)/configuracoes/page.tsx:52`, que lê `serverEnv` e passa a flag ao painel. A página chama `connection()` na linha 24; a documentação Next instalada define isso como renderização em request-time, então esse fluxo é runtime da aplicação, não uma etapa operacional Turbo. Não recomendar inclusão global; só adicionar escopo específico ao build web se outra leitura provar dependência de build, o que não foi encontrado aqui. Referência: [Next.js connection](https://nextjs.org/docs/app/api-reference/functions/connection).
-- `RLS_SMOKE_EXPECTED_RUNTIME_ROLE` está fora do Turbo e é lida por `scripts/smoke-rls-runtime.cjs`, chamado por `db:smoke:rls` (`cache: false`). A comparação é condicional: se strict mode filtrar o nome, o smoke continua sem validar a identidade esperada. P43 requer provar o runtime role de produção; portanto é uma entrada candidata **escopada a `db:smoke:rls`** quando esse job for implementado, nunca uma allowlist global automática. `.github/workflows/operations.yml` contém `DATABASE_URL` nas linhas 60 e 195 (a linha 60 o deixa vazio, conforme revisão da workflow) e não tem ocorrência do nome esperado do role. `ADMIN_E2E_DATABASE_URL` é zerada em `SAFE_VERIFY_ENV`, não está na allowlist e não teve consumidor runtime literal encontrado na busca.
+- `RLS_SMOKE_EXPECTED_RUNTIME_ROLE` estava fora do Turbo e é lida por `scripts/smoke-rls-runtime.cjs`, chamado por `db:smoke:rls` (`cache: false`). A comparação é condicional. `.github/workflows/operations.yml` contém `DATABASE_URL` nas linhas 60 e 195 (a linha 60 o deixa vazio) e ainda não envia a role esperada. `ADMIN_E2E_DATABASE_URL` era zerada em `SAFE_VERIFY_ENV`; o secret do workflow é mapeado para `E2E_DATABASE_URL`, e não foi encontrado consumidor runtime com o nome original.
 
 ### Fontes primárias consultadas
 
 - [Turborepo — Environment Variables](https://turborepo.com/docs/crafting-your-repository/using-environment-variables)
 - [Turborepo — Configuration reference](https://turborepo.com/docs/reference/configuration)
 - [Turborepo — side effects and cache](https://github.com/vercel/turborepo/blob/main/skills/turborepo/references/configuration/gotchas.md)
+- [Turborepo — cache and `--force`](https://github.com/vercel/turborepo/blob/main/apps/docs/content/docs/crafting-your-repository/caching.mdx)
 - [Vercel — Remote Caching](https://vercel.com/docs/monorepos/remote-caching)
 - [Turborepo v2.11.5 release](https://github.com/vercel/turborepo/releases/tag/v2.11.5)
+- [Bun 1.4.2 — Environment Variables](https://bun.sh/docs/runtime/environment-variables)
 
 ### Confirmação adicional do upload Sentry (2026-09-28)
 
@@ -169,5 +173,22 @@ Condição confirmada pelo código e pela documentação oficial atual:
 - O worktree usa `@sentry/nextjs` 10.65.0 e Next.js 16.3.6. Em ambos `apps/web/next.config.ts` e `apps/admin/next.config.ts`, `sentryCanUpload` exige presença conjunta de `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT`; `withSentryConfig` recebe esses três valores e `sourcemaps.disable` é `!sentryCanUpload`.
 - A doc oficial de Sentry documenta que `withSentryConfig` recebe org, project e auth token; Webpack envia source maps durante as compilações e, com Turbopack, o upload ocorre depois que o build termina (Sentry SDK 10.13.0+ e Next 15.4.1+). Ambos os requisitos de versão são satisfeitos no worktree. Fonte: [Sentry — Next.js source maps](https://github.com/getsentry/sentry-docs/blob/master/platform-includes/sourcemaps/overview/javascript.nextjs.mdx).
 - Confirmação independente no pacote instalado: `node_modules/@sentry/nextjs/build/cjs/config/getBuildPluginOptions.js` encaminha `authToken`, `org`, `project` e a flag `sourcemaps.disable` para o plugin de build; `handleRunAfterProductionCompile.js` invoca `uploadSourcemaps([distDir], ...)` no hook pós-compilação. Isso comprova o side effect externo quando habilitado, sem consultar credenciais.
-- O mesmo módulo instalado define `deleteSourcemapsAfterUpload` como `false` quando a opção não é especificada; ambos `next.config.ts` omitem essa opção. Portanto, source maps podem permanecer dentro de `.next/**`, que é o output atualmente cacheado. A presença e o local exatos dos arquivos no build Polaris não foram verificados porque nenhum build com credenciais Sentry foi executado; confirmar a exclusão/escopo dos mapas antes de compartilhar outputs em Remote Cache. A opção de configuração é documentada em [Sentry — Next.js source maps](https://github.com/getsentry/sentry-docs/blob/master/platform-includes/sourcemaps/overview/javascript.nextjs.mdx).
+- Há uma discrepância no default de `deleteSourcemapsAfterUpload`: o JavaScript instalado usa `?? false`, enquanto a declaração de tipos diz `true` e a documentação atual diz `true` para mapas client-side (mapas server-side permanecem para runtime). Antes do P32, ambas `next.config.ts` omitiam a opção, então `.next/**` podia conter mapas no output cacheável. A presença exata dos arquivos Polaris não foi verificada porque nenhum build com credenciais Sentry foi executado. Fonte: [Sentry — Next.js source maps](https://github.com/getsentry/sentry-docs/blob/master/platform-includes/sourcemaps/overview/javascript.nextjs.mdx).
 - Consequência: se os três nomes forem fornecidos, o upload faz parte da execução de `build`; cache hit do Turborepo restaura outputs/logs sem executar esse código, portanto pode omitir o upload. Se um dos três faltar, as configs desta repo desabilitam source-map upload. Esse achado está confirmado, não apenas inferido pelo nome da opção.
+
+## Estado da implementação P32 em 2026-09-28
+
+- `turbo` foi atualizado de 2.11.4 para 2.11.5. A configuração continua em strict mode, mas já não declara `globalEnv`, `globalPassThroughEnv` nem `globalDependencies`.
+- As 11 variáveis hashadas, incluindo os valores públicos usados no bundle, foram escopadas aos builds Web/Admin. Segredos de build ficam em `passThroughEnv`, sem valor em cache key. `ASAAS_CARD_CHECKOUT_ENABLED` chega apenas a `@polaris/web#dev` e `@polaris/web#start`, pois o consumidor foi confirmado como request-time. `RLS_SMOKE_EXPECTED_RUNTIME_ROLE` só chega a `@polaris/web#db:smoke:rls`; o workflow `operations.yml` ainda não a fornece, então a checagem da identidade permanece inativa nesse job até P43 configurar a variável.
+- Os dois builds Next incluem os `.env*` do workspace e da aplicação no hash; tarefas de outros pacotes não recebem esses inputs. `knip.config.ts` é input somente de `@polaris/web#knip`. `test:postgres` recebe `POSTGRES_BEHAVIOR_DATABASE_URL` e `DATABASE_URL` somente para a guarda que recusa o mesmo alvo. Migração e push recebem `DATABASE_URL_DIRECT` e `DATABASE_URL` para preservar a validação de que as URLs são distintas; geração e Studio recebem apenas `DATABASE_URL_DIRECT`. Testes E2E, preflight, deploy smoke e análise de plano têm listas próprias por consumidor. Os perfis `check`, `typecheck` e `test` não recebem credenciais globais.
+- `scripts/run-next-with-local-env.ts` deixou de sobrescrever valores já definidos pelo processo: isso mantém os placeholders vazios de `scripts/verify.ts` como autoridade e evita que um `.env.local` silenciosamente reative upload Sentry em um build de verificação. Bun 1.4.2 documenta a mesma precedência para `--env-file`.
+- As configs Sentry Web/Admin definem `deleteSourcemapsAfterUpload: true`; isso apaga mapas client-side após upload segundo a documentação atual, mas mapas server-side podem permanecer. Por isso `.next/**/*.map` é excluído dos outputs Turbo em qualquer caso. O comando raiz de build usa `scripts/run-turbo-build.ts`, que detecta o conjunto Sentry completo no ambiente ou nos arquivos env da aplicação selecionada e acrescenta `--force`. O `--force` faz a task executar sem restaurar cache; o Turbo ainda pode escrever os demais outputs no cache. `vercel.json` da raiz chama `bun run build`, então o build Vercel de Web passa pelo wrapper. O projeto Vercel Admin chama o script Next direto e não usa cache Turbo nesse caminho.
+- As quatro sample-rate vars sem consumidor foram removidas do `.env.example` e de `docs/runbooks/deploy-vercel.md`. `aidd_docs/production-closed-test.md` permaneceu inalterado por ser snapshot histórico P50. `ADMIN_E2E_DATABASE_URL` foi removida do `SAFE_VERIFY_ENV`; a CI entrega o secret diretamente como `E2E_DATABASE_URL`.
+- O comentário do workflow CI agora instrui a não injetar credenciais de upload Sentry na CI comum. `SAFE_VERIFY_ENV` continua zerando `TURBO_TEAM` e `TURBO_TOKEN`. Remote Cache permanece desligado conforme P31.
+
+### Verificação e limites
+
+- `bun x turbo --version` retornou `2.11.5`.
+- Dry-runs `--dry=json` de builds Web/Admin, tasks de banco e operações confirmaram a resolução das listas específicas, o cache desabilitado nas tasks operacionais/persistentes, e os outputs do build com as exclusões de cache/dev/source maps.
+- `git diff --check` passou. Nenhum teste ou build foi executado; nenhum arquivo `.env*`, segredo ou credencial foi aberto. Não foi executado build com upload Sentry e não houve conexão ao banco. Portanto a existência física dos `.map` no output do Next, a remoção pós-upload e a ausência de mapas em artifact ainda precisam ser validadas em build controlado antes de ligar Remote Cache.
+- Uso implícito de `INNGEST_EVENT_KEY`/`INNGEST_SIGNING_KEY` no SDK continua inconclusivo; por isso permanecem pass-through apenas em build/dev/start/preflight Web. Esse escopo pode ser reduzido depois de prova por versão do SDK.
