@@ -101,6 +101,8 @@ Before writing Next.js code:
 
 ## Tooling Source of Truth
 
+The toolchain contract is documented in the root README and version manifests: Bun installs dependencies and runs project scripts; Node 24 powers Node-shebang CLIs, the Admin Next launcher, and Vercel runtime. CI reads `.node-version`. When changing the Node major, update `.node-version`, both `engines.node` declarations, and all `setup-node` steps in CI and operations workflows. See README requirements for local Windows setup.
+
 This project uses Ultracite, a zero-config preset built on Biome, for formatting and linting.
 
 Use these commands:
