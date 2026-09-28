@@ -257,7 +257,7 @@ behaviorDescribe("PostgreSQL behavior harness", () => {
       );
       await client.query("BEGIN");
       await client.query("SET LOCAL TIME ZONE 'UTC'");
-      const utcSession = await client.query<{ occurred_on: string }>(
+      const utcSession = await client.query<{ occurred_on: Date }>(
         "INSERT INTO sales (organization_id, idempotency_key) VALUES ($1, $2) RETURNING occurred_on",
         [temporalOrganizationId, "behavior-temporal-utc"]
       );
@@ -265,13 +265,13 @@ behaviorDescribe("PostgreSQL behavior harness", () => {
 
       await client.query("BEGIN");
       await client.query("SET LOCAL TIME ZONE 'America/Sao_Paulo'");
-      const saoPauloSession = await client.query<{ occurred_on: string }>(
+      const saoPauloSession = await client.query<{ occurred_on: Date }>(
         "INSERT INTO sales (organization_id, idempotency_key) VALUES ($1, $2) RETURNING occurred_on",
         [temporalOrganizationId, "behavior-temporal-sao-paulo"]
       );
       await client.query("ROLLBACK");
 
-      expect(utcSession.rows[0]?.occurred_on).toBe(
+      expect(utcSession.rows[0]?.occurred_on).toStrictEqual(
         saoPauloSession.rows[0]?.occurred_on
       );
     } finally {
