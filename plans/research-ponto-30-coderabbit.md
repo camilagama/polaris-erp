@@ -71,3 +71,29 @@ Fontes adicionais: [CodeRabbit planos e limites](https://docs.coderabbit.ai/mana
 - [CodeRabbit planos e limites](https://docs.coderabbit.ai/management/plans)
 - [GitHub protected branches](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches)
 - [GitHub status checks](https://docs.github.com/en/pull-requests/reference/status-checks)
+
+## Revalidação em 2026-09-27
+
+Fontes oficiais consultadas novamente em 2026-09-27. Esta revisão corrige a interpretação anterior sobre Copilot Student e atualiza os limites atuais do CodeRabbit Free.
+
+### CodeRabbit Free: CLI/IDE e GitHub App
+
+- O plano Free aceita repositórios privados e públicos, inclui resumos de PR e oferece revisão por CLI/IDE; a revisão automática de PR pelo GitHub App requer plano pago Essentials ou superior. A página atual informa três revisões CLI por desenvolvedor por hora, até 150 arquivos por revisão; o preço de Essentials é US$ 24/desenvolvedor/mês no anual ou US$ 30 mensal. Não habilitar overage: a configuração de uso por créditos é separada e depende de plano elegível e consentimento. [CodeRabbit — planos e limites](https://docs.coderabbit.ai/management/plans), [CodeRabbit — CLI](https://docs.coderabbit.ai/cli)
+- A revisão CLI é iniciada no checkout local, mas envia o diff/contexto ao serviço e não é uma execução offline. A política de privacidade declara que o código de revisão não é usado para treinar modelos; também descreve armazenamento de dados derivados, como embeddings para melhoria de revisões, com opção de opt-out. Manter secrets, credenciais, dados pessoais e URLs reais fora do conteúdo enviado e confirmar a preferência de armazenamento antes de uso recorrente. [CodeRabbit — Privacy Policy](https://www.coderabbit.ai/privacy-policy), [CodeRabbit — Terms of Service](https://www.coderabbit.ai/legal/terms-of-service)
+- Sem integração CodeRabbit acessível para o repo, o CLI pode usar a modalidade Free limitada; revisão remota sem checkout depende da instalação do repo na organização ativa. Free não habilita review automático do PR privado pelo App. Portanto, não instalar o GitHub App nem adicionar `.coderabbit.yaml` para automatizar PRs nesta decisão. [CodeRabbit — planos](https://docs.coderabbit.ai/management/plans), [CodeRabbit — CLI](https://docs.coderabbit.ai/cli)
+
+### Correção: Copilot Student não inclui Copilot code review
+
+- A documentação vigente classifica Copilot Student como plano gratuito. A página de elegibilidade diz que Copilot code review está disponível nos planos pagos; Student não aparece como elegível na matriz de planos. Logo, Student por si só não permite ao irmão solicitar Copilot como reviewer de PRs de Junior. Reconsiderar apenas se houver uma licença paga ou entitlement organizacional separado, confirmado antes de usar. [GitHub — planos Copilot](https://docs.github.com/en/copilot/get-started/plans), [GitHub — elegibilidade de code review](https://docs.github.com/en/copilot/concepts/agents/code-review)
+- A via sem licença é organizacional: requer plano Copilot Business/Enterprise e políticas explícitas para permitir revisão e cobrança de AI Credits. Não se aplica à conta pessoal GitHub Pro/Copilot Student descrita no plano. Uso manual é atribuído ao solicitante quando ele tem acesso ao recurso. [GitHub — code review e uso](https://docs.github.com/en/copilot/concepts/agents/code-review)
+- A página de políticas pessoais consultada enumera Free, Pro, Pro+ e Max quanto a uso de interações para treinamento; Student não aparece. Não extrapolar essa página para Student: conferir os termos e controles mostrados à conta, caso esse caminho volte a ser avaliado. [GitHub — políticas individuais do Copilot](https://docs.github.com/en/copilot/how-tos/manage-your-account/manage-policies)
+
+### Evidência operacional no Polaris
+
+- Neste ambiente, `coderabbit --version` retornou `0.7.6`; `coderabbit doctor` passou 9/9 verificações e reportou autenticação ativa. A revisão do commit P29, escopada a `.github/workflows/semgrep-poc.yml`, informou que o repo não está conectado a uma organização CodeRabbit acessível e usou a franquia Free.
+- `coderabbit review --committed --base-commit 019c3b4 --dir .github/workflows --agent` terminou com `review_completed`, zero findings e um arquivo revisado. Não foi passado `--use-credits`; o resultado confirma que o fluxo local pode ser chamado neste ambiente, mas uma revisão sem apontamentos não prova ausência de defeitos nem disponibilidade em outros hosts.
+- Não há `.coderabbit.yaml`/`.coderabbit.yml` no Polaris. Não consultei as regras remotas do GitHub, as preferências de retenção CodeRabbit, eventual licença adicional do titular Student ou a disponibilidade de Copilot na interface do PR.
+
+### Recomendação revalidada
+
+Manter CI e critérios de release como autoridade. Usar CodeRabbit Free CLI como segunda opinião sob demanda para mudanças de risco, findings incertos ou pedido explícito; limitar cada revisão ao diff relevante, nunca usar `--use-credits` sem autorização expressa e verificar cada finding. Não contar com Copilot Student como reviewer e não instalar CodeRabbit GitHub App, automatizar revisões de PR ou criar gate. A orientação persistente de invocação pode ficar em `AGENTS.md`, sem duplicar configurações de App; preservar a decisão já aprovada de não exigir aprovação humana nem reviewer de IA.
