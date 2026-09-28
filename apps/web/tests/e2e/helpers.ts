@@ -14,6 +14,7 @@ const e2eUserName = process.env.E2E_NAME ?? "Polaris E2E";
 const e2eBootstrapSecret =
   process.env.E2E_INTERNAL_BOOTSTRAP_SECRET ??
   E2E_DEFAULT_INTERNAL_BOOTSTRAP_SECRET;
+const e2eNavigationTimeoutMs = 15_000;
 
 const createE2EUser = () => {
   const runId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -92,7 +93,7 @@ export const login = async (page: Page) => {
 
   await expect(
     page.getByRole("heading", { name: "Escolha como começar" })
-  ).toBeVisible();
+  ).toBeVisible({ timeout: e2eNavigationTimeoutMs });
   await page
     .getByRole("link", { exact: true, name: "Continuar no Free" })
     .click();
@@ -101,7 +102,7 @@ export const login = async (page: Page) => {
     page.getByRole("heading", {
       name: "Dashboard",
     })
-  ).toBeVisible();
+  ).toBeVisible({ timeout: e2eNavigationTimeoutMs });
 };
 
 export const selectOption = async (
