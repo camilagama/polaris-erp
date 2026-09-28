@@ -104,6 +104,18 @@ const VALIDATE_DISPATCH_NO_TOKEN_PERMISSIONS_PATTERN =
   / {2}validate-dispatch:\r?\n {4}if:.*\r?\n {4}permissions: \{\}/;
 const PERSIST_CREDENTIALS_DISABLED_PATTERN =
   /^ {10}persist-credentials: false\r?$/gm;
+const PINNED_WORKFLOW_REFERENCE_PATTERN = /^[^/@]+\/[^@]+@[a-f0-9]{40}$/i;
+const WORKFLOW_RELEASE_COMMENT_PATTERN = /^v\d+\.\d+\.\d+$/;
+const getExternalWorkflowUses = (workflow: string) =>
+  Array.from(
+    workflow.matchAll(
+      /^\s*(?:-\s*)?uses:\s+([^\s#]+)(?:\s+#\s*([^\s#]+))?\s*$/gm
+    )
+  ).filter((match) => {
+    const reference = match[1] ?? "";
+
+    return !(reference.startsWith("./") || reference.startsWith("docker://"));
+  });
 const REMOVED_ADMIN_PERIMETER_ENV_PATTERN = /CLOUD[F]LARE_ACCESS/;
 const ACTIVE_SOURCE_EXTENSIONS = new Set([
   ".cjs",
@@ -226,6 +238,24 @@ describe("CI workflow", () => {
     expect(operationsWorkflow).toMatch(
       VALIDATE_DISPATCH_NO_TOKEN_PERMISSIONS_PATTERN
     );
+  });
+
+  it("pins every external workflow dependency to a full commit SHA with a release comment", () => {
+    const workflows = [
+      { content: readCiWorkflow(), expectedCount: 8 },
+      { content: readOperationsWorkflow(), expectedCount: 12 },
+    ];
+
+    for (const workflow of workflows) {
+      const externalUses = getExternalWorkflowUses(workflow.content);
+
+      expect(externalUses).toHaveLength(workflow.expectedCount);
+
+      for (const [, reference, version] of externalUses) {
+        expect(reference).toMatch(PINNED_WORKFLOW_REFERENCE_PATTERN);
+        expect(version).toMatch(WORKFLOW_RELEASE_COMMENT_PATTERN);
+      }
+    }
   });
 
   it("exposes RLS smoke as a selected operation without a database URL before P24", () => {
