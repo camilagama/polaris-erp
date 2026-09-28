@@ -1,0 +1,42 @@
+name: Semgrep SAST POC
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-ref:
+    name: Require main for the POC
+    permissions: {}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reject refs other than main
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::The Semgrep POC can only run from refs/heads/main."
+            exit 1
+          fi
+
+  semgrep:
+    name: Semgrep SAST POC (Monitor, non-required)
+    needs: validate-ref
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    # Configure this Environment for the main branch and store SEMGREP_APP_TOKEN there.
+    # Disable Semgrep Managed Scans and AI features; set the project policy to Monitor.
+    environment:
+      name: semgrep-poc
+      deployment: false
+    container:
+      image: semgrep/semgrep:1.178.0@sha256:32e459968daabe7ab86968184a29109b9564aa00392401156f9788452b42786b
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run Semgrep CI
+        run: semgrep ci
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
