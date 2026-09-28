@@ -230,6 +230,10 @@ Biome and Ultracite catch formatting and many mechanical issues. Spend human att
 * User experience.
 * Comments for complex logic only; prefer self-documenting code.
 
+## Assistive Review
+
+For high-risk changes to authentication, tenancy/RLS, billing, webhooks, migrations or GitHub workflows, run `coderabbit review --agent --uncommitted` when the CLI is installed and authenticated; include untracked files with `--include-untracked` and use `--dir` to limit the review when practical. Keep secrets and production data out of review input, and consult `plans/research-ponto-30-coderabbit.md` for current privacy and usage limits. Verify findings against the code; never use `--use-credits` without explicit user approval. If the CLI is unavailable or rate-limited, report the skipped review and continue with the repository's normal verification; CodeRabbit is advisory and never a merge or release gate.
+
 ## Verification Standard
 
 A task is not "done" until one of these is true:
