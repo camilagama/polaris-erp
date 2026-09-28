@@ -63,9 +63,11 @@ const createBehaviorOrganization = async (
 ): Promise<void> => {
   const ownerUserId = organizationOwnerUserId(organizationId);
 
-  await client.query("BEGIN");
+  let transactionOpen = false;
 
   try {
+    await client.query("BEGIN");
+    transactionOpen = true;
     await client.query(
       "INSERT INTO users (id, name, email) VALUES ($1, $2, $3) ON CONFLICT (id) DO NOTHING",
       [ownerUserId, `${name} owner`, `${ownerUserId}@example.test`]
@@ -79,8 +81,11 @@ const createBehaviorOrganization = async (
       [`${organizationId}-owner-membership`, organizationId, ownerUserId]
     );
     await client.query("COMMIT");
+    transactionOpen = false;
   } catch (error) {
-    await client.query("ROLLBACK");
+    if (transactionOpen) {
+      await client.query("ROLLBACK");
+    }
     throw error;
   }
 };

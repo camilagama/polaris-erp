@@ -31,6 +31,7 @@ describe("E2E database environment", () => {
   it("reports missing E2E schema objects before Playwright starts", () => {
     expect(() =>
       assertE2eDatabaseSchema({
+        platformAuditAdminUserId: false,
         platformAdminGrants: false,
         platformAdmins: false,
         salesIdempotencyKey: false,
@@ -38,7 +39,7 @@ describe("E2E database environment", () => {
         sessionsIdUniqueIdx: true,
       })
     ).toThrow(
-      "E2E database schema is outdated: platform_admin_grants, platform_admins, sales.idempotency_key, sales_organization_idempotency_key_unique_idx"
+      "E2E database schema is outdated: platform_audit_events.actor_admin_user_id, platform_admin_grants, platform_admins, sales.idempotency_key, sales_organization_idempotency_key_unique_idx"
     );
   });
 });
