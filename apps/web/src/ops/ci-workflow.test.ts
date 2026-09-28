@@ -61,8 +61,30 @@ const readProductionReadinessPlan = () =>
   readFileSync(PRODUCTION_READINESS_PLAN_PATH, "utf8");
 const readTurboConfig = () => readFileSync(TURBO_CONFIG_PATH, "utf8");
 const readPackageJson = () => readFileSync(PACKAGE_JSON_PATH, "utf8");
+const TOP_LEVEL_WORKFLOW_JOB_PATTERN = /^ {2}[a-z0-9_-]+:$/i;
+const WORKFLOW_LINE_SEPARATOR_PATTERN = /\r?\n/;
 const normalizePath = (filePath: string) =>
   filePath.replaceAll("\\", "/").replace(/\/+/g, "/");
+const getWorkflowJobSection = (workflow: string, jobId: string) => {
+  const lines = workflow.split(WORKFLOW_LINE_SEPARATOR_PATTERN);
+  const jobStartIndex = lines.indexOf(`  ${jobId}:`);
+
+  if (jobStartIndex === -1) {
+    return "";
+  }
+
+  const nextJobStartIndex = lines.findIndex(
+    (line, index) =>
+      index > jobStartIndex && TOP_LEVEL_WORKFLOW_JOB_PATTERN.test(line)
+  );
+
+  return lines
+    .slice(
+      jobStartIndex,
+      nextJobStartIndex === -1 ? undefined : nextJobStartIndex
+    )
+    .join("\n");
+};
 const getFileExtension = (filePath: string) => {
   const fileName = normalizePath(filePath).split("/").at(-1) ?? "";
   const dotIndex = fileName.lastIndexOf(".");
@@ -106,6 +128,11 @@ const PERSIST_CREDENTIALS_DISABLED_PATTERN =
   /^ {10}persist-credentials: false\r?$/gm;
 const PINNED_WORKFLOW_REFERENCE_PATTERN = /^[^/@]+\/[^@]+@[a-f0-9]{40}$/i;
 const WORKFLOW_RELEASE_COMMENT_PATTERN = /^v\d+\.\d+\.\d+$/;
+const GITHUB_WORKFLOW_EXPRESSION = ["$", "{{ github.workflow }}"].join("");
+const GITHUB_PR_REF_EXPRESSION = [
+  "$",
+  "{{ github.event.pull_request.number || github.ref }}",
+].join("");
 const getExternalWorkflowUses = (workflow: string) =>
   Array.from(
     workflow.matchAll(
@@ -256,6 +283,32 @@ describe("CI workflow", () => {
         expect(version).toMatch(WORKFLOW_RELEASE_COMMENT_PATTERN);
       }
     }
+  });
+
+  it("cancels stale local CI jobs without cancelling E2E or operations", () => {
+    const ciWorkflow = readCiWorkflow();
+    const operationsWorkflow = readOperationsWorkflow();
+    const verifyJob = getWorkflowJobSection(ciWorkflow, "verify");
+    const postgresBehaviorJob = getWorkflowJobSection(
+      ciWorkflow,
+      "postgres-behavior"
+    );
+
+    expect(verifyJob).toContain(
+      `group: ci-${GITHUB_WORKFLOW_EXPRESSION}-verify-${GITHUB_PR_REF_EXPRESSION}`
+    );
+    expect(verifyJob).toContain("cancel-in-progress: true");
+    expect(postgresBehaviorJob).toContain(
+      `group: ci-${GITHUB_WORKFLOW_EXPRESSION}-postgres-behavior-${GITHUB_PR_REF_EXPRESSION}`
+    );
+    expect(postgresBehaviorJob).toContain("cancel-in-progress: true");
+    expect(getWorkflowJobSection(ciWorkflow, "e2e")).not.toContain(
+      "concurrency:"
+    );
+    expect(getWorkflowJobSection(ciWorkflow, "admin-e2e")).not.toContain(
+      "concurrency:"
+    );
+    expect(operationsWorkflow).not.toContain("concurrency:");
   });
 
   it("exposes RLS smoke as a selected operation without a database URL before P24", () => {
