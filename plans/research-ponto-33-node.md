@@ -53,3 +53,30 @@ Em 2026-09-25, Node 24.x é LTS; Node 26 está no canal Current. Next.js 16 requ
 - [Bun install lifecycle](https://bun.sh/docs/pm/cli/install)
 - [Bun runtime](https://bun.sh/docs/runtime)
 - [GitHub actions/setup-node](https://github.com/actions/setup-node)
+
+## Revalidação em 2026-09-28
+
+Esta seção atualiza fatos voláteis e o estado do checkout nesta data. A decisão aprovada em 2026-09-25 de suportar Node 24.x permanece válida; os itens de recomendação abaixo refinam como aplicá-la neste monorepo.
+
+### Fatos revalidados
+
+- **Node.js:** a página oficial de releases lista Node 24.21.0 como LTS e Node 26.10.0 como Current em 2026-09-28. A linha 24 recebe suporte até abril de 2028; Node 26 ainda não é LTS nessa data. Node 24 segue sendo a linha estável escolhida na decisão aprovada. [Node.js Releases](https://nodejs.org/en/about/previous-releases), [Node 22 to 24 migration guide](https://nodejs.org/en/blog/migrations/v22-to-v24)
+- **Vercel:** a documentação lista 24.x como default, além de 22.x e 20.x. Um `engines.node` válido no `package.json` da raiz do projeto Vercel pode sobrescrever a seleção nas configurações; por exemplo, `24.x` seleciona a linha 24. [Vercel — versões Node.js](https://vercel.com/docs/functions/runtimes/node-js/node-js-versions)
+- **GitHub Actions:** `actions/setup-node` aceita `.node-version` em `node-version-file`. O caminho relativo é resolvido a partir de `GITHUB_WORKSPACE`, logo cada job que precisa fixar Node deve executar a action após checkout. [actions/setup-node — uso avançado](https://github.com/actions/setup-node/blob/main/docs/advanced-usage.md)
+- **Bun 1.4.2 e shebangs:** o runtime Bun respeita `#!/usr/bin/env node` por padrão e inicia um processo Node; `--bun` troca esse comportamento. `node_modules/turbo/bin/turbo` também tem shebang `node`, e vários comandos CI executam Turbo, Next, Vitest ou Playwright. Portanto, pin do Bun não fixa por si só a versão do processo Node que executa esses CLIs. [Bun Runtime — shebang behavior](https://bun.sh/docs/runtime)
+- **Estado observado do repositório:** o root `package.json` declara `packageManager: bun@1.4.2`; `.github/workflows/ci.yml` fixa Bun 1.4.2 em cada um dos quatro jobs independentes (`verify`, `e2e`, `postgres-behavior`, `admin-e2e`). Nenhum usa `actions/setup-node` atualmente. O script `prepare` ainda invoca `node scripts/install-git-hooks.mjs`; o arquivo também importa `node:` e encerra cedo em CI/Vercel.
+- O `apps/admin/package.json` não declara `engines.node`. `vercel.json` da raiz e `apps/admin/vercel.json` configuram comandos de build e diretórios de saída a partir de contextos diferentes (raiz do monorepo e `apps/admin`). **Inferência baseada nesses arquivos:** Web usa o manifest da raiz; Admin pode usar `apps/admin` como Root Directory e manifest efetivo. Para evitar depender de busca ascendente implícita do Vercel, declarar a mesma faixa `24.x` nos dois manifests.
+- **Ambiente local observado:** `node --version` retorna `v22.20.0`; `bun --version` retorna `1.4.2`. Não existe `.node-version`, `.nvmrc` ou `.tool-versions` na raiz. `Get-Command` não encontrou `nvm`, `fnm`, `volta` ou `mise`. Logo, adicionar `.node-version` sozinho documentaria/permitiria seleção por ferramentas que a consomem, mas não troca Node nesta máquina Windows sem um version manager instalado/configurado.
+- `scripts/run-next-with-local-env.ts` chama `spawn("node", ...)` para executar Next no Admin. As quatro jobs independentes de CI executam CLIs com shebang Node (`verify`, `e2e`, `postgres-behavior`, `admin-e2e`). Em `operations.yml`, `rls-smoke`, `deployment-smoke`, `admin-deployment-smoke` e `production-preflight` executam scripts Turbo; `turbo` usa o wrapper Node. Os jobs de checklist/validação que executam somente shell ou scripts Bun não precisam de `setup-node` por esse motivo. Cada job é runner separado, então cada um que precisa de Node deve instalar sua própria versão.
+
+### Refinamento recomendado (inferência)
+
+1. Manter a decisão Node 24 e declarar `engines.node: "24.x"` na raiz e em `apps/admin/package.json`, para cobrir os dois roots Vercel previstos.
+2. Adotar `.node-version` com `24`; usar `actions/setup-node` com `node-version-file: .node-version` nos quatro jobs CI e nos quatro jobs operacionais que executam Turbo. Pin por SHA e verificar a release novamente conforme P26. Jobs de checklist Bun-only e dispatch não precisam desse passo.
+3. Trocar `prepare` para `bun scripts/install-git-hooks.mjs` e alinhar `@types/node` ao major 24; manter o código `.mjs` e o spawn explícito `node` do Admin porque Next continua executando sob Node.
+4. Manter Bun 1.4.2 como package manager, sem alterar o pin em P33; documentar no README/AGENTS que Bun instala e executa scripts próprios, enquanto Node 24 serve Next/CLIs e o runtime Vercel.
+5. Este Windows não tem version manager instalado: `.node-version` não troca o Node 22.20.0 atual. **Recomendação simples:** documentar a instalação/seleção manual de Node 24 e validar com `node --version`; não adicionar `fnm`/`mise` ao projeto nesta fundação. Se o usuário quiser auto-switching, isso exige uma decisão separada de ferramenta local.
+
+**Trade-off:** Node 22 também continua LTS e atende Next.js 16, mas Node 24 é o default Vercel atual e recebe suporte até abril de 2028; Node 26 está no canal Current e não aparece entre os runtimes Vercel disponíveis. `engines.node` nos dois manifests cobre o deploy; `.node-version` centraliza a versão para ferramentas locais compatíveis; `setup-node` configura cada runner. A versão local do Windows ainda depende de uma instalação manual porque não existe version manager no computador.
+
+**Escopo desta atualização:** somente fatos revalidados e refinamento operacional. A decisão aceita de Node 24.x não foi alterada.
