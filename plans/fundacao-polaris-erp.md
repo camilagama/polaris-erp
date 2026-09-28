@@ -496,7 +496,7 @@ GitHub continua documentando que apenas SHA completo dá referência imutável e
 
 ### Ponto 27 — cancelar execuções obsoletas de CI
 
-**Estado:** aceito em 2026-09-25.
+**Estado:** aceito em 2026-09-25; implementação parcial local em 2026-09-27 no commit `a0306e1`. Cancelamento ativo de E2E permanece condicional a P5.
 
 **Proposta do relatório:** adicionar `concurrency` ao workflow de CI e cancelar runs antigos quando um novo commit do mesmo PR/ref chegar, economizando runners em validações já obsoletas.
 
@@ -516,19 +516,23 @@ GitHub continua documentando que apenas SHA completo dá referência imutável e
 
 **Decisão aprovada:** depois de P23 separar CI e operações, cancelar apenas runs de CI obsoletos do mesmo workflow e PR/ref. Se `workflow_dispatch` permanecer na CI, isolá-lo em grupo próprio. Não cancelar operações ativas; quando seus alvos forem definidos em P4/P5, serializar por recurso compartilhado sem cancelamento ativo, escolhendo a fila conforme o tipo de operação. Antes de ativar o cancelamento E2E, confirmar que uma execução interrompida deixa apenas dados descartáveis/isolados.
 
+**Implementação parcial concluída em 2026-09-27:** concurrency job-level em `verify` e `postgres-behavior`, com grupos distintos por workflow/job/PR-ref e `cancel-in-progress: true`. `e2e`, `admin-e2e` e `operations.yml` não receberam cancelamento. A ampliação para E2E depende da evidência de isolamento por PR/run e descarte de efeitos parciais em P5.
+
+**Verificação:** `bun x vitest run src/ops/ci-workflow.test.ts` passou (21/21); `bun run verify:quick` passou; os testes que requerem PostgreSQL foram ignorados por dependerem de banco. Não houve execução remota de GitHub Actions nem push.
+
 ### Ponto 28 — Dependency Review
 
-**Estado:** aceito em 2026-09-25, com Q1 e Q2 aprovadas.
+**Estado:** fechado sem adoção em 2026-09-27, conforme Q1 aprovada; Q2 foi satisfeita por P22.
 
 **Proposta do relatório:** adicionar GitHub Dependency Review para comparar dependências alteradas por PR e bloquear vulnerabilidades high/critical, avaliando moderate mais tarde.
 
-**Evidência no Polaris:** a CI chama `bun run audit:baseline`, que executa `bun audit --json`, compara URLs dos advisories com `docs/security/dependency-advisory-baseline.json` e falha para advisories novos. Não encontrei `actions/dependency-review-action`, arquivo de configuração Dependabot ou `package-lock.json`; o lockfile usado é `bun.lock`. A baseline registra `reviewBy: 2026-08-14`, já vencido, e três advisories aceitos temporariamente (low/moderate). O script rejeita a baseline expirada antes de executar a auditoria. Portanto, há um gate versionado, mas ele precisa ser restaurado conforme P22; não executar testes/workflows nesta revisão.
+**Evidência atual no Polaris:** `ci.yml` chama `bun run audit:baseline`, que executa `bun audit --json`, compara advisories com `docs/security/dependency-advisory-baseline.json` e falha para advisories novos. O lockfile raiz é `bun.lock`; não há `package-lock.json`, `.github/dependabot.yml` nem `actions/dependency-review-action`. P22 restaurou o baseline: `acceptedAdvisories` está vazio, `generatedAt` é `2026-09-27` e não há `reviewBy`. A execução local de `bun run audit:baseline` passou com zero advisories atuais.
 
 **Comparação com o Hub:** o Hub usa `bun audit --production` na CI e Dependabot para atualização de Bun/Actions, mas não encontrei Dependency Review Action nem gate/licença específico. A comparação sugere que audit via Bun já é um padrão de CI útil, embora o Hub limite o audit às dependências de produção e mantenha uma regra isolada para Browserslist.
 
-**Disponibilidade e cobertura:** Dependency Review Action falha se encontra vulnerabilidade, mas só impede merge quando seu check é exigido pela proteção da branch. Para repos privados a feature requer GitHub Code Security/Advanced Security; a rota P3 é um repo privado em conta pessoal GitHub Pro, sem essa licença. Além disso, Dependency Review usa o Dependency Graph: a tabela oficial lista npm com `package-lock.json`, mas não Bun/`bun.lock`. Embora Dependabot aceite `bun.lock` para updates, isso não comprova que Dependency Review tenha cobertura do grafo Bun. O action é um gate sobre mudanças de PR, enquanto o audit existente examina a árvore atual, inclusive dependências não alteradas.
+**Disponibilidade e cobertura:** a documentação atual oferece Dependency Review a repositórios públicos e a repositórios pertencentes a organizações GitHub Team com GitHub Code Security; privados também podem usar quando Code Security/Advanced Security está habilitado. Code Security só pode ser adquirido em Team/Enterprise. A transferência aprovada em P3 é para uma conta pessoal GitHub Pro, portanto não habilita essa feature. Dependency Review cobre os ecossistemas do Dependency Graph; a tabela atual lista npm com `package-lock.json`/`package.json`, mas não Bun nem `bun.lock`. Dependabot aceitar `bun.lock` para version updates é um recurso distinto e não comprova cobertura transitiva no Dependency Review. Mesmo elegível, o check só bloqueia merge se for exigido na branch protegida. O audit atual examina advisories correntes do Bun e cobre uma necessidade diferente: vulnerabilidades já presentes, sem diff de PR ou política de licenças.
 
-**Recomendação preliminar:** não adicionar GitHub Dependency Review Action no cenário privado Pro e Bun atual: não há entitlement documentado e a cobertura de `bun.lock` não está confirmada. Conforme P22, corrigir os três advisories temporariamente aceitos, remover suas exceções quando resolvidos e renovar a revisão da baseline sem apenas estender o prazo. Manter `bun audit:baseline` no job `verify` requerido após a restauração; o script atual bloqueia advisories não aceitos em qualquer severidade. Não impor política de licença sem validação jurídica/documental. Reavaliar Dependency Review se a propriedade/plano passar a ter Code Security ou o repositório se tornar público, e somente depois de validar em PR que o grafo gerado cobre `bun.lock`.
+**Resultado:** não adicionar Dependency Review, não comprar Code Security nesta fundação e não criar política de licenças. Manter `bun audit:baseline` em CI; P22 já removeu os advisories aceitos e a verificação atual passou. Reabrir P28 se o repositório se tornar público, migrar para organização/plano com Code Security, ou se GitHub documentar suporte de Dependency Review ao grafo resolvido de `bun.lock`; testar essa cobertura em PR antes de tratá-la como gate.
 
 **Pesquisa de apoio:** [pesquisa do ponto 28 sobre Dependency Review e auditoria Bun](research-ponto-28-dependency-review.md).
 

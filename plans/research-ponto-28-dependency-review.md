@@ -1,80 +1,69 @@
 # Pesquisa do ponto 28 — Dependency Review em PRs
 
-**Revisado em:** 2026-09-25  
-**Pergunta:** o que Dependency Review cobre para vulnerabilidades/licenças e os lockfiles Bun do Polaris, como vira gate de merge e quais planos privados permitem usar a feature?
+**Revalidado em:** 2026-09-27
+**Checkout auditado:** worktree `codex/foundation-hook`, HEAD `a0306e1d3fc6f02b8043826855b79df1a89d1d58`
+**Pergunta:** Dependency Review acrescenta cobertura útil ao Polaris, que usa Bun e `bun.lock`, e está disponível no plano/forma de propriedade previstos?
 
-## Síntese
+## Conclusão
 
-GitHub Dependency Review compara o grafo de dependências entre a base e o head de um PR. Ele destaca dependências adicionadas, removidas ou atualizadas, incluindo transitivas de lockfiles suportados, com advisories/severidade e dados de licença quando disponíveis. A Action devolve um check; ela só bloqueia merge se a regra da branch tornar esse check obrigatório.
+Manter a decisão aprovada: **não adicionar GitHub Dependency Review como gate nesta fundação**. A documentação atual limita o recurso em repositórios privados a repositórios pertencentes a organizações com GitHub Team/Enterprise Cloud e GitHub Code Security/Advanced Security habilitado. A transferência para uma conta pessoal GitHub Pro, por si só, não satisfaz esse requisito. Além disso, a tabela de ecossistemas do Dependency Graph não lista Bun nem `bun.lock`; o suporte explícito do Dependabot a Bun para atualizações não demonstra cobertura equivalente pela Dependency Review.
 
-O Polaris é privado e a rota aprovada em P3 é uma conta pessoal GitHub Pro. A documentação atual exige GitHub Code Security/Advanced Security para Dependency Review em repositório privado; GitHub Pro pessoal, sem esse produto, não basta. Além disso, o Dependency Graph lista npm com `package-lock.json`/`package.json`, mas não lista Bun nem `bun.lock`. Não é seguro tratar a Action como cobertura completa do lockfile Bun sem entitlement e validação específica.
+O gate proporcional já existente é o `bun audit` executado pelo script `audit:baseline`. No checkout auditado, a baseline não contém advisories aceitos; a execução local de `bun run audit:baseline` passou com zero advisories atuais. Isso prova somente o resultado produzido pelo Bun audit nessa execução, não uma garantia de ausência de vulnerabilidades fora da cobertura da ferramenta/registry nem o estado da CI remota. O código compara os advisories retornados pelo Bun com uma allowlist vazia e deve falhar se encontrar qualquer advisory.
 
-O CI do Polaris já tem um baseline de advisories via Bun, mas a revisão desse baseline venceu em 2026-08-14. A proposta deve preservar/revisar esse controle; Dependency Review seria complementar, não substituto.
+## Fatos em documentação oficial
 
-## Fatos documentados
+### Elegibilidade de Dependency Review
 
-### Cobertura e limites
+- A página de Dependency Review lista repositórios públicos e repositórios pertencentes a organizações no GitHub Team com GitHub Code Security habilitado. O quickstart oficial também descreve organizações em Team ou Enterprise Cloud com Code Security para ativar Dependency Review em privados/internos. Para um repo privado em conta pessoal GitHub Pro, a documentação consultada não mostra elegibilidade; transferi-lo entre contas pessoais não o torna organização-owned nem concede licença Code Security. [Dependency review: disponibilidade e funcionamento](https://docs.github.com/en/code-security/concepts/supply-chain-security/dependency-review) · [Quickstart de segurança: habilitação em privados](https://docs.github.com/en/code-security/getting-started/quickstart-for-securing-your-repository)
+- Com Dependency Review habilitada, a comparação por PR cobre mudanças em manifests/lockfiles reconhecidos e pode mostrar dependências indiretas e vulnerabilidades conhecidas. A documentação explica o comportamento do recurso, mas não amplia a lista de ecossistemas reconhecidos. [Dependency review](https://docs.github.com/en/code-security/concepts/supply-chain-security/dependency-review)
 
-- A Action usa o Dependency Review REST API para comparar base e head do PR. A revisão exibe mudanças diretas/transitivas representadas em manifests e lockfiles reconhecidos, com vulnerabilidades conhecidas; ela se destina a impedir que novas ou atualizadas dependências vulneráveis entrem pelo PR, não a substituir alerts para vulnerabilidades antigas em dependências que não mudaram. ([Dependency review](https://docs.github.com/en/code-security/concepts/supply-chain-security/dependency-review))
-- O endpoint REST compara duas revisões, normalmente `{base}...{head}`, e pode retornar versão, license, pacote e dados de vulnerabilidade/severidade. Exige `contents: read` para token de escopo fino; retorna `403` em repositório privado sem GitHub Advanced Security ou quando usado contra um fork. A API não contorna a elegibilidade de plano da Action. ([REST API de Dependency Review](https://docs.github.com/en/rest/dependency-graph/dependency-review))
-- Dependency Review suporta os mesmos ecossistemas do Dependency Graph. A tabela atual lista npm com `package-lock.json` como arquivo recomendado e `package.json` como arquivo adicional; **não lista Bun nem `bun.lock`**. Inferência: GitHub pode reconhecer dependências declaradas em `package.json` como npm, mas a documentação não garante que entenda o grafo resolvido/transitivo de `bun.lock`. Não afirmar cobertura completa de Bun sem validação específica. ([Ecossistemas do Dependency Graph](https://docs.github.com/en/code-security/reference/supply-chain-security/dependency-graph-supported-package-ecosystems))
-- **Dependabot version updates é distinto:** a lista oficial de ecosystems do Dependabot suporta `package-ecosystem: bun` e o lockfile texto `bun.lock` desde Bun 1.1.39, mas isso não prova que Dependency Review/Dependency Graph cubra esse mesmo arquivo. ([Dependabot supported ecosystems](https://docs.github.com/en/code-security/reference/supply-chain-security/supported-ecosystems-and-repositories))
-- Se a análise precisar de uma árvore gerada durante o build, a API também recebe snapshots pela Dependency Submission API. GitHub recomenda que a submissão e a revisão rodem em ordem no mesmo workflow; execuções paralelas podem produzir snapshots ausentes. ([Dependency review e dependency submission](https://docs.github.com/en/code-security/concepts/supply-chain-security/dependency-review))
+### Dependency Graph, Bun e Dependabot não são a mesma tabela de suporte
 
-### Severidade, escopo e licenças
+- A tabela do Dependency Graph documenta `npm` com `package-lock.json` como arquivo recomendado e `package.json` como arquivo adicional. Ela lista diversos outros ecossistemas, mas **não lista Bun nem `bun.lock`**. Portanto, a cobertura documentada não garante que o grafo estático inclua as dependências resolvidas e transitivas específicas de `bun.lock`. A possível interpretação de `package.json` como npm não prova cobertura equivalente ao lockfile Bun. [Ecossistemas suportados pelo Dependency Graph](https://docs.github.com/en/code-security/reference/supply-chain-security/dependency-graph-supported-package-ecosystems)
+- Separadamente, a tabela do Dependabot aceita `package-ecosystem: bun` a partir de Bun 1.1.39 e declara que o lockfile texto `bun.lock` é suportado para **version updates**. A própria página remete à tabela do Dependency Graph para recursos de security updates; isto não altera a tabela de arquivos/formatos documentada para Dependency Graph e não comprova cobertura de Dependency Review sobre `bun.lock`. [Ecossistemas e repositórios suportados pelo Dependabot](https://docs.github.com/en/code-security/reference/supply-chain-security/supported-ecosystems-and-repositories)
+- A documentação atual do Bun diz que `bun.lock` é sua lockfile e que `bun audit` a lê diretamente, sem exigir `node_modules`. Também documenta consulta ao endpoint de advisories do registry, saída JSON, opções de escopo/severidade e exit code 1 quando há vulnerabilidades consideradas pelo comando. Pacotes de registries com advisory endpoint ausente podem ser listados como ignorados sem afetar o exit code; logo, `bun audit` não prova cobertura de fontes sem endpoint. [Bun `audit`](https://bun.sh/docs/pm/cli/audit) · [Formato da lockfile Bun](https://bun.sh/docs/pm/lockfile)
 
-- No README atual da Action v5, `fail-on-severity` tem `low` como default; a Action falha para vulnerabilidades no nível configurado ou superior. `fail-on-scopes` tem `runtime` como default; para fazer advisories de dev dependencies bloquearem, incluir `development` e, se desejado, `unknown`. `warn-only: true` transforma avisos em check bem-sucedido e substitui o gate. ([README oficial da Action](https://github.com/actions/dependency-review-action/blob/main/README.md))
-- A Action oferece `allow-licenses` e `deny-licenses` com IDs SPDX. No README da v5, `deny-licenses` está marcado como deprecated para remoção em uma próxima major; os dois modos são mutuamente exclusivos. Se o GitHub não detectar uma licença, a Action informa o fato, mas **não falha**. Dados ausentes não significam aprovação legal. ([README oficial da Action](https://github.com/actions/dependency-review-action/blob/main/README.md))
-- A API/Action é diff de dependências por PR. Para dependências sem mudança, use também a auditoria corrente do projeto e/ou Dependabot Alerts; a documentação distingue esses usos. Uma regra de licença configurada pode bloquear apenas as dependências reconhecidas e alteradas no diff.
+### Gate local versus revisão do diff
 
-### Como vira um bloqueio real
+- Dependency Review é uma análise de alterações introduzidas/atualizadas em PRs e pode gerar um check. Ele só bloqueia merge quando a configuração do repositório exige esse check. Não substitui automaticamente uma auditoria da árvore completa. [Dependency review](https://docs.github.com/en/code-security/concepts/supply-chain-security/dependency-review)
+- `bun audit` avalia os pacotes da lockfile corrente contra dados de advisories disponíveis no registry consultado. A baseline do Polaris pode tornar findings conhecidos uma exceção explícita e detectar findings fora dessa lista; isso complementa Dependabot/Dependency Review conceitualmente, mas não oferece o diff visual, os metadados de licença nem o conjunto de registros do GitHub.
+- Bun documenta `--prod` como escopo apenas das dependências alcançáveis por `dependencies`, `optionalDependencies` e `peerDependencies`. O script Polaris auditado não passa `--prod`, portanto seu contrato configurado é audit da árvore completa retornada pelo Bun, incluindo dependências de desenvolvimento conforme a saída da ferramenta. [Opções do Bun `audit`](https://bun.sh/docs/pm/cli/audit)
 
-- A Action pode terminar com falha, por exemplo ao detectar uma vulnerabilidade acima do limiar ou uma licença fora da política configurada. Isso aparece como check do workflow. A falha só impede merge se o proprietário exigir aquele check via branch protection/ruleset. ([Dependency review](https://docs.github.com/en/code-security/concepts/supply-chain-security/dependency-review), [branch protection](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches))
-- O exemplo oficial dispara a Action em `pull_request` e usa `contents: read`; para publicar comentário-resumo, a Action precisa também de `pull-requests: write`. O comentário é apresentação do resultado, não condição de merge. ([README oficial da Action](https://github.com/actions/dependency-review-action/blob/main/README.md))
+## Evidência local no Polaris
 
-### Requisitos de plano para repositórios privados
+Auditei o worktree indicado no cabeçalho. Não rodei a suíte de testes nem workflows, não consultei configurações remotas e não li secrets. Executei `bun run audit:baseline`, que chamou localmente o audit do Bun.
 
-- Em GitHub.com, Dependency Review está disponível em todos os repositórios públicos e em repositórios privados com GitHub Code Security/Advanced Security. As páginas atuais indicam GitHub Team ou Enterprise para adquirir GitHub Code Security; repositório privado pessoal no GitHub Pro, sem licença de Code Security, não é elegível. ([Dependency review](https://docs.github.com/en/code-security/concepts/supply-chain-security/dependency-review), [GitHub Advanced Security](https://docs.github.com/en/get-started/learning-about-github/about-github-advanced-security))
-- Para a API de repositório privado sem Advanced Security, a resposta documentada é `403`. Habilitar o Dependency Graph sozinho não substitui a licença necessária para Dependency Review privada.
+- `.github/workflows/ci.yml` contém o passo `Dependency advisory baseline` com `run: bun run audit:baseline` no job `verify`.
+- `package.json` define `audit:baseline` como `bun scripts/check-bun-audit-baseline.ts`.
+- `scripts/check-bun-audit-baseline.ts` executa `bun audit --json`, compara os URLs retornados com `acceptedAdvisories` e encerra com erro para advisories não presentes na allowlist. Se a lista de aceitos está vazia, todo advisory que o comando reportar é novo para a baseline.
+- `docs/security/dependency-advisory-baseline.json` contém `generatedAt: 2026-09-27` e `acceptedAdvisories: []`. A função local aceita ausência de `reviewBy` quando a allowlist está vazia; não há prazo de exceção vigente porque não há exceções registradas. `bun run audit:baseline` passou em 2026-09-27 com a saída `bun audit baseline accepted 0 current advisories.`
+- Existe `bun.lock`. Não existe `.github/dependabot.yml` neste checkout. A busca nos workflows não encontrou `dependency-review-action` nem etapa chamada Dependency Review.
+- Esses fatos confirmam presença do gate e ausência de exceções configuradas. Não confirmam que uma execução atual de `bun audit` retornaria zero findings, que o registry está acessível ou que a CI remota passou. Não leio valores de secrets.
 
-## Evidência local
+## Implicação da transferência de conta
 
-### Polaris
-
-- Snapshot local em `main`, `5f3f91a4ca47d7105a2cfc84ae63d12f3eb1912e`. `.github/workflows/ci.yml` chama `bun run audit:baseline` (linha 24); não encontrei `.github/dependabot.yml`, `dependency-review-action`, chamada da API Dependency Review ou `package-lock.json` na raiz. O lockfile versionado encontrado na raiz é `bun.lock`.
-- `audit:baseline` chama `bun scripts/check-bun-audit-baseline.ts`. O script executa `bun audit --json`, compara os advisories atuais aos URLs aprovados e falha quando encontra advisory novo ou quando `reviewBy` expirou. A comparação identifica exceções pela URL do advisory; uma alteração de severidade com a mesma URL não é classificada como advisory novo, daí a importância da data de revisão. ([Script](../scripts/check-bun-audit-baseline.ts), [baseline](../docs/security/dependency-advisory-baseline.json))
-- O baseline registra três advisories aceitos e `reviewBy: 2026-08-14`. Na data desta pesquisa, o prazo expirou; o script rejeitaria o baseline numa próxima CI até que seja revisto. Não executei a CI. O comando não especifica `--production`, ao contrário do Hub, e a implementação compara a lista retornada pelo Bun ao baseline completo.
-
-### Hub
-
-- Snapshot auditado em `origin/main`, commit `bea618fe759feb16fa77269340bf3c50a283e8b0`. A CI contém `bun audit --production` (`.github/workflows/ci.yml`, linha 79). O repositório tem `bun.lock`, não `package-lock.json` na raiz; o `.github/dependabot.yml` agenda atualizações `package-ecosystem: bun` semanais para `staging`. Dependabot aceita esse ecosystem, mas isso não significa suporte idêntico da Dependency Review.
-- Não encontrei `dependency-review-action` nem uso da Dependency Review API nos workflows auditados. A configuração Dependabot prova atualização automatizada, não execução de Dependency Review, cobertura do lockfile Bun ou licença de GitHub Code Security. O entitlement remoto não foi consultado.
-
-## Trade-offs para o Polaris
-
-- **Baseline Bun atual:** cobre o conjunto de advisories que o comando Bun retorna e bloqueia advisories fora da lista aceita; pode identificar um advisory novo em dependência existente sem mudança no PR. Não faz policy de licenças e depende da revisão periódica da exceção. O baseline atual expirou, então precisa de revisão própria.
-- **Dependency Review:** mostra diffs de dependências do PR, lockfile/transitivas quando suportados, advisories e opções de licença. Não substitui a auditoria do conjunto atual, Dependabot Alerts, nem cobre com garantia o grafo de `bun.lock` segundo a tabela oficial atual. Em privado no GitHub Pro pessoal planejado, não é utilizável sem mudar plano/owner e habilitar GitHub Code Security.
-- **Hub:** o fluxo atual é Bun audit com escopo de produção e Dependabot para abrir updates em `staging`; não é um exemplo de Dependency Review ativo. Só copiar esse modelo não habilita o gate nem resolve a cobertura do lockfile.
+A mudança prevista para uma conta pessoal GitHub Pro pode servir aos recursos de branch protection e Environments discutidos em P3/P24, mas não deve ser tratada como habilitação de Dependency Review para um repositório privado. Para reevaluar essa decisão, fatos necessários seriam: tornar o repositório público ou movê-lo para uma organização elegível com GitHub Code Security/Advanced Security habilitado; e obter evidência de que o Dependency Graph efetivamente representa o grafo Bun desejado. Transferência de proprietário pessoal, isoladamente, não prova nenhuma dessas condições.
 
 ## Recomendação para Polaris
 
-1. Restaurar o gate existente conforme a decisão P22: corrigir os três advisories temporariamente aceitos, remover suas exceções quando resolvidos e manter `reviewBy` válido. Não estender a data nem manter vulnerabilidades conhecidas como baseline para adiantar a fundação. Só considerar o check saudável depois que `bun audit:baseline` executar a auditoria e passar.
-2. Não adicionar Dependency Review como check obrigatório agora: o repo é privado no plano pessoal Pro previsto e não tem `package-lock.json`; sem GitHub Code Security a API/Action privada não é elegível, e `bun.lock` não consta na lista documentada de lockfiles suportados.
-3. Se a propriedade/plano do repo mudar ou o Dependency Graph passar a documentar Bun, reavaliar a Action com um PR de prova, mantendo o audit Bun. Confirmar cobertura direta e transitiva de `bun.lock` antes de tratá-la como gate; considerar Dependency Submission API se for necessário enviar snapshots gerados no build.
-4. Se a Action tornar-se viável, decidir limiar e escopo: `fail-on-severity` default é `low`, e `fail-on-scopes` default é `runtime`; incluir `development` se ferramentas de build/teste também devem bloquear. Não adicionar exceção de advisory sem rationale e aprovação explícita.
-5. Só tornar o check required depois de validar cobertura/plano, configurar branch protection/ruleset em `main` e corrigir o baseline expirado. Sem required check, uma falha aparece no PR, mas não bloqueia merge.
-6. Não impor allow/deny list de licenças sem política de licenças validada pelo projeto; a Action tem opções SPDX, mas licenças ausentes nos metadados não equivalem a aprovação.
+1. Manter Dependency Review fora dos workflows e dos required checks enquanto o repositório continuar privado sob conta pessoal Pro sem entitlement documentado de Code Security.
+2. Manter `bun audit:baseline` como controle de vulnerabilidades do grafo Bun. A baseline atual sem advisories aceitos é uma política de zero exceções; considerar o gate efetivamente saudável somente mediante execução observada e bem-sucedida de `bun audit:baseline`/CI.
+3. Tratar suporte Dependabot `bun` como suporte a version updates, não como prova de Dependency Review. Dependabot pode ser avaliado separadamente quando as condições E2E e secrets específicas para PRs de Dependabot, já identificadas em P26, forem resolvidas.
+4. Reabrir Dependency Review apenas se a elegibilidade mudar ou se houver nova documentação oficial de Bun no Dependency Graph. Antes de torná-lo gate, validar num PR que o grafo cobre dependências diretas e transitivas do `bun.lock`; conservar o audit Bun como cobertura da árvore corrente.
+5. Não adicionar política de licenças sem política de licenciamento do Polaris validada. A utilidade de metadados de licença não equivale a autorização jurídica, e a documentação não garante metadados para todos os pacotes.
 
-## Experiência anedótica da comunidade
+## O que as fontes não provam
 
-Em uma discussão recente da GitHub Community sobre revisar a segurança de um repositório antes de adotá-lo, participantes recomendam combinar atualização de dependências, `audit` no CI e code scanning, sem tratar uma ferramenta como avaliação completa. É conselho de praticantes, não documentação de cobertura para Bun nem requisito para Polaris; aqui o ponto decisivo é que o projeto já tem um gate `bun audit` direcionado ao seu lockfile. ([GitHub Community #204302](https://github.com/orgs/community/discussions/204302))
+- A ausência de Bun na tabela prova que não há suporte de `bun.lock` **documentado** nessa tabela; não prova que nenhum pacote declarado em `package.json` possa aparecer no Dependency Graph por alguma inferência/importação de outro formato.
+- A documentação de Dependabot prova suporte a updates para Bun e `bun.lock`; não prova que Dependabot e Dependency Review usem o mesmo parser, dados ou critérios de elegibilidade.
+- O resultado local de `bun run audit:baseline` prova somente que a auditoria reportada pelo Bun passou naquele momento. Não prova status da CI remota, cobertura de registry/fontes que a ferramenta não consegue consultar ou ausência de falsos negativos.
+- A inspeção local prova o conteúdo versionado no worktree e a presença do passo CI; não prova status da execução remota nem configuração de segurança/entitlement no GitHub.
 
-## Limites
+## Fontes primárias consultadas
 
-- A configuração de GitHub Code Security, Dependency Graph, rulesets e branch protection não foi consultada remotamente. A conclusão de plano parte do cenário registrado em P3: repo privado e owner pessoal GitHub Pro; revalidar se a titularidade/plano mudar.
-- Não confirmei se o Dependency Graph consegue inferir parte das dependências de `package.json` apesar da ausência de suporte documentado para `bun.lock`; a nota registra a cobertura documentada e recomenda não pressupor cobertura transitiva.
-- Nenhum workflow/teste foi executado, nenhuma licença foi alterada e nenhum secret foi lido. Não incluí caso de comunidade: a documentação oficial atual e os arquivos locais foram suficientes para a decisão.
-
-## Recomendação curta para o cenário P3
-
-No repositório privado em conta pessoal GitHub Pro previsto por P3, não exigir Dependency Review: a Action/API privada requer GitHub Code Security, disponível para compra em Team/Enterprise, e a cobertura documentada não inclui `bun.lock`. Manter e revisar o baseline Bun; reavaliar a Action se o repo se tornar público ou passar para uma organização/plano elegível, validando a cobertura Bun antes de torná-la required.
+- [GitHub Docs — Dependency review](https://docs.github.com/en/code-security/concepts/supply-chain-security/dependency-review)
+- [GitHub Docs — Quickstart for securing your repository](https://docs.github.com/en/code-security/getting-started/quickstart-for-securing-your-repository)
+- [GitHub Docs — Dependency graph supported package ecosystems](https://docs.github.com/en/code-security/reference/supply-chain-security/dependency-graph-supported-package-ecosystems)
+- [GitHub Docs — Dependabot supported ecosystems and repositories](https://docs.github.com/en/code-security/reference/supply-chain-security/supported-ecosystems-and-repositories)
+- [Bun Docs — `bun audit`](https://bun.sh/docs/pm/cli/audit)
+- [Bun Docs — Lockfile](https://bun.sh/docs/pm/lockfile)
