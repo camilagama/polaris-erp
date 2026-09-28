@@ -198,6 +198,9 @@ jobs:
         run: bun run test:e2e:admin
         env:
           E2E_DATABASE_URL: ${{ secrets.ADMIN_E2E_DATABASE_URL }}
+          ADMIN_BETTER_AUTH_SECRET: "ci-admin-better-auth-secret-at-least-32-chars!!"
+          ADMIN_GOOGLE_CLIENT_ID: dummy-admin-google-client-id
+          ADMIN_GOOGLE_CLIENT_SECRET: dummy-admin-google-client-secret
           BETTER_AUTH_SECRET: ci-better-auth-secret-at-least-32-chars!!
           BETTER_AUTH_URL: http://127.0.0.1:3002
           NEXT_PUBLIC_APP_URL: http://127.0.0.1:3001

@@ -113,11 +113,14 @@ const getActivityMap = async (
 ): Promise<{ date: string; count: number; level: number }[]> => {
   const rows = toRows(
     await queryableDb.execute(sql`
-      select date(created_at at time zone ${BUSINESS_TIME_ZONE}) as date, count(*) as count
-      from audit_events
-      where created_at >= now() - interval '365 days'
-      group by date(created_at at time zone ${BUSINESS_TIME_ZONE})
-      order by date(created_at at time zone ${BUSINESS_TIME_ZONE}) asc
+      select activity_date as date, count(*) as count
+      from (
+        select date(created_at at time zone ${BUSINESS_TIME_ZONE}) as activity_date
+        from audit_events
+        where created_at >= now() - interval '365 days'
+      ) as daily_events
+      group by activity_date
+      order by activity_date asc
     `)
   );
 

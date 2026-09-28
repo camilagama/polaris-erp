@@ -14,7 +14,6 @@ const e2eUserName = process.env.E2E_NAME ?? "Polaris E2E";
 const e2eBootstrapSecret =
   process.env.E2E_INTERNAL_BOOTSTRAP_SECRET ??
   E2E_DEFAULT_INTERNAL_BOOTSTRAP_SECRET;
-const onboardingPathPattern = /\/onboarding$/;
 
 const createE2EUser = () => {
   const runId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -83,28 +82,20 @@ export const login = async (page: Page) => {
   await applyBootstrapCookies(page, response);
   await page.goto("/");
 
+  await expect(
+    page.getByRole("heading", { name: "Crie seu espaço" })
+  ).toBeVisible();
   await page
-    .waitForFunction(
-      () =>
-        document.body.innerText.includes("Ativar conta") ||
-        document.body.innerText.includes("Assinatura necessaria") ||
-        document.body.innerText.includes("Dashboard"),
-      undefined,
-      { timeout: 5000 }
-    )
-    .catch(() => undefined);
+    .getByLabel("Nome da organização")
+    .fill(createRunLabel("Organização E2E"));
+  await page.getByRole("button", { exact: true, name: "Continuar" }).click();
 
-  const onboardingHeading = page.getByRole("heading", {
-    name: "Ativar conta",
-  });
-  const needsOnboarding = await onboardingHeading.isVisible();
-
-  if (needsOnboarding) {
-    await page.getByRole("button", { name: "Ativar conta" }).click();
-    await expect(page).not.toHaveURL(onboardingPathPattern, {
-      timeout: 30_000,
-    });
-  }
+  await expect(
+    page.getByRole("heading", { name: "Escolha como começar" })
+  ).toBeVisible();
+  await page
+    .getByRole("link", { exact: true, name: "Continuar no Free" })
+    .click();
 
   await expect(
     page.getByRole("heading", {

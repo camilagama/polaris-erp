@@ -5,6 +5,7 @@ vi.mock("server-only", () => ({}));
 import {
   bootstrapPlatformAdmin,
   createPlatformAdminEnrollment,
+  createPlaywrightPlatformAdminEnrollment,
   grantPlatformAdminAccess,
   listPlatformAdminGrants,
   recordPlatformAuditEvent,
@@ -162,6 +163,43 @@ describe("platform admin helpers", () => {
         action: "platform_admin.enrollment_created",
         metadata: expect.objectContaining({ email: "contacto@agencia.com" }),
         subjectId: "enrollment-1",
+      })
+    );
+  });
+
+  it("records isolated Playwright enrollment without a human actor", async () => {
+    const tx = {
+      ...createInsertMock(),
+      execute: vi
+        .fn()
+        .mockResolvedValueOnce({ rows: [{ id: "playwright-enrollment" }] }),
+    };
+    const db = { transaction: vi.fn(async (callback) => callback(tx)) };
+    const expiresAt = new Date(Date.now() + 60_000);
+
+    await createPlaywrightPlatformAdminEnrollment(
+      {
+        email: "  ADMIN-E2E@DGIMPORTS.LOCAL ",
+        enrollmentExpiresAt: expiresAt,
+        grantExpiresAt: expiresAt,
+        role: "owner",
+      },
+      db as never
+    );
+
+    expect(tx.execute).toHaveBeenCalledOnce();
+    expect(tx.values).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "platform_admin.e2e_enrollment_created",
+        actorAdminUserId: null,
+        actorPlatformAdminId: null,
+        metadata: expect.objectContaining({
+          email: "admin-e2e@dgimports.local",
+          reason: "Playwright admin E2E bootstrap",
+          role: "owner",
+        }),
+        subjectId: "playwright-enrollment",
+        subjectType: "platform_admin_enrollment",
       })
     );
   });

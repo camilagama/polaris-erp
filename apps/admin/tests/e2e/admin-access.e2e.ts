@@ -9,8 +9,6 @@ const e2eAdminBaseUrl =
 const e2eBootstrapSecret =
   process.env.E2E_INTERNAL_BOOTSTRAP_SECRET ??
   E2E_DEFAULT_INTERNAL_BOOTSTRAP_SECRET;
-const organizationsLinkRegex = /Organizacoes/i;
-const usersLinkRegex = /Usuarios/i;
 
 const loginAsPlatformAdmin = async (
   page: Page,
@@ -75,9 +73,11 @@ test("allows a bootstrapped platform admin to open the internal dashboard", asyn
     page.getByRole("heading", { name: "Console operacional" })
   ).toBeVisible();
   await expect(
-    page.getByRole("link", { name: organizationsLinkRegex })
+    page.getByRole("link", { exact: true, name: "Organizações" })
   ).toBeVisible();
-  await expect(page.getByRole("link", { name: usersLinkRegex })).toBeVisible();
+  await expect(
+    page.getByRole("link", { exact: true, name: "Usuários" })
+  ).toBeVisible();
   await expect(
     page.getByRole("link", { exact: true, name: "Auditoria" })
   ).toBeVisible();

@@ -1,5 +1,8 @@
 import { serverEnv } from "@polaris/auth/env";
-import { bootstrapPlatformAdmin } from "@polaris/platform/admin";
+import {
+  bootstrapPlatformAdmin,
+  createPlaywrightPlatformAdminEnrollment,
+} from "@polaris/platform/admin";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 
@@ -163,20 +166,35 @@ export async function POST(request: Request) {
   const ctx = await auth.$context;
   const existingUser =
     await ctx.internalAdapter.findUserByEmail(normalizedEmail);
-  const user =
-    existingUser?.user ??
-    (await ctx.internalAdapter.createUser({
+  let platformAdminId: string | null = null;
+  let user = existingUser?.user;
+
+  if (user) {
+    platformAdminId = await bootstrapPlatformAdmin({
+      expiresAt: new Date(Date.now() + E2E_PLATFORM_ADMIN_GRANT_TTL_MS),
+      reason: "Playwright admin E2E bootstrap",
+      role,
+      adminUserId: user.id,
+    });
+  } else {
+    const enrollmentExpiresAt = new Date(
+      Date.now() + E2E_PLATFORM_ADMIN_GRANT_TTL_MS
+    );
+
+    await createPlaywrightPlatformAdminEnrollment({
+      email: normalizedEmail,
+      enrollmentExpiresAt,
+      grantExpiresAt: enrollmentExpiresAt,
+      role,
+    });
+
+    user = await ctx.internalAdapter.createUser({
       email: normalizedEmail,
       emailVerified: true,
       name: name ?? normalizedEmail,
-    }));
+    });
+  }
 
-  const platformAdminId = await bootstrapPlatformAdmin({
-    expiresAt: new Date(Date.now() + E2E_PLATFORM_ADMIN_GRANT_TTL_MS),
-    reason: "Playwright admin E2E bootstrap",
-    role,
-    adminUserId: user.id,
-  });
   const session = await ctx.internalAdapter.createSession(user.id);
 
   if (!session) {

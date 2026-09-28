@@ -269,8 +269,8 @@ describe("CI workflow", () => {
 
   it("pins every external workflow dependency to a full commit SHA with a release comment", () => {
     const workflows = [
-      { content: readCiWorkflow(), expectedCount: 8 },
-      { content: readOperationsWorkflow(), expectedCount: 12 },
+      { content: readCiWorkflow(), expectedCount: 12 },
+      { content: readOperationsWorkflow(), expectedCount: 16 },
     ];
 
     for (const workflow of workflows) {
@@ -613,11 +613,12 @@ describe("CI workflow", () => {
 
   it("keeps monorepo hygiene config and package typechecks wired into Turbo", () => {
     const turboConfig = JSON.parse(readTurboConfig()) as {
-      globalDependencies?: string[];
-      tasks?: Record<string, { dependsOn?: string[] }>;
+      tasks?: Record<string, { dependsOn?: string[]; inputs?: string[] }>;
     };
 
-    expect(turboConfig.globalDependencies).toContain("knip.config.ts");
+    expect(turboConfig.tasks?.["@polaris/web#knip"]?.inputs).toContain(
+      "$TURBO_ROOT$/knip.config.ts"
+    );
     expect(turboConfig.tasks?.knip?.dependsOn).toContain("^knip");
     expect(turboConfig.tasks?.typecheck?.dependsOn).toContain("^typecheck");
   });
@@ -627,7 +628,9 @@ describe("CI workflow", () => {
       scripts?: Record<string, string>;
     };
 
-    expect(packageJson.scripts?.["build:all"]).toBe("turbo run build");
+    expect(packageJson.scripts?.["build:all"]).toBe(
+      "bun scripts/run-turbo-build.ts all"
+    );
     expect(packageJson.scripts?.["audit:baseline"]).toBe(
       "bun scripts/check-bun-audit-baseline.ts"
     );

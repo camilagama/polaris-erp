@@ -14,6 +14,27 @@ const importRoute = async ({
   vi.resetModules();
 
   const bootstrapPlatformAdmin = vi.fn();
+  const callOrder: string[] = [];
+  const createPlaywrightPlatformAdminEnrollment = vi.fn(() => {
+    callOrder.push("enrollment");
+    return Promise.resolve("enrollment-1");
+  });
+  const internalAdapter = {
+    createSession: vi.fn(() => {
+      callOrder.push("session");
+      return Promise.resolve({ token: "admin-e2e-session" });
+    }),
+    createUser: vi.fn(
+      (user: { email: string; emailVerified: boolean; name: string }) => {
+        callOrder.push("user");
+        return Promise.resolve({ id: "admin-e2e-user", ...user });
+      }
+    ),
+    findUserByEmail: vi.fn(() => {
+      callOrder.push("find-user");
+      return Promise.resolve({ user: null });
+    }),
+  };
 
   vi.doMock("@polaris/auth/env", () => ({
     serverEnv: {
@@ -24,21 +45,27 @@ const importRoute = async ({
     },
   }));
   vi.doMock("@polaris/db", () => ({ db: {} }));
-  vi.doMock("@polaris/platform/admin", () => ({ bootstrapPlatformAdmin }));
+  vi.doMock("@polaris/platform/admin", () => ({
+    bootstrapPlatformAdmin,
+    createPlaywrightPlatformAdminEnrollment,
+  }));
   vi.doMock("@/lib/auth", () => ({
     auth: {
       $context: Promise.resolve({
-        internalAdapter: {
-          createSession: vi.fn(() => {
-            throw new Error("createSession should not be used");
-          }),
-          createUser: vi.fn(() => {
-            throw new Error("createUser should not be used");
-          }),
-          findUserByEmail: vi.fn(() => {
-            throw new Error("findUserByEmail should not be used");
-          }),
+        authCookies: {
+          sessionToken: {
+            attributes: {
+              httpOnly: true,
+              maxAge: 60,
+              path: "/",
+              sameSite: "lax",
+              secure: false,
+            },
+            name: "polaris_admin.session_token",
+          },
         },
+        internalAdapter,
+        secret: "admin-e2e-unit-test-secret-at-least-32-chars",
       }),
     },
   }));
@@ -47,6 +74,9 @@ const importRoute = async ({
 
   return {
     bootstrapPlatformAdmin,
+    callOrder,
+    createPlaywrightPlatformAdminEnrollment,
+    internalAdapter,
     POST: route.POST as (request: Request) => Promise<Response>,
   };
 };
@@ -74,7 +104,11 @@ describe("POST /api/dev/bootstrap-platform-admin", () => {
   it("rejects requests outside local isolated E2E bootstrap", async () => {
     vi.stubEnv("DATABASE_URL", "postgres://main");
     vi.stubEnv("E2E_DATABASE_URL", "postgres://e2e");
-    const { bootstrapPlatformAdmin, POST } = await importRoute();
+    const {
+      bootstrapPlatformAdmin,
+      createPlaywrightPlatformAdminEnrollment,
+      POST,
+    } = await importRoute();
 
     const response = await POST(
       createRequest({ hostname: "admin.example.com" })
@@ -86,14 +120,17 @@ describe("POST /api/dev/bootstrap-platform-admin", () => {
         "Bootstrap admin disponivel apenas para Playwright local/CI com E2E_DATABASE_URL isolado.",
     });
     expect(bootstrapPlatformAdmin).not.toHaveBeenCalled();
+    expect(createPlaywrightPlatformAdminEnrollment).not.toHaveBeenCalled();
   });
 
   it("requires an internal bootstrap secret", async () => {
     vi.stubEnv("DATABASE_URL", "postgres://e2e");
     vi.stubEnv("E2E_DATABASE_URL", "postgres://e2e");
-    const { bootstrapPlatformAdmin, POST } = await importRoute({
-      bootstrapSecret: "",
-    });
+    const {
+      bootstrapPlatformAdmin,
+      createPlaywrightPlatformAdminEnrollment,
+      POST,
+    } = await importRoute({ bootstrapSecret: "" });
 
     const response = await POST(createRequest());
 
@@ -102,12 +139,17 @@ describe("POST /api/dev/bootstrap-platform-admin", () => {
       error: "Bootstrap admin indisponivel neste ambiente.",
     });
     expect(bootstrapPlatformAdmin).not.toHaveBeenCalled();
+    expect(createPlaywrightPlatformAdminEnrollment).not.toHaveBeenCalled();
   });
 
   it("rejects invalid authorization", async () => {
     vi.stubEnv("DATABASE_URL", "postgres://e2e");
     vi.stubEnv("E2E_DATABASE_URL", "postgres://e2e");
-    const { bootstrapPlatformAdmin, POST } = await importRoute();
+    const {
+      bootstrapPlatformAdmin,
+      createPlaywrightPlatformAdminEnrollment,
+      POST,
+    } = await importRoute();
 
     const response = await POST(
       createRequest({ authorization: "Bearer wrong" })
@@ -116,17 +158,51 @@ describe("POST /api/dev/bootstrap-platform-admin", () => {
     expect(response.status).toBe(401);
     expect(await response.json()).toEqual({ error: "Nao autorizado." });
     expect(bootstrapPlatformAdmin).not.toHaveBeenCalled();
+    expect(createPlaywrightPlatformAdminEnrollment).not.toHaveBeenCalled();
   });
 
   it("rejects invalid payloads before creating admin records", async () => {
     vi.stubEnv("DATABASE_URL", "postgres://e2e");
     vi.stubEnv("E2E_DATABASE_URL", "postgres://e2e");
-    const { bootstrapPlatformAdmin, POST } = await importRoute();
+    const {
+      bootstrapPlatformAdmin,
+      createPlaywrightPlatformAdminEnrollment,
+      POST,
+    } = await importRoute();
 
     const response = await POST(createRequest({ body: { email: "invalid" } }));
 
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({ error: "Payload invalido." });
     expect(bootstrapPlatformAdmin).not.toHaveBeenCalled();
+    expect(createPlaywrightPlatformAdminEnrollment).not.toHaveBeenCalled();
+  });
+
+  it("creates an E2E enrollment before creating and admitting a new admin identity", async () => {
+    vi.stubEnv("DATABASE_URL", "postgres://e2e");
+    vi.stubEnv("E2E_DATABASE_URL", "postgres://e2e");
+    const {
+      callOrder,
+      createPlaywrightPlatformAdminEnrollment,
+      internalAdapter,
+      POST,
+    } = await importRoute();
+
+    const response = await POST(createRequest());
+
+    expect(response.status).toBe(200);
+    expect(createPlaywrightPlatformAdminEnrollment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        email: "admin@example.com",
+        role: "owner",
+        enrollmentExpiresAt: expect.any(Date),
+        grantExpiresAt: expect.any(Date),
+      })
+    );
+    expect(callOrder).toEqual(["find-user", "enrollment", "user", "session"]);
+    expect(internalAdapter.createSession).toHaveBeenCalledOnce();
+    expect(response.headers.get("set-cookie")).toContain(
+      "polaris_admin.session_token="
+    );
   });
 });

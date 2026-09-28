@@ -52,6 +52,22 @@ export interface CreatePlatformAdminEnrollmentInput {
   role: PlatformAdminRole;
 }
 
+export interface CreatePlaywrightPlatformAdminEnrollmentInput {
+  email: string;
+  enrollmentExpiresAt: Date;
+  grantExpiresAt: Date;
+  role: PlatformAdminRole;
+}
+
+interface PlatformAdminEnrollmentWriteInput
+  extends Omit<
+    CreatePlatformAdminEnrollmentInput,
+    "actorAdminUserId" | "actorPlatformAdminId"
+  > {
+  actorAdminUserId: string | null;
+  actorPlatformAdminId: string | null;
+}
+
 export interface RevokePlatformAdminGrantInput {
   actorAdminUserId: string;
   actorPlatformAdminId: string;
@@ -333,8 +349,9 @@ const requireAdminEmail = (email: string): string => {
 };
 
 const createPlatformAdminEnrollmentInTransaction = async (
-  input: CreatePlatformAdminEnrollmentInput,
-  tx: GrantTx
+  input: PlatformAdminEnrollmentWriteInput,
+  tx: GrantTx,
+  auditAction: string
 ): Promise<string> => {
   const email = requireAdminEmail(input.email);
   const reason = requireGrantReason(input.reason);
@@ -376,7 +393,7 @@ const createPlatformAdminEnrollmentInTransaction = async (
   }
 
   await recordPlatformAuditEvent(tx, {
-    action: "platform_admin.enrollment_created",
+    action: auditAction,
     actorAdminUserId: input.actorAdminUserId,
     actorPlatformAdminId: input.actorPlatformAdminId,
     metadata: {
@@ -399,12 +416,50 @@ export const createPlatformAdminEnrollment = (
 ): Promise<string> => {
   if (transactionalDb) {
     return transactionalDb.transaction((tx) =>
-      createPlatformAdminEnrollmentInTransaction(input, tx)
+      createPlatformAdminEnrollmentInTransaction(
+        input,
+        tx,
+        "platform_admin.enrollment_created"
+      )
     );
   }
 
   return withInternalJobContext("platform_admin_grant_management", (tx) =>
-    createPlatformAdminEnrollmentInTransaction(input, tx as unknown as GrantTx)
+    createPlatformAdminEnrollmentInTransaction(
+      input,
+      tx as unknown as GrantTx,
+      "platform_admin.enrollment_created"
+    )
+  );
+};
+
+export const createPlaywrightPlatformAdminEnrollment = (
+  input: CreatePlaywrightPlatformAdminEnrollmentInput,
+  transactionalDb?: GrantTransactionDb
+): Promise<string> => {
+  const enrollmentInput: PlatformAdminEnrollmentWriteInput = {
+    ...input,
+    actorAdminUserId: null,
+    actorPlatformAdminId: null,
+    reason: "Playwright admin E2E bootstrap",
+  };
+
+  if (transactionalDb) {
+    return transactionalDb.transaction((tx) =>
+      createPlatformAdminEnrollmentInTransaction(
+        enrollmentInput,
+        tx,
+        "platform_admin.e2e_enrollment_created"
+      )
+    );
+  }
+
+  return withInternalJobContext("platform_admin_grant_management", (tx) =>
+    createPlatformAdminEnrollmentInTransaction(
+      enrollmentInput,
+      tx as unknown as GrantTx,
+      "platform_admin.e2e_enrollment_created"
+    )
   );
 };
 
