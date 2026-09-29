@@ -1,6 +1,6 @@
 name: Operations
 
-# Keep production credentials out until P24 configures the private Environment and ref policy.
+# Keep production credential targets unset until P4/P5 validate the real providers.
 on:
   workflow_dispatch:
     inputs:
@@ -42,6 +42,7 @@ jobs:
   rls-smoke:
     if: ${{ github.ref == 'refs/heads/main' && inputs.operation == 'rls-smoke' }}
     runs-on: ubuntu-latest
+    environment: Production
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -135,6 +136,7 @@ jobs:
   deployment-smoke:
     if: ${{ github.ref == 'refs/heads/main' && inputs.operation == 'deployment-smoke' }}
     runs-on: ubuntu-latest
+    environment: Production
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -162,6 +164,7 @@ jobs:
   admin-deployment-smoke:
     if: ${{ github.ref == 'refs/heads/main' && inputs.operation == 'admin-deployment-smoke' }}
     runs-on: ubuntu-latest
+    environment: Production
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -189,6 +192,7 @@ jobs:
   production-preflight:
     if: ${{ github.ref == 'refs/heads/main' && inputs.operation == 'production-preflight' }}
     runs-on: ubuntu-latest
+    environment: Production
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
