@@ -128,10 +128,31 @@ const PERSIST_CREDENTIALS_DISABLED_PATTERN =
   /^ {10}persist-credentials: false\r?$/gm;
 const PINNED_WORKFLOW_REFERENCE_PATTERN = /^[^/@]+\/[^@]+@[a-f0-9]{40}$/i;
 const WORKFLOW_RELEASE_COMMENT_PATTERN = /^v\d+\.\d+\.\d+$/;
+const PRODUCTION_MIGRATION_PERMISSIONS_PATTERN = new RegExp(
+  ["permissions:", " {6}contents: read"].join("\\r?\\n")
+);
+const DATABASE_DIRECT_SECRET_REFERENCE_PATTERN =
+  /secrets\.DATABASE_URL_DIRECT/g;
 const GITHUB_WORKFLOW_EXPRESSION = ["$", "{{ github.workflow }}"].join("");
 const GITHUB_PR_REF_EXPRESSION = [
   "$",
   "{{ github.event.pull_request.number || github.ref }}",
+].join("");
+const PRODUCTION_MIGRATION_TARGET_CONFIRMATION_EXPRESSION = [
+  "$",
+  "{{ inputs.target_confirmation }}",
+].join("");
+const PRODUCTION_MIGRATION_SHA_EXPRESSION = [
+  "$",
+  "{{ inputs.release_sha }}",
+].join("");
+const PRODUCTION_MIGRATION_GROUP_EXPECTATION = [
+  "group: production-migration-",
+  "$",
+  "{{ vars.PRODUCTION_NEON_PROJECT_ID }}",
+  "-",
+  "$",
+  "{{ vars.PRODUCTION_NEON_BRANCH_ID }}",
 ].join("");
 const getExternalWorkflowUses = (workflow: string) =>
   Array.from(
@@ -196,7 +217,7 @@ describe("CI workflow", () => {
     expect(operationsWorkflow).not.toContain("bun-version: latest");
   });
 
-  it("keeps manual operations separate, single-selected, main-only, and without secret references", () => {
+  it("keeps manual operations single-selected and main-only, scoping migration credentials to its job", () => {
     const ciWorkflow = readCiWorkflow();
     const operationsWorkflow = readOperationsWorkflow();
     const operations = [
@@ -206,13 +227,18 @@ describe("CI workflow", () => {
       "deployment-smoke",
       "admin-deployment-smoke",
       "production-preflight",
+      "production-migration",
     ];
     const productionEnvironmentOperations = [
       "rls-smoke",
       "deployment-smoke",
       "admin-deployment-smoke",
       "production-preflight",
+      "production-migration",
     ];
+    const secretlessOperations = operations.filter(
+      (operation) => operation !== "production-migration"
+    );
     const evidenceOnlyOperations = [
       "restore-drill-checklist",
       "production-certification-checklist",
@@ -229,7 +255,7 @@ describe("CI workflow", () => {
     expect(operationsWorkflow).toContain("Select one operation");
     expect(operationsWorkflow).not.toContain("  push:");
     expect(operationsWorkflow).not.toContain("  pull_request:");
-    expect(operationsWorkflow).not.toContain("secrets.");
+    expect(ciWorkflow).not.toContain("secrets.DATABASE_URL_DIRECT");
     expect(
       getWorkflowJobSection(operationsWorkflow, "validate-dispatch")
     ).not.toContain("environment:");
@@ -245,6 +271,40 @@ describe("CI workflow", () => {
         getWorkflowJobSection(operationsWorkflow, operation)
       ).not.toContain("environment:");
     }
+
+    for (const operation of secretlessOperations) {
+      expect(
+        getWorkflowJobSection(operationsWorkflow, operation)
+      ).not.toContain("secrets.");
+    }
+
+    const productionMigrationJob = getWorkflowJobSection(
+      operationsWorkflow,
+      "production-migration"
+    );
+    expect(productionMigrationJob).toContain("secrets.DATABASE_URL_DIRECT");
+    expect(productionMigrationJob).toContain("environment: Production");
+    expect(productionMigrationJob).toMatch(
+      PRODUCTION_MIGRATION_PERMISSIONS_PATTERN
+    );
+    expect(
+      operationsWorkflow.match(DATABASE_DIRECT_SECRET_REFERENCE_PATTERN)
+    ).toHaveLength(2);
+    expect(productionMigrationJob).toContain(
+      `PRODUCTION_MIGRATION_TARGET_CONFIRMATION: ${PRODUCTION_MIGRATION_TARGET_CONFIRMATION_EXPRESSION}`
+    );
+    expect(productionMigrationJob).toContain(
+      `PRODUCTION_MIGRATION_SHA: ${PRODUCTION_MIGRATION_SHA_EXPRESSION}`
+    );
+    expect(productionMigrationJob).toContain(
+      "bun scripts/check-production-migration-target.ts"
+    );
+    expect(productionMigrationJob).toContain("bun run db:migrate");
+    expect(productionMigrationJob).toContain("cancel-in-progress: false");
+    expect(productionMigrationJob).toContain(
+      PRODUCTION_MIGRATION_GROUP_EXPECTATION
+    );
+    expect(ciWorkflow).not.toContain("bun run db:migrate");
 
     for (const operation of operations) {
       expect(ciWorkflow).not.toContain(`${operation}:`);
@@ -282,10 +342,10 @@ describe("CI workflow", () => {
     );
     expect(
       operationsWorkflow.match(/^ {6}- uses: actions\/checkout@/gm)
-    ).toHaveLength(6);
+    ).toHaveLength(7);
     expect(
       operationsWorkflow.match(PERSIST_CREDENTIALS_DISABLED_PATTERN)
-    ).toHaveLength(6);
+    ).toHaveLength(7);
     expect(operationsWorkflow).toMatch(
       VALIDATE_DISPATCH_NO_TOKEN_PERMISSIONS_PATTERN
     );
@@ -294,7 +354,7 @@ describe("CI workflow", () => {
   it("pins every external workflow dependency to a full commit SHA with a release comment", () => {
     const workflows = [
       { content: readCiWorkflow(), expectedCount: 12 },
-      { content: readOperationsWorkflow(), expectedCount: 16 },
+      { content: readOperationsWorkflow(), expectedCount: 19 },
     ];
 
     for (const workflow of workflows) {
@@ -332,7 +392,24 @@ describe("CI workflow", () => {
     expect(getWorkflowJobSection(ciWorkflow, "admin-e2e")).not.toContain(
       "concurrency:"
     );
-    expect(operationsWorkflow).not.toContain("concurrency:");
+    const productionMigrationJob = getWorkflowJobSection(
+      operationsWorkflow,
+      "production-migration"
+    );
+    expect(productionMigrationJob).toContain("concurrency:");
+    expect(productionMigrationJob).toContain("cancel-in-progress: false");
+    for (const operation of [
+      "rls-smoke",
+      "restore-drill-checklist",
+      "production-certification-checklist",
+      "deployment-smoke",
+      "admin-deployment-smoke",
+      "production-preflight",
+    ]) {
+      expect(
+        getWorkflowJobSection(operationsWorkflow, operation)
+      ).not.toContain("concurrency:");
+    }
   });
 
   it("exposes RLS smoke as a selected operation without a database URL before P24", () => {
@@ -357,7 +434,9 @@ describe("CI workflow", () => {
     expect(workflow).toContain('RLS_DATABASE_URL: ""');
     expect(workflow).toContain('DEPLOYMENT_SMOKE_URL: ""');
     expect(workflow).not.toMatch(REMOVED_ADMIN_PERIMETER_ENV_PATTERN);
-    expect(workflow).not.toContain("secrets.");
+    expect(
+      getWorkflowJobSection(workflow, "production-preflight")
+    ).not.toContain("secrets.");
   });
 
   it("exposes deployment smoke operations without connecting them before P24", () => {

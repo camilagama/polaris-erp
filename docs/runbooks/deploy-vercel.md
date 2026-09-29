@@ -17,7 +17,7 @@ Configure em Production e replique/adapte para Preview:
 | Variavel | Uso |
 | --- | --- |
 | `DATABASE_URL` | Runtime com connection string pooler da branch Neon usando role nao proprietaria, sem `BYPASSRLS` e com `sslmode=verify-full` (ex.: `polaris_app`). |
-| `DATABASE_URL_DIRECT` | Migracoes locais/CI com role proprietaria/admin e `sslmode=verify-full` (ex.: `neondb_owner`). Nao use essa URL como runtime da aplicacao. |
+| `DATABASE_URL_DIRECT` | URL direta para migration deliberada, com role de migration distinta da role runtime e `sslmode=verify-full`. Nunca use essa URL como runtime da aplicacao; a credencial de Production fica restrita ao job operacional aprovado. |
 | `BETTER_AUTH_SECRET` | Segredo forte do Better Auth; em producao precisa ter pelo menos 32 caracteres. |
 | `BETTER_AUTH_URL` | URL canonica do app, sem barra final. |
 | `ADMIN_APP_URL` | Origem dedicada do admin interno, por exemplo `https://admin.seu-dominio.com`. Deve ser diferente de `NEXT_PUBLIC_APP_URL`. |
@@ -51,7 +51,7 @@ Valores invalidos de sampling do Sentry sao ignorados pelo app e caem nos padroe
 
 O baseline de headers globais e aplicado por `next.config.ts`: HSTS, `nosniff`, frame policy, referrer policy e permissions policy. CSP completa deve ser validada separadamente para nao quebrar Next/Sentry.
 
-RLS e obrigatorio em producao. Nao configure o runtime com `neondb_owner`: esse role pode ter `BYPASSRLS` no Neon e anula a barreira de tenant mesmo com policies corretas. Mantenha `neondb_owner` apenas em `DATABASE_URL_DIRECT` para migrations. Use `sslmode=verify-full` nas URLs Postgres de producao para preservar a verificacao TLS esperada pelo driver.
+RLS e obrigatorio em producao. Nao configure o runtime com `neondb_owner`: esse role pode ter `BYPASSRLS` no Neon e anula a barreira de tenant mesmo com policies corretas. Use uma role runtime sem `BYPASSRLS` e uma role de migration distinta em `DATABASE_URL_DIRECT`, seguindo o [runbook de migrations de Production](production-migrations.md). Use `sslmode=verify-full` nas URLs Postgres de producao para preservar a verificacao TLS esperada pelo driver.
 
 ## Guardrails de producao
 
@@ -182,13 +182,9 @@ Nao misture `localhost` no navegador com `BETTER_AUTH_URL` apontando para tunnel
 
 As migracoes nao rodam automaticamente no deploy por padrao.
 
-1. Aponte `DATABASE_URL_DIRECT` para a branch correta com role de migration.
-2. Confirme que `DATABASE_URL_DIRECT` e `DATABASE_URL` nao sao a mesma connection string.
-3. Rode `bun run db:migrate`. O script falha antes do Drizzle se `DATABASE_URL_DIRECT` estiver ausente, invalida ou igual a `DATABASE_URL`; nao existe mais fallback para a URL runtime.
-4. Configure `DATABASE_URL` do runtime com role nao proprietaria sem `BYPASSRLS`.
-5. Rode `bun run db:smoke:rls` no ambiente apontado para a branch promovida.
-6. Rode `bun run platform-admin:bootstrap` uma unica vez para o primeiro operador interno aprovado, usando `DATABASE_URL_DIRECT`.
-7. Confira o runbook em `docs/saas-organization-migration-runbook.md`.
+Para migrations locais ou de Staging, use um alvo não produtivo confirmado e siga o fluxo versionado em [Migrations Drizzle](../database/migrations.md). Para Production, não rode `bun run db:migrate` manualmente nem no deploy Vercel: siga exclusivamente o [runbook de migrations de Production](production-migrations.md), depois de cumprir os gates P43/P44 e confirmar no P43 que o workflow está integrado e configurado.
+
+Configure `DATABASE_URL` do runtime com role não proprietária sem `BYPASSRLS`. Depois da migration e do deploy aprovados, rode `bun run db:smoke:rls` no ambiente promovido. O bootstrap inicial de platform admin é uma operação distinta e deve usar apenas o procedimento operacional aprovado para o alvo confirmado; não reutilize uma URL runtime como credencial de migration.
 
 Antes de migrations de risco material e antes de aceitar dados reais, siga o [runbook de backup e recuperação](backup-and-recovery.md) e execute um restore drill real em alvo descartável. O checklist abaixo apenas valida campos de evidência declarados; ele não gera backup, não restaura o banco e não comprova RPO/RTO.
 

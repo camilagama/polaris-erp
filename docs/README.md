@@ -23,6 +23,7 @@
 - [RLS tenant isolation](architecture/rls-tenant-isolation.md): decisao e evidencia historica de RLS; requer revalidacao contra banco promovido.
 - [Estrategia de testes](testing/strategy.md): camadas, limites de evidencia e classificacao de risco com verificacoes proporcionais.
 - [Deploy Vercel](runbooks/deploy-vercel.md): roteiro operacional de deploy.
+- [Migrations de Production](runbooks/production-migrations.md): procedimento separado de migração do schema, com validação do alvo e pré-requisitos P43/P44.
 - [Backup e recuperação](runbooks/backup-and-recovery.md): estratégia PITR, cópia externa e restore drill; não é evidência de execução.
 - [SOP de ativacao manual de billing](runbooks/manual-billing-activation-sop.md): processo manual; nao prova checkout self-service.
 

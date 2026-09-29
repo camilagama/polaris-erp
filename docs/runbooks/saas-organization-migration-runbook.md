@@ -20,7 +20,7 @@ Billing e gestao multiusuario completa continuam fora deste corte.
 2. Confirme PITR/restore habilitado para a branch de producao.
 3. Confirme que o runtime usa uma role sem `BYPASSRLS`:
    - `DATABASE_URL`: role runtime nao proprietaria, por exemplo `polaris_app`;
-   - `DATABASE_URL_DIRECT`: role proprietaria/admin, por exemplo `neondb_owner`, apenas para migrations.
+   - `DATABASE_URL_DIRECT`: role de migration distinta da role runtime, com os privilegios DDL necessarios; nunca e uma URL de runtime.
 4. Confirme que estes comandos passam localmente:
    - `bun run check`
    - `bun run test`
@@ -79,7 +79,7 @@ bun run db:smoke:rls
 ## Deploy em producao
 
 1. Registre o timestamp/PITR ou crie restore point.
-2. Aplique migrations com `DATABASE_URL_DIRECT`.
+2. Aplique migrations somente pelo procedimento de [migrations de Production](production-migrations.md), após os gates P43/P44. Nao execute `bun run db:migrate` manualmente contra Production nem inclua migration no deploy Vercel.
 3. Configure o runtime de producao:
    - `DATABASE_URL` com role sem `BYPASSRLS`;
    - nunca use `DATABASE_URL_DIRECT` como runtime.
@@ -104,7 +104,7 @@ bun run db:smoke:rls
 
 ## Rollback
 
-Rollback preferido: restaurar banco por PITR para o timestamp registrado e reverter o deploy da aplicacao.
+Rollback preferido: seguir o [runbook de backup e recuperação](backup-and-recovery.md) para avaliar a restauração/PITR no alvo aprovado e reverter o deploy da aplicação somente quando compatível com o schema e os dados.
 
 Se apenas o app for revertido, nao rode codigo antigo que nao usa `set_config('app.organization_id', ..., true)` contra banco com RLS habilitado. Esse runtime antigo pode quebrar leituras/escritas tenant-scoped.
 

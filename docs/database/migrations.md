@@ -2,6 +2,8 @@
 
 **Status:** inventário versionado confirmado; aplicação em cada ambiente não foi inferida. **Commit:** `886eda0`.
 
+O procedimento canônico para Production está em [Migrations de Production](../runbooks/production-migrations.md). Na revisão de 2026-09-29, a operação separada estava preparada na PR #2, ainda não integrada à `main`; credenciais/alvo não foram configurados nem migrations de Production executadas. Consulte P43 para o estado operacional vigente.
+
 Drizzle lê `packages/db/src/schema.ts`, grava migrations em `packages/db/src/migrations/` e registra aplicação em `drizzle.__drizzle_migrations__`. `db:migrate` exige a URL direta; não foi executado nesta tarefa.
 
 | Marco | Migrations | Efeito relevante |

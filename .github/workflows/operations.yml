@@ -17,6 +17,15 @@ on:
           - deployment-smoke
           - admin-deployment-smoke
           - production-preflight
+          - production-migration
+      release_sha:
+        description: Full SHA on main approved for the production migration (production-migration only).
+        required: false
+        type: string
+      target_confirmation:
+        description: Re-enter the verified <project-id>/<branch-id> from P43 and the Neon console (production-migration only).
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -243,3 +252,48 @@ jobs:
           SUPPORT_EMAIL: ${{ vars.SUPPORT_EMAIL }}
           UPSTASH_REDIS_REST_TOKEN: ""
           UPSTASH_REDIS_REST_URL: ""
+
+  production-migration:
+    if: ${{ github.ref == 'refs/heads/main' && inputs.operation == 'production-migration' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    environment: Production
+    concurrency:
+      group: production-migration-${{ vars.PRODUCTION_NEON_PROJECT_ID }}-${{ vars.PRODUCTION_NEON_BRANCH_ID }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          check-latest: true
+          package-manager-cache: false
+
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.4.2
+
+      - name: Validate approved migration target
+        run: bun scripts/check-production-migration-target.ts
+        env:
+          DATABASE_URL_DIRECT: ${{ secrets.DATABASE_URL_DIRECT }}
+          PRODUCTION_DATABASE_HOST: ${{ vars.PRODUCTION_DATABASE_HOST }}
+          PRODUCTION_DATABASE_NAME: ${{ vars.PRODUCTION_DATABASE_NAME }}
+          PRODUCTION_MIGRATION_ROLE: ${{ vars.PRODUCTION_MIGRATION_ROLE }}
+          PRODUCTION_MIGRATION_SHA: ${{ inputs.release_sha }}
+          PRODUCTION_MIGRATION_TARGET_CONFIRMATION: ${{ inputs.target_confirmation }}
+          PRODUCTION_NEON_BRANCH_ID: ${{ vars.PRODUCTION_NEON_BRANCH_ID }}
+          PRODUCTION_NEON_PROJECT_ID: ${{ vars.PRODUCTION_NEON_PROJECT_ID }}
+          PRODUCTION_RUNTIME_ROLE: ${{ vars.PRODUCTION_RUNTIME_ROLE }}
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Apply versioned migrations to the confirmed Production target
+        run: bun run db:migrate
+        env:
+          DATABASE_URL_DIRECT: ${{ secrets.DATABASE_URL_DIRECT }}

@@ -4,6 +4,8 @@
 
 **Adendo de 2026-09-29:** `runbooks/backup-and-recovery.md` documenta a estratégia aprovada em P44 e os critérios do restore drill. É procedimento-alvo; não altera a evidência-base nem comprova automação ou restore real. O estado operacional atual está no registro P43.
 
+**Adendo de 2026-09-29 — P45:** `runbooks/production-migrations.md` passa a ser a fonte canônica do procedimento. O job manual de migration foi adicionado à PR #2, ainda não integrada à `main`; alvo/credenciais de Production continuam sem configuração confirmada e nenhuma migration de Production foi executada. O runbook mantém P44 e a caracterização de falha/retomada Drizzle em PostgreSQL descartável como bloqueios antes de habilitar a operação.
+
 **Leitura da confiança:** alta = código, schema/migration e/ou teste local apontados; média = código e configuração versionada, com dependência externa; baixa = procedimento ou estado que requer confirmação fora do repositório. Nenhum nível confirma produção.
 
 | Área | Código/configuração apontados | Banco e testes apontados | Documento | Confiança | Lacuna principal |
