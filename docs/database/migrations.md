@@ -17,6 +17,10 @@ Drizzle lê `packages/db/src/schema.ts`, grava migrations em `packages/db/src/mi
 
 Há DML versionado: seed de plano, normalização de identidade de organização e atualização de eventos capture-only. Esses efeitos devem ser tratados como parte das migrations, não como comportamento que este documento executou.
 
+## `db:push` local
+
+`db:push` só aceita a URL dedicada `DATABASE_URL_PUSH_LOCAL` para PostgreSQL loopback e banco scratch `polaris_push_scratch`. Use uma instância realmente descartável; o guard verifica host e nome do banco, mas não consegue provar o ciclo de vida do servidor. O banco comportamental `polaris_behavior`, E2E e qualquer alvo remoto não são destinos de `db:push`. Para toda branch remota, inclusive Neon temporária, use `db:generate`, SQL versionado/revisado e `db:migrate`. A regra operacional completa está em [`packages/db/AGENTS.md`](../../packages/db/AGENTS.md).
+
 ## Drift e validação
 
 O journal Drizzle e snapshots em `packages/db/src/migrations/meta/` mostram a sequência local; eles não demonstram que uma branch Neon específica está no mesmo estado. Confirme metadados read-only de schema, policies, índices e `__drizzle_migrations__` antes de afirmar ausência de drift. Branch `dev` não é prova de produção.

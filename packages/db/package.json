@@ -19,7 +19,7 @@
   "scripts": {
     "db:generate": "drizzle-kit generate",
     "db:migrate": "bun ../../scripts/require-database-url-direct.ts && drizzle-kit migrate",
-    "db:push": "bun ../../scripts/require-database-url-direct.ts && drizzle-kit push",
+    "db:push": "bun ../../scripts/check-local-db-push-target.ts && drizzle-kit push --config=drizzle.push.config.ts",
     "db:studio": "drizzle-kit studio",
     "test": "vitest run",
     "test:postgres": "bun ../../scripts/require-postgres-behavior-database.ts && vitest run src/postgres-behavior.test.ts",

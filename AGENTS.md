@@ -83,6 +83,10 @@ Project docs, memory, specs, and plans live in `aidd_docs/`.
 * Prefer pointers to docs over copying large content into this file.
 * Keep task-specific guidance in `aidd_docs/` and read it only when relevant.
 
+## Database Operations
+
+Before changing schema, migrations, or database commands, read [`packages/db/AGENTS.md`](packages/db/AGENTS.md).
+
 ## Next.js Rules
 
 <!-- BEGIN:nextjs-agent-rules -->

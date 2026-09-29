@@ -55,7 +55,7 @@ Os nomes, finalidade e requisitos por ambiente ficam em [.env.example](.env.exam
 | Preflight e smoke | `bun run prod:preflight`, `bun run deploy:smoke` |
 | Links documentais | `bun run docs:check` |
 
-Os scripts de banco e producao exigem ambiente apropriado. Nao execute migrations, `db:push`, smokes ou E2E contra producao. Fonte: [package.json](package.json) e [docs/architecture/database-environments.md](docs/architecture/database-environments.md).
+Os scripts de banco e producao exigem ambiente apropriado. `db:push` so aceita o banco PostgreSQL descartavel local `polaris_push_scratch` pela URL `DATABASE_URL_PUSH_LOCAL`; qualquer banco remoto, inclusive branches Neon, usa migrations versionadas. Nunca execute migrations, smokes ou E2E contra producao. Fonte: [package.json](package.json), [regras do banco](packages/db/AGENTS.md) e [ambientes de banco](docs/architecture/database-environments.md).
 
 ## Limitacoes conhecidas
 
