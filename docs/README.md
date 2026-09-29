@@ -18,6 +18,7 @@
 ## Documentos existentes relevantes
 
 - [Ambientes de banco, E2E e RLS](architecture/database-environments.md): operacao de banco e isolamento de ambientes.
+- [Prontidao de producao](operations/production-readiness.md): estado dos gates, configuracao externa observada e evidencias por ambiente.
 - [Imagens de produto com Cloudflare R2](architecture/product-images-r2.md): fluxo de imagem e configuracao operacional.
 - [RLS tenant isolation](architecture/rls-tenant-isolation.md): decisao e evidencia historica de RLS; requer revalidacao contra banco promovido.
 - [Estrategia de testes](testing/strategy.md): camadas, limites de evidencia e classificacao de risco com verificacoes proporcionais.
@@ -34,5 +35,3 @@ Perguntas abertas decisivas:
 - A protecao Vercel Authentication do admin esta ativa fora do codigo?
 - Quais provedores externos possuem sandbox e producao certificados?
 - Qual branch Neon e qual role de runtime representam o ambiente promovido?
-
-Nao ha outros documentos de fundacao pendentes nesta tarefa.
