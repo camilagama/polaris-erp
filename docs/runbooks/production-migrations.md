@@ -10,7 +10,7 @@ O job `production-migration` está preparado na PR #2, ainda não integrado à `
 
 - Gere migrations com Drizzle, revise o SQL, versione-o e valide o replay em CI. Não edite migrations já aplicadas; faça uma nova migration para corrigir ou avançar o schema.
 - `db:push` não faz parte deste procedimento; siga a regra de [migrations do banco](../database/migrations.md) e o ponto P46.
-- A CI e o build/deploy Vercel não recebem credenciais de Production nem aplicam migrations.
+- A CI não recebe credenciais de Production; ela reaplica a cadeia versionada em PostgreSQL descartável, sem aplicar migrations em banco persistente. O build/deploy Vercel não executa migrations.
 - O job de Production é acionado manualmente em `Operations`, a partir de `main`, com uma única operação e um SHA completo aprovado. Ele não faz deploy da aplicação.
 - `DATABASE_URL_DIRECT` usa endpoint direto e role de migration distinta da role runtime. Nunca configure essa URL no runtime Web/Admin.
 - A validação confere o SHA, ref, host, banco, conexão direta, TLS, role e IDs de projeto/branch informados. Ela **não consulta a API do Neon**. Antes de cada dispatch, o operador deve confirmar a associação host/projeto/branch no Neon Console e reconciliá-la com P43; a confirmação digitada no workflow registra essa checagem, não a substitui.
