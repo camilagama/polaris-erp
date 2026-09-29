@@ -55,7 +55,11 @@
     },
     "db:push": {
       "cache": false,
-      "passThroughEnv": ["DATABASE_URL", "DATABASE_URL_DIRECT"]
+      "passThroughEnv": [
+        "DATABASE_URL",
+        "DATABASE_URL_DIRECT",
+        "DATABASE_URL_PUSH_LOCAL"
+      ]
     },
     "prod:preflight": {
       "cache": false

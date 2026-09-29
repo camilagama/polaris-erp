@@ -7,6 +7,7 @@ const WEB_PACKAGE_JSON = new URL(
   "../../../apps/web/package.json",
   import.meta.url
 );
+const TURBO_CONFIG = new URL("../../../turbo.json", import.meta.url);
 const PUSH_CONFIG = new URL("../drizzle.push.config.ts", import.meta.url);
 
 describe("local db:push command contract", () => {
@@ -20,6 +21,9 @@ describe("local db:push command contract", () => {
     const webPackage = JSON.parse(readFileSync(WEB_PACKAGE_JSON, "utf8")) as {
       scripts: Record<string, string>;
     };
+    const turboConfig = JSON.parse(readFileSync(TURBO_CONFIG, "utf8")) as {
+      tasks: Record<string, { passThroughEnv?: string[] }>;
+    };
     const pushConfig = readFileSync(PUSH_CONFIG, "utf8");
 
     expect(databasePackage.scripts["db:push"]).toBe(
@@ -30,6 +34,9 @@ describe("local db:push command contract", () => {
     );
     expect(webPackage.scripts["db:push"]).toBe(
       "bun run --cwd ../../packages/db db:push"
+    );
+    expect(turboConfig.tasks["db:push"].passThroughEnv).toContain(
+      "DATABASE_URL_PUSH_LOCAL"
     );
     expect(pushConfig).toContain("validateLocalDbPushTarget");
     expect(pushConfig).toContain("DATABASE_URL_PUSH_LOCAL");

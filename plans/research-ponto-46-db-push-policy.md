@@ -46,13 +46,9 @@ Não há configuração remota atual de Neon examinada nesta revisão. Nenhum `d
 
 O comando suportado usará `DATABASE_URL_PUSH_LOCAL` em um config Drizzle separado, em vez de reaproveitar `DATABASE_URL_DIRECT`. O guard exige endpoint PostgreSQL em `localhost`, `127.0.0.1` ou `::1`, o nome reservado `polaris_push_scratch` e um alvo distinto de `DATABASE_URL`/`DATABASE_URL_DIRECT`; falha sem imprimir URL/credenciais. O valor continua opcional e vazio no template. O guard prova loopback/nome/identidade do alvo, não que o servidor local tenha ciclo de vida efêmero; as instruções devem exigir instância realmente descartável e declarar esse limite. Nenhum endpoint remoto ou database real será consultado durante validação.
 
-### Implementação candidata na worktree — 2026-09-29
-
-O manifest de `@polaris/db` agora chama o guard antes de `drizzle-kit push` e fornece um config separado que carrega a URL local dedicada e reaplica o guard durante o carregamento. O root e Web continuam delegando ao script do package. Root/child `AGENTS.md`, `.env.example`, README Web, README root e a documentação de ambientes/migrations foram alinhados. Testes cobrem URLs loopback, IPv6, colisões de alvo, nome reservado, host remoto e redaction. Uma chamada integrada com host sintético `.invalid` foi rejeitada pelo guard antes da conexão; nenhum banco foi acessado. A instância local continua sem configuração confirmada e o estado do plano aguarda revisão do usuário.
-
 ### Implementação candidata em 2026-09-29
 
-- `packages/db` agora valida `DATABASE_URL_PUSH_LOCAL` antes do CLI e usa `drizzle.push.config.ts`, que também executa o mesmo guard ao ser carregado. Root e Web continuam delegando para o script guardado do package.
+- `packages/db` agora valida `DATABASE_URL_PUSH_LOCAL` antes do CLI e usa `drizzle.push.config.ts`, que também executa o mesmo guard ao ser carregado. Root e Web continuam delegando para o script guardado do package; `turbo.json` encaminha a URL local somente para `db:push`, task que permanece sem cache.
 - O guard normaliza os aliases de loopback, exige o nome `polaris_push_scratch`, recusa destinos iguais ao endpoint de runtime/migration e não expõe URL/credenciais. A proteção cobre host e identidade do banco, não a vida útil real do processo PostgreSQL.
-- Foram adicionados testes para loopback, IPv6, rejeição remota, colisão com URLs existentes, nome de scratch e ausência de credenciais em mensagens. Uma prova de comando com domínio reservado `.invalid` foi rejeitada no guard antes de chamar o CLI; nenhum serviço PostgreSQL foi conectado.
+- Foram adicionados testes para loopback, IPv6, rejeição remota, colisão com URLs existentes, nome de scratch e ausência de credenciais em mensagens. Provas de comando por root e CLI direta com host sintético `.invalid` foram rejeitadas no guard antes de executar o cliente de banco; nenhum serviço PostgreSQL foi conectado.
 - Não há `.env.local` nem Compose neste worktree, portanto o teste não comprova uma instância local descartável disponível. O operador precisa provisionar uma instância de scratch antes de usar o comando; o PR não cria ou conecta banco.
