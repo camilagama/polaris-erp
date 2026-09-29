@@ -890,7 +890,7 @@ Implementar uma proteção no comando suportado que recuse hosts fora de uma all
 
 **Proposta do relatório:** vincular o SHA validado às implantações reais de Web/Admin e ao conjunto de migrations, para a release representar uma versão verificável do sistema e não apenas o estado atual de uma branch.
 
-**Evidência no Polaris:** ainda não há Vercel publicada nem workflow de deploy; a CI constrói Web e Admin, cada um com configuração Vercel própria. O runbook atual recomenda validar Preview e depois `vercel deploy --prod`, sem registrar a identidade do build produzido. Não existe registro que una SHA, deployments e estado aplicado do banco.
+**Evidência no Polaris (revalidada em 2026-09-29):** Web e Admin têm configurações de build separadas. O checkout não contém vínculo `.vercel` nem workflow de deploy; configuração remota segue desconhecida. Antes da implementação documental P47, o runbook terminava em `vercel deploy --prod` e não registrava o deployment candidato validado. O commit `19af65b` substituiu essa instrução por um contrato de release por SHA; ainda não há manifest gerado nem prova de deployments Vercel reais.
 
 **Comparação com Hub:** o Hub vincula staging, CI, SHA candidato, deployment de produção, migrations, smoke e deployment anterior de rollback. Seu registro `release-state.md` é um snapshot operacional datado e não prova o estado remoto atual do Polaris.
 
@@ -902,13 +902,17 @@ Web e Admin terão IDs de deployment próprios associados à mesma release. Não
 
 **Pesquisa de apoio:** [pesquisa do ponto 47 sobre identidade de release por SHA](research-ponto-47-release-sha.md).
 
+**Implementação documental:** concluída e aprovada pelo usuário em 2026-09-29, commit `19af65b` na PR #2. O runbook de deploy agora define staged Production por SHA, proteção de URL, promotion do ID exato, manifest por release e limite do snapshot P43; o runbook de migrations prepara candidatos antes da operação e promove após migration e smokes. `docs:check`, Ultracite e o `verify:quick` do pre-push passaram.
+
+**Status operacional:** parcial/condicional. Não há projetos/variáveis Vercel ou workflow de release confirmados, deployment ID/SHA real nem promoção/smoke executados. Configuração e automação permanecem pendentes de P4/P5 e da revisão dos gates P43/P44/P45.
+
 ### Ponto 48 — deploys separados, releases coordenadas por impacto
 
 **Estado:** aceito em 2026-09-25, com Q1–Q2 aprovadas.
 
 **Proposta do relatório:** manter Web e Admin como projetos/deployments distintos, reunindo os dois numa release coordenada para que código, banco e aplicações não avancem em combinações incompatíveis.
 
-**Evidência no Polaris:** há builds e configurações Vercel separadas para Web e Admin, mas ainda não há projetos Vercel publicados nem workflow de deploy. Os apps compartilham `@polaris/auth`, `@polaris/db`, `@polaris/date`, `@polaris/e2e-support` e `@polaris/ui`; Admin ainda consome `@polaris/platform`. A CI atual constrói e verifica ambos. O runbook faz referência a ambos, mas seus comandos de deploy não selecionam explicitamente os dois projetos.
+**Evidência no Polaris (revalidada após P47):** `vercel.json` configura Web na raiz e `apps/admin/vercel.json` configura Admin; não há vínculo/projetos remotos confirmados nem workflow de release. Os manifests mostram dependências diretas diferentes; o grafo transitivo inclui pacotes consumidos por ambos, por Web ou por Admin. A CI executa builds dos dois apps sem filtro por caminho. O runbook P47 já descreve preparar e promover candidates por app, mas ainda falta um critério explícito de impacto que registre também o deployment/SHA inalterado do app não afetado.
 
 **Comparação com Hub:** o Hub tem um único app e deployment Vercel, então seu fluxo de SHA e promoção é referência para checks, não para coordenar múltiplos projetos.
 
