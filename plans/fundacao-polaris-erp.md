@@ -912,7 +912,11 @@ Web e Admin terão IDs de deployment próprios associados à mesma release. Não
 
 **Proposta do relatório:** manter Web e Admin como projetos/deployments distintos, reunindo os dois numa release coordenada para que código, banco e aplicações não avancem em combinações incompatíveis.
 
-**Evidência no Polaris (revalidada em 2026-09-29):** `vercel.json` configura Web na raiz e `apps/admin/vercel.json` configura Admin; não há vínculo/projetos remotos confirmados nem workflow de release. Os manifests mostram dependências diretas diferentes; o grafo transitivo inclui pacotes consumidos por ambos, por Web ou por Admin. A CI executa builds dos dois apps sem filtro por caminho. A atualização documental P48 em revisão acrescenta matriz de impacto e registro obrigatório dos dois apps, incluindo ID/SHA do app inalterado; isso não configura Vercel nem habilita skips.
+**Evidência no Polaris (revalidada em 2026-09-29):** `vercel.json` configura Web na raiz e `apps/admin/vercel.json` configura Admin; não há vínculo/projetos remotos confirmados nem workflow de release. Os manifests mostram dependências diretas diferentes; o grafo transitivo inclui pacotes consumidos por ambos, por Web ou por Admin. A CI executa builds dos dois apps sem filtro por caminho. O runbook agora registra a matriz de impacto e exige evidência dos dois apps, incluindo ID/SHA do app inalterado; isso não configura Vercel nem habilita skips.
+
+**Implementação documental:** concluída e aprovada pelo usuário em 2026-09-29, commit `8507710dc0f2d618f0fc9dc6846d77b469e96a4c` na PR #2. O runbook classifica apps/pacotes por impacto transitivo, exige entradas `web` e `admin` no manifest e registra estados bloqueado/parcial; mantém a CI completa e adia skips da Vercel.
+
+**Status operacional:** parcial/condicional. Nenhum projeto, Root Directory, deployment workflow ou promotion real da Vercel foi validado. `@polaris/config` é usado pelos dois `tsconfig` via caminho relativo e não está declarado nos manifests; por isso mudanças nele afetam ambos e a detecção automática de projetos afetados permanece desabilitada até a relação ser explicitada e testada.
 
 **Comparação com Hub:** o Hub tem um único app e deployment Vercel, então seu fluxo de SHA e promoção é referência para checks, não para coordenar múltiplos projetos.
 

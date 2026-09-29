@@ -1,7 +1,7 @@
 # Pesquisa do ponto 48 — deploys separados e release coordenada
 
 **Data:** pesquisa inicial 2026-09-25; revalidação 2026-09-29
-**Estado:** decisão aceita em 2026-09-25. Web/Admin permanecem projetos separados; candidatos afetados ficam prontos antes de promoções sequenciais e não atômicas. A matriz de impacto e o contrato do manifest foram adicionados ao runbook nesta revalidação; aguardam revisão do usuário.
+**Estado:** decisão aceita em 2026-09-25; atualização documental aprovada em 2026-09-29. Web/Admin permanecem projetos separados; candidatos afetados ficam prontos antes de promoções sequenciais e não atômicas. A matriz de impacto e o contrato do manifest estão no runbook; os passos operacionais continuam condicionais à configuração Vercel.
 **Pergunta:** manter Web e Admin como projetos/deployments independentes, coordenando versões quando há dependências compartilhadas.
 
 ## Conclusão provisória
