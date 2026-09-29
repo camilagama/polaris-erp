@@ -195,14 +195,7 @@ Antes de migrations de risco material e antes de aceitar dados reais, siga o [ru
 
 Preencha esses campos somente depois do drill real, sem armazenar URL de conexão, credenciais, dump, chave privada, PII ou payloads no GitHub. O estado e a evidência sanitizada pertencem ao [registro P43](../operations/production-readiness.md).
 
-Antes de promover producao:
-
-```bash
-vercel env run -e production -- bun run prod:preflight
-vercel env run -e production -- bun run build
-```
-
-Esses comandos usam as variaveis de Production da Vercel durante o preflight/build local/CI e antecipam falhas de env.
+Antes de promover Production, execute `prod:preflight` em uma operação autorizada que tenha acesso somente às variáveis necessárias do Environment `Production`. Não baixe variáveis de Production para `.env.local`, não as injete na CI comum e não faça um build local com esses secrets. O build do candidato é feito pela operação de deployment selecionada e seu ID/SHA deve ser verificado. O workflow de release ainda não está configurado; P43 registra seu estado.
 
 ## R2
 
@@ -236,36 +229,38 @@ curl "https://SEU_DOMINIO/api/internal/health/r2" \
   -H "Authorization: Bearer $INTERNAL_R2_HEALTH_SECRET"
 ```
 
-## Fluxo de deploy
+## Fluxo de release por SHA
 
-Fluxo manual recomendado:
+### Estado e ambientes
 
-```bash
-vercel link
-vercel env pull .env.local
-bun run check
-bun run check:all
-bun run check:admin
-bun run typecheck
-bun run typecheck:all
-bun run typecheck:admin
-bun run test
-bun run test:all
-vercel env run -e production -- bun run prod:preflight
-bun run db:smoke:rls
-bun run db:analyze:listings
-DEPLOYMENT_SMOKE_URL=https://SEU_DOMINIO bun run deploy:smoke
-ADMIN_DEPLOYMENT_SMOKE_URL=https://ADMIN_SEU_DOMINIO bun run deploy:smoke:admin
-bun run build
-bun run build:admin
-vercel env run -e production -- bun run build
-vercel deploy
-vercel logs --deployment <preview-deployment-id> --level error
-vercel deploy --prod
-vercel logs --environment production --level error --since 5m
-```
+Este checkout ainda não contém vínculo `.vercel` nem workflow de deploy. A existência de projetos, domínios, variáveis, proteções e deployments no provedor permanece **desconhecida** até consulta autorizada à conta; este runbook não afirma que estejam configurados.
 
-Promova para producao somente depois de validar o preview contra banco/servicos isolados.
+O mapa aprovado tem quatro ambientes conceituais: Local, CI, Staging e Production. No plano Hobby, a Vercel documenta Local, Preview e Production como ambientes padrão; `Preview` pode implementar o Staging não produtivo com variáveis Preview específicas da branch depois que P4/P5 fixarem o alvo. Ambientes Vercel customizados, como um ambiente chamado `staging`, exigem Pro ou Enterprise. Não conte Preview e Staging como dois ambientes conceituais, nem use um build staged de Production como homologação: ele recebe variáveis de Production. Confirme no provisionamento que branch, banco, callbacks, integrações sandbox e dados sintéticos de Preview estão isolados de Production. [Vercel — environments](https://vercel.com/docs/deployments/environments), [variáveis por branch](https://vercel.com/docs/environment-variables/manage-across-environments).
+
+Hobby é a referência para o período de teste; a Vercel descreve o plano como voltado a projetos pessoais e aplicações pequenas. Antes de qualquer uso comercial, confirme os termos/plano apropriados. Uma conta Vercel pode conter os projetos Web e Admin, mas importar/conectar o repositório pessoal do GitHub exige que a pessoa que configura a integração seja owner do repositório. O owner `camilagama` deve autorizar essa conexão. A Vercel cria um deployment Production cada vez que há merge para a branch Production configurada. Isso contornaria a ordem aprovada (migration operacional → promoção), então a integração deve manter Preview, mas impedir deploy Git automático de Production até existir um gate provado; a operação P47 deve criar o staged deployment por SHA e promovê-lo. Vercel também documenta uma regra Hobby sobre autoria dos commits; confira que a identidade Git do autor corresponde ao owner da conta Hobby e valide um deployment de teste antes de adotar integração automática. Se a integração não permitir esses gates, use o caminho operacional por CLI no SHA selecionado. [Vercel — Hobby](https://vercel.com/docs/plans/hobby), [Vercel — GitHub e produção por merge](https://vercel.com/docs/git), [deploy por CLI](https://vercel.com/docs/cli/deploying-from-cli).
+
+### Ordem de release
+
+1. Fixe o SHA Git completo. Exija os checks requeridos da CI, replay das migrations e testes PostgreSQL 18. Registre o run/checks que validaram esse mesmo SHA.
+2. Valide a mudança primeiro numa branch Neon descartável por PR quando configurada; depois no Staging persistente após provisionamento, com dados sintéticos e integrações sandbox.
+3. Antes de Production, confirme os gates P43/P44 aplicáveis: alvo correto, backup/PITR e restore drill real conforme o escopo aprovado. O estado e as provas externas continuam no [registro P43](../operations/production-readiness.md).
+4. Para cada app afetado (`web` e/ou `admin`), crie um staged deployment de Production a partir do SHA aprovado **sem atribuir domínio**. Prepare todos os candidatos afetados antes da primeira promoção. Guarde deployment ID/URL e confirme no `vercel inspect` status, target e SHA Git reportado. Um build staged usa variáveis Production; não o use para testes mutáveis nem antes dos gates. Proteja as URLs geradas com Vercel Authentication antes de usá-las; elas são públicas por padrão. Faça smoke seguro contra o candidato somente depois da migration compatível. [Vercel — staged Production](https://vercel.com/docs/cli/deploying-from-cli), [URLs geradas e proteção](https://vercel.com/docs/deployments/generated-urls), [Vercel Authentication](https://vercel.com/docs/deployment-protection/methods-to-protect-deployments).
+5. Execute a migration de Production como operação separada, com SHA, projeto/branch/host/banco validados, depois dos candidatos estarem prontos. Siga o [runbook de migrations de Production](production-migrations.md); não rode migration como parte do build ou deploy.
+6. Após migration bem-sucedida, execute primeiro smoke seguro e não mutável contra cada candidato protegido. Promova o **deployment ID exato** do primeiro app afetado sem rebuild e execute seu smoke pós-promoção; só então promova o próximo app afetado e repita o smoke. Web/Admin são promoções sequenciais e não atômicas: se uma promoção ou smoke falhar, pare, registre o estado parcial e siga recuperação compatível com código e banco. Não faça tráfego real de cliente como teste.
+
+Quando suportado pela configuração escolhida, o comando Vercel para preparar o candidato é `vercel --prod --skip-domain`; a promoção é `vercel promote <deployment-id-ou-url>`. Esses comandos são exemplos do mecanismo aprovado, não autorização para executá-los agora. Não use `vercel deploy --prod` diretamente como release: ele não garante validação prévia e promoção do mesmo deployment ID. `Preview` → `Production` também pode reconstruir com variáveis de Production; nesse caso é um artefato novo, cujo ID e SHA devem ser validados antes de promovê-lo. [Vercel — deploy CLI](https://vercel.com/docs/cli/deploying-from-cli), [promote](https://vercel.com/docs/cli/promote), [Preview para Production](https://vercel.com/docs/deployments/promote-preview-to-production).
+
+### Registro e evidência
+
+Para cada release, gerar um `release-manifest.json` e resumo da execução no GitHub Actions, com:
+
+- SHA Git completo, identificador/link do run e resultado dos checks de CI;
+- por app Vercel afetado, deployment ID, URL, target/status, projeto (`web`/`admin`) e SHA reportado pela Vercel;
+- migrations ordenadas/identificadores e hashes do candidato, estado aplicado confirmado no alvo e resultado do job de migration;
+- smoke por app, resultado, horário UTC e referência de evidência sanitizada;
+- deployment e SHA anteriores para recuperação, com observação de compatibilidade com o schema.
+
+Não inclua secrets, URLs com credenciais, dados de clientes ou logs brutos. Armazene o resumo e o artifact no run associado à release; defina explicitamente a retenção quando o workflow for configurado. Na documentação GitHub consultada em 2026-09-29, artifacts e logs tinham retenção padrão de 90 dias; repositórios privados podem configurar de 1 a 400 dias, sujeitos a limites superiores da conta/organização. A retenção não é arquivo permanente: se evidência de auditoria precisar durar mais, decida um arquivo separado antes de depender dela. O P43 mantém o snapshot atual dos gates e aponta para runs/evidências; não se transforma em diário de todas as releases. [GitHub — retenção de runs e artifacts](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/enabling-features-for-your-repository/managing-github-actions-settings-for-a-repository). A configuração de projetos, proteção, retenção e workflow fica pendente até P4/P5 provisionarem hospedagem, banco, callbacks e credenciais.
 
 ## Smoke checks
 

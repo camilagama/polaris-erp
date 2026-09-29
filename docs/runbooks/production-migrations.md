@@ -21,7 +21,7 @@ O job `production-migration` está preparado na PR #2, ainda não integrado à `
 
 Confirme todos os itens abaixo; registre configuração e evidência no P43.
 
-1. A branch `main` está protegida e o SHA candidato passou nos checks requeridos. O SHA selecionado para homologação e release deve ser o mesmo SHA usado pela operação de migration.
+1. A branch `main` está protegida e o SHA candidato passou nos checks requeridos. O SHA selecionado para homologação, staged deployments, release e operação de migration deve ser o mesmo SHA completo.
 2. As migrations passaram pelo replay completo e pelos testes de PostgreSQL 18 na CI. Revise locks, duração, backfills, índices, constraints, funções, policies RLS e compatibilidade com a versão do app que está no ar.
 3. Quando Staging e branches Neon não produtivas estiverem provisionados conforme P4/P5, valide a migration no fluxo não produtivo antes de Production.
 4. P44 está realmente validado: cópia/restauração conforme o escopo aprovado, RPO/RTO medidos dentro dos limites, imagens finais cobertas e restore drill concluído em alvo descartável. O sucesso de `ops:restore-drill:checklist` sozinho não satisfaz este gate.
@@ -43,7 +43,7 @@ Enquanto qualquer item estiver pendente, mantenha o job sem as credenciais de Pr
 2. Leia todo o SQL gerado e ajuste-o deliberadamente. Identifique efeitos de DDL/DML, locks, tamanho das tabelas afetadas, prechecks e compatibilidade para versões antiga e nova do app.
 3. Inclua schema, migration e snapshots/journal no mesmo commit. Não reescreva um arquivo que já foi aplicado em algum ambiente.
 4. Aguarde o replay e os testes de PostgreSQL da CI. Para mudanças compatíveis, valide primeiro em branch Neon descartável por PR quando provisionada, depois em Staging. Registre exceções e evidências em P43.
-5. Antes da operação de Production, confirme P44, o alvo do P43, o SHA homologado e o plano de smoke/recuperação. Para produção, estes são gates operacionais, não apenas uma lista de testes locais.
+5. Antes da operação de Production, confirme P44, o alvo do P43, o SHA homologado e o plano de smoke/recuperação. Para cada app afetado, prepare e registre o staged deployment de Production desse SHA sem atribuir domínio; prepare todos os candidatos antes da primeira promoção. Como esse build recebe variáveis de Production, proteja a URL gerada, não execute smoke mutável antes da migration e confirme os IDs/SHA antes de seguir. Para produção, estes são gates operacionais, não apenas uma lista de testes locais.
 
 ## Aplicar em Production
 
@@ -53,8 +53,8 @@ Enquanto qualquer item estiver pendente, mantenha o job sem as credenciais de Pr
 4. Em GitHub Actions, inicie `Operations` por `workflow_dispatch`, selecione `production-migration`, informe o SHA completo e digite exatamente `<project-id>/<branch-id>` usando os valores atuais confirmados no Neon e registrados no P43.
 5. Confira o job `production-migration`: ele deve rodar somente em `main`, no Environment `Production`, validar o alvo sem abrir conexão e então executar `bun run db:migrate` com a URL direta. Uma falha no guard encerra o job antes da migration. Não tente contornar o guard com `db:push` ou execução manual de Production.
 6. Se a migration falhar, pare. Não reexecute às cegas. Inspecione, por conexão read-only apropriada, o journal Drizzle e os efeitos do SQL no alvo; decida entre correção para frente ou recuperação P44. Correções de migration são novos arquivos versionados e passam novamente por CI e homologação.
-7. Depois do sucesso, registre no P43 o SHA completo, run ID do GitHub, projeto/branch/banco sem credenciais, horário UTC, migrations aplicadas, resultado, smoke e evidência sanitizada.
-8. Siga o fluxo de release P47/P48: prepare e valide os staged deployments dos apps afetados a partir do mesmo SHA, promova os IDs exatos sem rebuild quando suportado e execute smokes por app. Registre e interrompa diante de estado parcial; o deploy continua sendo uma operação separada.
+7. Depois do sucesso, atualize o snapshot corrente do P43 com SHA, run ID, alvo sanitizado, estado e ponteiro para a evidência; não duplique nele o histórico completo de releases. Guarde migrations, deployments e smokes no manifest/run da release.
+8. Após a migration bem-sucedida, siga P47/P48: execute primeiro smokes seguros e não mutáveis por app contra os staged deployments já preparados; promova o ID exato do primeiro app afetado sem rebuild e execute o smoke pós-promoção; só então promova o próximo app afetado e repita o smoke. Mantenha o manifest/run como registro de release e atualize o P43 para refletir o estado operacional corrente, incluindo o link para essa evidência. As promoções Web/Admin são sequenciais, não atômicas: diante de falha ou estado parcial, pare e siga a recuperação compatível. O deploy continua sendo uma operação separada.
 
 ## Falha e recuperação
 
