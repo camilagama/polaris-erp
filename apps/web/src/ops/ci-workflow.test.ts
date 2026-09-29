@@ -196,7 +196,7 @@ describe("CI workflow", () => {
     expect(operationsWorkflow).not.toContain("bun-version: latest");
   });
 
-  it("keeps manual operations separate, single-selected, main-only, and without credentials", () => {
+  it("keeps manual operations separate, single-selected, main-only, and without secret references", () => {
     const ciWorkflow = readCiWorkflow();
     const operationsWorkflow = readOperationsWorkflow();
     const operations = [
@@ -206,6 +206,16 @@ describe("CI workflow", () => {
       "deployment-smoke",
       "admin-deployment-smoke",
       "production-preflight",
+    ];
+    const productionEnvironmentOperations = [
+      "rls-smoke",
+      "deployment-smoke",
+      "admin-deployment-smoke",
+      "production-preflight",
+    ];
+    const evidenceOnlyOperations = [
+      "restore-drill-checklist",
+      "production-certification-checklist",
     ];
 
     expect(ciWorkflow).not.toContain("workflow_dispatch:");
@@ -220,7 +230,21 @@ describe("CI workflow", () => {
     expect(operationsWorkflow).not.toContain("  push:");
     expect(operationsWorkflow).not.toContain("  pull_request:");
     expect(operationsWorkflow).not.toContain("secrets.");
-    expect(operationsWorkflow).not.toContain("environment:");
+    expect(
+      getWorkflowJobSection(operationsWorkflow, "validate-dispatch")
+    ).not.toContain("environment:");
+
+    for (const operation of productionEnvironmentOperations) {
+      expect(getWorkflowJobSection(operationsWorkflow, operation)).toContain(
+        "environment: Production"
+      );
+    }
+
+    for (const operation of evidenceOnlyOperations) {
+      expect(
+        getWorkflowJobSection(operationsWorkflow, operation)
+      ).not.toContain("environment:");
+    }
 
     for (const operation of operations) {
       expect(ciWorkflow).not.toContain(`${operation}:`);
