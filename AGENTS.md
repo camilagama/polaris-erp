@@ -210,6 +210,8 @@ Write code that is accessible, performant, type-safe, and maintainable. Prefer c
 
 ## Testing
 
+For implementation, refactoring, or behavior changes, classify risk and follow [the testing strategy](docs/testing/strategy.md); typecheck and build alone do not prove behavioral correctness.
+
 * Write assertions inside `it()` or `test()` blocks.
 * Use `async/await` instead of `done` callbacks.
 * Do not commit `.only` or `.skip`.
