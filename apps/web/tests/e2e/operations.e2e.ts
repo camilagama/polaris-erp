@@ -402,7 +402,9 @@ test("configures card installments and records customer-paid and seller-paid fee
     .getByRole("button", { name: "Confirmar venda" })
     .click();
 
-  await expect(page.getByText("Venda registrada.")).toBeVisible();
+  await expect(page.getByText("Venda registrada.")).toBeVisible({
+    timeout: e2eMutationFeedbackTimeoutMs,
+  });
   await gotoApp(page, "/vendas");
   const sellerSaleHref = await page
     .getByRole("link", { name: "Abrir" })
