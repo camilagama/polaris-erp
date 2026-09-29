@@ -20,6 +20,8 @@ Esses testes verificam contrato HTTP básico. Não provam entrega de e-mail, cob
 
 Migrações e comportamentos PostgreSQL são verificados em job dedicado com banco efêmero. As instruções de mudança organizacional e deploy estão em `docs/runbooks/`; devem ser usadas para planejar backup, rollback e restore drill.
 
+A estratégia de camadas, critérios do restore drill e objetivos RPO/RTO estão em [Backup e recuperação](../runbooks/backup-and-recovery.md). O estado atual de configuração e evidência permanece no [registro P43](production-readiness.md).
+
 Não foi encontrada automação versionada que realize backup ou restore de produção. O workflow manual de restore drill demonstra intenção operacional, não evidência de execução bem-sucedida. Antes de uma mudança irreversível, confirme no provedor o backup recuperável, o responsável e o caminho de rollback.
 
 Fontes: `.github/workflows/ci.yml:verify`, `.github/workflows/ci.yml:postgres-behavior`, `apps/web/src/ops/production-preflight.ts:validateProductionPreflight`, `apps/web/src/ops/deployment-smoke.ts:runDeploymentSmoke`, `apps/admin/src/lib/deployment-smoke.ts:runAdminDeploymentSmoke`, `docs/runbooks/deploy-vercel.md` e `docs/runbooks/saas-organization-migration-runbook.md`.

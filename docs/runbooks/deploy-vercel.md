@@ -190,22 +190,14 @@ As migracoes nao rodam automaticamente no deploy por padrao.
 6. Rode `bun run platform-admin:bootstrap` uma unica vez para o primeiro operador interno aprovado, usando `DATABASE_URL_DIRECT`.
 7. Confira o runbook em `docs/saas-organization-migration-runbook.md`.
 
-Antes de migrations sensiveis, registre evidencia de restore drill recente em variables do GitHub e rode o job manual `restore-drill-checklist`:
+Antes de migrations de risco material e antes de aceitar dados reais, siga o [runbook de backup e recuperação](backup-and-recovery.md) e execute um restore drill real em alvo descartável. O checklist abaixo apenas valida campos de evidência declarados; ele não gera backup, não restaura o banco e não comprova RPO/RTO.
 
 - `RESTORE_DRILL_CONFIRMED_AT`: timestamp ISO do drill validado.
 - `RESTORE_DRILL_SOURCE_BRANCH`: branch/base original.
 - `RESTORE_DRILL_RESTORE_BRANCH`: branch restaurada usada para validacao.
 - `RESTORE_DRILL_VALIDATED_BY`: operador responsavel.
 
-Localmente, a mesma validacao roda com:
-
-```bash
-RESTORE_DRILL_CONFIRMED_AT=2026-07-10T12:00:00.000Z \
-RESTORE_DRILL_SOURCE_BRANCH=production \
-RESTORE_DRILL_RESTORE_BRANCH=production-restore-drill-20260710 \
-RESTORE_DRILL_VALIDATED_BY=ops@example.com \
-bun run ops:restore-drill:checklist
-```
+Preencha esses campos somente depois do drill real, sem armazenar URL de conexão, credenciais, dump, chave privada, PII ou payloads no GitHub. O estado e a evidência sanitizada pertencem ao [registro P43](../operations/production-readiness.md).
 
 Antes de promover producao:
 
