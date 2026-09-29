@@ -1,7 +1,7 @@
 # Pesquisa do ponto 48 — deploys separados e release coordenada
 
-**Data:** 2026-09-25  
-**Estado:** decisão aceita em 2026-09-25. Web/Admin permanecem projetos separados; candidatos afetados ficam prontos antes de promoções sequenciais e não atômicas.  
+**Data:** pesquisa inicial 2026-09-25; revalidação 2026-09-29
+**Estado:** decisão aceita em 2026-09-25. Web/Admin permanecem projetos separados; candidatos afetados ficam prontos antes de promoções sequenciais e não atômicas. A matriz de impacto e o contrato do manifest foram adicionados ao runbook nesta revalidação; aguardam revisão do usuário.
 **Pergunta:** manter Web e Admin como projetos/deployments independentes, coordenando versões quando há dependências compartilhadas.
 
 ## Conclusão provisória
@@ -14,11 +14,12 @@ As promoções dos projetos são operações distintas e não atômicas. Prepara
 
 ## Evidência no Polaris
 
-- O repositório tem duas aplicações com builds/configurações Vercel separadas: `vercel.json` na raiz para Web e `apps/admin/vercel.json` para Admin. Isso é a intenção versionada; não confirma dois projetos configurados na conta, pois o usuário informou que Polaris ainda não foi publicado.
-- Web/Admin compartilham `@polaris/auth`, `@polaris/db`, `@polaris/date`, `@polaris/e2e-support` e `@polaris/ui`. Admin também depende de `@polaris/platform`; `packages/platform` depende de `@polaris/billing` e `@polaris/events`.
-- CI não filtra por paths: o job verifica e constrói Web e Admin. Só há `.github/workflows/ci.yml`, sem workflow de release Vercel coordenada.
-- `docs/runbooks/deploy-vercel.md` constrói e lista smokes para os dois apps, porém dá apenas comandos `vercel deploy` e `vercel deploy --prod` sem selecionar/provar cada projeto. O runbook não é suficiente como procedimento de duas aplicações.
-- A documentação do Polaris exige confirmar Root Directory do Admin e a inclusão de fontes fora do root. Isso afeta o acesso do projeto Admin às workspaces compartilhadas e deve ser registrado em P43 quando Vercel for configurada.
+- O repositório tem duas aplicações com builds/configurações Vercel separadas: `vercel.json` na raiz para Web e `apps/admin/vercel.json` para Admin. O checkout não contém vínculo `.vercel` nem workflow de release; os projetos/settings remotos não foram consultados.
+- Os manifests declaram Web → `@polaris/billing`, `db`, `date`, `events`, `emails`, `e2e-support`, `auth` e `ui`; Admin → `auth`, `date`, `db`, `e2e-support`, `platform`, `platform-auth` e `ui`. `@polaris/platform` depende de `billing`, `db`, `date` e `events`, então billing/events também afetam Admin transitivamente. Resultado: `emails` é Web-only; `platform`/`platform-auth` são Admin-only; auth/db/date/e2e-support/ui/billing/events afetam ambos.
+- `apps/web/tsconfig.json` e `apps/admin/tsconfig.json` estendem `packages/config/tsconfig/next.json` por caminho relativo, mas nenhum declara `@polaris/config` como dependência. Classificar config/tsconfig como impacto em ambos; essa relação é risco para detecção automática de projeto afetado.
+- `.github/workflows/ci.yml` dispara para push/PR em `main`, sem `paths`, e roda builds separados Web/Admin. Não há filtro `--affected` na CI; preservá-la completa conforme decisão P48.
+- O runbook P47 já cobre deployment staged, promoção sequencial e smokes, mas não tinha matriz explícita nem exigia registrar o deployment/SHA do app que não muda. A revalidação adiciona ambos ao contrato documental.
+- A documentação de Admin exige confirmar Root Directory `apps/admin` e inclusão de fontes fora do root. Verificar essas opções, dependências internas e a branch de Production no provisionamento Vercel e registrar evidência no P43.
 
 ## Comparação com Hub
 
@@ -26,7 +27,7 @@ O Hub tem um único app Next.js e um único deployment Vercel. Seu processo de S
 
 ## Fontes oficiais atuais
 
-A Vercel documenta um projeto por diretório/app no monorepo, com Root Directory próprio. Por padrão, cada commit conectado pode criar deployment para cada projeto. A plataforma pode pular projetos não afetados com base em código-fonte e dependências internas, desde que esteja conectado via GitHub, o workspace e `package.json` declarem dependências e Root Directories estejam configurados corretamente. Mudanças em dependências internas são consideradas para definir quais apps foram afetados. Fonte: [Vercel Monorepos](https://vercel.com/docs/monorepos) e [Deploying Turborepo to Vercel](https://vercel.com/docs/monorepos/turborepo).
+A Vercel documenta skip de projetos não afetados em monorepos quando o repositório está conectado ao GitHub, o workspace padrão é reconhecido, os pacotes têm nomes únicos e as dependências internas estão declaradas. Também documenta um Ignored Build Step opcional com `turbo query affected`. Esses mecanismos podem economizar builds, mas dependem de grafo e Root Directories corretos; P48 os mantém desligados até validar a configuração real. `@polaris/config` ainda é uma relação não declarada nos manifests do Polaris. Fontes: [Vercel Monorepos](https://vercel.com/docs/monorepos) e [Turborepo na Vercel](https://vercel.com/docs/monorepos/turborepo).
 
 Os Deployment Checks da Vercel podem segurar uma build Production antes de associar os domínios; isso separa criação de build da liberação ao tráfego. A documentação recomenda garantir que os checks correspondam ao commit/deployment que será liberado: [Deployment Checks](https://vercel.com/docs/deployment-checks).
 
@@ -40,4 +41,4 @@ GitHub Actions registra deployments por environment e pode restringir refs, limi
 
 ## Limitações
 
-As configurações remotas de Vercel, Root Directories, deployment skipping, domínios e envs não foram acessadas nem inferidas. O estado de deploy real segue desconhecido. Nenhum workflow, deploy ou teste foi executado.
+As configurações remotas de Vercel, Root Directories, deployment skipping, domínios e envs não foram acessadas nem inferidas. O estado de deploy real segue desconhecido. Nenhum workflow ou deployment foi executado; a revalidação local e a atualização documental não testam a plataforma.

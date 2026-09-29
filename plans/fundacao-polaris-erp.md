@@ -912,7 +912,7 @@ Web e Admin terão IDs de deployment próprios associados à mesma release. Não
 
 **Proposta do relatório:** manter Web e Admin como projetos/deployments distintos, reunindo os dois numa release coordenada para que código, banco e aplicações não avancem em combinações incompatíveis.
 
-**Evidência no Polaris (revalidada após P47):** `vercel.json` configura Web na raiz e `apps/admin/vercel.json` configura Admin; não há vínculo/projetos remotos confirmados nem workflow de release. Os manifests mostram dependências diretas diferentes; o grafo transitivo inclui pacotes consumidos por ambos, por Web ou por Admin. A CI executa builds dos dois apps sem filtro por caminho. O runbook P47 já descreve preparar e promover candidates por app, mas ainda falta um critério explícito de impacto que registre também o deployment/SHA inalterado do app não afetado.
+**Evidência no Polaris (revalidada em 2026-09-29):** `vercel.json` configura Web na raiz e `apps/admin/vercel.json` configura Admin; não há vínculo/projetos remotos confirmados nem workflow de release. Os manifests mostram dependências diretas diferentes; o grafo transitivo inclui pacotes consumidos por ambos, por Web ou por Admin. A CI executa builds dos dois apps sem filtro por caminho. A atualização documental P48 em revisão acrescenta matriz de impacto e registro obrigatório dos dois apps, incluindo ID/SHA do app inalterado; isso não configura Vercel nem habilita skips.
 
 **Comparação com Hub:** o Hub tem um único app e deployment Vercel, então seu fluxo de SHA e promoção é referência para checks, não para coordenar múltiplos projetos.
 

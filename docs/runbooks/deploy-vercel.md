@@ -239,6 +239,26 @@ O mapa aprovado tem quatro ambientes conceituais: Local, CI, Staging e Productio
 
 Hobby é a referência para o período de teste; a Vercel descreve o plano como voltado a projetos pessoais e aplicações pequenas. Antes de qualquer uso comercial, confirme os termos/plano apropriados. Uma conta Vercel pode conter os projetos Web e Admin, mas importar/conectar o repositório pessoal do GitHub exige que a pessoa que configura a integração seja owner do repositório. O owner `camilagama` deve autorizar essa conexão. A Vercel cria um deployment Production cada vez que há merge para a branch Production configurada. Isso contornaria a ordem aprovada (migration operacional → promoção), então a integração deve manter Preview, mas impedir deploy Git automático de Production até existir um gate provado; a operação P47 deve criar o staged deployment por SHA e promovê-lo. Vercel também documenta uma regra Hobby sobre autoria dos commits; confira que a identidade Git do autor corresponde ao owner da conta Hobby e valide um deployment de teste antes de adotar integração automática. Se a integração não permitir esses gates, use o caminho operacional por CLI no SHA selecionado. [Vercel — Hobby](https://vercel.com/docs/plans/hobby), [Vercel — GitHub e produção por merge](https://vercel.com/docs/git), [deploy por CLI](https://vercel.com/docs/cli/deploying-from-cli).
 
+### Impacto e escopo Web/Admin
+
+Classifique o impacto pelo grafo transitivo de dependências e pelos contratos alterados, não apenas pela pasta do diff. A classificação escolhe quais projetos recebem um candidato; a CI continua verificando e construindo os dois apps em toda mudança, conforme P48.
+
+| Mudança comprovada | App(s) afetado(s) |
+| --- | --- |
+| Código ou configuração local em `apps/web/**`, sem alterar contrato compartilhado; `vercel.json` da raiz | Web |
+| Código ou configuração local em `apps/admin/**`, sem alterar contrato compartilhado; `apps/admin/vercel.json` | Admin |
+| `@polaris/emails` | Web |
+| `@polaris/platform` ou `@polaris/platform-auth` | Admin |
+| `@polaris/auth`, `@polaris/db`, `@polaris/date`, `@polaris/e2e-support`, `@polaris/ui`, `@polaris/billing` ou `@polaris/events` | Web e Admin. Billing/events são dependências diretas do Web e chegam ao Admin por `@polaris/platform`. |
+| Schema, migrations, grants/RLS, autenticação compartilhada, contrato usado pelos dois apps ou configuração global | Web e Admin |
+| `packages/config/**` ou `apps/*/tsconfig.json` | Web e Admin. Ambos estendem `packages/config/tsconfig/next.json` por caminho relativo; `@polaris/config` ainda não aparece como dependência declarada nos manifests dos apps. |
+| `package.json` raiz, `bun.lock`, definição de workspaces, `turbo.json` ou scripts/variáveis globais que possam afetar os builds | Web e Admin |
+| Impacto não comprovado ou dependência não mapeada | Web e Admin até demonstrar o contrário |
+
+Essa matriz não cria uma exceção para mudanças compartilhadas só porque um pacote aparece diretamente em um app. Mudanças isoladas podem atingir só um app somente quando não alteram API, schema, autenticação, configuração ou outro contrato usado pelo segundo. Mudança apenas documental, sem efeito em build/runtime ou nos gates, não cria candidato Vercel.
+
+Não habilite ainda skip automático de deployment Vercel nem filtros `--affected` na CI. A detecção Vercel em monorepo requer Git conectado, workspace reconhecido e dependências internas declaradas. O uso de `@polaris/config` por `extends` relativo ainda não está declarado no grafo dos manifests; classifique-o como global e reavalie somente após corrigir/verificar o grafo, os Root Directories e a inclusão de workspaces fora do root Admin. [Vercel — monorepos](https://vercel.com/docs/monorepos), [Turborepo na Vercel](https://vercel.com/docs/monorepos/turborepo).
+
 ### Ordem de release
 
 1. Fixe o SHA Git completo. Exija os checks requeridos da CI, replay das migrations e testes PostgreSQL 18. Registre o run/checks que validaram esse mesmo SHA.
@@ -252,13 +272,17 @@ Quando suportado pela configuração escolhida, o comando Vercel para preparar o
 
 ### Registro e evidência
 
-Para cada release, gerar um `release-manifest.json` e resumo da execução no GitHub Actions, com:
+Para cada release de aplicação, gerar um `release-manifest.json` e resumo da execução no GitHub Actions. O manifest sempre inclui as entradas `web` e `admin`, mesmo quando somente uma recebe nova deployment:
 
 - SHA Git completo, identificador/link do run e resultado dos checks de CI;
-- por app Vercel afetado, deployment ID, URL, target/status, projeto (`web`/`admin`) e SHA reportado pela Vercel;
+- por app, `impact` (`affected` ou `unchanged`) e a razão da classificação;
+- deployment ativo anterior de cada app: ID e SHA completo; use `none` com justificativa apenas na primeira publicação;
+- para cada app afetado, deployment candidato (ID, URL, target, status e SHA), smoke do candidato, status da promoção e smoke pós-promoção com referências de evidência;
+- para cada app inalterado, ID/SHA que continua ativo, estado `unchanged` e nenhuma promoção; não invente um candidate para satisfazer simetria;
 - migrations ordenadas/identificadores e hashes do candidato, estado aplicado confirmado no alvo e resultado do job de migration;
-- smoke por app, resultado, horário UTC e referência de evidência sanitizada;
-- deployment e SHA anteriores para recuperação, com observação de compatibilidade com o schema.
+- horário UTC e evidência sanitizada de cada operação.
+
+Marque a release `complete` somente quando todos os apps afetados tiverem sido promovidos e seus smokes pós-promoção passarem. Se um candidato, uma promoção ou um smoke falhar, pare antes da próxima promoção e marque `partial` ou `blocked` conforme tenha ocorrido alguma promoção; registre o último passo concluído, app/ID, falha, apps ainda não promovidos e ID/SHA que continuam ativos. A referência anterior permanece vinculada à compatibilidade do schema.
 
 Não inclua secrets, URLs com credenciais, dados de clientes ou logs brutos. Armazene o resumo e o artifact no run associado à release; defina explicitamente a retenção quando o workflow for configurado. Na documentação GitHub consultada em 2026-09-29, artifacts e logs tinham retenção padrão de 90 dias; repositórios privados podem configurar de 1 a 400 dias, sujeitos a limites superiores da conta/organização. A retenção não é arquivo permanente: se evidência de auditoria precisar durar mais, decida um arquivo separado antes de depender dela. O P43 mantém o snapshot atual dos gates e aponta para runs/evidências; não se transforma em diário de todas as releases. [GitHub — retenção de runs e artifacts](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/enabling-features-for-your-repository/managing-github-actions-settings-for-a-repository). A configuração de projetos, proteção, retenção e workflow fica pendente até P4/P5 provisionarem hospedagem, banco, callbacks e credenciais.
 
