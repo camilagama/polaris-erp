@@ -870,7 +870,7 @@ Para mudanças compatíveis, adicionar o schema antes de implantar código que d
 
 **Proposta do relatório:** formalizar que `db:push` só pode alterar banco descartável/local autorizado; Staging e Production recebem migrations versionadas.
 
-**Evidência no Polaris:** root, `apps/web` e `packages/db` expõem `db:push`. O wrapper atual exige `DATABASE_URL_DIRECT` PostgreSQL distinto de `DATABASE_URL`, mas não verifica host, projeto, branch ou persistência do alvo. `README.md` proíbe o comando em Production, enquanto `apps/web/src/db/README.md` o permite genericamente “em desenvolvimento” e o lista nos comandos úteis. O único `AGENTS.md` atual não possui regra específica de banco.
+**Evidência no Polaris (revalidada em 2026-09-29):** root e `apps/web` encaminham `db:push` para `@polaris/db`. O package agora valida a URL dedicada `DATABASE_URL_PUSH_LOCAL`, exige loopback e o banco reservado `polaris_push_scratch`, rejeita a mesma identidade de host/porta/banco que `DATABASE_URL` ou `DATABASE_URL_DIRECT`, e carrega um config Drizzle separado. A raiz via Turborepo encaminha essa variável somente à task `db:push`, que permanece sem cache. `.env.example` deixa o valor vazio; `packages/db/AGENTS.md` e os READMEs/docs proíbem o comando em alvos remotos. Este worktree não contém `.env.local` nem config Compose; nenhum PostgreSQL scratch foi provisionado ou acessado.
 
 **Comparação com Hub:** o Hub também mantém o script disponível, mas suas instruções de database/release proíbem seu uso para releases e adotam migrations forward-only. O comando disponível não equivale à permissão de usá-lo em qualquer ambiente.
 
@@ -881,6 +881,8 @@ Para mudanças compatíveis, adicionar o schema antes de implantar código que d
 Implementar uma proteção no comando suportado que recuse hosts fora de uma allowlist local explícita antes de chamar Drizzle, falhando de forma segura sem imprimir URL/credenciais e sem override genérico de ambiente. O wrapper deve cobrir os atalhos da raiz e de `apps/web`; invocar `drizzle-kit push` diretamente continua fora do fluxo suportado e deve ser proibido nas instruções. Criar `packages/db/AGENTS.md` com a regra operacional, acrescentar ponteiro curto nas instruções raiz conforme a árvore aprovada e corrigir `apps/web/src/db/README.md` para distinguir banco local descartável de ambientes remotos persistentes. Manter o aviso já existente no `README.md` e harmonizar referências em documentação.
 
 **Pesquisa de apoio:** [pesquisa do ponto 46 sobre a política de `db:push`](research-ponto-46-db-push-policy.md).
+
+**Implementação:** completa na branch da PR #2, commits `fbe45e7` e `458d6fa`, sujeita à sua revisão. Os testes cobrem o guard e os atalhos da raiz/Web; `bun run verify:quick`, `env:check`, `docs:check` e Ultracite passaram; CodeRabbit não reportou findings. A prova integrada com URL remota sintética falha antes de iniciar Drizzle; nenhum banco real foi acessado. O comando continuará falhando até existir um PostgreSQL local realmente descartável em `polaris_push_scratch`; o guard valida loopback/identidade, não a efemeridade do processo.
 
 ### Ponto 47 — releases identificam SHA e deployments
 
