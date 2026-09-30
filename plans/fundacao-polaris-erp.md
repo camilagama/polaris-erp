@@ -1002,7 +1002,7 @@ O acesso ao deployment do Admin fica limitado aos operadores internos que tenham
 
 **Implementação parcial revalidada em 2026-09-30:** o mapa e o ponteiro do README raiz foram reconciliados na etapa 1 de P63. `AGENTS.md` agora aponta para o mapa, trata `aidd_docs/` como contexto histórico sob demanda e orienta verificar o lifecycle antes de executar planos antigos; commit `014e5d0`.
 
-**Backfill P51 implementado para revisão em 2026-09-30:** a etapa 6 de P63 adicionou lifecycle dirigido por risco a snapshots e planos selecionados, sem mover conteúdo ou declarar gates externos concluídos. P51 permanece parcial até a aprovação do usuário sobre esse backfill.
+**P51 concluído e aprovado pelo usuário em 2026-09-30:** a etapa 6 de P63 adicionou lifecycle dirigido por risco a sete snapshots, sete planos concluídos e dois roteiros superseded, preservando conteúdo e caminhos e sem metadados em massa. Itens ambíguos permaneceram sem reclassificação. Gates externos continuam no estado registrado em P43; lifecycle documental não os conclui. Commit `d85e733`; `docs:check`, `git diff --check`, `verify:quick` e revisão independente passaram.
 
 **Comparação com Hub:** o Hub mostra um mapa de autoridade e marca planos substituídos com `execution_status`, `superseded_by` e “Não executar”, mas seus status e `docs/reviews/` também são inconsistentes. Aproveitar os controles pontuais, sem copiar a taxonomia inteira nem criar pastas por simetria.
 
@@ -1246,7 +1246,7 @@ Antes do go-live, verificar a major e as extensões do branch Neon real por font
 
 **Etapa 5 aprovada em 2026-09-30:** `AGENTS.md` agora aponta para o mapa canônico `docs/README.md`, para o guia condicional `docs/maintenance.md` e trata snapshots AIDD como contexto histórico sob demanda; o carregamento automático de toda a memória foi removido. O ponteiro específico para `packages/db/AGENTS.md` foi preservado, sem expandir a etapa para a redução geral P16. Commit `014e5d0`; `docs:check`, `git diff --check` e `verify:quick` passaram. P14/P15 estão implementados.
 
-**Etapa 6 implementada para revisão em 2026-09-30:** receberam `status: historical` sete snapshots de maior risco; `execution_status: completed` sete planos com conclusão comprovada; e `execution_status: superseded`, `superseded_by` e “Não executar” os dois roteiros cuja sequência foi substituída. O PR-008 também teve a alegação obsoleta de execução pendente reconciliada. Arquivos e taxonomia foram preservados; nenhum gate externo foi declarado concluído. `docs:check` e `git diff --check` passaram; uma revisão independente não encontrou problemas de lifecycle/data/link. A etapa aguarda aprovação do usuário antes de P51/P63 serem marcados como concluídos.
+**Etapa 6 aprovada em 2026-09-30:** receberam `status: historical` sete snapshots de maior risco; `execution_status: completed` sete planos com conclusão comprovada; e `execution_status: superseded`, `superseded_by` e “Não executar” os dois roteiros cuja sequência foi substituída. O PR-008 também teve a alegação obsoleta de execução pendente reconciliada. Arquivos e taxonomia foram preservados; nenhum gate externo foi declarado concluído. `docs:check`, `git diff --check`, `verify:quick` e revisão independente passaram; commit `d85e733`.
 
 ### Ponto 64 — CI e segurança após estabilizar o workflow
 
