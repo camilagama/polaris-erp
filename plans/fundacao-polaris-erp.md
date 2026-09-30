@@ -980,7 +980,9 @@ O acesso ao deployment do Admin fica limitado aos operadores internos que tenham
 
 **Proposta do relatório:** preservar relatórios e planos antigos, separando-os das fontes canônicas para que não sejam lidos como regras ou estado atual.
 
-**Evidência revalidada:** antes da implementação P51, `docs/README.md` ainda apresentava a cobertura e as perguntas abertas de julho como atuais e não classificava fontes, estado operacional, decisões e histórico. O mapa foi atualizado no commit `251b39d` para separar essas categorias e expor reconciliações documentais pendentes; aguarda revisão do usuário. `AGENTS.md` ainda dá prioridade documental a `aidd_docs/` e carrega automaticamente sua memória quando o bloco está vazio. `aidd_docs/memory/project-state.md` permanece um snapshot arquitetural de julho; a afirmação anterior sobre Vercel ativa foi removida e o ponteiro P43 foi atualizado em P50, sem reauditoria completa. `docs/reports/` e `docs/superpowers/plans/` contêm estados e avisos mistos; planos podem conter comandos imperativos. P12–P15 já definem metadados seletivos, freshness não universal, `docs/README.md` como mapa e ponteiros curtos no `AGENTS.md`.
+**Evidência revalidada:** antes da implementação P51, `docs/README.md` ainda apresentava a cobertura e as perguntas abertas de julho como atuais e não classificava fontes, estado operacional, decisões e histórico. O mapa foi atualizado nos commits `251b39d` e `fa4b321` e aprovado pelo usuário em 2026-09-29. `AGENTS.md` ainda dá prioridade documental a `aidd_docs/` e carrega automaticamente sua memória quando o bloco está vazio. `aidd_docs/memory/project-state.md` permanece um snapshot arquitetural de julho; a afirmação anterior sobre Vercel ativa foi removida e o ponteiro P43 foi atualizado em P50, sem reauditoria completa. `docs/reports/` e `docs/superpowers/plans/` contêm estados e avisos mistos; planos podem conter comandos imperativos. P12–P15 já definem metadados seletivos, freshness não universal, `docs/README.md` como mapa e ponteiros curtos no `AGENTS.md`.
+
+**Implementação parcial aprovada:** o mapa e o ponteiro do README raiz foram reconciliados na etapa 1 de P63. P51 permanece em andamento: a atualização do `AGENTS.md` e o backfill de lifecycle estão sequenciados após a criação de `CONTEXT.md` e dos ADRs seletivos.
 
 **Comparação com Hub:** o Hub mostra um mapa de autoridade e marca planos substituídos com `execution_status`, `superseded_by` e “Não executar”, mas seus status e `docs/reviews/` também são inconsistentes. Aproveitar os controles pontuais, sem copiar a taxonomia inteira nem criar pastas por simetria.
 
@@ -1200,7 +1202,7 @@ Antes do go-live, verificar a major e as extensões do branch Neon real por font
 
 **Proposta do relatório:** transformar a documentação em fontes previsíveis: índice, frontmatter, CONTEXT/PRODUCT/DESIGN, ADRs, históricos organizados e instruções do agente.
 
-**Evidência no Polaris:** `docs/README.md`, `PRODUCT.md`, `DESIGN.md` e `AGENTS.md` já existem; `CONTEXT.md`, `docs/adr/` e `docs/operations/production-readiness.md` ainda não. Há 111 Markdown sob `docs/`, sem frontmatter YAML inicial no inventário auditado. O repo já possui taxonomia extensa em `docs/architecture`, `business-rules`, `database`, `modules`, `product`, `reports`, `runbooks`, `operations`, `security`, `testing`, `api` e `superpowers`; `aidd_docs/` tem memória e material histórico. Mover `aidd_docs/` quebraria pelo menos uma referência relativa e contraria P14/P50/P51.
+**Evidência revalidada:** `docs/README.md`, `PRODUCT.md`, `DESIGN.md`, `AGENTS.md` e `docs/operations/production-readiness.md` (P43) existem; `CONTEXT.md` e `docs/adr/` ainda não. Há 111 Markdown sob `docs/`, sem frontmatter YAML inicial no inventário auditado. O repo já possui taxonomia extensa em `docs/architecture`, `business-rules`, `database`, `modules`, `product`, `reports`, `runbooks`, `operations`, `security`, `testing`, `api` e `superpowers`; `aidd_docs/` tem memória e material histórico. Mover `aidd_docs/` quebraria pelo menos uma referência relativa e contraria P14/P50/P51.
 
 **Comparação com Hub:** Hub tem `CONTEXT.md`, `docs/domain`, `docs/integrations`, `docs/reviews`, `docs/archive` e scripts próprios, mas é um monólito com outros limites e já foi constatado que seus índices/estados também têm deriva. Usar princípios de índice/autoridade e vocabulário, sem copiar a árvore ou migrar Polaris para as pastas do Hub.
 
@@ -1211,6 +1213,8 @@ Antes do go-live, verificar a major e as extensões do branch Neon real por font
 **ADRs e metadados:** backfill limitado a RLS/autorização tenant-plataforma, outbox transacional e adaptadores de billing, usando rationale confirmado. Status/lifecycle e frontmatter aplicam-se apenas às páginas/classe de risco selecionadas; decisões de negócio continuam em DEC-BR, ADRs mantêm seu próprio lifecycle, históricos mantêm local e data de snapshot.
 
 **Pesquisa de apoio:** [crosswalk do ponto 63 sobre sequência documental](research-ponto-63-docs-sequence.md). P63 é reconciliação de decisões já pesquisadas em P7–17, P35–36, P43, P50–51 e P58–60; não exige uma nova migração de taxonomia.
+
+**Implementação da etapa 1 aprovada em 2026-09-29:** `docs/README.md` foi reconciliado como mapa de autoridade e o README raiz passou a apontar para ele; commits `251b39d` e `fa4b321`. `docs:check`, Ultracite e `verify:quick` passaram antes dos pushes. A etapa 2 é a criação do `CONTEXT.md` raiz; as demais etapas permanecem pendentes na ordem aprovada.
 
 ### Ponto 64 — CI e segurança após estabilizar o workflow
 

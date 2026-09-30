@@ -12,7 +12,7 @@ P63 contém uma agenda válida de consolidação, mas suas etapas de movimento d
 
 ## Estado do checkout
 
-- `docs/README.md`, `README.md`, `PRODUCT.md`, `DESIGN.md` e o `AGENTS.md` raiz existem; `CONTEXT.md`, `docs/adr/` e `docs/operations/production-readiness.md` ainda não.
+- `docs/README.md`, `README.md`, `PRODUCT.md`, `DESIGN.md`, o `AGENTS.md` raiz e `docs/operations/production-readiness.md` (P43) existem; `CONTEXT.md` e `docs/adr/` ainda não.
 - A taxonomia de `docs/` já cobre API, arquitetura, regras, banco, módulos, produto, relatórios, runbooks, operações, segurança, testes e planos/specs Superpowers. Não há justificativa documentada para substituí-la por `domain/integrations/reviews/archive`.
 - O inventário encontrou 111 arquivos Markdown sob `docs/` sem frontmatter YAML inicial. Isso não justifica metadados em massa; P12/P13/P51 já definem as classes específicas.
 - `aidd_docs/` contém memória e snapshots. `aidd_docs/production-closed-test.md` deve permanecer no lugar atual (P50); movê-lo quebraria ao menos uma referência relativa. `AGENTS.md` também referencia memória nessa árvore.
@@ -32,3 +32,7 @@ P63 contém uma agenda válida de consolidação, mas suas etapas de movimento d
 ## Limites
 
 Este é um crosswalk de arquivos e decisões já aceitas. Não altera conteúdos nesta revisão, não move arquivos, não cria diretórios vazios e não relê conteúdo histórico como instrução. Nenhum teste foi executado.
+
+## Atualização após a etapa 1
+
+Em 2026-09-29, `docs/README.md` e o ponteiro no README raiz foram reconciliados conforme a etapa 1 e aprovados pelo usuário. `docs:check`, Ultracite e `verify:quick` passaram antes dos pushes (`251b39d`, `fa4b321`). `CONTEXT.md` e `docs/adr/` seguem ausentes; as etapas restantes mantêm a ordem aprovada acima.

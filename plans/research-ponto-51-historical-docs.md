@@ -45,6 +45,6 @@ Essas fontes apoiam histórico rastreável e supersessão explícita; não justi
 
 A revisão é de arquivos locais e documentação publicada; nenhum estado externo foi consultado. A política final precisa manter os limites já aprovados em P12/P13/P14/P15 e ser aplicada sem reclassificar a documentação canônica inteira como snapshot.
 
-## Implementação em revisão
+## Implementação aprovada
 
-Em 2026-09-29, o commit `251b39d` atualizou `docs/README.md` como mapa de autoridade e o ponteiro em `README.md`. O escopo desta primeira fatia segue a ordem P63. O ponteiro no `AGENTS.md` e o backfill de lifecycle permanecem pendentes até os destinos de `CONTEXT.md` e ADRs serem reconciliados; portanto, P51 ainda não está concluído.
+Em 2026-09-29, os commits `251b39d` e `fa4b321` atualizaram `docs/README.md` como mapa de autoridade e o ponteiro em `README.md`; o usuário aprovou essa fatia ao autorizar prosseguir. O escopo segue a ordem P63. O ponteiro no `AGENTS.md` e o backfill de lifecycle permanecem pendentes até os destinos de `CONTEXT.md` e ADRs serem reconciliados; portanto, P51 ainda não está concluído.
