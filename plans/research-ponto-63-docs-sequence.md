@@ -31,7 +31,7 @@ P63 contém uma agenda válida de consolidação, mas suas etapas de movimento d
 
 ## Limites
 
-Este é um crosswalk de arquivos e decisões já aceitas. Não altera conteúdos nesta revisão, não move arquivos, não cria diretórios vazios e não relê conteúdo histórico como instrução. Nenhum teste foi executado.
+Na revisão original, este arquivo foi um crosswalk de caminhos e decisões já aceitas; não alterou conteúdos, não moveu arquivos, não criou diretórios vazios e não executou testes. A atualização de implementação abaixo registra trabalho posterior.
 
 ## Atualização após a etapa 1
 
