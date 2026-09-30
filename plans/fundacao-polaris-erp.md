@@ -187,6 +187,10 @@ As recomendações do relatório são hipóteses de trabalho, não instruções 
 
 **Pesquisa de apoio:** [pesquisa do ponto 9 sobre o contrato de produto](research-ponto-09-product-contract.md).
 
+**Implementação submetida à revisão:** `PRODUCT.md` agora é um brief conciso com público/problema confirmados pelo responsável, prioridades aprovadas, jornadas macro, limites do lançamento e sinais sem metas numéricas. O público/problema não tem artefato de pesquisa versionado. A reconciliação detalhada de `docs/product/01-regras-de-negocio.md` e `docs/product/roadmap.md` continua pendente como subetapa do P9; não fechar P9 antes dela.
+
+**Implementação submetida à revisão:** `PRODUCT.md` foi convertido em brief conciso com público/problema confirmados pelo responsável, prioridades aprovadas, jornadas macro, limites do lançamento e sinais sem metas numéricas. O público/problema não tem artefato de pesquisa versionado. A reconciliação detalhada de `docs/product/01-regras-de-negocio.md` e `docs/product/roadmap.md` continua pendente como subetapa do P9; não fechar P9 antes dela.
+
 ### Ponto 10 — sistema explícito de regras de domínio
 
 **Estado:** aceito em 2026-09-24, com reutilização dos IDs canônicos e separação do snapshot de descoberta.
@@ -696,6 +700,10 @@ As quatro sample-rate vars sem consumidor foram removidas do `.env.example` e do
 
 **Pesquisa de apoio:** [pesquisa do ponto 35 sobre o contrato de design](research-ponto-35-design-contract.md).
 
+**Implementação submetida à revisão:** `DESIGN.md` foi mesclado e reestruturado como contrato visual ligado aos tokens/componentes atuais; `.impeccable/design.json` foi atualizado junto. O helper CLI recusou `document` como comando, então segui manualmente o playbook do Impeccable e conferi CSS/componentes. Nenhuma tela ou código de aplicação foi alterado.
+
+**Implementação submetida à revisão:** `DESIGN.md` foi mesclado e reestruturado como contrato visual ligado aos tokens/componentes atuais; `.impeccable/design.json` foi atualizado junto. Nenhuma tela ou código de aplicação foi alterado.
+
 ### Ponto 36 — contrato conciso de acessibilidade
 
 **Estado:** aceito em 2026-09-25, com Q1–Q3 aprovadas.
@@ -711,6 +719,10 @@ As quatro sample-rate vars sem consumidor foram removidas do `.env.example` e do
 **Verificação aprovada:** adicionar Axe às jornadas E2E representativas como check de CI depois de corrigir o baseline inicial e configurar os bancos E2E não produtivos. Complementar com revisão manual de teclado e foco nas mudanças interativas e verificação direcionada de leitor de tela para widgets complexos. O scanner não certifica conformidade; não fazer alegação WCAG AA do produto sem avaliação completa das páginas e processos no escopo.
 
 **Pesquisa de apoio:** [pesquisa do ponto 36 sobre acessibilidade](research-ponto-36-accessibility.md).
+
+**Contrato documental em revisão:** `DESIGN.md` registra WCAG 2.2 AA como alvo interno sem alegar conformidade global; variantes pequenas exigem revisão do alvo efetivo ou da exceção de espaçamento. Axe em CI e avaliação das jornadas existentes permanecem pendentes conforme a decisão deste ponto.
+
+**Contrato documental em revisão:** `DESIGN.md` registra WCAG 2.2 AA como alvo interno sem alegar conformidade global; variantes pequenas exigem revisão do alvo efetivo ou da exceção de espaçamento. Axe em CI e avaliação das jornadas existentes permanecem pendentes conforme a decisão deste ponto.
 
 ### Ponto 37 — `@polaris/ui` como fundação visual única
 
@@ -1152,6 +1164,10 @@ Antes do go-live, verificar a major e as extensões do branch Neon real por font
 
 **Pesquisa de apoio:** [pesquisa do ponto 59 sobre apresentação temporal](research-ponto-59-temporal-display.md). Fontes: [MDN `Intl.DateTimeFormat`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat/DateTimeFormat), [WHATWG `<time>`](https://html.spec.whatwg.org/dev/text-level-semantics.html#the-time-element), [W3C — instruções de formato](https://www.w3.org/WAI/tutorials/forms/instructions/), [Shopify Live View](https://help.shopify.com/en/manual/reports-and-analytics/shopify-reports/live-view).
 
+**Contrato visual em revisão:** `DESIGN.md` registra data civil, timestamp em `America/Sao_Paulo`, indicação de fuso em telas densas e horário absoluto como valor primário. As correções de código para `DATE`, cancelamento, filtro Admin Events e formatter de `createdAt` seguem pendentes conforme P69.
+
+**Contrato visual em revisão:** `DESIGN.md` registra data civil, timestamp em `America/Sao_Paulo`, indicação de fuso em telas densas e horário absoluto como valor primário. As correções de código para `DATE`, cancelamento, filtro Admin Events e formatter de `createdAt` seguem pendentes conforme P69.
+
 ### Ponto 60 — árvore-alvo como mapa reconciliado
 
 **Estado:** aceito em 2026-09-26, com Q1 aprovada.
@@ -1219,6 +1235,10 @@ Antes do go-live, verificar a major e as extensões do branch Neon real por font
 **Implementação da etapa 1 aprovada em 2026-09-29:** `docs/README.md` foi reconciliado como mapa de autoridade e o README raiz passou a apontar para ele; commits `251b39d` e `fa4b321`. `docs:check`, Ultracite e `verify:quick` passaram antes dos pushes. A etapa 2 é a criação do `CONTEXT.md` raiz; as demais etapas permanecem pendentes na ordem aprovada.
 
 **Etapa 2 aprovada em 2026-09-29:** `CONTEXT.md` foi criado com a definição validada de Organização; os glossários de negócio e técnico, o índice e o guia de manutenção foram reconciliados no commit `96f4293` e aprovados pelo usuário ao autorizar prosseguir. `docs:check`, Ultracite e `verify:quick` passaram. A etapa 5 de P63 atualizará o `AGENTS.md` depois dos destinos documentais previstos.
+
+**Etapa 3 submetida à revisão:** `PRODUCT.md` e `DESIGN.md` foram mesclados com P9/P35/P36/P58/P59, e `.impeccable/design.json` foi reconciliado aos tokens CSS e padrões compartilhados. A remoção de `## Register` foi aprovada. A reconciliação de `docs/product/01-regras-de-negocio.md` e `docs/product/roadmap.md` permanece como subetapa do P9; Axe/jornadas e correções de código P58/P59 continuam pendentes. Não marcar P63 etapa 3 concluída antes da revisão do usuário.
+
+**Etapa 3 submetida à revisão:** `PRODUCT.md` e `DESIGN.md` foram mesclados com as decisões P9/P35/P36/P58/P59, e `.impeccable/design.json` foi reconciliado ao CSS compartilhado. A remoção do `Register` obsoleto foi aprovada. Os documentos legados de produto continuam como subetapa pendente do P9; P36 mantém pendentes Axe e avaliação das jornadas, e P58/P59 mantêm pendentes as correções de código previstas em P69.
 
 ### Ponto 64 — CI e segurança após estabilizar o workflow
 
