@@ -1,4 +1,13 @@
+---
+execution_status: superseded
+superseded_by:
+  - ../../../plans/fundacao-polaris-erp.md
+  - ../../operations/production-readiness.md
+---
+
 # Production Readiness PR Plan
+
+> **Não executar a sequência antiga de PRs.** P69/P70 no [plano de fundação](../../../plans/fundacao-polaris-erp.md) definem a ordem atual; [P43](../../operations/production-readiness.md) mantém gates e evidências externos, e os runbooks vigentes descrevem os procedimentos. O PR 29 incompleto registrado abaixo não foi considerado concluído; confira seu estado atual em P43. A supersessão substitui a sequência do plano, não fecha os gates.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. This document is a PR execution plan, not an implementation patch. Do not implement without explicit user approval.
 

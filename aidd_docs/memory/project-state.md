@@ -1,7 +1,14 @@
+---
+status: historical
+snapshot_date: 2026-07-13
+---
+
 # Project State Memory
 
 Last reviewed: 2026-07-13 (architecture snapshot; live release readiness is tracked separately).
 Production-readiness pointer updated: 2026-09-29 (UTC); architecture was not re-audited.
+
+> **Historical architecture snapshot.** The September 2026 update changed only the P43 pointer; it did not revalidate the architecture below. Use [current architecture docs](../../docs/architecture/overview.md) and code/schema for present structure, and [P43](../../docs/operations/production-readiness.md) for release gates and external evidence.
 
 ## Current Architecture
 

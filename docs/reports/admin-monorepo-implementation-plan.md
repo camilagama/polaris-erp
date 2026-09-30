@@ -1,4 +1,10 @@
+---
+status: historical
+---
+
 # Plano de Implementacao - Monorepo e Admin Interno
+
+> **Historical implementation snapshot.** The existing 2026-07-12 note dates the Cloudflare Access supersession, not a full re-audit of this document. Its architecture, checklist statuses and commands are not current execution guidance. Use the [current foundation plan](../../plans/fundacao-polaris-erp.md), current architecture sources and [P43](../operations/production-readiness.md).
 
 > Nota de supersessao, 2026-07-12: este plano historico antecede a decisao atual de remover Cloudflare Access do admin. Para protecao admin vigente, use `docs/superpowers/plans/2026-07-10-production-readiness-pr-plan.md`: admin separado em Vercel com Vercel Authentication/deployment protection e guard in-app de platform admin.
 

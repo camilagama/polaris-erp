@@ -1,4 +1,10 @@
+---
+execution_status: completed
+---
+
 # PR-003: Restaurar higiene de workspaces, Knip e gates do UI
+
+> **Plano concluído:** critérios e verificações estão marcados abaixo. Não reexecute a sequência; confira o estado atual do repositório e do plano de fundação.
 
 > **Para execução:** seguir este plano em ordem, preservando alterações não relacionadas já presentes no worktree.
 

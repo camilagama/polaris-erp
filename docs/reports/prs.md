@@ -1,3 +1,10 @@
+---
+status: historical
+snapshot_date: 2026-07-08
+---
+
+> **Historical execution log — last dated update 2026-07-08.** PR status and Neon branch details below are a record of that work, not current repository or provider state. Use the [current foundation plan](../../plans/fundacao-polaris-erp.md) for execution order and [P43](../operations/production-readiness.md) for external evidence.
+
 **Status de Execucao**
 - 2026-07-06: PR 1 validado como skip/sem P0 confirmado neste snapshot.
 - 2026-07-06: PR 2 iniciado. Concluidos nesta fatia: `DB-001` (`sessions.id` unico com migration), `RACE-001` mitigado por advisory lock transacional no onboarding, e rota de imagem passa a exigir organizacao ativa.
