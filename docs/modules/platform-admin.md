@@ -1,14 +1,13 @@
 # Admin interno da plataforma
 
-**Status:** guards, grants e ações locais confirmados; Vercel Authentication, projeto/deploy e sessão cross-origin não foram verificados externamente.
-**Última verificação:** 2026-07-14.
-**Commit analisado:** `886eda0` em `main`.
+**Status:** guards, grants e ações locais revalidados; projeto/deploy e Vercel Authentication continuam sem confirmação externa.
+**Última verificação:** 2026-09-29, checkout `codex/foundation-hook`; nenhum provider Vercel foi consultado.
 
 ## Objetivo e separação
 
 `apps/admin` é o console operacional interno, separado do app web no monorepo. Um papel de organização não concede acesso a esse console. O acesso combina uma sessão Better Auth com um grant de platform admin ativo; a interface declara Vercel Authentication como defesa adicional, mas essa configuração não é provada pelo repositório.
 
-Fontes: `apps/admin/src/app/layout.tsx:AdminAppWrapper`, `apps/admin/src/lib/platform-admin-auth.ts:requirePlatformAdmin`, `apps/admin/src/app/forbidden.tsx:ForbiddenPage`, `apps/admin/vercel.json`.
+Fontes: `apps/admin/src/app/(dashboard)/layout.tsx:AdminAppWrapper`, `apps/admin/src/lib/platform-admin-auth.ts:requirePlatformAdmin`, `apps/admin/src/app/forbidden.tsx:ForbiddenPage`, `apps/admin/vercel.json`.
 
 ## Identidade de platform admin
 
@@ -30,7 +29,7 @@ As páginas principais chamam `requirePlatformAdmin` e, em falha, chamam `forbid
 
 | Recurso | Sem sessão ou sem grant | `support` | `operator` | `owner` | Evidência |
 | --- | --- | ---: | ---: | ---: | --- |
-| Dashboard, diretório, usuários, organizações, auditoria, eventos e billing | `forbidden()` | Sim | Sim | Sim | `apps/admin/src/app/layout.tsx`; `apps/web/src/lib/admin-app-protection.test.ts`. |
+| Dashboard, diretório, usuários, organizações, auditoria, eventos e billing | `forbidden()` | Sim | Sim | Sim | Páginas e ações de `apps/admin/src/app/(dashboard)`; `apps/web/src/lib/admin-app-protection.test.ts`. |
 | Criar nota interna | Ação rejeita antes de mutar | Sim | Sim | Sim | `apps/admin/src/app/support-notes/actions.ts:createSupportNoteAction`. |
 | Suspender/reativar organização | Ação rejeita antes de mutar | Não | Sim | Sim | `apps/admin/src/app/organizations/actions.ts:changeOrganizationStatusAction`. |
 | Alterar assinatura para `active` ou `past_due` | Ação rejeita antes de mutar | Não | Sim | Sim | `apps/admin/src/app/billing/actions.ts:changeBillingSubscriptionStatusAction`. |
@@ -73,17 +72,19 @@ O diretório mascara emails para exibição, mas o console ainda manipula nome, 
 
 As queries internas passam `app.platform_admin_id` dentro de transação. A migration versionada valida grant ativo com `has_active_platform_admin()` antes das policies de leitura/atualização aplicáveis. A ativação dessa policy no banco promovido e a role usada pelo deploy não foram verificadas nesta tarefa. Fontes: `packages/db/src/tenant-context.ts:withPlatformAdminContext`, `packages/db/src/migrations/20260713090000_platform_admin_rls_validation.sql`.
 
-## Vercel Authentication e sessão entre origens
+## Better Auth e perímetro Vercel
 
-O texto da UI e a memória do projeto mencionam Vercel Authentication/deployment protection, e há configuração Vercel separada para o admin. Isso não confirma que a barreira está ativa em preview ou produção. A autenticação in-app continua sendo indispensável.
+O Admin tem sua própria instância Better Auth: `apps/admin/src/lib/auth.ts` chama `createAdminAuth` com o ambiente Admin; `resolveAdminAuthOptions` usa `ADMIN_APP_URL` como `baseURL`; `packages/auth/src/admin-auth.ts` confia nessa origem e a rota `apps/admin/src/app/api/auth/[...all]/route.ts` exporta os handlers. O fluxo Google também usa a origem da requisição Admin e retorna ao próprio Admin. Ele não compartilha a sessão Better Auth da Web e não promete SSO entre os apps.
 
-Além disso, `ADMIN_APP_URL` deve ser origem distinta em produção, mas a factory Better Auth do admin usa a origem canônica do web e não inclui `ADMIN_APP_URL` em `trustedOrigins`. Não existe callback/handler de Better Auth no admin. A sessão real entre as duas origens é **não confirmada** e requer verificação em ambiente controlado.
+A configuração de Vercel Authentication continua **não confirmada**: não há projeto Vercel vinculado neste checkout nem configuração externa consultada. Quando provisionado, o projeto Admin deve usar Vercel Authentication com escopo `All Deployments`, cobrindo previews, URLs geradas e domínio customizado de Production; isso é uma barreira independente do login Better Auth e do grant interno. Aplicar por projeto, sem mudar o default do time nem tornar o domínio Production do Web privado.
 
-Fontes: `apps/admin/src/app/page.tsx:AdminDashboard`, `apps/admin/vercel.json`, `apps/web/src/ops/production-preflight.ts:validateProductionPreflight`, `packages/auth/src/auth.ts:createPolarisAuth`.
+O fluxo real de OAuth Google e a configuração externa dos dois domínios ainda não foram exercitados. Os testes E2E locais/CI usam bootstrap restrito a banco E2E não produtivo e não certificam o login Vercel/OAuth real.
+
+Fontes: `apps/admin/src/lib/auth.ts`, `packages/auth/src/admin-auth-options.ts:resolveAdminAuthOptions`, `packages/auth/src/admin-auth.ts:createAdminAuth`, `apps/admin/src/app/api/auth/[...all]/route.ts`, `apps/admin/src/app/api/auth/google/route.ts`, `apps/admin/vercel.json`.
 
 ## Testes e lacunas
 
-Testes locais: `packages/platform-auth/src/platform-admin-auth.test.ts`, `packages/platform-auth/src/admin-rate-limit.test.ts`, `apps/admin/src/app/billing/actions.test.ts`, `apps/admin/src/app/events/actions.test.ts`, `apps/admin/src/app/organizations/actions.test.ts`, `apps/admin/src/app/support-notes/actions.test.ts`, `apps/web/src/lib/admin-app-protection.test.ts` e `apps/admin/tests/e2e/admin-access.e2e.ts`.
+Testes locais: `packages/platform-auth/src/platform-admin-auth.test.ts`, `packages/platform-auth/src/admin-rate-limit.test.ts`, `apps/admin/src/app/(dashboard)/layout.test.ts`, `apps/admin/src/app/billing/actions.test.ts`, `apps/admin/src/app/events/actions.test.ts`, `apps/admin/src/app/organizations/actions.test.ts`, `apps/admin/src/app/support-notes/actions.test.ts`, `apps/web/src/lib/admin-app-protection.test.ts` e `apps/admin/tests/e2e/admin-access.e2e.ts`.
 
 Lacunas: login real do admin, Vercel Authentication, concessão/revogação administrativa, desabilitar admin, impersonation, ban/desban, escopo de PII por role e teste de RLS contra banco promovido.
 

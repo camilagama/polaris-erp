@@ -1,7 +1,7 @@
 # Pesquisa do ponto 49 — perímetro do Admin
 
-**Data:** 2026-09-25  
-**Estado:** decisão aceita em 2026-09-25. Manter perímetro Vercel e autorização interna `platform_admin` como controles independentes; validar ambos para o lançamento.  
+**Data:** pesquisa inicial 2026-09-25; revalidação 2026-09-29
+**Estado:** decisão aceita em 2026-09-25. Manter perímetro Vercel e autorização interna `platform_admin` como controles independentes; validar ambos para o lançamento. A correção documental/código P49 foi preparada nesta revalidação e aguarda revisão; configuração Vercel permanece adiada ao provisionamento.
 **Pergunta:** manter Vercel Authentication no Admin em conjunto com autenticação e autorização internas da aplicação.
 
 ## Conclusão provisória
@@ -20,9 +20,11 @@ Vercel Authentication é uma barreira de perímetro, não autorização do Polar
 
 - A separação Web/Admin já está expressa por `vercel.json` e `apps/admin/vercel.json`; isso descreve a intenção local, não confirma projetos Vercel remotos.
 - `docs/architecture/authorization-model.md` separa sessão, grant interno, contexto transacional e RLS. O documento diz que Vercel Authentication não substitui o grant interno.
-- `docs/modules/platform-admin.md` confirma que o Admin usa sessão Better Auth mais grant ativo de `platform_admin`; também registra que login real, Vercel Authentication e sessão entre origens ainda não foram validados externamente.
+- `docs/modules/platform-admin.md` confirma que o Admin usa sessão Better Auth mais grant ativo de `platform_admin`; seu texto sobre `ADMIN_APP_URL`/origem Web e ausência de handler estava desatualizado: o código atual usa `createAdminAuth`, `ADMIN_APP_URL`, `trustedOrigins: [baseUrl]` e `/api/auth/[...all]` no próprio Admin.
 - `docs/architecture/external-integrations.md` classifica a configuração/deploy Vercel e a proteção Vercel Authentication como não confirmados. Nenhum estado de conta ou deployment foi consultado nesta pesquisa.
-- Os dois controles têm experiências de login separadas: Vercel exige conta Vercel com acesso ao projeto, e o Polaris exige sua própria sessão. A identidade e o login cross-origin do Better Auth não estão provados; não se deve prometer aos operadores uma experiência de login único.
+- Os dois controles têm experiências de login separadas: Vercel exige conta com acesso ao projeto, e o Polaris exige sua sessão/grant. O Admin Better Auth usa a própria origem e sessão; OAuth Google real não foi executado, então não se deve prometer login operacional nem SSO entre os apps.
+- `apps/admin/src/app/(dashboard)/layout.tsx` capturava erros de sessão/grant e retornava `children` sem contexto. O candidato P49 chama `requirePlatformAdmin` antes de renderizar e inclui teste de regressão. Páginas e ações existentes já mantêm verificações independentes; health/auth/bootstrap têm contratos separados.
+- O runbook mostrava `vercel project protection enable ... --sso` e `prod_deployment_urls_and_all_previews`, que equivalem a Standard Protection e não cobrem o domínio customizado Production do Admin. O candidato P49 passa a instruir a configuração de `All Deployments` no projeto Admin via Dashboard; o projeto Vercel ainda não existe/foi consultado neste checkout.
 
 ## Escopo e comportamento documentados pela Vercel
 
@@ -47,13 +49,14 @@ O Hub é um único app/projeto Vercel, sem projeto administrativo separado; suas
 
 ## Fontes primárias atuais
 
-- Vercel, [Deployment Protection](https://vercel.com/docs/deployment-protection), última atualização indicada em 2026-09-15: escopos Standard/All Deployments, cobertura de domínios e disponibilidade por plano.
+- Vercel, [Deployment Protection](https://vercel.com/docs/deployment-protection), atualizada em 2026-09-15: Standard exclui domínios Production; `All Deployments` inclui os domínios customizados e está disponível em todos os planos.
 - Vercel, [Vercel Authentication](https://vercel.com/docs/deployment-protection/methods-to-protect-deployments/vercel-authentication), última atualização indicada em 2026-09-15: identidade exigida, acesso de membros/usuários externos, pedidos de acesso, comportamento de sessão e configuração por projeto.
 - Vercel, [Protect production deployments for free on every plan](https://vercel.com/changelog/protect-production-deployments-for-free-on-every-plan), 2026-09-09: All Deployments com Vercel Authentication passou a proteger produção em todos os planos sem custo adicional.
 - Vercel, [Sharing a Preview Deployment](https://vercel.com/docs/deployments/sharing-deployments), última atualização indicada em 2026-08-28: acesso de membros e limite de colaboração externa no Hobby.
 - Vercel, [Accessing Deployments through Generated URLs](https://vercel.com/docs/deployments/generated-urls), última atualização indicada em 2026-09-08: URLs por commit/branch, acessíveis publicamente por padrão até aplicar Deployment Protection.
 - Vercel, [Bypass Deployment Protection](https://vercel.com/docs/deployment-protection/methods-to-bypass-deployment-protection): exceções de domínio e links/bypass ampliam acesso; exceções tornam o domínio público.
+- Código Vercel CLI, [`project protection`](https://github.com/vercel/vercel/blob/main/packages/cli/src/commands/project/protection.ts): `--sso` usa `prod_deployment_urls_and_all_previews`, portanto não pode configurar o escopo P49 para o domínio customizado Admin.
 
 ## Limitações
 
-Pesquisa documental e leitura do repositório; nenhum projeto, deployment, domínio, plano ou acesso da conta Vercel foi consultado. A disponibilidade atual documentada não prova que a opção já foi aplicada no futuro projeto. A configuração deve ser verificada no momento do provisionamento, principalmente se o plano, a quantidade de operadores ou os produtos Vercel mudarem. Nenhum teste, deploy ou alteração de código foi executado.
+Pesquisa documental e leitura do repositório; nenhum projeto, deployment, domínio, plano ou acesso da conta Vercel foi consultado. A disponibilidade atual documentada não prova que a opção já foi aplicada. O smoke atual aceitar `401`/`403` só verifica uma resposta HTTP, não demonstra escopo de proteção ou acesso positivo com usuário Vercel autorizado. A configuração e os testes de Preview, URL gerada e domínio Admin devem ocorrer ao provisionar; o número de operadores deve ser compatível com a colaboração Hobby ou exigir reavaliação de plano. Nenhum deployment Vercel foi executado.

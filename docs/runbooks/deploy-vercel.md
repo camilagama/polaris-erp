@@ -81,28 +81,17 @@ Configuracao esperada do projeto Vercel admin:
 3. Use o `apps/admin/vercel.json` versionado como configuracao do projeto. Nao use `vercel.admin.json` na raiz; esse arquivo foi removido para evitar deploys escondidos ou divergentes.
 4. Mantenha **Include source files outside of the Root Directory in the Build Step** habilitado para que os packages compartilhados do monorepo sejam incluidos no build.
 
-Protecao obrigatoria antes de promover:
+Protecao obrigatoria antes de promover o Admin:
 
-1. Vercel Authentication/deployment protection ativo no projeto Vercel do admin. Recomendado: proteger production deployment URLs e todos os previews.
-2. Better Auth session e grant ativo em `platform_admins` continuam obrigatorios dentro do app.
-3. `DATABASE_URL` do admin usando role runtime sem `BYPASSRLS`, nunca `DATABASE_URL_DIRECT`.
-4. Primeiro platform admin bootstrapado por fluxo auditavel, sem reutilizar `member.role`.
+1. No projeto Vercel do Admin, abra **Security → Deployment Protection**, selecione **Vercel Authentication** e o escopo **All Deployments**. Isso protege Preview, URLs geradas e o dominio customizado de Production; a Vercel disponibiliza esse escopo em todos os planos desde 2026-09-09. O acesso exige uma conta Vercel com permissao no projeto.
+2. Configure isso somente no projeto Admin. Nao use o default do time: o dominio Production do Web deve ficar publico para clientes no lancamento. A protecao deve ser conferida projeto a projeto no Dashboard e registrada em P43.
+3. Nao use `vercel project protection enable <admin-project> --sso` como substituto: a implementacao atual do comando configura o escopo `prod_deployment_urls_and_all_previews`, equivalente a Standard Protection, que deixa o dominio customizado de Production fora da barreira. Standard Protection nao satisfaz P49 para o Admin.
+4. Nao crie Shareable Links, excecoes de dominio ou bypass de automacao para abrir o Admin Production. Esse acesso tem de continuar restrito pela Vercel Authentication.
+5. Better Auth session e grant ativo em `platform_admins` continuam obrigatorios dentro do app, independentemente da barreira externa. O Admin tem uma sessao Better Auth separada da Web; nao presumir SSO nem sessao compartilhada.
+6. `DATABASE_URL` do Admin usa role runtime sem `BYPASSRLS`, nunca `DATABASE_URL_DIRECT`.
+7. O primeiro platform admin e bootstrapado por fluxo auditavel, sem reutilizar `member.role`.
 
-Exemplo via Vercel CLI:
-
-```bash
-vercel project protection enable <admin-project> --sso
-```
-
-Exemplo via API da Vercel:
-
-```json
-{
-  "ssoProtection": {
-    "deploymentType": "prod_deployment_urls_and_all_previews"
-  }
-}
-```
+Fontes atuais: [Vercel Deployment Protection](https://vercel.com/docs/deployment-protection), [anuncio de All Deployments em todos os planos](https://vercel.com/changelog/protect-production-deployments-for-free-on-every-plan), [escopo configurado pelo CLI](https://github.com/vercel/vercel/blob/main/packages/cli/src/commands/project/protection.ts).
 
 Bootstrap operacional do primeiro platform admin:
 
