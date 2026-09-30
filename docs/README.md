@@ -12,7 +12,15 @@ Este índice define onde encontrar contratos vigentes, evidência operacional, d
 - O [glossário técnico](glossary.md) nomeia mecanismos e identificadores do código; não substitui o vocabulário de domínio em `CONTEXT.md`.
 - [Manutenção documental](maintenance.md): define quando e como atualizar documentação, fontes e referências.
 
-Os ADRs seletivos aprovados em P11 serão criados em `docs/adr/`. Até esse backfill, as decisões aceitas e a ordem de execução desta fundação estão registradas no [plano mestre](../plans/fundacao-polaris-erp.md). As notas de pesquisa apoiam a análise, mas não autorizam implementação por si mesmas.
+### Decisões arquiteturais (ADRs)
+
+As ADRs registram decisões técnicas e seu rationale conhecido; não substituem `DEC-BR`, regras normativas, documentação de arquitetura atual ou evidência de implementação. `Accepted` significa que a escolha está em vigor, não que esteja integralmente implementada ou validada em ambiente promovido.
+
+- [ADR-0001 — Isolamento de autorização tenant/plataforma com RLS](adr/0001-tenant-platform-authorization-rls.md)
+- [ADR-0002 — Outbox transacional para fluxos externos integrados](adr/0002-transactional-outbox.md)
+- [ADR-0003 — Adaptadores de billing e estados internos normalizados](adr/0003-normalized-billing-adapters.md)
+
+O [plano mestre](../plans/fundacao-polaris-erp.md) registra a sequência da fundação. As notas de pesquisa apoiam a análise, mas não autorizam implementação por si mesmas.
 
 ## Estado e evidência operacional
 
