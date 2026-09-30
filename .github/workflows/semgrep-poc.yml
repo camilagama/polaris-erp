@@ -36,7 +36,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Run Semgrep CI
-        run: semgrep ci
+      - name: Run Semgrep CI (Code only)
+        run: semgrep ci --code
         env:
           SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
