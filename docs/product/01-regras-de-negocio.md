@@ -1,6 +1,13 @@
+---
+status: historical
+snapshot_date: 2026-04-02
+---
+
 # Documento de Regras de Negocio
 ## Plataforma Web de Gestao de Produtos para Revenda
 ### Versao: V1.5 (estado atual em 02/04/2026)
+
+> **Snapshot histórico — 02/04/2026.** Este documento preserva uma versão anterior da compreensão do produto e da implementação. Não é fonte de regras vigentes nem prova do estado atual do código. Consulte o [brief de produto](../../PRODUCT.md), as [regras normativas aprovadas](../business-rules/normative/approved-rules.md) e a [matriz de aderência](../business-rules/normative/adherence-by-rule.md). A matriz registra uma auditoria estática de 14/07/2026; revalide código, banco e testes antes de usá-la como estado atual. Afirmações exclusivas deste snapshot continuam históricas até validação e decisão apropriadas.
 
 ## 1. Objetivo atual do sistema
 

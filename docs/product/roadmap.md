@@ -1,4 +1,26 @@
+---
+execution_status: superseded
+superseded_by:
+  - ../../PRODUCT.md
+  - ../business-rules/normative/approved-rules.md
+  - ../../plans/fundacao-polaris-erp.md
+---
+
 # Roadmap pos-MVP
+
+> **Não executar.** As prioridades, estados e critérios abaixo pertencem a um roadmap anterior e não representam compromissos aprovados nem estado atual do produto.
+
+## Reconciliação vigente
+
+- A intenção do produto e os limites do lançamento estão em [`PRODUCT.md`](../../PRODUCT.md) e em [`SCOPE-001`](../business-rules/normative/approved-rules.md). A ordem de execução da fundação está no [plano atual](../../plans/fundacao-polaris-erp.md); não há uma ordem aprovada para as ideias pós-lançamento listadas abaixo.
+- Convites, múltiplos membros e papéis de tenant além de `owner` não fazem parte do lançamento aprovado (`ORG-001`). Colaboração futura exige descoberta e nova decisão (`SCOPE-001`); “not-started” não deve ser interpretado como falha de implementação.
+- O contrato aprovado de billing é Free e um plano pago mensal de R$ 49,90, sem trial (`PLAN-001`). Isso define o comportamento alvo, não a implementação: consulte a [aderência registrada](../business-rules/normative/adherence.md), cuja avaliação de código é um snapshot e precisa ser revalidada antes de afirmar o estado atual.
+- Suporte de plataforma não pode impersonar o owner nem criar sessão de tenant (`RBAC-001`). Use os [gates de prontidão](../operations/production-readiness.md) para evidência operacional; uma menção antiga a E2E, RLS, restore ou provider não comprova progresso nem configuração atual.
+- Exportação e relatórios avançados permanecem ideias sem prioridade aprovada. Contas a receber, refund financeiro e settlement de vendas estão fora do lançamento (`SALE-001`); qualquer expansão precisa de definição e validação próprias.
+
+---
+
+> **Conteúdo legado preservado abaixo — histórico, não executar.** As propostas podem servir como contexto, mas não estão aprovadas por aparecerem neste arquivo.
 
 ## Objetivo
 
