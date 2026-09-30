@@ -972,6 +972,8 @@ O acesso ao deployment do Admin fica limitado aos operadores internos que tenham
 
 **Pesquisa de apoio:** [pesquisa do ponto 50 sobre snapshot operacional](research-ponto-50-operational-snapshot.md).
 
+**Implementação documental:** concluída e aprovada pelo usuário em 2026-09-29, commit `cf9eed51537eae3cc3e8b6d0e56816bae3bc3d25` na PR #2. O snapshot preservou todo o corpo e recebeu apenas `status: historical`, `snapshot_date: 2026-07-12`, aviso explícito e links para P43/runbooks vigentes. A memória `project-state.md` já tinha o ponteiro atual para P43; não foi alterada.
+
 ### Ponto 51 — preservar e distinguir documentos históricos
 
 **Estado:** aceito em 2026-09-25, com Q1–Q2 aprovadas.

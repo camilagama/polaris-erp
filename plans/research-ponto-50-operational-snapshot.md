@@ -1,7 +1,7 @@
 # Pesquisa do ponto 50 — snapshot operacional versus memória vigente
 
 **Data:** 2026-09-25  
-**Estado:** decisão aceita em 2026-09-25. Preservar `aidd_docs/production-closed-test.md` no local atual, marcando o snapshot de 2026-07-12 como histórico e apontando às fontes operacionais vigentes.  
+**Estado:** decisão aceita em 2026-09-25; implementação documental aprovada em 2026-09-29 no commit `cf9eed5` da PR #2. Preservar `aidd_docs/production-closed-test.md` no local atual, marcando o snapshot de 2026-07-12 como histórico e apontando às fontes operacionais vigentes.
 **Pergunta:** como preservar `aidd_docs/production-closed-test.md` sem apresentar seu estado remoto de julho como vigente.
 
 ## Conclusão provisória
@@ -40,4 +40,4 @@ Auditoria e implementação somente documental. Não consultamos Vercel, Neon, R
 
 - `aidd_docs/production-closed-test.md` agora tem `status: historical`, `snapshot_date: 2026-07-12`, aviso destacado contra reutilizar IDs/hosts/envs/URLs/comandos e links para o P43 e runbooks vigentes. A inserção não moveu nem reescreveu o conteúdo do snapshot.
 - `aidd_docs/memory/project-state.md` foi relido: seu ponteiro P43 já está atualizado e o texto não afirma que a Vercel esteja ativa. Nenhuma alteração adicional à memória é necessária para P50.
-- A mudança é apenas documental e aguarda revisão do usuário; nenhum provider foi consultado ou alterado.
+- A mudança é apenas documental; aprovada pelo usuário. Nenhum provider foi consultado ou alterado.
