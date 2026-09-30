@@ -173,7 +173,7 @@ As recomendações do relatório são hipóteses de trabalho, não instruções 
 
 **Pesquisa de apoio:** [pesquisa do ponto 8 sobre vocabulário de domínio](research-ponto-08-contexto-glossario.md).
 
-**Implementação submetida à revisão:** `CONTEXT.md` registra somente a definição aprovada de Organização; o glossário de negócio aponta para ele e o glossário técnico distingue `organization`, `tenant` e as roles atuais. `docs/README.md` indexa a fonte. O ponteiro no `AGENTS.md` continua sequenciado na etapa 5 de P63. Não marcar P8 concluído antes da revisão do usuário.
+**Implementação concluída e aprovada em 2026-09-29:** `CONTEXT.md` registra somente a definição aprovada de Organização; o glossário de negócio aponta para ele e o glossário técnico distingue `organization`, `tenant` e as roles atuais. `docs/README.md` indexa a fonte e `docs/maintenance.md` encaminha novas definições para o arquivo canônico. Commit `96f4293`; `docs:check`, Ultracite e `verify:quick` passaram. O ponteiro no `AGENTS.md` continua sequenciado na etapa 5 de P63.
 
 ### Ponto 9 — ampliar `PRODUCT.md`
 
@@ -1204,7 +1204,7 @@ Antes do go-live, verificar a major e as extensões do branch Neon real por font
 
 **Proposta do relatório:** transformar a documentação em fontes previsíveis: índice, frontmatter, CONTEXT/PRODUCT/DESIGN, ADRs, históricos organizados e instruções do agente.
 
-**Evidência revalidada:** `docs/README.md`, `PRODUCT.md`, `DESIGN.md`, `AGENTS.md` e `docs/operations/production-readiness.md` (P43) existem; `CONTEXT.md` foi criado nesta etapa e aguarda revisão; `docs/adr/` ainda não existe. Há 111 Markdown sob `docs/`, sem frontmatter YAML inicial no inventário auditado. O repo já possui taxonomia extensa em `docs/architecture`, `business-rules`, `database`, `modules`, `product`, `reports`, `runbooks`, `operations`, `security`, `testing`, `api` e `superpowers`; `aidd_docs/` tem memória e material histórico. Mover `aidd_docs/` quebraria pelo menos uma referência relativa e contraria P14/P50/P51.
+**Evidência revalidada:** `docs/README.md`, `PRODUCT.md`, `DESIGN.md`, `AGENTS.md` e `docs/operations/production-readiness.md` (P43) existem; `CONTEXT.md` foi criado e aprovado na etapa 2 de P63; `docs/adr/` ainda não existe. Há 111 Markdown sob `docs/`, sem frontmatter YAML inicial no inventário auditado. O repo já possui taxonomia extensa em `docs/architecture`, `business-rules`, `database`, `modules`, `product`, `reports`, `runbooks`, `operations`, `security`, `testing`, `api` e `superpowers`; `aidd_docs/` tem memória e material histórico. Mover `aidd_docs/` quebraria pelo menos uma referência relativa e contraria P14/P50/P51.
 
 **Comparação com Hub:** Hub tem `CONTEXT.md`, `docs/domain`, `docs/integrations`, `docs/reviews`, `docs/archive` e scripts próprios, mas é um monólito com outros limites e já foi constatado que seus índices/estados também têm deriva. Usar princípios de índice/autoridade e vocabulário, sem copiar a árvore ou migrar Polaris para as pastas do Hub.
 
@@ -1218,7 +1218,7 @@ Antes do go-live, verificar a major e as extensões do branch Neon real por font
 
 **Implementação da etapa 1 aprovada em 2026-09-29:** `docs/README.md` foi reconciliado como mapa de autoridade e o README raiz passou a apontar para ele; commits `251b39d` e `fa4b321`. `docs:check`, Ultracite e `verify:quick` passaram antes dos pushes. A etapa 2 é a criação do `CONTEXT.md` raiz; as demais etapas permanecem pendentes na ordem aprovada.
 
-**Etapa 2 submetida à revisão:** `CONTEXT.md` foi criado com a definição aprovada de Organização; os glossários de negócio e técnico, o índice e o guia de manutenção foram reconciliados. P8 aguarda aprovação desta implementação; a etapa 5 de P63 atualizará o `AGENTS.md` depois dos destinos documentais previstos.
+**Etapa 2 aprovada em 2026-09-29:** `CONTEXT.md` foi criado com a definição validada de Organização; os glossários de negócio e técnico, o índice e o guia de manutenção foram reconciliados no commit `96f4293`. `docs:check`, Ultracite e `verify:quick` passaram. A etapa 5 de P63 atualizará o `AGENTS.md` depois dos destinos documentais previstos.
 
 ### Ponto 64 — CI e segurança após estabilizar o workflow
 
