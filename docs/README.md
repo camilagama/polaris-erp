@@ -3,10 +3,10 @@
 **Mapa atualizado:** 2026-09-29.
 Este índice define onde encontrar contratos vigentes, evidência operacional, decisões aceitas e material histórico. A existência de um procedimento ou relatório no repositório não comprova que uma configuração externa foi aplicada.
 
-## Fontes canônicas vigentes
+## Fontes canônicas e estado de reconciliação
 
-- [PRODUCT.md](../PRODUCT.md): público, problema, resultado esperado e limites do produto.
-- [DESIGN.md](../DESIGN.md): linguagem visual, acessibilidade e apresentação de dados na interface.
+- [PRODUCT.md](../PRODUCT.md): fonte de produto para público, problema, resultado esperado e limites; sua reconciliação com P9 ainda está pendente.
+- [DESIGN.md](../DESIGN.md): fonte de design para linguagem visual, acessibilidade e apresentação de dados; seu alinhamento com P35, P36, P58 e P59 ainda está pendente.
 - [Visão arquitetural](architecture/overview.md), [estrutura do repositório](architecture/repository-structure.md), [glossário](glossary.md), regras de negócio, módulos e documentos de banco: descrevem o domínio e o comportamento pretendido. Confirme divergências contra o código, o schema, as migrations e os testes correspondentes; atualize a fonte documental no mesmo PR.
 - [Manutenção documental](maintenance.md): define quando e como atualizar documentação, fontes e referências.
 
