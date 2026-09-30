@@ -1,7 +1,7 @@
 # Pesquisa do ponto 55 — artefatos úteis de E2E
 
 **Data:** 2026-09-26  
-**Estado:** recomendação aprovada pelo usuário em 2026-09-26; implementação ainda pendente.  
+**Estado:** recomendação aprovada pelo usuário em 2026-09-26; implementação aprovada e concluída no commit `3e09532` em 2026-09-30. A CI remota `36751203346` passou em todos os checks; os upload steps foram pulados porque os testes E2E passaram.
 **Pergunta:** quais evidências Playwright devem ser preservadas quando E2E falha na CI, por quanto tempo e com quais limites de privacidade?
 
 ## Conclusão provisória
@@ -40,4 +40,8 @@ O trace do Playwright pode conter snapshots completos do DOM, screencast, logs d
 
 ## Limitações
 
-Esta auditoria foi do checkout e da configuração versionada; não consultou as definições remotas do GitHub Actions, permissionamento real dos colaboradores, conteúdo de banco E2E ou histórico de artifacts. Nenhum código foi alterado e nenhum teste foi executado. Os links de documentação são fontes primárias; o behavior deve ser revalidado se o runner/versões de actions ou as políticas GitHub mudarem durante a implementação.
+Na auditoria original de 2026-09-26, não foram consultadas as definições remotas do GitHub Actions, o permissionamento real dos colaboradores, o conteúdo de banco E2E ou o histórico de artifacts. Naquele momento nenhum código foi alterado e nenhum teste foi executado. Os links de documentação são fontes primárias; o behavior deve ser revalidado se o runner/versões de actions ou as políticas GitHub mudarem.
+
+## Implementação posterior — 2026-09-30
+
+O commit `3e09532` adicionou trace `retain-on-failure`, screenshot `only-on-failure`, reporters HTML/JSON na CI, upload failure-only separado para Web/Admin e retenção de 7 dias. `actions/upload-artifact` está fixado em v7.0.1 por SHA. O teste de workflow passou 23/23 e a CI `36751203346` passou integralmente. Ambos os E2E passaram, então os passos de upload foram pulados; nenhum artifact de falha foi gerado para inspeção nesta run.
