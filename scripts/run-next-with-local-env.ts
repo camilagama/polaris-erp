@@ -16,7 +16,7 @@ const workspaceRoot = resolve(import.meta.dir, "..");
 const environmentFile = resolve(workspaceRoot, ".env.local");
 
 if (existsSync(environmentFile)) {
-  config({ override: true, path: environmentFile, processEnv: process.env });
+  config({ path: environmentFile, processEnv: process.env });
 }
 
 const nextBinary = resolve(

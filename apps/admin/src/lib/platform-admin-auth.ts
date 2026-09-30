@@ -6,9 +6,6 @@ import { getSession } from "@/lib/session";
 
 const platformAdminAuth = createPlatformAdminAuth({ getSession });
 
-export const getPlatformAdminContext =
-  platformAdminAuth.getPlatformAdminContext;
-
 export const requirePlatformAdmin = async (
   options?: Parameters<typeof platformAdminAuth.requirePlatformAdmin>[0]
 ) => {

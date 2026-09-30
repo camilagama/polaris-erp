@@ -20,7 +20,7 @@ interface AdvisoryBaseline {
   acceptedAdvisories: BaselineAdvisory[];
   generatedAt: string;
   owner: string;
-  reviewBy: string;
+  reviewBy?: string;
 }
 
 export interface AuditComparison {
@@ -85,13 +85,19 @@ export const assertBaselineReviewCurrent = (
   baseline: AdvisoryBaseline,
   now = new Date()
 ): void => {
-  if (!ISO_DATE_PATTERN.test(baseline.reviewBy)) {
+  if (baseline.acceptedAdvisories.length === 0) {
+    return;
+  }
+
+  const reviewBy = baseline.reviewBy;
+
+  if (!(reviewBy && ISO_DATE_PATTERN.test(reviewBy))) {
     throw new Error(
       "Dependency advisory baseline reviewBy must be an ISO date."
     );
   }
 
-  const reviewDeadline = new Date(`${baseline.reviewBy}T23:59:59.999Z`);
+  const reviewDeadline = new Date(`${reviewBy}T23:59:59.999Z`);
 
   if (Number.isNaN(reviewDeadline.getTime())) {
     throw new Error(
@@ -101,7 +107,7 @@ export const assertBaselineReviewCurrent = (
 
   if (now.getTime() > reviewDeadline.getTime()) {
     throw new Error(
-      `Dependency advisory baseline review expired on ${baseline.reviewBy}.`
+      `Dependency advisory baseline review expired on ${reviewBy}.`
     );
   }
 };

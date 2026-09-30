@@ -2,6 +2,8 @@
 
 O repositório define aplicações `web` e `admin`, cada uma com build e smoke test próprios. A promoção real, os projetos ativos na plataforma e os valores de ambiente não podem ser inferidos apenas da configuração versionada.
 
+O estado atual dos gates e das evidências por ambiente está em [Prontidão de produção](production-readiness.md). Este guia e os runbooks continuam sendo as fontes dos procedimentos; o registro aponta para eles e não substitui suas instruções.
+
 ## Configuração e preflight
 
 O script de preflight de produção valida, entre outros pontos, presença e força de segredos exigidos, ambiente de produção, separação de URLs/origens e papel proprietário. Ele valida configuração antes da promoção, mas não testa credenciais contra serviços remotos.
@@ -17,6 +19,8 @@ Esses testes verificam contrato HTTP básico. Não provam entrega de e-mail, cob
 ## Banco, rollback e recuperação
 
 Migrações e comportamentos PostgreSQL são verificados em job dedicado com banco efêmero. As instruções de mudança organizacional e deploy estão em `docs/runbooks/`; devem ser usadas para planejar backup, rollback e restore drill.
+
+A estratégia de camadas, critérios do restore drill e objetivos RPO/RTO estão em [Backup e recuperação](../runbooks/backup-and-recovery.md). O estado atual de configuração e evidência permanece no [registro P43](production-readiness.md).
 
 Não foi encontrada automação versionada que realize backup ou restore de produção. O workflow manual de restore drill demonstra intenção operacional, não evidência de execução bem-sucedida. Antes de uma mudança irreversível, confirme no provedor o backup recuperável, o responsável e o caminho de rollback.
 

@@ -1,6 +1,6 @@
 import "server-only";
 
-import sharp from "sharp";
+import sharp, { type Metadata } from "sharp";
 import {
   PRODUCT_IMAGE_MAX_DIMENSION,
   PRODUCT_IMAGE_TABLE_DIMENSION,
@@ -28,7 +28,7 @@ const toBlurDataUrl = (buffer: Buffer) =>
 export const processProductImage = async (
   input: Buffer
 ): Promise<ProcessedProductImage> => {
-  let metadata: sharp.Metadata;
+  let metadata: Metadata;
 
   try {
     metadata = await sharp(input, { animated: true }).metadata();

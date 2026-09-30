@@ -1,4 +1,10 @@
+---
+execution_status: completed
+---
+
 # Architecture Deepening PR Checklist
+
+> **Checklist concluído.** As 80 caixas estão marcadas e os PRs listados estão registrados como implementados. Use o [plano de fundação vigente](../../../plans/fundacao-polaris-erp.md) para trabalho pendente; não execute esta checklist novamente.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 

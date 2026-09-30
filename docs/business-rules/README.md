@@ -9,7 +9,7 @@
 - [Execução dos subagentes](subagent-execution-log.md): escopo, evidência e andamento das 15 auditorias obrigatórias.
 - [Inventário de regras](rules-inventory.md): IDs provisórios e classificação AS-IS/TO-BE por unidade observada.
 - [Entidades e fluxos](entities-and-flows.md): mapa de dados e trajetos ponta a ponta.
-- [Glossário](glossary.md), [atores](actors.md), [capacidades](capabilities-matrix.md) e [política de erros](error-policy.md): vocabulário e contratos transversais.
+- [Glossário de domínio](glossary.md): ponte para o vocabulário aprovado em [`CONTEXT.md`](../../CONTEXT.md). [Atores](actors.md), [capacidades](capabilities-matrix.md) e [política de erros](error-policy.md) continuam materiais de descoberta.
 - [Atores e permissões](actors-and-permissions.md): matriz atual de acesso.
 - [Invariantes](invariants.md): invariantes confirmados, parciais e ausentes.
 - [Máquinas de estado](state-machines.md): estados e transições observados.

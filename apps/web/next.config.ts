@@ -129,6 +129,7 @@ export default withSentryConfig(baseNextConfig, {
   silent: !process.env.CI,
   sourcemaps: {
     disable: !sentryCanUpload,
+    deleteSourcemapsAfterUpload: true,
   },
   webpack: {
     treeshake: {

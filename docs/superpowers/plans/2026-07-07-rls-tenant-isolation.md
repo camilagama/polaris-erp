@@ -1,4 +1,14 @@
+---
+execution_status: superseded
+superseded_by:
+  - ../../runbooks/production-migrations.md
+  - ../../operations/production-readiness.md
+  - ../../../plans/fundacao-polaris-erp.md
+---
+
 # RLS Tenant Isolation Implementation Plan
+
+> **Não executar este roteiro antigo.** A sequência de migrations e validação foi substituída pelo [runbook P45](../../runbooks/production-migrations.md) e pela ordem atual no [plano de fundação](../../../plans/fundacao-polaris-erp.md). O gate de RLS/Production permanece pendente ou desconhecido conforme [P43](../../operations/production-readiness.md); este lifecycle não declara RLS de produção concluída.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 

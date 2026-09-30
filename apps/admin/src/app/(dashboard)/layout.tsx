@@ -9,48 +9,29 @@ import { eq } from "drizzle-orm";
 import type { ReactNode } from "react";
 import { Suspense } from "react";
 import { signOutAction } from "@/features/auth/actions";
-import { getPlatformAdminContext } from "@/lib/platform-admin-auth";
+import { requirePlatformAdmin } from "@/lib/platform-admin-auth";
 import { getSession } from "@/lib/session";
 import { AdminSidebar } from "../../components/admin-sidebar";
 import { AdminThemeToggle } from "../../components/admin-theme-toggle";
 
-const getAdminContext = async () => {
-  try {
-    return await getPlatformAdminContext();
-  } catch {
-    return null;
-  }
-};
-
 async function AdminAppWrapper({ children }: { children: ReactNode }) {
-  let adminContext: Awaited<ReturnType<typeof getAdminContext>> | undefined;
+  const adminContext = await requirePlatformAdmin();
+  const session = await getSession();
   let userName = "Administrador";
   let userEmail = "";
   let userImage: string | null = null;
 
-  try {
-    const session = await getSession();
-    if (session?.user) {
-      userName = session.user.name;
-      userEmail = session.user.email;
-      userImage = session.user.image ?? null;
-    }
-
-    adminContext = await getAdminContext();
-    if (adminContext?.adminUserId) {
-      const userRecord = await db.query.adminUsers.findFirst({
-        where: eq(adminUsers.id, adminContext.adminUserId),
-      });
-      if (userRecord?.name) {
-        userName = userRecord.name;
-      }
-    }
-  } catch {
-    // Will be handled by page.tsx or forbidden
+  if (session?.user) {
+    userName = session.user.name;
+    userEmail = session.user.email;
+    userImage = session.user.image ?? null;
   }
 
-  if (!adminContext) {
-    return <>{children}</>;
+  const userRecord = await db.query.adminUsers.findFirst({
+    where: eq(adminUsers.id, adminContext.adminUserId),
+  });
+  if (userRecord?.name) {
+    userName = userRecord.name;
   }
 
   return (

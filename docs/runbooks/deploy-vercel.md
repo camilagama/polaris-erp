@@ -17,7 +17,7 @@ Configure em Production e replique/adapte para Preview:
 | Variavel | Uso |
 | --- | --- |
 | `DATABASE_URL` | Runtime com connection string pooler da branch Neon usando role nao proprietaria, sem `BYPASSRLS` e com `sslmode=verify-full` (ex.: `polaris_app`). |
-| `DATABASE_URL_DIRECT` | Migracoes locais/CI com role proprietaria/admin e `sslmode=verify-full` (ex.: `neondb_owner`). Nao use essa URL como runtime da aplicacao. |
+| `DATABASE_URL_DIRECT` | URL direta para migration deliberada, com role de migration distinta da role runtime e `sslmode=verify-full`. Nunca use essa URL como runtime da aplicacao; a credencial de Production fica restrita ao job operacional aprovado. |
 | `BETTER_AUTH_SECRET` | Segredo forte do Better Auth; em producao precisa ter pelo menos 32 caracteres. |
 | `BETTER_AUTH_URL` | URL canonica do app, sem barra final. |
 | `ADMIN_APP_URL` | Origem dedicada do admin interno, por exemplo `https://admin.seu-dominio.com`. Deve ser diferente de `NEXT_PUBLIC_APP_URL`. |
@@ -41,10 +41,6 @@ Configure em Production e replique/adapte para Preview:
 | `SENTRY_DSN` | Sentry server-side. |
 | `NEXT_PUBLIC_SENTRY_DSN` | Sentry client-side. |
 | `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN` | Source maps no build. |
-| `SENTRY_TRACES_SAMPLE_RATE` | Opcional. Override server-side de tracing, numero entre `0` e `1`. Padrao: `0.1` em producao, `1` em desenvolvimento. |
-| `NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE` | Opcional. Override client-side de tracing, numero entre `0` e `1`. |
-| `NEXT_PUBLIC_SENTRY_REPLAYS_SESSION_SAMPLE_RATE` | Opcional. Replay de sessoes normais, numero entre `0` e `1`. Padrao: `0`. |
-| `NEXT_PUBLIC_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE` | Opcional. Replay em sessoes com erro, numero entre `0` e `1`. Padrao: `1`. |
 | `ALLOW_PLAYWRIGHT_BOOTSTRAP` | Nunca em producao real; apenas E2E com banco isolado. |
 | `INNGEST_EVENT_KEY` | Chave de eventos do Inngest usada para enviar eventos do outbox em producao. |
 | `INNGEST_SIGNING_KEY` | Chave de assinatura do Inngest usada para autenticar invocacoes cloud da rota `/api/inngest`. |
@@ -55,7 +51,7 @@ Valores invalidos de sampling do Sentry sao ignorados pelo app e caem nos padroe
 
 O baseline de headers globais e aplicado por `next.config.ts`: HSTS, `nosniff`, frame policy, referrer policy e permissions policy. CSP completa deve ser validada separadamente para nao quebrar Next/Sentry.
 
-RLS e obrigatorio em producao. Nao configure o runtime com `neondb_owner`: esse role pode ter `BYPASSRLS` no Neon e anula a barreira de tenant mesmo com policies corretas. Mantenha `neondb_owner` apenas em `DATABASE_URL_DIRECT` para migrations. Use `sslmode=verify-full` nas URLs Postgres de producao para preservar a verificacao TLS esperada pelo driver.
+RLS e obrigatorio em producao. Nao configure o runtime com `neondb_owner`: esse role pode ter `BYPASSRLS` no Neon e anula a barreira de tenant mesmo com policies corretas. Use uma role runtime sem `BYPASSRLS` e uma role de migration distinta em `DATABASE_URL_DIRECT`, seguindo o [runbook de migrations de Production](production-migrations.md). Use `sslmode=verify-full` nas URLs Postgres de producao para preservar a verificacao TLS esperada pelo driver.
 
 ## Guardrails de producao
 
@@ -85,28 +81,17 @@ Configuracao esperada do projeto Vercel admin:
 3. Use o `apps/admin/vercel.json` versionado como configuracao do projeto. Nao use `vercel.admin.json` na raiz; esse arquivo foi removido para evitar deploys escondidos ou divergentes.
 4. Mantenha **Include source files outside of the Root Directory in the Build Step** habilitado para que os packages compartilhados do monorepo sejam incluidos no build.
 
-Protecao obrigatoria antes de promover:
+Protecao obrigatoria antes de promover o Admin:
 
-1. Vercel Authentication/deployment protection ativo no projeto Vercel do admin. Recomendado: proteger production deployment URLs e todos os previews.
-2. Better Auth session e grant ativo em `platform_admins` continuam obrigatorios dentro do app.
-3. `DATABASE_URL` do admin usando role runtime sem `BYPASSRLS`, nunca `DATABASE_URL_DIRECT`.
-4. Primeiro platform admin bootstrapado por fluxo auditavel, sem reutilizar `member.role`.
+1. No projeto Vercel do Admin, abra **Security → Deployment Protection**, selecione **Vercel Authentication** e o escopo **All Deployments**. Isso protege Preview, URLs geradas e o dominio customizado de Production; a Vercel disponibiliza esse escopo em todos os planos desde 2026-09-09. O acesso exige uma conta Vercel com permissao no projeto.
+2. Configure isso somente no projeto Admin. Nao use o default do time: o dominio Production do Web deve ficar publico para clientes no lancamento. A protecao deve ser conferida projeto a projeto no Dashboard e registrada em P43.
+3. Nao use `vercel project protection enable <admin-project> --sso` como substituto: a implementacao atual do comando configura o escopo `prod_deployment_urls_and_all_previews`, equivalente a Standard Protection, que deixa o dominio customizado de Production fora da barreira. Standard Protection nao satisfaz P49 para o Admin.
+4. Nao crie Shareable Links, excecoes de dominio ou bypass de automacao para abrir o Admin Production. Esse acesso tem de continuar restrito pela Vercel Authentication.
+5. Better Auth session e grant ativo em `platform_admins` continuam obrigatorios dentro do app, independentemente da barreira externa. O Admin tem uma sessao Better Auth separada da Web; nao presumir SSO nem sessao compartilhada.
+6. `DATABASE_URL` do Admin usa role runtime sem `BYPASSRLS`, nunca `DATABASE_URL_DIRECT`.
+7. O primeiro platform admin e bootstrapado por fluxo auditavel, sem reutilizar `member.role`.
 
-Exemplo via Vercel CLI:
-
-```bash
-vercel project protection enable <admin-project> --sso
-```
-
-Exemplo via API da Vercel:
-
-```json
-{
-  "ssoProtection": {
-    "deploymentType": "prod_deployment_urls_and_all_previews"
-  }
-}
-```
+Fontes atuais: [Vercel Deployment Protection](https://vercel.com/docs/deployment-protection), [anuncio de All Deployments em todos os planos](https://vercel.com/changelog/protect-production-deployments-for-free-on-every-plan), [escopo configurado pelo CLI](https://github.com/vercel/vercel/blob/main/packages/cli/src/commands/project/protection.ts).
 
 Bootstrap operacional do primeiro platform admin:
 
@@ -186,39 +171,20 @@ Nao misture `localhost` no navegador com `BETTER_AUTH_URL` apontando para tunnel
 
 As migracoes nao rodam automaticamente no deploy por padrao.
 
-1. Aponte `DATABASE_URL_DIRECT` para a branch correta com role de migration.
-2. Confirme que `DATABASE_URL_DIRECT` e `DATABASE_URL` nao sao a mesma connection string.
-3. Rode `bun run db:migrate`. O script falha antes do Drizzle se `DATABASE_URL_DIRECT` estiver ausente, invalida ou igual a `DATABASE_URL`; nao existe mais fallback para a URL runtime.
-4. Configure `DATABASE_URL` do runtime com role nao proprietaria sem `BYPASSRLS`.
-5. Rode `bun run db:smoke:rls` no ambiente apontado para a branch promovida.
-6. Rode `bun run platform-admin:bootstrap` uma unica vez para o primeiro operador interno aprovado, usando `DATABASE_URL_DIRECT`.
-7. Confira o runbook em `docs/saas-organization-migration-runbook.md`.
+Para migrations locais ou de Staging, use um alvo não produtivo confirmado e siga o fluxo versionado em [Migrations Drizzle](../database/migrations.md). Para Production, não rode `bun run db:migrate` manualmente nem no deploy Vercel: siga exclusivamente o [runbook de migrations de Production](production-migrations.md), depois de cumprir os gates P43/P44 e confirmar no P43 que o workflow está integrado e configurado.
 
-Antes de migrations sensiveis, registre evidencia de restore drill recente em variables do GitHub e rode o job manual `restore-drill-checklist`:
+Configure `DATABASE_URL` do runtime com role não proprietária sem `BYPASSRLS`. Depois da migration e do deploy aprovados, rode `bun run db:smoke:rls` no ambiente promovido. O bootstrap inicial de platform admin é uma operação distinta e deve usar apenas o procedimento operacional aprovado para o alvo confirmado; não reutilize uma URL runtime como credencial de migration.
+
+Antes de migrations de risco material e antes de aceitar dados reais, siga o [runbook de backup e recuperação](backup-and-recovery.md) e execute um restore drill real em alvo descartável. O checklist abaixo apenas valida campos de evidência declarados; ele não gera backup, não restaura o banco e não comprova RPO/RTO.
 
 - `RESTORE_DRILL_CONFIRMED_AT`: timestamp ISO do drill validado.
 - `RESTORE_DRILL_SOURCE_BRANCH`: branch/base original.
 - `RESTORE_DRILL_RESTORE_BRANCH`: branch restaurada usada para validacao.
 - `RESTORE_DRILL_VALIDATED_BY`: operador responsavel.
 
-Localmente, a mesma validacao roda com:
+Preencha esses campos somente depois do drill real, sem armazenar URL de conexão, credenciais, dump, chave privada, PII ou payloads no GitHub. O estado e a evidência sanitizada pertencem ao [registro P43](../operations/production-readiness.md).
 
-```bash
-RESTORE_DRILL_CONFIRMED_AT=2026-07-10T12:00:00.000Z \
-RESTORE_DRILL_SOURCE_BRANCH=production \
-RESTORE_DRILL_RESTORE_BRANCH=production-restore-drill-20260710 \
-RESTORE_DRILL_VALIDATED_BY=ops@example.com \
-bun run ops:restore-drill:checklist
-```
-
-Antes de promover producao:
-
-```bash
-vercel env run -e production -- bun run prod:preflight
-vercel env run -e production -- bun run build
-```
-
-Esses comandos usam as variaveis de Production da Vercel durante o preflight/build local/CI e antecipam falhas de env.
+Antes de promover Production, execute `prod:preflight` em uma operação autorizada que tenha acesso somente às variáveis necessárias do Environment `Production`. Não baixe variáveis de Production para `.env.local`, não as injete na CI comum e não faça um build local com esses secrets. O build do candidato é feito pela operação de deployment selecionada e seu ID/SHA deve ser verificado. O workflow de release ainda não está configurado; P43 registra seu estado.
 
 ## R2
 
@@ -252,36 +218,62 @@ curl "https://SEU_DOMINIO/api/internal/health/r2" \
   -H "Authorization: Bearer $INTERNAL_R2_HEALTH_SECRET"
 ```
 
-## Fluxo de deploy
+## Fluxo de release por SHA
 
-Fluxo manual recomendado:
+### Estado e ambientes
 
-```bash
-vercel link
-vercel env pull .env.local
-bun run check
-bun run check:all
-bun run check:admin
-bun run typecheck
-bun run typecheck:all
-bun run typecheck:admin
-bun run test
-bun run test:all
-vercel env run -e production -- bun run prod:preflight
-bun run db:smoke:rls
-bun run db:analyze:listings
-DEPLOYMENT_SMOKE_URL=https://SEU_DOMINIO bun run deploy:smoke
-ADMIN_DEPLOYMENT_SMOKE_URL=https://ADMIN_SEU_DOMINIO bun run deploy:smoke:admin
-bun run build
-bun run build:admin
-vercel env run -e production -- bun run build
-vercel deploy
-vercel logs --deployment <preview-deployment-id> --level error
-vercel deploy --prod
-vercel logs --environment production --level error --since 5m
-```
+Este checkout ainda não contém vínculo `.vercel` nem workflow de deploy. A existência de projetos, domínios, variáveis, proteções e deployments no provedor permanece **desconhecida** até consulta autorizada à conta; este runbook não afirma que estejam configurados.
 
-Promova para producao somente depois de validar o preview contra banco/servicos isolados.
+O mapa aprovado tem quatro ambientes conceituais: Local, CI, Staging e Production. No plano Hobby, a Vercel documenta Local, Preview e Production como ambientes padrão; `Preview` pode implementar o Staging não produtivo com variáveis Preview específicas da branch depois que P4/P5 fixarem o alvo. Ambientes Vercel customizados, como um ambiente chamado `staging`, exigem Pro ou Enterprise. Não conte Preview e Staging como dois ambientes conceituais, nem use um build staged de Production como homologação: ele recebe variáveis de Production. Confirme no provisionamento que branch, banco, callbacks, integrações sandbox e dados sintéticos de Preview estão isolados de Production. [Vercel — environments](https://vercel.com/docs/deployments/environments), [variáveis por branch](https://vercel.com/docs/environment-variables/manage-across-environments).
+
+Hobby é a referência para o período de teste; a Vercel descreve o plano como voltado a projetos pessoais e aplicações pequenas. Antes de qualquer uso comercial, confirme os termos/plano apropriados. Uma conta Vercel pode conter os projetos Web e Admin, mas importar/conectar o repositório pessoal do GitHub exige que a pessoa que configura a integração seja owner do repositório. O owner `camilagama` deve autorizar essa conexão. A Vercel cria um deployment Production cada vez que há merge para a branch Production configurada. Isso contornaria a ordem aprovada (migration operacional → promoção), então a integração deve manter Preview, mas impedir deploy Git automático de Production até existir um gate provado; a operação P47 deve criar o staged deployment por SHA e promovê-lo. Vercel também documenta uma regra Hobby sobre autoria dos commits; confira que a identidade Git do autor corresponde ao owner da conta Hobby e valide um deployment de teste antes de adotar integração automática. Se a integração não permitir esses gates, use o caminho operacional por CLI no SHA selecionado. [Vercel — Hobby](https://vercel.com/docs/plans/hobby), [Vercel — GitHub e produção por merge](https://vercel.com/docs/git), [deploy por CLI](https://vercel.com/docs/cli/deploying-from-cli).
+
+### Impacto e escopo Web/Admin
+
+Classifique o impacto pelo grafo transitivo de dependências e pelos contratos alterados, não apenas pela pasta do diff. A classificação escolhe quais projetos recebem um candidato; a CI continua verificando e construindo os dois apps em toda mudança, conforme P48.
+
+| Mudança comprovada | App(s) afetado(s) |
+| --- | --- |
+| Código ou configuração local em `apps/web/**`, sem alterar contrato compartilhado; `vercel.json` da raiz | Web |
+| Código ou configuração local em `apps/admin/**`, sem alterar contrato compartilhado; `apps/admin/vercel.json` | Admin |
+| `@polaris/emails` | Web |
+| `@polaris/platform` ou `@polaris/platform-auth` | Admin |
+| `@polaris/auth`, `@polaris/db`, `@polaris/date`, `@polaris/e2e-support`, `@polaris/ui`, `@polaris/billing` ou `@polaris/events` | Web e Admin. Billing/events são dependências diretas do Web e chegam ao Admin por `@polaris/platform`. |
+| Schema, migrations, grants/RLS, autenticação compartilhada, contrato usado pelos dois apps ou configuração global | Web e Admin |
+| `packages/config/**` ou `apps/*/tsconfig.json` | Web e Admin. Ambos estendem `packages/config/tsconfig/next.json` por caminho relativo; `@polaris/config` ainda não aparece como dependência declarada nos manifests dos apps. |
+| `package.json` raiz, `bun.lock`, definição de workspaces, `turbo.json` ou scripts/variáveis globais que possam afetar os builds | Web e Admin |
+| Impacto não comprovado ou dependência não mapeada | Web e Admin até demonstrar o contrário |
+
+Essa matriz não cria uma exceção para mudanças compartilhadas só porque um pacote aparece diretamente em um app. Mudanças isoladas podem atingir só um app somente quando não alteram API, schema, autenticação, configuração ou outro contrato usado pelo segundo. Mudança apenas documental, sem efeito em build/runtime ou nos gates, não cria candidato Vercel.
+
+Não habilite ainda skip automático de deployment Vercel nem filtros `--affected` na CI. A detecção Vercel em monorepo requer Git conectado, workspace reconhecido e dependências internas declaradas. O uso de `@polaris/config` por `extends` relativo ainda não está declarado no grafo dos manifests; classifique-o como global e reavalie somente após corrigir/verificar o grafo, os Root Directories e a inclusão de workspaces fora do root Admin. [Vercel — monorepos](https://vercel.com/docs/monorepos), [Turborepo na Vercel](https://vercel.com/docs/monorepos/turborepo).
+
+### Ordem de release
+
+1. Fixe o SHA Git completo. Exija os checks requeridos da CI, replay das migrations e testes PostgreSQL 18. Registre o run/checks que validaram esse mesmo SHA.
+2. Valide a mudança primeiro numa branch Neon descartável por PR quando configurada; depois no Staging persistente após provisionamento, com dados sintéticos e integrações sandbox.
+3. Antes de Production, confirme os gates P43/P44 aplicáveis: alvo correto, backup/PITR e restore drill real conforme o escopo aprovado. O estado e as provas externas continuam no [registro P43](../operations/production-readiness.md).
+4. Para cada app afetado (`web` e/ou `admin`), crie um staged deployment de Production a partir do SHA aprovado **sem atribuir domínio**. Prepare todos os candidatos afetados antes da primeira promoção. Guarde deployment ID/URL e confirme no `vercel inspect` status, target e SHA Git reportado. Um build staged usa variáveis Production; não o use para testes mutáveis nem antes dos gates. Proteja as URLs geradas com Vercel Authentication antes de usá-las; elas são públicas por padrão. Faça smoke seguro contra o candidato somente depois da migration compatível. [Vercel — staged Production](https://vercel.com/docs/cli/deploying-from-cli), [URLs geradas e proteção](https://vercel.com/docs/deployments/generated-urls), [Vercel Authentication](https://vercel.com/docs/deployment-protection/methods-to-protect-deployments).
+5. Execute a migration de Production como operação separada, com SHA, projeto/branch/host/banco validados, depois dos candidatos estarem prontos. Siga o [runbook de migrations de Production](production-migrations.md); não rode migration como parte do build ou deploy.
+6. Após migration bem-sucedida, execute primeiro smoke seguro e não mutável contra cada candidato protegido. Promova o **deployment ID exato** do primeiro app afetado sem rebuild e execute seu smoke pós-promoção; só então promova o próximo app afetado e repita o smoke. Web/Admin são promoções sequenciais e não atômicas: se uma promoção ou smoke falhar, pare, registre o estado parcial e siga recuperação compatível com código e banco. Não faça tráfego real de cliente como teste.
+
+Quando suportado pela configuração escolhida, o comando Vercel para preparar o candidato é `vercel --prod --skip-domain`; a promoção é `vercel promote <deployment-id-ou-url>`. Esses comandos são exemplos do mecanismo aprovado, não autorização para executá-los agora. Não use `vercel deploy --prod` diretamente como release: ele não garante validação prévia e promoção do mesmo deployment ID. `Preview` → `Production` também pode reconstruir com variáveis de Production; nesse caso é um artefato novo, cujo ID e SHA devem ser validados antes de promovê-lo. [Vercel — deploy CLI](https://vercel.com/docs/cli/deploying-from-cli), [promote](https://vercel.com/docs/cli/promote), [Preview para Production](https://vercel.com/docs/deployments/promote-preview-to-production).
+
+### Registro e evidência
+
+Para cada release de aplicação, gerar um `release-manifest.json` e resumo da execução no GitHub Actions. O manifest sempre inclui as entradas `web` e `admin`, mesmo quando somente uma recebe nova deployment:
+
+- SHA Git completo, identificador/link do run e resultado dos checks de CI;
+- por app, `impact` (`affected` ou `unchanged`) e a razão da classificação;
+- deployment ativo anterior de cada app: ID e SHA completo; use `none` com justificativa apenas na primeira publicação;
+- para cada app afetado, deployment candidato (ID, URL, target, status e SHA), smoke do candidato, status da promoção e smoke pós-promoção com referências de evidência;
+- para cada app inalterado, ID/SHA que continua ativo, estado `unchanged` e nenhuma promoção; não invente um candidate para satisfazer simetria;
+- migrations ordenadas/identificadores e hashes do candidato, estado aplicado confirmado no alvo e resultado do job de migration;
+- horário UTC e evidência sanitizada de cada operação.
+
+Marque a release `complete` somente quando todos os apps afetados tiverem sido promovidos e seus smokes pós-promoção passarem. Se um candidato, uma promoção ou um smoke falhar, pare antes da próxima promoção e marque `partial` ou `blocked` conforme tenha ocorrido alguma promoção; registre o último passo concluído, app/ID, falha, apps ainda não promovidos e ID/SHA que continuam ativos. A referência anterior permanece vinculada à compatibilidade do schema.
+
+Não inclua secrets, URLs com credenciais, dados de clientes ou logs brutos. Armazene o resumo e o artifact no run associado à release; defina explicitamente a retenção quando o workflow for configurado. Na documentação GitHub consultada em 2026-09-29, artifacts e logs tinham retenção padrão de 90 dias; repositórios privados podem configurar de 1 a 400 dias, sujeitos a limites superiores da conta/organização. A retenção não é arquivo permanente: se evidência de auditoria precisar durar mais, decida um arquivo separado antes de depender dela. O P43 mantém o snapshot atual dos gates e aponta para runs/evidências; não se transforma em diário de todas as releases. [GitHub — retenção de runs e artifacts](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/enabling-features-for-your-repository/managing-github-actions-settings-for-a-repository). A configuração de projetos, proteção, retenção e workflow fica pendente até P4/P5 provisionarem hospedagem, banco, callbacks e credenciais.
 
 ## Smoke checks
 

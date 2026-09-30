@@ -1,6 +1,14 @@
+---
+status: historical
+snapshot_date: 2026-07-13
+---
+
 # Project State Memory
 
-Last reviewed: 2026-07-13
+Last reviewed: 2026-07-13 (architecture snapshot; live release readiness is tracked separately).
+Production-readiness pointer updated: 2026-09-29 (UTC); architecture was not re-audited.
+
+> **Historical architecture snapshot.** The September 2026 update changed only the P43 pointer; it did not revalidate the architecture below. Use [current architecture docs](../../docs/architecture/overview.md) and code/schema for present structure, and [P43](../../docs/operations/production-readiness.md) for release gates and external evidence.
 
 ## Current Architecture
 
@@ -10,15 +18,13 @@ Last reviewed: 2026-07-13
 - `@polaris/db` now owns the shared Drizzle schema/client/tenant context, Drizzle config and migration files. `apps/web/src/db/*` keeps short compatibility wrappers for existing web imports.
 - `@polaris/events` now provides the shared outbox/webhook/idempotency helpers used by web and admin.
 - `@polaris/platform` now provides shared platform admin queries, mutations, audit/support helpers and dashboard data.
-- `@polaris/platform-auth` now provides Better Auth session-based platform admin grant validation and admin rate limiting. `apps/admin/src/lib/platform-admin-auth.ts` is only a local session-injection wrapper. The active admin perimeter is a separate `apps/admin` Vercel project with Vercel Authentication/deployment protection plus in-app platform admin grants.
+- `@polaris/platform-auth` now provides Better Auth session-based platform admin grant validation and admin rate limiting. `apps/admin/src/lib/platform-admin-auth.ts` is only a local session-injection wrapper. The intended Admin perimeter is a separate `apps/admin` Vercel project with Vercel Authentication/deployment protection plus in-app platform admin grants; the external configuration status is tracked in the production-readiness register.
 - `@polaris/auth` now provides the shared Better Auth factory, auth env contract, session helpers and workspace management policy. The web app injects tenant login audit; the admin uses a local wrapper without importing from `apps/web`.
 - `@polaris/ui` and `@polaris/domain` are intentionally not extracted yet.
 
-## Production Gates Still External
+## Production Readiness Authority
 
-- Vercel projects/domains, admin Vercel Authentication/deployment protection, and preview protection need real environment validation.
-- Neon production branch protection, runtime role without `BYPASSRLS`, and migrations via `DATABASE_URL_DIRECT` still need live proof.
-- Upstash, R2 lifecycle, Sentry alerts, OAuth callbacks, Resend domain, Inngest credentials, Woovi and Asaas sandbox/prod validation remain operational gates.
+The current status of release gates, externally observed configuration, validation evidence, owners, next actions and revalidation triggers lives in [docs/operations/production-readiness.md](../../docs/operations/production-readiness.md). Do not maintain a parallel list of external gate status in this memory file.
 
 ## Current Implementation Notes
 
@@ -26,4 +32,3 @@ Last reviewed: 2026-07-13
 - The admin-to-web boundary source test now has an empty allowlist for temporary web imports.
 - Outbox foundation uses shared `@polaris/events` helpers, local DB tables plus Inngest route/function for durable claim/finalization.
 - Resend, Woovi and Asaas webhooks enqueue outbox events and dispatch Inngest best-effort while preserving current synchronous effects.
-- Full release is not proven until `prod:preflight`, `deploy:smoke`, RLS smoke, E2E and environment-specific checks pass against real promoted infrastructure.

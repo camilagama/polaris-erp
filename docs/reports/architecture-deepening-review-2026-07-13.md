@@ -1,4 +1,11 @@
+---
+status: historical
+snapshot_date: 2026-07-13
+---
+
 # Architecture deepening review - 2026-07-13
+
+> **Historical snapshot — 2026-07-13.** Findings and assigned PRs describe the reviewed checkout, not current architecture or remaining work. Check current architecture docs and code before acting; use [P43](../operations/production-readiness.md) for operational evidence.
 
 Status: read-only architecture review.
 

@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 
+export const instant = false;
+
 export default async function AdminAccessDeniedPage() {
   if (!(await getSession())) {
     redirect("/sign-in");

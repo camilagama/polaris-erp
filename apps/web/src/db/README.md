@@ -11,6 +11,7 @@
 ```bash
 DATABASE_URL="postgresql://..." # pooled (para a aplicacao)
 DATABASE_URL_DIRECT="postgresql://..." # direto (para migracoes)
+DATABASE_URL_PUSH_LOCAL="" # opcional; somente scratch local descartavel
 ```
 
 ### 2. Fluxo de migracoes
@@ -20,7 +21,9 @@ bun run db:generate
 bun run db:migrate
 ```
 
-Em desenvolvimento, pode usar `db:push` quando necessario:
+`db:push` e reservado ao PostgreSQL local descartavel `polaris_push_scratch`, usando `DATABASE_URL_PUSH_LOCAL`. O guard exige host loopback e rejeita outros bancos; `DATABASE_URL_DIRECT` continua reservado a migrations. Para qualquer alvo remoto, inclusive branch Neon temporaria, gere/revise SQL e aplique `db:migrate`.
+
+Depois de experimentar com `db:push`, descarte e recrie o banco scratch antes de validar a migration versionada desde o zero. Nao tente reconciliar no journal Drizzle um schema aplicado diretamente pelo `push`.
 
 ```bash
 bun run db:push
@@ -94,6 +97,7 @@ bun run db:push
 bun run db:studio
 bun run db:generate
 bun run db:migrate
+# Somente para PostgreSQL local descartavel em polaris_push_scratch
 bun run db:push
 ```
 

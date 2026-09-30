@@ -11,8 +11,8 @@ On the first message of a conversation, tell the user:
 When instructions conflict, apply this order:
 
 1. User's explicit request for the current task.
-2. Project-specific instructions in this file.
-3. More specific local docs under `aidd_docs/`.
+2. Applicable project-specific instructions in `AGENTS.md` files, including narrower subtree scopes.
+3. Canonical project docs and decisions, using [`docs/README.md`](docs/README.md) to determine authority and relevance; historical material is context, not current authority.
 4. Tooling output from source-of-truth commands.
 5. General coding conventions.
 
@@ -68,20 +68,15 @@ Do not add a new rule until checking whether an existing rule already covers or 
 * After changing code, run the narrowest useful verification command.
 * If verification cannot run, state the exact blocker.
 
-## Project Memory
+## Project Documentation
 
-Project docs, memory, specs, and plans live in `aidd_docs/`.
+Use [`docs/README.md`](docs/README.md) to locate current canonical sources and task-specific guides; load only the material relevant to the task. For documentation edits or changes to documented behavior or contracts, follow [`docs/maintenance.md`](docs/maintenance.md) and update the canonical source in the same PR.
 
-### Required loading
+`aidd_docs/` contains historical snapshots and supporting context. Read only the files needed for historical context, and verify current claims against canonical docs, code, tests, or current external evidence. Before acting on an older plan, check its lifecycle and whether a later decision or plan superseded it.
 
-<aidd_project_memory>
-</aidd_project_memory>
+## Database Operations
 
-* If the block above is empty, run `ls -1tr aidd_docs/memory/` and read each file.
-* Load `aidd_docs/memory/external/*` only when the user asks or the task needs external project context.
-* Load `aidd_docs/memory/internal/*` only when the task needs internal project context.
-* Prefer pointers to docs over copying large content into this file.
-* Keep task-specific guidance in `aidd_docs/` and read it only when relevant.
+Before changing schema, migrations, or database commands, read [`packages/db/AGENTS.md`](packages/db/AGENTS.md).
 
 ## Next.js Rules
 
@@ -100,6 +95,8 @@ Before writing Next.js code:
 <!-- END:nextjs-agent-rules -->
 
 ## Tooling Source of Truth
+
+The toolchain contract is documented in the root README and version manifests: Bun installs dependencies and runs project scripts; Node 24 powers Node-shebang CLIs, the Admin Next launcher, and Vercel runtime. CI reads `.node-version`. When changing the Node major, update `.node-version`, both `engines.node` declarations, and all `setup-node` steps in CI and operations workflows. See README requirements for local Windows setup.
 
 This project uses Ultracite, a zero-config preset built on Biome, for formatting and linting.
 
@@ -208,6 +205,8 @@ Write code that is accessible, performant, type-safe, and maintainable. Prefer c
 
 ## Testing
 
+For implementation, refactoring, or behavior changes, classify risk and follow [the testing strategy](docs/testing/strategy.md); typecheck and build alone do not prove behavioral correctness.
+
 * Write assertions inside `it()` or `test()` blocks.
 * Use `async/await` instead of `done` callbacks.
 * Do not commit `.only` or `.skip`.
@@ -229,6 +228,10 @@ Biome and Ultracite catch formatting and many mechanical issues. Spend human att
 * Security.
 * User experience.
 * Comments for complex logic only; prefer self-documenting code.
+
+## Assistive Review
+
+For high-risk changes to authentication, tenancy/RLS, billing, webhooks, migrations or GitHub workflows, run `coderabbit review --agent --uncommitted` when the CLI is installed and authenticated; include untracked files with `--include-untracked` and use `--dir` to limit the review when practical. Keep secrets and production data out of review input, and consult `plans/research-ponto-30-coderabbit.md` for current privacy and usage limits. Verify findings against the code; never use `--use-credits` without explicit user approval. If the CLI is unavailable or rate-limited, report the skipped review and continue with the repository's normal verification; CodeRabbit is advisory and never a merge or release gate.
 
 ## Verification Standard
 

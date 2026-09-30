@@ -12,7 +12,7 @@ Atualize a documentação no mesmo PR quando uma mudança afetar comportamento, 
 | Billing, evento, webhook, job, retry ou provedor | `modules/subscriptions-and-billing.md`, `api/webhooks.md`, `operations/jobs-and-workflows.md` e `architecture/external-integrations.md`. |
 | Imagem, R2, armazenamento ou reconciliação | `modules/uploads-and-images.md`, `modules/catalog-products-inventory.md`, `operations/jobs-and-workflows.md` e `api/route-handlers.md`. |
 | CI, deploy, ambiente, segredo, observabilidade ou runbook | `operations/{environments-and-deployment,observability}.md`, `testing/{strategy,end-to-end}.md`, `security/application-security.md` e runbook correspondente. |
-| Termo de domínio ou página documental nova | `glossary.md`, `docs/README.md`, `documentation-coverage.md` e, se alterar conclusão, `documentation-audit-report.md`. |
+| Termo de domínio ou página documental nova | `CONTEXT.md`, `docs/README.md` e a fonte canônica do assunto. Revise `documentation-coverage.md` somente se a cobertura mapeada mudar e `documentation-audit-report.md` se uma lacuna, contradição ou risco for resolvido. |
 
 ## Checklist de PR
 
@@ -24,6 +24,10 @@ Atualize a documentação no mesmo PR quando uma mudança afetar comportamento, 
 6. Se o PR mudar conteúdo coberto pela matriz, atualize [documentation-coverage.md](documentation-coverage.md). Se alterar uma lacuna, contradição ou risco, atualize [documentation-audit-report.md](documentation-audit-report.md).
 
 ## Validação local
+
+`bun run docs:check` é offline e bloqueador para erros estruturais determinísticos. Ele verifica os documentos canônicos da raiz e `docs/`: caminhos locais em links e imagens; âncoras GitHub nos contratos da raiz e nos documentos vigentes apontados pelas seções canônicas/operacionais de `docs/README.md`; YAML e lifecycle nos arquivos que já declaram frontmatter; e unicidade/cobertura de IDs e referências nas matrizes normativas adotadas.
+
+O checker não exige metadados ou freshness em todo Markdown, não valida âncoras de arquivos listados somente na seção de material histórico/planos e não consulta liveness de links externos. Mudanças nessas regras também exigem atualizar e testar `scripts/check-docs.ts`.
 
 Use as verificações abaixo antes de solicitar revisão documental:
 

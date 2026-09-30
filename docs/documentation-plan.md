@@ -1,4 +1,10 @@
+---
+execution_status: completed
+---
+
 # Plano de documentação do Polaris
+
+> **Plano concluído para o snapshot `886eda01ef126139ddce62545971e48f7d3d15f3`.** Não o reutilize como sequência de execução atual; consulte o [mapa documental](README.md) e o [plano de fundação vigente](../plans/fundacao-polaris-erp.md).
 
 > **Para agentes:** execute este plano por grupos documentais, com revisão após cada grupo. Marque apenas itens realmente concluídos.
 

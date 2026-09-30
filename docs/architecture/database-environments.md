@@ -49,6 +49,12 @@ O banco indicado deve poder criar roles e ser descartado apos o teste. Nunca
 aponte essa variavel para producao, desenvolvimento compartilhado ou uma branch
 Neon reutilizada.
 
+`db:push` usa outro destino dedicado: `DATABASE_URL_PUSH_LOCAL`, loopback e
+banco `polaris_push_scratch`. Nao reutilize `POSTGRES_BEHAVIOR_DATABASE_URL`,
+`DATABASE_URL_DIRECT`, runtime, E2E ou qualquer branch Neon. O guard valida o
+host e o nome; confirme tambem que a instancia local pode ser descartada. Para
+alvos remotos, use migrations versionadas.
+
 O workflow tambem possui o job manual `rls-smoke`. Ele so roda por `workflow_dispatch` e executa `bun run db:smoke:rls` com:
 
 ```yaml

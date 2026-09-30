@@ -1,4 +1,11 @@
+---
+status: historical
+snapshot_date: 2026-07-12
+---
+
 # Post-PR Dev Review Analysis - 2026-07-10
+
+> **Historical snapshot.** This review began on 2026-07-10 and includes follow-up evidence through 2026-07-12. Its PR statuses, launch verdicts, configuration statements and commands do not describe current state. Use [P43](../operations/production-readiness.md) for current gate evidence and current runbooks for procedures.
 
 ## Summary
 

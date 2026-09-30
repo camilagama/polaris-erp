@@ -7,6 +7,19 @@ import {
 } from "../../../../scripts/check-bun-audit-baseline";
 
 describe("dependency advisory baseline guard", () => {
+  it("does not require a review deadline when no advisories are accepted", () => {
+    expect(() =>
+      assertBaselineReviewCurrent(
+        {
+          acceptedAdvisories: [],
+          generatedAt: "2026-09-27",
+          owner: "Platform engineering",
+        },
+        new Date("2026-09-27T12:00:00.000Z")
+      )
+    ).not.toThrow();
+  });
+
   it("parses bun audit JSON even when Bun prefixes timing output", () => {
     const auditJson = parseAuditJsonFromOutput(
       '$ bun audit --json\n{"vite":[{"severity":"high","title":"dev server issue","url":"https://github.com/advisories/GHSA-test"}]}'
@@ -98,11 +111,40 @@ describe("dependency advisory baseline guard", () => {
     ]);
   });
 
+  it("treats every current advisory as new when the baseline is empty", () => {
+    const currentAdvisories = [
+      {
+        packageName: "esbuild",
+        severity: "moderate",
+        url: "https://github.com/advisories/GHSA-esbuild-moderate",
+      },
+      {
+        packageName: "esbuild",
+        severity: "low",
+        url: "https://github.com/advisories/GHSA-esbuild-low",
+      },
+    ];
+
+    const comparison = compareAuditToBaseline(currentAdvisories, {
+      acceptedAdvisories: [],
+      generatedAt: "2026-09-27",
+      owner: "Platform engineering",
+    });
+
+    expect(comparison.newAdvisories).toEqual(currentAdvisories);
+  });
+
   it("rejects an expired advisory baseline review date", () => {
     expect(() =>
       assertBaselineReviewCurrent(
         {
-          acceptedAdvisories: [],
+          acceptedAdvisories: [
+            {
+              packageName: "esbuild",
+              severity: "moderate",
+              url: "https://github.com/advisories/GHSA-67mh-4wv8-2f99",
+            },
+          ],
           generatedAt: "2026-07-10",
           owner: "Platform engineering",
           reviewBy: "2026-07-10",
@@ -116,7 +158,13 @@ describe("dependency advisory baseline guard", () => {
     expect(() =>
       assertBaselineReviewCurrent(
         {
-          acceptedAdvisories: [],
+          acceptedAdvisories: [
+            {
+              packageName: "esbuild",
+              severity: "moderate",
+              url: "https://github.com/advisories/GHSA-67mh-4wv8-2f99",
+            },
+          ],
           generatedAt: "2026-07-10",
           owner: "Platform engineering",
           reviewBy: "not-a-date",
@@ -130,7 +178,13 @@ describe("dependency advisory baseline guard", () => {
     expect(() =>
       assertBaselineReviewCurrent(
         {
-          acceptedAdvisories: [],
+          acceptedAdvisories: [
+            {
+              packageName: "esbuild",
+              severity: "moderate",
+              url: "https://github.com/advisories/GHSA-67mh-4wv8-2f99",
+            },
+          ],
           generatedAt: "2026-07-10",
           owner: "Platform engineering",
           reviewBy: "2026-07-11",

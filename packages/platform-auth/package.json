@@ -9,7 +9,7 @@
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.38.0",
     "drizzle-orm": "^0.45.2",
-    "next": "16.2.10",
+    "next": "16.3.6",
     "server-only": "^0.0.1"
   },
   "exports": {

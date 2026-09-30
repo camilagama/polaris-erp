@@ -1,12 +1,15 @@
 import "dotenv/config";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import { resolveDatabasePoolMax } from "./pool-config";
+import {
+  resolveDatabasePoolMax,
+  resolveDatabaseSsl,
+  stripDatabaseSslConnectionParameters,
+} from "./pool-config";
 // biome-ignore lint/performance/noNamespaceImport: needed for drizzle schema
 import * as schema from "./schema";
 
 type Database = NodePgDatabase<typeof schema>;
-const SSLMODE_REQUIRE_PATTERN = /([?&])sslmode=require(?=(&|$))/i;
 
 const resolveDatabaseConnectionString = (): string => {
   const connectionString = process.env.DATABASE_URL;
@@ -15,10 +18,7 @@ const resolveDatabaseConnectionString = (): string => {
     throw new Error("DATABASE_URL is required to initialize @polaris/db.");
   }
 
-  return connectionString.replace(
-    SSLMODE_REQUIRE_PATTERN,
-    "$1sslmode=verify-full"
-  );
+  return connectionString;
 };
 
 let pool: Pool | null = null;
@@ -26,12 +26,14 @@ let database: Database | null = null;
 
 const getPool = () => {
   if (!pool) {
+    const connectionString = resolveDatabaseConnectionString();
+
     pool = new Pool({
-      connectionString: resolveDatabaseConnectionString(),
+      connectionString: stripDatabaseSslConnectionParameters(connectionString),
       connectionTimeoutMillis: 10_000,
       idleTimeoutMillis: 30_000,
       max: resolveDatabasePoolMax(),
-      ssl: true,
+      ssl: resolveDatabaseSsl(connectionString),
     });
   }
 

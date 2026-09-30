@@ -52,6 +52,56 @@ const executeAsRuntime = async <T>(
   }
 };
 
+const organizationOwnerUserId = (organizationId: string): string =>
+  `${organizationId}-owner`;
+
+const createBehaviorOrganization = async (
+  client: PoolClient,
+  organizationId: string,
+  name: string,
+  slug: string
+): Promise<void> => {
+  const ownerUserId = organizationOwnerUserId(organizationId);
+
+  let transactionOpen = false;
+
+  try {
+    await client.query("BEGIN");
+    transactionOpen = true;
+    await client.query(
+      "INSERT INTO users (id, name, email) VALUES ($1, $2, $3) ON CONFLICT (id) DO NOTHING",
+      [ownerUserId, `${name} owner`, `${ownerUserId}@example.test`]
+    );
+    await client.query(
+      "INSERT INTO organization (id, name, slug) VALUES ($1, $2, $3)",
+      [organizationId, name, slug]
+    );
+    await client.query(
+      "INSERT INTO member (id, organization_id, user_id) VALUES ($1, $2, $3)",
+      [`${organizationId}-owner-membership`, organizationId, ownerUserId]
+    );
+    await client.query("COMMIT");
+    transactionOpen = false;
+  } catch (error) {
+    if (transactionOpen) {
+      await client.query("ROLLBACK");
+    }
+    throw error;
+  }
+};
+
+const deleteBehaviorOrganizations = async (
+  client: Pool | PoolClient,
+  organizationIds: readonly string[]
+): Promise<void> => {
+  await client.query("DELETE FROM organization WHERE id = ANY($1)", [
+    organizationIds,
+  ]);
+  await client.query("DELETE FROM users WHERE id = ANY($1)", [
+    organizationIds.map(organizationOwnerUserId),
+  ]);
+};
+
 const behaviorDescribe = databaseUrl ? describe : describe.skip;
 
 behaviorDescribe("PostgreSQL behavior harness", () => {
@@ -84,16 +134,17 @@ behaviorDescribe("PostgreSQL behavior harness", () => {
     const client = await pool.connect();
 
     try {
-      await client.query(
-        "INSERT INTO organization (id, name, slug) VALUES ($1, $2, $3), ($4, $5, $6)",
-        [
-          primaryOrganizationId,
-          "Primary behavior organization",
-          "behavior-primary",
-          secondaryOrganizationId,
-          "Secondary behavior organization",
-          "behavior-secondary",
-        ]
+      await createBehaviorOrganization(
+        client,
+        primaryOrganizationId,
+        "Primary behavior organization",
+        "behavior-primary"
+      );
+      await createBehaviorOrganization(
+        client,
+        secondaryOrganizationId,
+        "Secondary behavior organization",
+        "behavior-secondary"
       );
 
       const visibleOrganizations = await executeAsRuntime(client, async () => {
@@ -146,8 +197,9 @@ behaviorDescribe("PostgreSQL behavior harness", () => {
         rlsPolicyErrorPattern
       );
     } finally {
-      await client.query("DELETE FROM organization WHERE id = ANY($1)", [
-        [primaryOrganizationId, secondaryOrganizationId],
+      await deleteBehaviorOrganizations(client, [
+        primaryOrganizationId,
+        secondaryOrganizationId,
       ]);
       client.release();
     }
@@ -157,13 +209,11 @@ behaviorDescribe("PostgreSQL behavior harness", () => {
     const client = await pool.connect();
 
     try {
-      await client.query(
-        "INSERT INTO organization (id, name, slug) VALUES ($1, $2, $3)",
-        [
-          primaryOrganizationId,
-          "Primary behavior organization",
-          "behavior-primary",
-        ]
+      await createBehaviorOrganization(
+        client,
+        primaryOrganizationId,
+        "Primary behavior organization",
+        "behavior-primary"
       );
 
       const duplicateError = await executeAsRuntime(client, async () => {
@@ -195,9 +245,7 @@ behaviorDescribe("PostgreSQL behavior harness", () => {
         "sales_organization_idempotency_key_unique_idx"
       );
     } finally {
-      await client.query("DELETE FROM organization WHERE id = $1", [
-        primaryOrganizationId,
-      ]);
+      await deleteBehaviorOrganizations(client, [primaryOrganizationId]);
       client.release();
     }
   });
@@ -206,17 +254,15 @@ behaviorDescribe("PostgreSQL behavior harness", () => {
     const client = await pool.connect();
 
     try {
-      await client.query(
-        "INSERT INTO organization (id, name, slug) VALUES ($1, $2, $3)",
-        [
-          temporalOrganizationId,
-          "Temporal behavior organization",
-          "behavior-temporal",
-        ]
+      await createBehaviorOrganization(
+        client,
+        temporalOrganizationId,
+        "Temporal behavior organization",
+        "behavior-temporal"
       );
       await client.query("BEGIN");
       await client.query("SET LOCAL TIME ZONE 'UTC'");
-      const utcSession = await client.query<{ occurred_on: string }>(
+      const utcSession = await client.query<{ occurred_on: Date }>(
         "INSERT INTO sales (organization_id, idempotency_key) VALUES ($1, $2) RETURNING occurred_on",
         [temporalOrganizationId, "behavior-temporal-utc"]
       );
@@ -224,19 +270,17 @@ behaviorDescribe("PostgreSQL behavior harness", () => {
 
       await client.query("BEGIN");
       await client.query("SET LOCAL TIME ZONE 'America/Sao_Paulo'");
-      const saoPauloSession = await client.query<{ occurred_on: string }>(
+      const saoPauloSession = await client.query<{ occurred_on: Date }>(
         "INSERT INTO sales (organization_id, idempotency_key) VALUES ($1, $2) RETURNING occurred_on",
         [temporalOrganizationId, "behavior-temporal-sao-paulo"]
       );
       await client.query("ROLLBACK");
 
-      expect(utcSession.rows[0]?.occurred_on).toBe(
+      expect(utcSession.rows[0]?.occurred_on).toStrictEqual(
         saoPauloSession.rows[0]?.occurred_on
       );
     } finally {
-      await client.query("DELETE FROM organization WHERE id = $1", [
-        temporalOrganizationId,
-      ]);
+      await deleteBehaviorOrganizations(client, [temporalOrganizationId]);
       client.release();
     }
   });
@@ -245,13 +289,11 @@ behaviorDescribe("PostgreSQL behavior harness", () => {
     const client = await pool.connect();
 
     try {
-      await client.query(
-        "INSERT INTO organization (id, name, slug) VALUES ($1, $2, $3)",
-        [
-          temporalOrganizationId,
-          "Temporal behavior organization",
-          "behavior-temporal",
-        ]
+      await createBehaviorOrganization(
+        client,
+        temporalOrganizationId,
+        "Temporal behavior organization",
+        "behavior-temporal"
       );
 
       await expect(
@@ -261,9 +303,7 @@ behaviorDescribe("PostgreSQL behavior harness", () => {
         )
       ).rejects.toMatchObject({ code: "23514" });
     } finally {
-      await client.query("DELETE FROM organization WHERE id = $1", [
-        temporalOrganizationId,
-      ]);
+      await deleteBehaviorOrganizations(client, [temporalOrganizationId]);
       client.release();
     }
   });
@@ -419,16 +459,17 @@ behaviorDescribe("PostgreSQL behavior harness", () => {
           "behavior-expired-platform-user",
         ],
       ]);
-      await client.query(
-        "INSERT INTO organization (id, name, slug) VALUES ($1, $2, $3), ($4, $5, $6)",
-        [
-          primaryOrganizationId,
-          "Primary behavior organization",
-          "behavior-primary",
-          secondaryOrganizationId,
-          "Secondary behavior organization",
-          "behavior-secondary",
-        ]
+      await createBehaviorOrganization(
+        client,
+        primaryOrganizationId,
+        "Primary behavior organization",
+        "behavior-primary"
+      );
+      await createBehaviorOrganization(
+        client,
+        secondaryOrganizationId,
+        "Secondary behavior organization",
+        "behavior-secondary"
       );
       await client.query(
         "INSERT INTO admin_users (id, name, email) VALUES ($1, $2, $3)",
@@ -531,8 +572,9 @@ behaviorDescribe("PostgreSQL behavior harness", () => {
           "behavior-expired-platform-user",
         ],
       ]);
-      await client.query("DELETE FROM organization WHERE id = ANY($1)", [
-        [primaryOrganizationId, secondaryOrganizationId],
+      await deleteBehaviorOrganizations(client, [
+        primaryOrganizationId,
+        secondaryOrganizationId,
       ]);
       client.release();
     }

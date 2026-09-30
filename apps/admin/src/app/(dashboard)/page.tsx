@@ -140,7 +140,9 @@ const AdminDashboard = async () => {
       <Card>
         <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
           <div>
-            <CardTitle className="text-lg">Console operacional</CardTitle>
+            <h1 className="font-heading font-medium text-lg">
+              Console operacional
+            </h1>
             <CardDescription className="mt-2 max-w-2xl">
               Superfície interna bloqueada por Vercel Authentication, sessão
               Better Auth e grant ativo de platform admin.

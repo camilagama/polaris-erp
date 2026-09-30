@@ -1,94 +1,256 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-07-14T12:43:00Z",
+  "generatedAt": "2026-09-30T02:39:18Z",
   "title": "Design System: Polaris",
   "extensions": {
     "colorMeta": {
       "primary": {
         "role": "primary",
-        "displayName": "Vermelho Polaris",
-        "canonical": "oklch(0.505 0.213 27.518)"
+        "displayName": "Vermelho Polaris — tema escuro",
+        "canonical": "oklch(0.444 0.177 26.899)",
+        "tonalRamp": [
+          "oklch(0.15 0.177 26.899)",
+          "oklch(0.25 0.177 26.899)",
+          "oklch(0.35 0.177 26.899)",
+          "oklch(0.45 0.177 26.899)",
+          "oklch(0.55 0.177 26.899)",
+          "oklch(0.65 0.177 26.899)",
+          "oklch(0.75 0.177 26.899)",
+          "oklch(0.85 0.177 26.899)"
+        ]
       },
-      "secondary": {
-        "role": "secondary",
-        "displayName": "Roxo Escuro",
-        "canonical": "oklch(0.967 0.001 286.375)"
+      "primary-light": {
+        "role": "primary",
+        "displayName": "Vermelho Polaris — tema claro",
+        "canonical": "oklch(0.505 0.213 27.518)",
+        "tonalRamp": [
+          "oklch(0.15 0.213 27.518)",
+          "oklch(0.25 0.213 27.518)",
+          "oklch(0.35 0.213 27.518)",
+          "oklch(0.45 0.213 27.518)",
+          "oklch(0.55 0.213 27.518)",
+          "oklch(0.65 0.213 27.518)",
+          "oklch(0.75 0.213 27.518)",
+          "oklch(0.85 0.213 27.518)"
+        ]
       },
       "background": {
         "role": "neutral",
-        "displayName": "Background",
-        "canonical": "oklch(1 0 0)"
+        "displayName": "Fundo — tema escuro",
+        "canonical": "oklch(0.16 0.006 264)",
+        "tonalRamp": [
+          "oklch(0.15 0.006 264)",
+          "oklch(0.25 0.006 264)",
+          "oklch(0.35 0.006 264)",
+          "oklch(0.45 0.006 264)",
+          "oklch(0.55 0.006 264)",
+          "oklch(0.65 0.006 264)",
+          "oklch(0.75 0.006 264)",
+          "oklch(0.85 0.006 264)"
+        ]
+      },
+      "background-light": {
+        "role": "neutral",
+        "displayName": "Fundo — tema claro",
+        "canonical": "oklch(1 0 0)",
+        "tonalRamp": [
+          "oklch(0.15 0 0)",
+          "oklch(0.25 0 0)",
+          "oklch(0.35 0 0)",
+          "oklch(0.45 0 0)",
+          "oklch(0.55 0 0)",
+          "oklch(0.65 0 0)",
+          "oklch(0.75 0 0)",
+          "oklch(0.85 0 0)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Superfície — tema escuro",
+        "canonical": "oklch(0.2 0.006 264)",
+        "tonalRamp": [
+          "oklch(0.15 0.006 264)",
+          "oklch(0.25 0.006 264)",
+          "oklch(0.35 0.006 264)",
+          "oklch(0.45 0.006 264)",
+          "oklch(0.55 0.006 264)",
+          "oklch(0.65 0.006 264)",
+          "oklch(0.75 0.006 264)",
+          "oklch(0.85 0.006 264)"
+        ]
+      },
+      "surface-light": {
+        "role": "neutral",
+        "displayName": "Superfície — tema claro",
+        "canonical": "oklch(1 0 0)",
+        "tonalRamp": [
+          "oklch(0.15 0 0)",
+          "oklch(0.25 0 0)",
+          "oklch(0.35 0 0)",
+          "oklch(0.45 0 0)",
+          "oklch(0.55 0 0)",
+          "oklch(0.65 0 0)",
+          "oklch(0.75 0 0)",
+          "oklch(0.85 0 0)"
+        ]
+      },
+      "secondary": {
+        "role": "secondary",
+        "displayName": "Neutro secundário — tema escuro",
+        "canonical": "oklch(0.27 0.008 264)",
+        "tonalRamp": [
+          "oklch(0.15 0.008 264)",
+          "oklch(0.25 0.008 264)",
+          "oklch(0.35 0.008 264)",
+          "oklch(0.45 0.008 264)",
+          "oklch(0.55 0.008 264)",
+          "oklch(0.65 0.008 264)",
+          "oklch(0.75 0.008 264)",
+          "oklch(0.85 0.008 264)"
+        ]
+      },
+      "secondary-light": {
+        "role": "secondary",
+        "displayName": "Neutro secundário — tema claro",
+        "canonical": "oklch(0.967 0.001 286.375)",
+        "tonalRamp": [
+          "oklch(0.15 0.001 286.375)",
+          "oklch(0.25 0.001 286.375)",
+          "oklch(0.35 0.001 286.375)",
+          "oklch(0.45 0.001 286.375)",
+          "oklch(0.55 0.001 286.375)",
+          "oklch(0.65 0.001 286.375)",
+          "oklch(0.75 0.001 286.375)",
+          "oklch(0.85 0.001 286.375)"
+        ]
       }
     },
     "typographyMeta": {
       "display": {
-        "displayName": "Display",
-        "purpose": "Grandes números ou hero states"
+        "displayName": "Geist Sans",
+        "purpose": "Títulos de interface e números destacados."
+      },
+      "body": {
+        "displayName": "Geist Sans",
+        "purpose": "Leitura e tarefas operacionais diárias."
+      },
+      "mono": {
+        "displayName": "Geist Mono",
+        "purpose": "Identificadores e valores técnicos compactos."
       }
     },
-    "shadows": [],
+    "shadows": [
+      {
+        "name": "surface-subtle",
+        "value": "var(--shadow-sm)",
+        "purpose": "Separação discreta em cartões e estados de navegação existentes."
+      },
+      {
+        "name": "floating-layer",
+        "value": "var(--shadow-md)",
+        "purpose": "Menus, popovers e outros controles flutuantes."
+      },
+      {
+        "name": "sheet-layer",
+        "value": "var(--shadow-lg)",
+        "purpose": "Sheets e camadas maiores sobre o conteúdo."
+      },
+      {
+        "name": "tooltip-layer",
+        "value": "var(--shadow-xl)",
+        "purpose": "Tooltips de gráfico e conteúdo flutuante de maior contraste."
+      }
+    ],
     "motion": [
       {
         "name": "ease-out-strong",
         "value": "cubic-bezier(0.23, 1, 0.32, 1)",
-        "purpose": "Strong ease-out for UI interactions"
+        "purpose": "Transições curtas dos controles compartilhados."
       }
-    ],
-    "breakpoints": []
+    ]
   },
   "components": [
     {
-      "name": "Primary Button",
+      "name": "Ação primária",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "Ação principal, usada de forma controlada.",
-      "html": "<button class=\"ds-btn-primary\">Salvar Alterações</button>",
-      "css": ".ds-btn-primary { background: oklch(0.505 0.213 27.518); color: oklch(0.971 0.013 17.38); padding: 8px 16px; border-radius: calc(0.625rem * 0.8); border: none; font-weight: 500; font-family: sans-serif; transition: background 0.2s cubic-bezier(0.23, 1, 0.32, 1); cursor: pointer; } .ds-btn-primary:hover { opacity: 0.9; } .ds-btn-primary:focus-visible { outline: 2px solid oklch(0.708 0 0); outline-offset: 2px; }"
+      "description": "Ação principal compacta com foco e estado pressionado visíveis.",
+      "html": "<button class=\"ds-btn-primary\">Salvar</button>",
+      "css": ".ds-btn-primary { display:inline-flex; align-items:center; justify-content:center; height:28px; padding:0 8px; border:0; border-radius:var(--radius-md); background:var(--primary); color:var(--primary-foreground); font:500 12px/1.625 var(--font-geist-sans,sans-serif); cursor:pointer; transition:transform 150ms var(--ease-out-strong); } .ds-btn-primary:focus-visible { border:1px solid var(--ring); box-shadow:0 0 0 2px color-mix(in oklch,var(--ring) 30%,transparent); } .ds-btn-primary:active { transform:scale(.96); }"
     },
     {
-      "name": "Card Container",
+      "name": "Ação secundária",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Ação secundária com superfície neutra sem competir com a principal.",
+      "html": "<button class=\"ds-btn-secondary\">Cancelar</button>",
+      "css": ".ds-btn-secondary { display:inline-flex; align-items:center; justify-content:center; height:28px; padding:0 8px; border:1px solid transparent; border-radius:var(--radius-md); background:var(--secondary); color:var(--secondary-foreground); font:500 12px/1.625 var(--font-geist-sans,sans-serif); } .ds-btn-secondary:hover { background:color-mix(in oklch,var(--secondary) 80%,transparent); } .ds-btn-secondary:focus-visible { border-color:var(--ring); box-shadow:0 0 0 2px color-mix(in oklch,var(--ring) 30%,transparent); }"
+    },
+    {
+      "name": "Campo de texto",
+      "kind": "input",
+      "description": "Campo compacto com borda semântica, texto de placeholder discreto e foco visível.",
+      "html": "<label class=\"ds-field\"><span>Buscar produtos</span><input aria-label=\"Buscar produtos\" placeholder=\"Nome do produto\"></label>",
+      "css": ".ds-field { display:grid; gap:4px; color:var(--foreground); font:400 12px/1.5 var(--font-geist-sans,sans-serif); } .ds-field input { width:100%; min-width:0; height:28px; padding:0 8px; border:1px solid var(--input); border-radius:var(--radius-md); background:color-mix(in oklch,var(--input) 30%,transparent); color:var(--foreground); font:inherit; } .ds-field input:focus-visible { outline:2px solid color-mix(in oklch,var(--ring) 30%,transparent); outline-offset:1px; }"
+    },
+    {
+      "name": "Cartão",
       "kind": "card",
       "refersTo": "card",
-      "description": "Container principal sem sombras, usa apenas borda.",
-      "html": "<div class=\"ds-card\"><h4>Receita Recorrente</h4><p>R$ 15.000,00</p></div>",
-      "css": ".ds-card { background: oklch(1 0 0); color: oklch(0.145 0 0); border: 1px solid oklch(0.922 0 0); border-radius: 0.625rem; padding: 24px; font-family: sans-serif; } .ds-card h4 { margin: 0 0 8px 0; font-weight: 500; } .ds-card p { margin: 0; font-family: monospace; font-size: 1.5rem; font-weight: 600; }"
+      "description": "Superfície de conteúdo com separação tonal e borda leve.",
+      "html": "<section class=\"ds-card\"><h3>Resumo da operação</h3><p>Dados da organização</p></section>",
+      "css": ".ds-card { display:flex; flex-direction:column; gap:16px; padding:16px; border:1px solid color-mix(in oklch,var(--border) 60%,transparent); border-radius:var(--radius-lg); background:var(--card); color:var(--card-foreground); font-family:var(--font-geist-sans,sans-serif); } .ds-card h3,.ds-card p { margin:0; }"
+    },
+    {
+      "name": "Navegação lateral",
+      "kind": "nav",
+      "description": "Item de navegação com estado ativo explícito e superfície de sidebar.",
+      "html": "<nav aria-label=\"Navegação principal\"><a class=\"ds-nav-item\" aria-current=\"page\">Estoque</a></nav>",
+      "css": ".ds-nav-item { display:flex; align-items:center; min-height:28px; padding:4px 8px; border-radius:var(--radius-sm); color:var(--sidebar-foreground); font:500 12px/1.5 var(--font-geist-sans,sans-serif); text-decoration:none; } .ds-nav-item[data-active=true] { background:var(--sidebar-accent); color:var(--sidebar-accent-foreground); } .ds-nav-item:focus-visible { outline:2px solid var(--sidebar-ring); outline-offset:2px; }"
+    },
+    {
+      "name": "Dica flutuante",
+      "kind": "custom",
+      "description": "Conteúdo temporário de gráfico com contraste, borda e elevação funcionais.",
+      "html": "<div class=\"ds-tooltip\" role=\"tooltip\"><strong>Vendas</strong><span>R$ 1.250,00</span></div>",
+      "css": ".ds-tooltip { display:grid; gap:6px; min-width:128px; padding:8px 10px; border:1px solid color-mix(in oklch,var(--border) 50%,transparent); border-radius:var(--radius-md); background:var(--background); color:var(--foreground); box-shadow:var(--shadow-xl); font:400 12px/1.5 var(--font-geist-sans,sans-serif); } .ds-tooltip span { font-variant-numeric:tabular-nums; }"
     }
   ],
   "narrative": {
     "northStar": "O Minimalismo Essencial",
-    "overview": "A plataforma atua de forma silenciosa e focada, projetada para que os dados sejam os protagonistas. A interface abandona decorações desnecessárias em favor de clareza, transparência e elegância premium. O objetivo é criar um ambiente confortável para uso diário prolongado, onde a estética obedece à usabilidade. Rejeita-se categoricamente qualquer traço de \"slop de IA\", gradientes confusos ou ruídos visuais.",
+    "overview": "Web e Admin são superfícies de operação diária. A interface mantém os dados legíveis e a hierarquia previsível, com densidade suficiente para tarefas frequentes e sem ornamentos que disputem atenção. A base visual é compartilhada, mas cada app conserva sua navegação e suas tarefas. O tema escuro é o padrão; o tema claro também é suportado.",
     "keyCharacteristics": [
-      "Foco absoluto na leitura dos dados.",
-      "Design plano (flat) e estruturado por bordas suaves.",
-      "Densidade refinada para uso constante."
+      "Hierarquia visual construída com tipografia, espaço, superfícies e bordas.",
+      "Vermelho usado com intenção nas ações principais e estados definidos.",
+      "Componentes compartilhados com padrões coerentes entre Web e Admin."
     ],
     "rules": [
       {
-        "name": "The Silence Rule",
-        "body": "A interface em si deve ser predominantemente neutra e monocromática. A cor primária deve ocupar menos de 5% da superfície visual.",
+        "name": "The Semantic State Rule",
+        "body": "Nenhum estado ou significado depende apenas da diferença de matiz.",
         "section": "colors"
       },
       {
         "name": "The Data-First Rule",
-        "body": "Utilize a variante monoespaçada para exibir dinheiro, SKUs ou dados contábeis.",
+        "body": "Alinhe números pela posição dos dígitos; reserve a fonte monoespaçada para os casos em que ela esclarece o tipo de informação.",
         "section": "typography"
       },
       {
         "name": "The Flat-By-Default Rule",
-        "body": "Superfícies não devem flutuar. Utilize bordas para definir contornos, nunca box-shadow.",
+        "body": "Prefira cor de superfície e bordas; use sombra quando a camada ou o estado interativo precisar de separação.",
         "section": "elevation"
       }
     ],
     "dos": [
-      "Do manter a densidade visual alta para facilitar o trabalho sem uso de 'white space' excessivo de landing pages.",
-      "Do utilizar componentes contidos, com foco total no conteúdo ao invés da casca visual.",
-      "Do aplicar o 'Vermelho Polaris' apenas para guiar as interações e reforçar as ações principais."
+      "Mantenha os dados como foco principal; use vermelho para ação ou ênfase definida.",
+      "Dê nome acessível, estado e feedback a controles interativos.",
+      "Mostre sinais de carregamento, vazio, erro, sucesso e permissão negada com linguagem e semântica claras."
     ],
     "donts": [
-      "Don't utilizar designs genéricos gerados por IA ('AI slop').",
-      "Don't usar gradientes exagerados, nem em textos nem em fundos.",
-      "Don't adicionar 'side-stripe borders' (bordas laterais coloridas superdimensionadas) em alertas ou componentes.",
-      "Don't empilhar elementos usando box-shadow. O Polaris adota um design flat baseado em bordas sutis."
+      "Não dependa somente de cor para transmitir erro, sucesso, seleção ou série de gráfico.",
+      "Não use gradientes decorativos, faixas laterais coloridas exageradas ou sombras grandes como ornamento.",
+      "Não use um rótulo relativo de tempo sem o instante absoluto disponível e acessível.",
+      "Não faça alegação de conformidade WCAG AA com base apenas em um scanner ou neste contrato."
     ]
   }
 }

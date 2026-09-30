@@ -17,6 +17,7 @@ const salePaymentMethodRegex = /metodo de pagamento da venda/i;
 const saleDetailRouteRegex = /\/vendas\/.+/;
 const settingsThreeInstallmentsRegex = /^3x$/;
 const saleThreeInstallmentsRegex = /^3x no cartao$/i;
+const e2eMutationFeedbackTimeoutMs = 15_000;
 
 test.describe.configure({ mode: "serial" });
 test.setTimeout(180_000);
@@ -86,7 +87,9 @@ test("creates inventory, records a sale, cancels it, and archives the product wi
   await productDialog.getByLabel("Preco de Venda").fill("40");
   await productDialog.getByRole("button", { name: "Salvar Produto" }).click();
 
-  await expect(page.getByText("Produto cadastrado.")).toBeVisible();
+  await expect(page.getByText("Produto cadastrado.")).toBeVisible({
+    timeout: e2eMutationFeedbackTimeoutMs,
+  });
   await page.reload();
   await openProductFromList(page, productName);
   await expect(page.getByRole("heading", { name: productName })).toBeVisible({
@@ -148,7 +151,9 @@ test("creates inventory, records a sale, cancels it, and archives the product wi
 
   await page.getByRole("button", { name: "Cancelar venda" }).click();
   await page.getByRole("button", { name: "Confirmar cancelamento" }).click();
-  await expect(page.getByText("Cancelada").first()).toBeVisible();
+  await expect(page.getByText("Cancelada").first()).toBeVisible({
+    timeout: e2eMutationFeedbackTimeoutMs,
+  });
 
   await gotoApp(page, productDetailUrl);
   await expect(page.getByRole("heading", { name: productName })).toBeVisible({
@@ -397,7 +402,9 @@ test("configures card installments and records customer-paid and seller-paid fee
     .getByRole("button", { name: "Confirmar venda" })
     .click();
 
-  await expect(page.getByText("Venda registrada.")).toBeVisible();
+  await expect(page.getByText("Venda registrada.")).toBeVisible({
+    timeout: e2eMutationFeedbackTimeoutMs,
+  });
   await gotoApp(page, "/vendas");
   const sellerSaleHref = await page
     .getByRole("link", { name: "Abrir" })

@@ -14,9 +14,18 @@ export default defineConfig({
   fullyParallel: true,
   retries: process.env.CI ? 2 : 0,
   workers: 1,
+  outputDir: "test-results",
+  reporter: process.env.CI
+    ? [
+        ["html", { outputFolder: "playwright-report", open: "never" }],
+        ["json", { outputFile: "test-results/report.json" }],
+      ]
+    : "list",
   use: {
     baseURL: "http://127.0.0.1:3001",
-    trace: "on-first-retry",
+    screenshot: "only-on-failure",
+    trace: "retain-on-failure",
+    video: "off",
   },
   webServer: {
     command: "bun x next build && bun x next start --port 3001",

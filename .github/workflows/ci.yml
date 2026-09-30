@@ -5,17 +5,30 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
-  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   verify:
     runs-on: ubuntu-latest
+    concurrency:
+      group: ci-${{ github.workflow }}-verify-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          bun-version: 1.3.11
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          check-latest: true
+          package-manager-cache: false
+
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.4.2
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -56,8 +69,7 @@ jobs:
       - name: Production build
         run: bun run build
         env:
-          # Opcional: adicione SENTRY_AUTH_TOKEN, SENTRY_ORG, SENTRY_PROJECT e SENTRY_DSN
-          # como secrets do GitHub se quiser source maps e upload de artefatos no CI.
+          # Não adicione credenciais de upload Sentry à CI comum.
           # Minimal placeholders so `next build` can read env schema if required
           DATABASE_URL: postgres://ci:ci@127.0.0.1:5432/ci
           BETTER_AUTH_SECRET: ci-better-auth-secret-at-least-32-chars!!
@@ -66,11 +78,13 @@ jobs:
           GOOGLE_CLIENT_ID: dummy-google-client-id
           GOOGLE_CLIENT_SECRET: dummy-google-client-secret
           NEXT_PUBLIC_GOOGLE_CLIENT_ID: dummy-google-client-id
-
       - name: Admin production build
         run: bun run build:admin
         env:
           DATABASE_URL: postgres://ci:ci@127.0.0.1:5432/ci
+          ADMIN_BETTER_AUTH_SECRET: ci-admin-better-auth-secret-at-least-32-chars!!
+          ADMIN_GOOGLE_CLIENT_ID: dummy-admin-google-client-id
+          ADMIN_GOOGLE_CLIENT_SECRET: dummy-admin-google-client-secret
           BETTER_AUTH_SECRET: ci-better-auth-secret-at-least-32-chars!!
           BETTER_AUTH_URL: http://localhost:3002
           NEXT_PUBLIC_APP_URL: http://localhost:3000
@@ -82,11 +96,19 @@ jobs:
     runs-on: ubuntu-latest
     needs: verify
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          bun-version: 1.3.11
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          check-latest: true
+          package-manager-cache: false
+
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.4.2
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -95,6 +117,7 @@ jobs:
         run: bun x playwright install --with-deps chromium
 
       - name: E2E tests
+        id: e2e-tests
         run: bun run test:e2e
         env:
           E2E_DATABASE_URL: ${{ secrets.E2E_DATABASE_URL }}
@@ -105,12 +128,26 @@ jobs:
           GOOGLE_CLIENT_SECRET: dummy-google-client-secret
           NEXT_PUBLIC_GOOGLE_CLIENT_ID: dummy-google-client-id
 
+      - name: Upload Web E2E diagnostics
+        if: ${{ failure() && steps.e2e-tests.outcome == 'failure' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: polaris-web-e2e-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            apps/web/playwright-report/
+            apps/web/test-results/
+          retention-days: 7
+          if-no-files-found: warn
+
   postgres-behavior:
     runs-on: ubuntu-latest
     needs: verify
+    concurrency:
+      group: ci-${{ github.workflow }}-postgres-behavior-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
     services:
       postgres:
-        image: postgres:16
+        image: postgres:18.6
         env:
           POSTGRES_DB: polaris_behavior
           POSTGRES_PASSWORD: postgres
@@ -123,11 +160,19 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          bun-version: 1.3.11
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          check-latest: true
+          package-manager-cache: false
+
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.4.2
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -141,11 +186,19 @@ jobs:
     runs-on: ubuntu-latest
     needs: verify
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          bun-version: 1.3.11
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          check-latest: true
+          package-manager-cache: false
+
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.4.2
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -154,9 +207,13 @@ jobs:
         run: bun x playwright install --with-deps chromium
 
       - name: Admin E2E tests
+        id: admin-e2e-tests
         run: bun run test:e2e:admin
         env:
           E2E_DATABASE_URL: ${{ secrets.ADMIN_E2E_DATABASE_URL }}
+          ADMIN_BETTER_AUTH_SECRET: "ci-admin-better-auth-secret-at-least-32-chars!!"
+          ADMIN_GOOGLE_CLIENT_ID: dummy-admin-google-client-id
+          ADMIN_GOOGLE_CLIENT_SECRET: dummy-admin-google-client-secret
           BETTER_AUTH_SECRET: ci-better-auth-secret-at-least-32-chars!!
           BETTER_AUTH_URL: http://127.0.0.1:3002
           NEXT_PUBLIC_APP_URL: http://127.0.0.1:3001
@@ -164,168 +221,13 @@ jobs:
           GOOGLE_CLIENT_SECRET: dummy-google-client-secret
           NEXT_PUBLIC_GOOGLE_CLIENT_ID: dummy-google-client-id
 
-  rls-smoke:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: oven-sh/setup-bun@v2
+      - name: Upload Admin E2E diagnostics
+        if: ${{ failure() && steps.admin-e2e-tests.outcome == 'failure' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          bun-version: 1.3.11
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: RLS runtime smoke
-        run: bun run db:smoke:rls
-        env:
-          DATABASE_URL: ${{ secrets.RLS_DATABASE_URL }}
-
-  restore-drill-checklist:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.3.11
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Restore drill evidence checklist
-        run: bun run ops:restore-drill:checklist
-        env:
-          RESTORE_DRILL_CONFIRMED_AT: ${{ vars.RESTORE_DRILL_CONFIRMED_AT }}
-          RESTORE_DRILL_SOURCE_BRANCH: ${{ vars.RESTORE_DRILL_SOURCE_BRANCH }}
-          RESTORE_DRILL_RESTORE_BRANCH: ${{ vars.RESTORE_DRILL_RESTORE_BRANCH }}
-          RESTORE_DRILL_VALIDATED_BY: ${{ vars.RESTORE_DRILL_VALIDATED_BY }}
-
-  production-certification-checklist:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.3.11
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Production certification evidence checklist
-        run: bun run ops:production-certification:checklist
-        env:
-          PRODUCTION_CERT_ADMIN_VERCEL_AUTH_AT: ${{ vars.PRODUCTION_CERT_ADMIN_VERCEL_AUTH_AT }}
-          PRODUCTION_CERT_ADMIN_VERCEL_OUTSIDE_ROOT_INCLUDED: ${{ vars.PRODUCTION_CERT_ADMIN_VERCEL_OUTSIDE_ROOT_INCLUDED }}
-          PRODUCTION_CERT_ADMIN_VERCEL_ROOT_DIRECTORY: ${{ vars.PRODUCTION_CERT_ADMIN_VERCEL_ROOT_DIRECTORY }}
-          PRODUCTION_CERT_ASAAS_SANDBOX_AT: ${{ vars.PRODUCTION_CERT_ASAAS_SANDBOX_AT }}
-          PRODUCTION_CERT_INNGEST_SYNC_AT: ${{ vars.PRODUCTION_CERT_INNGEST_SYNC_AT }}
-          PRODUCTION_CERT_INNGEST_RECONCILE_CRON: ${{ vars.PRODUCTION_CERT_INNGEST_RECONCILE_CRON }}
-          PRODUCTION_CERT_INNGEST_RECONCILE_FUNCTION_ID: ${{ vars.PRODUCTION_CERT_INNGEST_RECONCILE_FUNCTION_ID }}
-          PRODUCTION_CERT_MANUAL_BILLING_SLA_HOURS: ${{ vars.PRODUCTION_CERT_MANUAL_BILLING_SLA_HOURS }}
-          PRODUCTION_CERT_MANUAL_BILLING_SOP_AT: ${{ vars.PRODUCTION_CERT_MANUAL_BILLING_SOP_AT }}
-          PRODUCTION_CERT_NEON_POOLER_ENABLED: ${{ vars.PRODUCTION_CERT_NEON_POOLER_ENABLED }}
-          PRODUCTION_CERT_NEON_PRODUCTION_BRANCH_PROTECTED: ${{ vars.PRODUCTION_CERT_NEON_PRODUCTION_BRANCH_PROTECTED }}
-          PRODUCTION_CERT_PROVIDER_SANDBOX_AT: ${{ vars.PRODUCTION_CERT_PROVIDER_SANDBOX_AT }}
-          PRODUCTION_CERT_QUERY_PLAN_AT: ${{ vars.PRODUCTION_CERT_QUERY_PLAN_AT }}
-          PRODUCTION_CERT_QUERY_PLAN_MIN_ROWS: ${{ vars.PRODUCTION_CERT_QUERY_PLAN_MIN_ROWS }}
-          PRODUCTION_CERT_QUERY_PLAN_SEARCH_TERM: ${{ vars.PRODUCTION_CERT_QUERY_PLAN_SEARCH_TERM }}
-          PRODUCTION_CERT_R2_HEALTH_AT: ${{ vars.PRODUCTION_CERT_R2_HEALTH_AT }}
-          PRODUCTION_CERT_RESTORE_DRILL_AT: ${{ vars.PRODUCTION_CERT_RESTORE_DRILL_AT }}
-          PRODUCTION_CERT_RESTORE_DRILL_SOURCE_BRANCH: ${{ vars.PRODUCTION_CERT_RESTORE_DRILL_SOURCE_BRANCH }}
-          PRODUCTION_CERT_RESTORE_DRILL_RESTORE_BRANCH: ${{ vars.PRODUCTION_CERT_RESTORE_DRILL_RESTORE_BRANCH }}
-          PRODUCTION_CERT_RLS_FORCED_TABLES: ${{ vars.PRODUCTION_CERT_RLS_FORCED_TABLES }}
-          PRODUCTION_CERT_SENTRY_ALERT_AT: ${{ vars.PRODUCTION_CERT_SENTRY_ALERT_AT }}
-          PRODUCTION_CERT_SENTRY_EVENT_ID: ${{ vars.PRODUCTION_CERT_SENTRY_EVENT_ID }}
-          PRODUCTION_CERT_UPSTASH_RATE_LIMIT_AT: ${{ vars.PRODUCTION_CERT_UPSTASH_RATE_LIMIT_AT }}
-          PRODUCTION_CERT_VALIDATED_BY: ${{ vars.PRODUCTION_CERT_VALIDATED_BY }}
-          PRODUCTION_CERT_WOOVI_SANDBOX_AT: ${{ vars.PRODUCTION_CERT_WOOVI_SANDBOX_AT }}
-
-  deployment-smoke:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.3.11
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Deployment HTTP smoke
-        run: bun run deploy:smoke
-        env:
-          DEPLOYMENT_SMOKE_URL: ${{ secrets.DEPLOYMENT_SMOKE_URL }}
-          INTERNAL_R2_HEALTH_SECRET: ${{ secrets.INTERNAL_R2_HEALTH_SECRET }}
-
-  admin-deployment-smoke:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.3.11
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Admin deployment HTTP smoke
-        run: bun run deploy:smoke:admin
-        env:
-          ADMIN_DEPLOYMENT_SMOKE_URL: ${{ secrets.ADMIN_DEPLOYMENT_SMOKE_URL }}
-          ADMIN_DEPLOYMENT_SMOKE_PROTECTED: ${{ vars.ADMIN_DEPLOYMENT_SMOKE_PROTECTED }}
-
-  production-preflight:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.3.11
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Production preflight
-        run: bun run prod:preflight
-        env:
-          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
-          DATABASE_URL_DIRECT: ${{ secrets.PRODUCTION_DATABASE_URL_DIRECT }}
-          DEPLOYMENT_SMOKE_URL: ${{ secrets.DEPLOYMENT_SMOKE_URL }}
-          ADMIN_APP_URL: ${{ secrets.ADMIN_APP_URL }}
-          ADMIN_BETTER_AUTH_SECRET: ${{ secrets.ADMIN_BETTER_AUTH_SECRET }}
-          ADMIN_GOOGLE_CLIENT_ID: ${{ secrets.ADMIN_GOOGLE_CLIENT_ID }}
-          ADMIN_GOOGLE_CLIENT_SECRET: ${{ secrets.ADMIN_GOOGLE_CLIENT_SECRET }}
-          BETTER_AUTH_URL: ${{ secrets.PRODUCTION_BETTER_AUTH_URL }}
-          NEXT_PUBLIC_APP_URL: ${{ secrets.PRODUCTION_NEXT_PUBLIC_APP_URL }}
-          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
-          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
-          INNGEST_EVENT_KEY: ${{ secrets.INNGEST_EVENT_KEY }}
-          INNGEST_SIGNING_KEY: ${{ secrets.INNGEST_SIGNING_KEY }}
-          NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${{ secrets.NEXT_PUBLIC_GOOGLE_CLIENT_ID }}
-          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
-          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
-          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
-          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          R2_BUCKET_STAGING: ${{ secrets.R2_BUCKET_STAGING }}
-          R2_BUCKET_FINAL: ${{ secrets.R2_BUCKET_FINAL }}
-          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-          NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
-          SUPPORT_EMAIL: ${{ vars.SUPPORT_EMAIL }}
-          E2E_DATABASE_URL: ${{ secrets.E2E_DATABASE_URL }}
-          RLS_DATABASE_URL: ${{ secrets.RLS_DATABASE_URL }}
-          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
-          INTERNAL_R2_HEALTH_SECRET: ${{ secrets.INTERNAL_R2_HEALTH_SECRET }}
-          PRODUCT_IMAGE_RECONCILE_SECRET: ${{ secrets.PRODUCT_IMAGE_RECONCILE_SECRET }}
-          VERCEL_ENV: production
+          name: polaris-admin-e2e-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            apps/admin/playwright-report/
+            apps/admin/test-results/
+          retention-days: 7
+          if-no-files-found: warn

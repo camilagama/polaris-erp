@@ -1,74 +1,5 @@
 {
   "$schema": "https://turborepo.com/schema.json",
-  "globalDependencies": [".env*", "knip.config.ts"],
-  "globalEnv": [
-    "APP_LOCAL_URL",
-    "APP_PUBLIC_URL",
-    "APP_URL_MODE",
-    "BETTER_AUTH_URL",
-    "NEXT_PUBLIC_APP_URL",
-    "NEXT_PUBLIC_GOOGLE_CLIENT_ID",
-    "NEXT_PUBLIC_SENTRY_DSN",
-    "NODE_ENV",
-    "R2_PUBLIC_BASE_URL",
-    "SENTRY_DSN",
-    "VERCEL_ENV"
-  ],
-  "globalPassThroughEnv": [
-    "ALLOW_PLAYWRIGHT_BOOTSTRAP",
-    "ADMIN_BETTER_AUTH_SECRET",
-    "ADMIN_DEPLOYMENT_SMOKE_PROTECTED",
-    "ADMIN_DEPLOYMENT_SMOKE_URL",
-    "ADMIN_APP_URL",
-    "ADMIN_GOOGLE_CLIENT_ID",
-    "ADMIN_GOOGLE_CLIENT_SECRET",
-    "ASAAS_API_BASE_URL",
-    "ASAAS_API_KEY",
-    "ASAAS_WEBHOOK_TOKEN",
-    "BETTER_AUTH_API_KEY",
-    "BETTER_AUTH_SECRET",
-    "DATABASE_POOL_MAX",
-    "DATABASE_URL",
-    "DATABASE_URL_DIRECT",
-    "DEPLOYMENT_SMOKE_URL",
-    "E2E_DATABASE_URL",
-    "E2E_INTERNAL_BOOTSTRAP_SECRET",
-    "GOOGLE_CLIENT_ID",
-    "GOOGLE_CLIENT_SECRET",
-    "INTERNAL_BOOTSTRAP_SECRET",
-    "INTERNAL_R2_HEALTH_SECRET",
-    "INNGEST_EVENT_KEY",
-    "INNGEST_SIGNING_KEY",
-    "PRODUCT_IMAGE_RECONCILE_SECRET",
-    "PERFORMANCE_MIN_ROWS",
-    "PERFORMANCE_ORGANIZATION_ID",
-    "PERFORMANCE_REQUIRE_REPRESENTATIVE",
-    "PERFORMANCE_SEARCH_TERM",
-    "PERFORMANCE_USER_ID",
-    "POSTGRES_BEHAVIOR_DATABASE_URL",
-    "RESEND_API_KEY",
-    "RESEND_FROM_EMAIL",
-    "RESEND_WEBHOOK_SECRET",
-    "SUPPORT_EMAIL",
-    "R2_ACCESS_KEY_ID",
-    "R2_ACCOUNT_ID",
-    "R2_BUCKET_FINAL",
-    "R2_BUCKET_STAGING",
-    "R2_SECRET_ACCESS_KEY",
-    "RLS_DATABASE_URL",
-    "SENTRY_AUTH_TOKEN",
-    "SENTRY_ORG",
-    "SENTRY_PROJECT",
-    "SENTRY_TRACES_SAMPLE_RATE",
-    "NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE",
-    "NEXT_PUBLIC_SENTRY_REPLAYS_SESSION_SAMPLE_RATE",
-    "NEXT_PUBLIC_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE",
-    "UPSTASH_REDIS_REST_TOKEN",
-    "UPSTASH_REDIS_REST_URL",
-    "WOOVI_API_BASE_URL",
-    "WOOVI_API_KEY",
-    "WOOVI_WEBHOOK_SECRET"
-  ],
   "tasks": {
     "dev": {
       "cache": false,
@@ -76,8 +7,13 @@
     },
     "build": {
       "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": [".next/**", "!.next/cache/**", "!.next/dev/**"]
+      "inputs": ["$TURBO_DEFAULT$"],
+      "outputs": [
+        ".next/**",
+        "!.next/cache/**",
+        "!.next/dev/**",
+        "!.next/**/*.map"
+      ]
     },
     "start": {
       "cache": false,
@@ -91,7 +27,8 @@
       "cache": false
     },
     "test:postgres": {
-      "cache": false
+      "cache": false,
+      "passThroughEnv": ["DATABASE_URL", "POSTGRES_BEHAVIOR_DATABASE_URL"]
     },
     "check": {
       "dependsOn": ["^check"],
@@ -109,13 +46,20 @@
       "outputs": []
     },
     "db:generate": {
-      "cache": false
+      "cache": false,
+      "passThroughEnv": ["DATABASE_URL_DIRECT"]
     },
     "db:migrate": {
-      "cache": false
+      "cache": false,
+      "passThroughEnv": ["DATABASE_URL", "DATABASE_URL_DIRECT"]
     },
     "db:push": {
-      "cache": false
+      "cache": false,
+      "passThroughEnv": [
+        "DATABASE_URL",
+        "DATABASE_URL_DIRECT",
+        "DATABASE_URL_PUSH_LOCAL"
+      ]
     },
     "prod:preflight": {
       "cache": false
@@ -131,7 +75,320 @@
     },
     "db:studio": {
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      "passThroughEnv": ["DATABASE_URL_DIRECT"]
+    },
+    "@polaris/web#build": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/.env*", ".env*"],
+      "outputs": [
+        ".next/**",
+        "!.next/cache/**",
+        "!.next/dev/**",
+        "!.next/**/*.map"
+      ],
+      "env": [
+        "APP_LOCAL_URL",
+        "APP_PUBLIC_URL",
+        "APP_URL_MODE",
+        "BETTER_AUTH_URL",
+        "NEXT_PUBLIC_APP_URL",
+        "NEXT_PUBLIC_GOOGLE_CLIENT_ID",
+        "NEXT_PUBLIC_SENTRY_DSN",
+        "NODE_ENV",
+        "R2_PUBLIC_BASE_URL",
+        "SENTRY_DSN",
+        "VERCEL_ENV"
+      ],
+      "passThroughEnv": [
+        "BETTER_AUTH_SECRET",
+        "DATABASE_URL",
+        "GOOGLE_CLIENT_ID",
+        "GOOGLE_CLIENT_SECRET",
+        "INNGEST_EVENT_KEY",
+        "INNGEST_SIGNING_KEY",
+        "SENTRY_AUTH_TOKEN",
+        "SENTRY_ORG",
+        "SENTRY_PROJECT"
+      ]
+    },
+    "@polaris/admin#build": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/.env*", ".env*"],
+      "outputs": [
+        ".next/**",
+        "!.next/cache/**",
+        "!.next/dev/**",
+        "!.next/**/*.map"
+      ],
+      "env": [
+        "ADMIN_APP_URL",
+        "APP_LOCAL_URL",
+        "APP_PUBLIC_URL",
+        "APP_URL_MODE",
+        "BETTER_AUTH_URL",
+        "NEXT_PUBLIC_APP_URL",
+        "NEXT_PUBLIC_GOOGLE_CLIENT_ID",
+        "NEXT_PUBLIC_SENTRY_DSN",
+        "NODE_ENV",
+        "SENTRY_DSN",
+        "VERCEL_ENV"
+      ],
+      "passThroughEnv": [
+        "ADMIN_BETTER_AUTH_SECRET",
+        "ADMIN_GOOGLE_CLIENT_ID",
+        "ADMIN_GOOGLE_CLIENT_SECRET",
+        "BETTER_AUTH_SECRET",
+        "DATABASE_URL",
+        "GOOGLE_CLIENT_ID",
+        "GOOGLE_CLIENT_SECRET",
+        "SENTRY_AUTH_TOKEN",
+        "SENTRY_ORG",
+        "SENTRY_PROJECT"
+      ]
+    },
+    "@polaris/web#dev": {
+      "cache": false,
+      "persistent": true,
+      "passThroughEnv": [
+        "APP_LOCAL_URL",
+        "APP_PUBLIC_URL",
+        "APP_URL_MODE",
+        "ASAAS_API_BASE_URL",
+        "ASAAS_API_KEY",
+        "ASAAS_CARD_CHECKOUT_ENABLED",
+        "ASAAS_WEBHOOK_TOKEN",
+        "BETTER_AUTH_API_KEY",
+        "BETTER_AUTH_SECRET",
+        "BETTER_AUTH_URL",
+        "DATABASE_POOL_MAX",
+        "DATABASE_URL",
+        "GOOGLE_CLIENT_ID",
+        "GOOGLE_CLIENT_SECRET",
+        "INTERNAL_BOOTSTRAP_SECRET",
+        "INTERNAL_R2_HEALTH_SECRET",
+        "INNGEST_EVENT_KEY",
+        "INNGEST_SIGNING_KEY",
+        "NEXT_PUBLIC_APP_URL",
+        "NEXT_PUBLIC_GOOGLE_CLIENT_ID",
+        "NEXT_PUBLIC_SENTRY_DSN",
+        "NODE_ENV",
+        "PRODUCT_IMAGE_RECONCILE_SECRET",
+        "R2_ACCESS_KEY_ID",
+        "R2_ACCOUNT_ID",
+        "R2_BUCKET_FINAL",
+        "R2_BUCKET_STAGING",
+        "R2_PUBLIC_BASE_URL",
+        "R2_SECRET_ACCESS_KEY",
+        "RESEND_API_KEY",
+        "RESEND_FROM_EMAIL",
+        "RESEND_WEBHOOK_SECRET",
+        "SENTRY_DSN",
+        "SUPPORT_EMAIL",
+        "UPSTASH_REDIS_REST_TOKEN",
+        "UPSTASH_REDIS_REST_URL",
+        "VERCEL_ENV",
+        "WOOVI_API_BASE_URL",
+        "WOOVI_API_KEY",
+        "WOOVI_WEBHOOK_SECRET"
+      ]
+    },
+    "@polaris/web#start": {
+      "cache": false,
+      "persistent": true,
+      "passThroughEnv": [
+        "APP_LOCAL_URL",
+        "APP_PUBLIC_URL",
+        "APP_URL_MODE",
+        "ASAAS_API_BASE_URL",
+        "ASAAS_API_KEY",
+        "ASAAS_CARD_CHECKOUT_ENABLED",
+        "ASAAS_WEBHOOK_TOKEN",
+        "BETTER_AUTH_API_KEY",
+        "BETTER_AUTH_SECRET",
+        "BETTER_AUTH_URL",
+        "DATABASE_POOL_MAX",
+        "DATABASE_URL",
+        "GOOGLE_CLIENT_ID",
+        "GOOGLE_CLIENT_SECRET",
+        "INTERNAL_BOOTSTRAP_SECRET",
+        "INTERNAL_R2_HEALTH_SECRET",
+        "INNGEST_EVENT_KEY",
+        "INNGEST_SIGNING_KEY",
+        "NEXT_PUBLIC_APP_URL",
+        "NEXT_PUBLIC_GOOGLE_CLIENT_ID",
+        "NEXT_PUBLIC_SENTRY_DSN",
+        "NODE_ENV",
+        "PRODUCT_IMAGE_RECONCILE_SECRET",
+        "R2_ACCESS_KEY_ID",
+        "R2_ACCOUNT_ID",
+        "R2_BUCKET_FINAL",
+        "R2_BUCKET_STAGING",
+        "R2_PUBLIC_BASE_URL",
+        "R2_SECRET_ACCESS_KEY",
+        "RESEND_API_KEY",
+        "RESEND_FROM_EMAIL",
+        "RESEND_WEBHOOK_SECRET",
+        "SENTRY_DSN",
+        "SUPPORT_EMAIL",
+        "UPSTASH_REDIS_REST_TOKEN",
+        "UPSTASH_REDIS_REST_URL",
+        "VERCEL_ENV",
+        "WOOVI_API_BASE_URL",
+        "WOOVI_API_KEY",
+        "WOOVI_WEBHOOK_SECRET"
+      ]
+    },
+    "@polaris/admin#dev": {
+      "cache": false,
+      "persistent": true,
+      "passThroughEnv": [
+        "ADMIN_APP_URL",
+        "ADMIN_BETTER_AUTH_SECRET",
+        "ADMIN_GOOGLE_CLIENT_ID",
+        "ADMIN_GOOGLE_CLIENT_SECRET",
+        "APP_LOCAL_URL",
+        "APP_PUBLIC_URL",
+        "APP_URL_MODE",
+        "BETTER_AUTH_API_KEY",
+        "BETTER_AUTH_SECRET",
+        "BETTER_AUTH_URL",
+        "DATABASE_POOL_MAX",
+        "DATABASE_URL",
+        "GOOGLE_CLIENT_ID",
+        "GOOGLE_CLIENT_SECRET",
+        "NEXT_PUBLIC_APP_URL",
+        "NEXT_PUBLIC_GOOGLE_CLIENT_ID",
+        "NEXT_PUBLIC_SENTRY_DSN",
+        "NODE_ENV",
+        "SENTRY_DSN",
+        "UPSTASH_REDIS_REST_TOKEN",
+        "UPSTASH_REDIS_REST_URL",
+        "VERCEL_ENV"
+      ]
+    },
+    "@polaris/admin#start": {
+      "cache": false,
+      "persistent": true,
+      "passThroughEnv": [
+        "ADMIN_APP_URL",
+        "ADMIN_BETTER_AUTH_SECRET",
+        "ADMIN_GOOGLE_CLIENT_ID",
+        "ADMIN_GOOGLE_CLIENT_SECRET",
+        "APP_LOCAL_URL",
+        "APP_PUBLIC_URL",
+        "APP_URL_MODE",
+        "BETTER_AUTH_API_KEY",
+        "BETTER_AUTH_SECRET",
+        "BETTER_AUTH_URL",
+        "DATABASE_POOL_MAX",
+        "DATABASE_URL",
+        "GOOGLE_CLIENT_ID",
+        "GOOGLE_CLIENT_SECRET",
+        "NEXT_PUBLIC_APP_URL",
+        "NEXT_PUBLIC_GOOGLE_CLIENT_ID",
+        "NEXT_PUBLIC_SENTRY_DSN",
+        "NODE_ENV",
+        "SENTRY_DSN",
+        "UPSTASH_REDIS_REST_TOKEN",
+        "UPSTASH_REDIS_REST_URL",
+        "VERCEL_ENV"
+      ]
+    },
+    "@polaris/web#test:e2e": {
+      "cache": false,
+      "passThroughEnv": [
+        "BETTER_AUTH_SECRET",
+        "BETTER_AUTH_URL",
+        "E2E_DATABASE_URL",
+        "E2E_INTERNAL_BOOTSTRAP_SECRET",
+        "GOOGLE_CLIENT_ID",
+        "GOOGLE_CLIENT_SECRET",
+        "NEXT_PUBLIC_APP_URL",
+        "NEXT_PUBLIC_GOOGLE_CLIENT_ID"
+      ]
+    },
+    "@polaris/admin#test:e2e": {
+      "cache": false,
+      "passThroughEnv": [
+        "ADMIN_BETTER_AUTH_SECRET",
+        "ADMIN_GOOGLE_CLIENT_ID",
+        "ADMIN_GOOGLE_CLIENT_SECRET",
+        "BETTER_AUTH_SECRET",
+        "BETTER_AUTH_URL",
+        "E2E_DATABASE_URL",
+        "E2E_INTERNAL_BOOTSTRAP_SECRET",
+        "GOOGLE_CLIENT_ID",
+        "GOOGLE_CLIENT_SECRET",
+        "NEXT_PUBLIC_APP_URL",
+        "NEXT_PUBLIC_GOOGLE_CLIENT_ID"
+      ]
+    },
+    "@polaris/web#knip": {
+      "dependsOn": ["^knip"],
+      "outputs": [],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/knip.config.ts"]
+    },
+    "@polaris/web#prod:preflight": {
+      "cache": false,
+      "passThroughEnv": [
+        "ADMIN_APP_URL",
+        "ALLOW_PLAYWRIGHT_BOOTSTRAP",
+        "BETTER_AUTH_SECRET",
+        "BETTER_AUTH_URL",
+        "DATABASE_POOL_MAX",
+        "DATABASE_URL",
+        "DATABASE_URL_DIRECT",
+        "DEPLOYMENT_SMOKE_URL",
+        "E2E_DATABASE_URL",
+        "GOOGLE_CLIENT_ID",
+        "GOOGLE_CLIENT_SECRET",
+        "INNGEST_EVENT_KEY",
+        "INNGEST_SIGNING_KEY",
+        "INTERNAL_R2_HEALTH_SECRET",
+        "NEXT_PUBLIC_APP_URL",
+        "NEXT_PUBLIC_GOOGLE_CLIENT_ID",
+        "NEXT_PUBLIC_SENTRY_DSN",
+        "PRODUCT_IMAGE_RECONCILE_SECRET",
+        "R2_ACCESS_KEY_ID",
+        "R2_ACCOUNT_ID",
+        "R2_BUCKET_FINAL",
+        "R2_BUCKET_STAGING",
+        "R2_SECRET_ACCESS_KEY",
+        "RLS_DATABASE_URL",
+        "SENTRY_DSN",
+        "SUPPORT_EMAIL",
+        "UPSTASH_REDIS_REST_TOKEN",
+        "UPSTASH_REDIS_REST_URL",
+        "VERCEL_ENV"
+      ]
+    },
+    "@polaris/web#deploy:smoke": {
+      "cache": false,
+      "passThroughEnv": ["DEPLOYMENT_SMOKE_URL", "INTERNAL_R2_HEALTH_SECRET"]
+    },
+    "@polaris/admin#deploy:smoke": {
+      "cache": false,
+      "passThroughEnv": [
+        "ADMIN_APP_URL",
+        "ADMIN_DEPLOYMENT_SMOKE_PROTECTED",
+        "ADMIN_DEPLOYMENT_SMOKE_URL"
+      ]
+    },
+    "@polaris/web#db:smoke:rls": {
+      "cache": false,
+      "passThroughEnv": ["DATABASE_URL", "RLS_SMOKE_EXPECTED_RUNTIME_ROLE"]
+    },
+    "@polaris/web#db:analyze:listings": {
+      "cache": false,
+      "passThroughEnv": [
+        "DATABASE_URL",
+        "PERFORMANCE_MIN_ROWS",
+        "PERFORMANCE_ORGANIZATION_ID",
+        "PERFORMANCE_REQUIRE_REPRESENTATIVE",
+        "PERFORMANCE_SEARCH_TERM",
+        "PERFORMANCE_USER_ID"
+      ]
     }
   }
 }

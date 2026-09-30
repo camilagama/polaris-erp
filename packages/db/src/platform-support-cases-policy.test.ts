@@ -11,7 +11,10 @@ const migrationPath = join(
 
 describe("platform support case policy", () => {
   it("stores manual DSR cases separately from support notes", async () => {
-    const schema = await readFile(schemaPath, "utf8");
+    const schema = (await readFile(schemaPath, "utf8")).replaceAll(
+      "\r\n",
+      "\n"
+    );
 
     expect(schema).toContain('pgTable(\n  "platform_support_cases"');
     expect(schema).toContain('"data_subject_request"');

@@ -15,6 +15,7 @@ const providerEventId = `asaas-event-${randomUUID()}`;
 
 behaviorDescribe("Asaas billing reconciliation on PostgreSQL", () => {
   const pool = new Pool({ connectionString: databaseUrl });
+  const ownerUserId = `${organizationId}-owner`;
 
   beforeAll(async () => {
     if (!databaseUrl) {
@@ -22,26 +23,53 @@ behaviorDescribe("Asaas billing reconciliation on PostgreSQL", () => {
     }
 
     process.env.DATABASE_URL = databaseUrl;
+    const client = await pool.connect();
+    let transactionOpen = false;
 
-    await pool.query(
-      "INSERT INTO organization (id, name, slug) VALUES ($1, $2, $3)",
-      [organizationId, "Asaas concurrency", organizationId]
-    );
-    await pool.query(
-      "INSERT INTO billing_plans (id, name, interval, amount_cents, entitlements) VALUES ($1, $2, 'month', 0, '[]'::jsonb)",
-      [planId, "Asaas concurrency plan"]
-    );
-    await pool.query(
-      "INSERT INTO billing_subscriptions (id, organization_id, plan_id, status) VALUES ($1, $2, $3, 'incomplete')",
-      [subscriptionId, organizationId, planId]
-    );
+    try {
+      await client.query("BEGIN");
+      transactionOpen = true;
+      await client.query(
+        "INSERT INTO users (id, name, email) VALUES ($1, $2, $3)",
+        [ownerUserId, "Asaas test owner", `${ownerUserId}@example.test`]
+      );
+      await client.query(
+        "INSERT INTO organization (id, name, slug) VALUES ($1, $2, $3)",
+        [organizationId, "Asaas concurrency", organizationId]
+      );
+      await client.query(
+        "INSERT INTO member (id, organization_id, user_id) VALUES ($1, $2, $3)",
+        [`${organizationId}-membership`, organizationId, ownerUserId]
+      );
+      await client.query(
+        "INSERT INTO billing_plans (id, name, interval, amount_cents, entitlements) VALUES ($1, $2, 'month', 0, '[]'::jsonb)",
+        [planId, "Asaas concurrency plan"]
+      );
+      await client.query(
+        "INSERT INTO billing_subscriptions (id, organization_id, plan_id, status) VALUES ($1, $2, $3, 'incomplete')",
+        [subscriptionId, organizationId, planId]
+      );
+      await client.query("COMMIT");
+      transactionOpen = false;
+    } catch (error) {
+      if (transactionOpen) {
+        await client.query("ROLLBACK");
+      }
+      throw error;
+    } finally {
+      client.release();
+    }
   });
 
   afterAll(async () => {
-    await pool.query("DELETE FROM organization WHERE id = $1", [
-      organizationId,
-    ]);
-    await pool.end();
+    try {
+      await pool.query("DELETE FROM organization WHERE id = $1", [
+        organizationId,
+      ]);
+      await pool.query("DELETE FROM users WHERE id = $1", [ownerUserId]);
+    } finally {
+      await pool.end();
+    }
   });
 
   it("creates one invoice, link and attempt for concurrent deliveries", async () => {
@@ -49,6 +77,7 @@ behaviorDescribe("Asaas billing reconciliation on PostgreSQL", () => {
       "@polaris/db/tenant-context"
     );
     const payload = {
+      dateCreated: "2026-09-28 12:00:00",
       event: "PAYMENT_RECEIVED",
       id: providerEventId,
       payment: {

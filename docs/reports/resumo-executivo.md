@@ -1,3 +1,10 @@
+---
+status: historical
+snapshot_date: 2026-07-08
+---
+
+> **Historical snapshot — 2026-07-08.** The PR, database and deployment statuses and commands below are not current. Consult [P43](../operations/production-readiness.md) for gate state and current runbooks for procedures.
+
 **1. Resumo Executivo**
 Status de execucao em 2026-07-08:
 - PR 1: validado como skip/sem P0 confirmado neste snapshot.

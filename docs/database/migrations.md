@@ -2,6 +2,8 @@
 
 **Status:** inventário versionado confirmado; aplicação em cada ambiente não foi inferida. **Commit:** `886eda0`.
 
+O procedimento canônico para Production está em [Migrations de Production](../runbooks/production-migrations.md). Na revisão de 2026-09-29, a operação separada estava preparada na PR #2, ainda não integrada à `main`; credenciais/alvo não foram configurados nem migrations de Production executadas. Consulte P43 para o estado operacional vigente.
+
 Drizzle lê `packages/db/src/schema.ts`, grava migrations em `packages/db/src/migrations/` e registra aplicação em `drizzle.__drizzle_migrations__`. `db:migrate` exige a URL direta; não foi executado nesta tarefa.
 
 | Marco | Migrations | Efeito relevante |
@@ -14,6 +16,10 @@ Drizzle lê `packages/db/src/schema.ts`, grava migrations em `packages/db/src/mi
 | Outbox e identidade | migrations de 10/07 a 14/07 | status `observed`, normalização técnica, validação platform admin e leases |
 
 Há DML versionado: seed de plano, normalização de identidade de organização e atualização de eventos capture-only. Esses efeitos devem ser tratados como parte das migrations, não como comportamento que este documento executou.
+
+## `db:push` local
+
+`db:push` só aceita a URL dedicada `DATABASE_URL_PUSH_LOCAL` para PostgreSQL loopback e banco scratch `polaris_push_scratch`. Use uma instância realmente descartável; o guard verifica host e nome do banco, mas não consegue provar o ciclo de vida do servidor. O banco comportamental `polaris_behavior`, E2E e qualquer alvo remoto não são destinos de `db:push`. Para toda branch remota, inclusive Neon temporária, use `db:generate`, SQL versionado/revisado e `db:migrate`. A regra operacional completa está em [`packages/db/AGENTS.md`](../../packages/db/AGENTS.md).
 
 ## Drift e validação
 

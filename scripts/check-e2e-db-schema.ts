@@ -40,6 +40,13 @@ const main = async () => {
           as "sessionsIdUniqueIdx",
         to_regclass('public.platform_admins') is not null
           as "platformAdmins",
+        exists (
+          select 1
+          from information_schema.columns
+          where table_schema = 'public'
+            and table_name = 'platform_audit_events'
+            and column_name = 'actor_admin_user_id'
+        ) as "platformAuditAdminUserId",
         to_regclass('public.platform_admin_grants') is not null
           as "platformAdminGrants"
     `);

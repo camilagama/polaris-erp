@@ -2,7 +2,7 @@
 
 Polaris e um SaaS para operacao de revenda. O app web atende a operacao de cada organizacao, com catalogo, estoque, vendas e metas. O app admin e uma superficie separada para operacao interna da plataforma.
 
-Esta documentacao descreve o comportamento observado no commit `886eda0` da branch `main`. Configuracoes externas, provedores e infraestrutura que nao podem ser comprovados pelo repositorio sao identificados como nao confirmados.
+Esta documentacao resume o comportamento observado no codigo versionado. Configuracoes externas, provedores e infraestrutura que nao podem ser comprovados pelo repositorio sao identificados como nao confirmados.
 
 ## Stack confirmada
 
@@ -25,10 +25,13 @@ O runtime web protege a area operacional por sessao, contexto de app e guards de
 
 ## Requisitos e setup local
 
-1. Instale Bun `1.3.11`, conforme `packageManager` em [package.json](package.json).
-2. Crie `.env.local` a partir de [.env.example](.env.example), sem versionar valores reais.
-3. Instale dependencias com `bun install`.
-4. Inicie o web com `bun dev` ou o admin com `bun run dev:admin`.
+- Node.js 24.x para Next.js, CLIs com shebang `node` e runtime Vercel. A versão de desenvolvimento fica em [`.node-version`](.node-version); `engines.node` declara a linha de deploy nos manifests da raiz e do Admin.
+- Bun para instalar dependências e executar scripts do projeto. A versão requerida é a de `packageManager` em [package.json](package.json).
+- No Windows, confirme `node --version` antes de builds locais. `.node-version` é lido por gerenciadores compatíveis; sem um deles, atualize a instalação Node local manualmente.
+
+1. Crie `.env.local` a partir de [.env.example](.env.example), sem versionar valores reais.
+2. Instale dependências com `bun install`.
+3. Inicie o web com `bun dev` ou o admin com `bun run dev:admin`.
 
 Categorias de ambiente:
 
@@ -52,7 +55,7 @@ Os nomes, finalidade e requisitos por ambiente ficam em [.env.example](.env.exam
 | Preflight e smoke | `bun run prod:preflight`, `bun run deploy:smoke` |
 | Links documentais | `bun run docs:check` |
 
-Os scripts de banco e producao exigem ambiente apropriado. Nao execute migrations, `db:push`, smokes ou E2E contra producao. Fonte: [package.json](package.json) e [docs/architecture/database-environments.md](docs/architecture/database-environments.md).
+Os scripts de banco e producao exigem ambiente apropriado. `db:push` so aceita o banco PostgreSQL descartavel local `polaris_push_scratch` pela URL `DATABASE_URL_PUSH_LOCAL`; qualquer banco remoto, inclusive branches Neon, usa migrations versionadas. Nunca execute migrations, smokes ou E2E contra producao. Fonte: [package.json](package.json), [regras do banco](packages/db/AGENTS.md) e [ambientes de banco](docs/architecture/database-environments.md).
 
 ## Limitacoes conhecidas
 
@@ -64,7 +67,7 @@ Fontes: [preflight de producao](apps/web/src/ops/production-preflight.ts) e [SOP
 
 ## Documentacao
 
-Comece em [docs/README.md](docs/README.md). O plano de cobertura e rastreabilidade fica em [docs/documentation-plan.md](docs/documentation-plan.md).
+O [índice documental](docs/README.md) é o mapa de autoridade: direciona às fontes vigentes, ao estado operacional P43 e ao material histórico. As decisões aceitas e a sequência da fundação estão no [plano mestre](plans/fundacao-polaris-erp.md).
 
 Documentos existentes de operacao: [ambientes de banco](docs/architecture/database-environments.md), [R2](docs/architecture/product-images-r2.md), [RLS](docs/architecture/rls-tenant-isolation.md) e [deploy Vercel](docs/runbooks/deploy-vercel.md).
 

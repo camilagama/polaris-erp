@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { login } from "./helpers";
 
 const gsiWarningRegex = /origin is not allowed/i;
-const implicitGoogleAccountRegex = /sua conta sera criada automaticamente/i;
+const implicitGoogleAccountRegex = /sua conta será criada automaticamente/i;
 const googleContinueRegex = /Continuar com Google/;
 const rootRouteRegex = /\/$/;
 const signInRouteRegex = /\/sign-in$/;

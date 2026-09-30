@@ -1,4 +1,11 @@
+---
+status: historical
+snapshot_date: 2026-07-13
+---
+
 # Revisão profunda do codebase e backlog de PRs
+
+> **Historical snapshot — 2026-07-13, `main` at `d161079`.** The report and its implementation notes preserve findings from that review; PR states, commands and recommendations are not current instructions. Use [`docs/README.md`](../docs/README.md) for current sources and [P43](../docs/operations/production-readiness.md) for operational gates.
 
 Data: 2026-07-13  
 Fuso: America/Sao_Paulo  

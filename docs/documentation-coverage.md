@@ -2,6 +2,10 @@
 
 **Base:** commit `886eda01ef126139ddce62545971e48f7d3d15f3` (`main`), revisado em 2026-07-14.
 
+**Adendo de 2026-09-29:** `runbooks/backup-and-recovery.md` documenta a estratégia aprovada em P44 e os critérios do restore drill. É procedimento-alvo; não altera a evidência-base nem comprova automação ou restore real. O estado operacional atual está no registro P43.
+
+**Adendo de 2026-09-29 — P45:** `runbooks/production-migrations.md` passa a ser a fonte canônica do procedimento. O job manual de migration foi adicionado à PR #2, ainda não integrada à `main`; alvo/credenciais de Production continuam sem configuração confirmada e nenhuma migration de Production foi executada. O runbook mantém P44 e a caracterização de falha/retomada Drizzle em PostgreSQL descartável como bloqueios antes de habilitar a operação.
+
 **Leitura da confiança:** alta = código, schema/migration e/ou teste local apontados; média = código e configuração versionada, com dependência externa; baixa = procedimento ou estado que requer confirmação fora do repositório. Nenhum nível confirma produção.
 
 | Área | Código/configuração apontados | Banco e testes apontados | Documento | Confiança | Lacuna principal |
@@ -16,7 +20,7 @@
 | Vendas e metas | Actions e módulos de domínio | Tabelas, transações e testes locais apontados | [Vendas](modules/sales.md), [metas](modules/goals.md) | Alta | Cobertura E2E específica de regras de borda. |
 | Billing e webhooks | Adaptadores Asaas/Woovi, handlers e outbox | Tabelas billing/eventos e testes com doubles | [Billing](modules/subscriptions-and-billing.md), [webhooks](api/webhooks.md) | Média | Assinaturas, payloads e reconciliação reais de sandbox/produção. |
 | Jobs e observabilidade | Inngest, healthchecks, Sentry e rate limit | Eventos/outbox e testes locais apontados | [Jobs](operations/jobs-and-workflows.md), [observabilidade](operations/observability.md) | Média | Cron/retry remoto, alertas, retenção e redaction de PII. |
-| Ambientes e operação | CI, preflight, smokes, runbooks | Job PostgreSQL e E2E buildado | [Ambientes](operations/environments-and-deployment.md), [testes](testing/strategy.md), [E2E](testing/end-to-end.md) | Média | Projetos promovidos, backup/restore e smokes externos. |
+| Ambientes e operação | CI, preflight, smokes, runbooks | Job PostgreSQL e E2E buildado | [Ambientes](operations/environments-and-deployment.md), [backup e recuperação](runbooks/backup-and-recovery.md), [testes](testing/strategy.md), [E2E](testing/end-to-end.md) | Média | Projetos promovidos, automação de backup, restore real e smokes externos. |
 | Segurança | Guards, rate limit, instrumentação e preflight | Baseline e suites locais indicadas | [Segurança](security/application-security.md) | Média | Configuração real de WAF, secrets, Sentry e controles de plataforma. |
 
 ## Interpretação
