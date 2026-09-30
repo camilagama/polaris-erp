@@ -1,7 +1,7 @@
 # Pesquisa do ponto 49 — perímetro do Admin
 
 **Data:** pesquisa inicial 2026-09-25; revalidação 2026-09-29
-**Estado:** decisão aceita em 2026-09-25. Manter perímetro Vercel e autorização interna `platform_admin` como controles independentes; validar ambos para o lançamento. A correção documental/código P49 foi preparada nesta revalidação e aguarda revisão; configuração Vercel permanece adiada ao provisionamento.
+**Estado:** decisão aceita em 2026-09-25; código e documentação P49 aprovados em 2026-09-29 no commit `984889b` da PR #2. O perímetro Vercel e a autorização interna `platform_admin` permanecem controles independentes; configuração e provas externas ficam adiadas até provisionar o projeto.
 **Pergunta:** manter Vercel Authentication no Admin em conjunto com autenticação e autorização internas da aplicação.
 
 ## Conclusão provisória
@@ -59,4 +59,4 @@ O Hub é um único app/projeto Vercel, sem projeto administrativo separado; suas
 
 ## Limitações
 
-Pesquisa documental e leitura do repositório; nenhum projeto, deployment, domínio, plano ou acesso da conta Vercel foi consultado. A disponibilidade atual documentada não prova que a opção já foi aplicada. O smoke atual aceitar `401`/`403` só verifica uma resposta HTTP, não demonstra escopo de proteção ou acesso positivo com usuário Vercel autorizado. A configuração e os testes de Preview, URL gerada e domínio Admin devem ocorrer ao provisionar; o número de operadores deve ser compatível com a colaboração Hobby ou exigir reavaliação de plano. Nenhum deployment Vercel foi executado.
+Pesquisa documental e leitura do repositório; nenhum projeto, deployment, domínio, plano ou acesso da conta Vercel foi consultado. O teste de regressão do layout, typecheck, build Admin com variáveis sintéticas e `verify:quick` passaram; o build não testa OAuth. O smoke atual aceitar `401`/`403` só verifica uma resposta HTTP, não demonstra escopo de proteção ou acesso positivo com usuário Vercel autorizado. A configuração e os testes de Preview, URL gerada e domínio Admin devem ocorrer ao provisionar; o número de operadores deve ser compatível com a colaboração Hobby ou exigir reavaliação de plano. Nenhum deployment Vercel foi executado.
