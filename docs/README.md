@@ -7,10 +7,12 @@ Este índice define onde encontrar contratos vigentes, evidência operacional, d
 
 - [PRODUCT.md](../PRODUCT.md): fonte de produto para público, problema, resultado esperado e limites; sua reconciliação com P9 ainda está pendente.
 - [DESIGN.md](../DESIGN.md): fonte de design para linguagem visual, acessibilidade e apresentação de dados; seu alinhamento com P35, P36, P58 e P59 ainda está pendente.
-- [Visão arquitetural](architecture/overview.md), [estrutura do repositório](architecture/repository-structure.md), [glossário](glossary.md), regras de negócio, módulos e documentos de banco: descrevem o domínio e o comportamento pretendido. Confirme divergências contra o código, o schema, as migrations e os testes correspondentes; atualize a fonte documental no mesmo PR.
+- [CONTEXT.md](../CONTEXT.md): vocabulário aprovado de produto e domínio, sem regras ou detalhes de implementação.
+- [Regras normativas aprovadas](business-rules/normative/README.md) definem o comportamento de negócio aprovado. Os documentos de arquitetura, módulos, API, segurança e banco descrevem seus contratos técnicos ou o comportamento observado; confronte implementação com código, schema, migrations e testes, e registre divergências na fonte documental correspondente.
+- O [glossário técnico](glossary.md) nomeia mecanismos e identificadores do código; não substitui o vocabulário de domínio em `CONTEXT.md`.
 - [Manutenção documental](maintenance.md): define quando e como atualizar documentação, fontes e referências.
 
-O vocabulário de domínio ainda será consolidado em `CONTEXT.md`, e os ADRs seletivos aprovados em P11 serão criados em `docs/adr/`. Até esse backfill, as decisões aceitas e a ordem de execução desta fundação estão registradas no [plano mestre](../plans/fundacao-polaris-erp.md). As notas de pesquisa apoiam a análise, mas não autorizam implementação por si mesmas.
+Os ADRs seletivos aprovados em P11 serão criados em `docs/adr/`. Até esse backfill, as decisões aceitas e a ordem de execução desta fundação estão registradas no [plano mestre](../plans/fundacao-polaris-erp.md). As notas de pesquisa apoiam a análise, mas não autorizam implementação por si mesmas.
 
 ## Estado e evidência operacional
 
@@ -29,7 +31,7 @@ O vocabulário de domínio ainda será consolidado em `CONTEXT.md`, e os ADRs se
 ## Ordem prática de leitura
 
 1. [README principal](../README.md): produto, stack, setup e comandos.
-2. [PRODUCT.md](../PRODUCT.md) e [DESIGN.md](../DESIGN.md): intenção de produto e regras de interface.
-3. [Visão arquitetural](architecture/overview.md) e [glossário](glossary.md): estrutura e conceitos.
+2. [PRODUCT.md](../PRODUCT.md), [DESIGN.md](../DESIGN.md) e [CONTEXT.md](../CONTEXT.md): intenção de produto, regras de interface e vocabulário de domínio.
+3. [Visão arquitetural](architecture/overview.md) e [glossário técnico](glossary.md): estrutura e termos de implementação.
 4. [Ambientes de banco, E2E e RLS](architecture/database-environments.md) e [estratégia de testes](testing/strategy.md): limites técnicos e evidência de teste.
 5. P43 e o runbook específico antes de qualquer operação externa.

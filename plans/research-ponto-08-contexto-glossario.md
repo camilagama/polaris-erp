@@ -92,4 +92,8 @@ Os termos canônicos serão redigidos em português; identificadores de código 
 
 Entradas sobrepostas com regras não serão copiadas mecanicamente: devem ser curtas, sem detalhe de implementação e incluídas só depois de validar o significado. “Vendedor” e sua relação com owner, usuário e pagador de taxa de cartão seguem pendentes para a etapa de redação/validação do glossário.
 
-**Limitação:** a auditoria cobre os arquivos e o HEAD local verificados nesta revisão. Não define termos ainda não aprovados nem estabelece formalmente bounded contexts do Polaris. `CONTEXT.md` ainda não foi criado; sua redação integra a execução futura do plano consolidado dos 70 pontos.
+**Limitação da pesquisa original:** a auditoria cobre os arquivos e o HEAD local verificados naquela revisão. Não define termos ainda não aprovados nem estabelece formalmente bounded contexts do Polaris.
+
+## Implementação submetida à revisão
+
+Em 2026-09-29, o usuário aprovou a redação da definição de Organização. `CONTEXT.md` foi criado com esse único termo validado; `docs/business-rules/glossary.md` tornou-se uma ponte para a fonte canônica, `docs/glossary.md` foi limitado a termos técnicos e `docs/README.md` passou a indexar `CONTEXT.md`. A atualização do `AGENTS.md` continua deferida à etapa 5 de P63. P8 aguarda revisão da implementação.

@@ -12,7 +12,7 @@ Atualize a documentação no mesmo PR quando uma mudança afetar comportamento, 
 | Billing, evento, webhook, job, retry ou provedor | `modules/subscriptions-and-billing.md`, `api/webhooks.md`, `operations/jobs-and-workflows.md` e `architecture/external-integrations.md`. |
 | Imagem, R2, armazenamento ou reconciliação | `modules/uploads-and-images.md`, `modules/catalog-products-inventory.md`, `operations/jobs-and-workflows.md` e `api/route-handlers.md`. |
 | CI, deploy, ambiente, segredo, observabilidade ou runbook | `operations/{environments-and-deployment,observability}.md`, `testing/{strategy,end-to-end}.md`, `security/application-security.md` e runbook correspondente. |
-| Termo de domínio ou página documental nova | `glossary.md`, `docs/README.md`, `documentation-coverage.md` e, se alterar conclusão, `documentation-audit-report.md`. |
+| Termo de domínio ou página documental nova | `CONTEXT.md`, `docs/README.md` e a fonte canônica do assunto. Revise `documentation-coverage.md` somente se a cobertura mapeada mudar e `documentation-audit-report.md` se uma lacuna, contradição ou risco for resolvido. |
 
 ## Checklist de PR
 

@@ -35,4 +35,4 @@ Na revisão original, este arquivo foi um crosswalk de caminhos e decisões já 
 
 ## Atualização após a etapa 1
 
-Em 2026-09-29, `docs/README.md` e o ponteiro no README raiz foram reconciliados conforme a etapa 1 e aprovados pelo usuário. `docs:check`, Ultracite e `verify:quick` passaram antes dos pushes (`251b39d`, `fa4b321`). `CONTEXT.md` e `docs/adr/` seguem ausentes; as etapas restantes mantêm a ordem aprovada acima.
+Em 2026-09-29, `docs/README.md` e o ponteiro no README raiz foram reconciliados conforme a etapa 1 e aprovados pelo usuário. `docs:check`, Ultracite e `verify:quick` passaram antes dos pushes (`251b39d`, `fa4b321`). Na etapa 2, `CONTEXT.md` foi criado e a reconciliação dos glossários foi submetida à revisão; `docs/adr/` segue ausente. As etapas restantes mantêm a ordem aprovada acima.
