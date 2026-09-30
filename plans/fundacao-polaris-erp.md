@@ -1248,6 +1248,12 @@ Antes do go-live, verificar a major e as extensões do branch Neon real por font
 
 **Etapa 6 aprovada em 2026-09-30:** receberam `status: historical` sete snapshots de maior risco; `execution_status: completed` sete planos com conclusão comprovada; e `execution_status: superseded`, `superseded_by` e “Não executar” os dois roteiros cuja sequência foi substituída. O PR-008 também teve a alegação obsoleta de execução pendente reconciliada. Arquivos e taxonomia foram preservados; nenhum gate externo foi declarado concluído. `docs:check`, `git diff --check`, `verify:quick` e revisão independente passaram; commit `d85e733`.
 
+**Etapa 7 aprovada em 2026-09-30:** o verificador regex-only foi substituído por `scripts/check-docs.ts`. `docs:check` agora cobre os documentos canônicos da raiz e `docs/`, links locais com contenção de workspace, âncoras GitHub nos documentos ativos apontados pelas fontes canônicas do índice, YAML/lifecycle somente onde há frontmatter adotado e IDs/referências de regras nas matrizes canônicas. `docs/maintenance.md` documenta esse contrato e seus limites. Freshness e liveness de links externos continuam fora do gate. As referências abreviadas `DEC-###` dos perfis foram normalizadas para `DEC-BR-NNN`. O comando executa 13 testes do checker e validou 122 arquivos Markdown. `bun run docs:check`, `bun x ultracite check`, `git diff --check` e `bun run verify:quick` passaram; este último concluiu 12 typechecks e as suítes Web/Admin, com os testes que exigem PostgreSQL real ignorados pelo perfil rápido. Nenhuma configuração externa ou banco foi alterado.
+
+**Etapa 8 satisfeita junto com P46:** a regra local específica está em `packages/db/AGENTS.md`; `AGENTS.md` raiz aponta para ela; o guard executável de `db:push` e o README do banco foram implementados nos commits P46 `fbe45e7` e `458d6fa`. A exceção permaneceu limitada ao uso de `db:push` em PostgreSQL local descartável. Nenhum banco scratch foi provisionado ou acessado nesta etapa documental.
+
+**P63 concluído na execução documental:** as oito etapas aprovadas estão satisfeitas. Isso fecha a sequência documental, sem declarar concluídos os gates operacionais, de infraestrutura ou de Production registrados em outros pontos.
+
 ### Ponto 64 — CI e segurança após estabilizar o workflow
 
 **Estado:** aceito em 2026-09-26, com Q1 aprovada e itens reordenados por suas dependências.

@@ -25,6 +25,10 @@ Atualize a documentação no mesmo PR quando uma mudança afetar comportamento, 
 
 ## Validação local
 
+`bun run docs:check` é offline e bloqueador para erros estruturais determinísticos. Ele verifica os documentos canônicos da raiz e `docs/`: caminhos locais em links e imagens; âncoras GitHub nos contratos da raiz e nos documentos vigentes apontados pelas seções canônicas/operacionais de `docs/README.md`; YAML e lifecycle nos arquivos que já declaram frontmatter; e unicidade/cobertura de IDs e referências nas matrizes normativas adotadas.
+
+O checker não exige metadados ou freshness em todo Markdown, não valida âncoras de arquivos listados somente na seção de material histórico/planos e não consulta liveness de links externos. Mudanças nessas regras também exigem atualizar e testar `scripts/check-docs.ts`.
+
 Use as verificações abaixo antes de solicitar revisão documental:
 
 ```powershell
