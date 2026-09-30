@@ -1,6 +1,13 @@
+---
+status: historical
+snapshot_date: 2026-07-12
+---
+
 # Closed Production Test Runbook
 
 Last updated: 2026-07-12
+
+> **Historical snapshot — 2026-07-12.** This file records one closed test run. Its Vercel/Neon IDs, hosts, environment names, webhook URLs, and commands are historical; they do not verify current provider state and must not be used to configure services, run migrations, or deploy/promote. For current status and evidence, see [Production Readiness (P43)](../docs/operations/production-readiness.md). For current procedures, use the [Vercel deployment runbook](../docs/runbooks/deploy-vercel.md), [Production migrations runbook](../docs/runbooks/production-migrations.md), and [backup and recovery runbook](../docs/runbooks/backup-and-recovery.md).
 
 ## Current State
 

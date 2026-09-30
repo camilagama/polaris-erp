@@ -34,4 +34,10 @@ P14 já definiu que `aidd_docs/` permanece no lugar, como contexto auxiliar e hi
 
 ## Limitações
 
-Auditoria somente dos arquivos versionados e dos caminhos de documentação locais. Não consultamos Vercel, Neon, R2, Resend ou qualquer serviço remoto; nenhuma configuração antiga foi revalidada. Não houve mudança de código ou documentação principal, nem testes.
+Auditoria e implementação somente documental. Não consultamos Vercel, Neon, R2, Resend ou qualquer serviço remoto; nenhuma configuração antiga foi revalidada. O corpo do snapshot foi preservado.
+
+## Revalidação e implementação P50 — 2026-09-29
+
+- `aidd_docs/production-closed-test.md` agora tem `status: historical`, `snapshot_date: 2026-07-12`, aviso destacado contra reutilizar IDs/hosts/envs/URLs/comandos e links para o P43 e runbooks vigentes. A inserção não moveu nem reescreveu o conteúdo do snapshot.
+- `aidd_docs/memory/project-state.md` foi relido: seu ponteiro P43 já está atualizado e o texto não afirma que a Vercel esteja ativa. Nenhuma alteração adicional à memória é necessária para P50.
+- A mudança é apenas documental e aguarda revisão do usuário; nenhum provider foi consultado ou alterado.
