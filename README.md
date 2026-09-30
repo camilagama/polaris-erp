@@ -67,7 +67,7 @@ Fontes: [preflight de producao](apps/web/src/ops/production-preflight.ts) e [SOP
 
 ## Documentacao
 
-Comece em [docs/README.md](docs/README.md). O plano de cobertura e rastreabilidade fica em [docs/documentation-plan.md](docs/documentation-plan.md).
+O [índice documental](docs/README.md) é o mapa de autoridade: direciona às fontes vigentes, ao estado operacional P43 e ao material histórico. As decisões aceitas e a sequência da fundação estão no [plano mestre](plans/fundacao-polaris-erp.md).
 
 Documentos existentes de operacao: [ambientes de banco](docs/architecture/database-environments.md), [R2](docs/architecture/product-images-r2.md), [RLS](docs/architecture/rls-tenant-isolation.md) e [deploy Vercel](docs/runbooks/deploy-vercel.md).
 
