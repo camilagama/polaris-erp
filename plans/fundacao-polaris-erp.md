@@ -600,6 +600,12 @@ O primeiro comando `semgrep ci` usou os produtos habilitados no tenant e o log c
 
 **Pesquisa de apoio:** [pesquisa do ponto 29 sobre CodeQL/SAST](research-ponto-29-codeql.md).
 
+**Estado de implementação após o rerun Code-only — 2026-09-30:** PR #4 foi integrado em `main` no merge commit `3eaaeeb`; a CI do merge (`36780421697`) passou nos quatro jobs. O workflow manual executou no SHA de `main` pelo run [36780602755](https://github.com/camilagama/polaris-erp/actions/runs/36780602755), criou o scan `237448079` e terminou em 3m14s com Semgrep 1.178.0. O log confirmou **Code somente**, 767 arquivos e 2.944 regras Code; houve 23 achados não bloqueantes, zero bloqueantes e saída 0. O seletor `--code` eliminou Supply Chain do segundo scan.
+
+**Triagem técnica preliminar dos 23 achados:** 11 alertas críticos de SQL Injection aparecem em `packages/db/src/postgres-behavior.test.ts`, `scripts/analyze-listing-plans.ts` e `scripts/smoke-rls-runtime.cjs`; o código revisado usa identificador de role constante, definições de query estáticas e parâmetros para dados, sem caminho de entrada de request para esses sinks. Quatro alertas baixos de `shell: true` estão em scripts locais de verificação/build e usam o comando `bun` com argumentos fixos ou alvo allowlisted, além do shell apenas para a compatibilidade Windows. Dois alertas baixos de regex estão no helper de testes de fronteira, que escapa os nomes antes de montar os padrões. Dois alertas baixos de HMAC apontam segredos fictícios em testes Woovi. Quatro alertas baixos de `replaceAll` apontam a função de escape do template de email: o nome do usuário é escapado para contexto de texto HTML e a URL vem de `serverEnv.NEXT_PUBLIC_APP_URL`, normalizada por `resolveCanonicalAppUrl` como origem configurada. Essa revisão é preliminar; nenhum finding foi ignorado/fechado no Semgrep e nenhuma supressão ou baseline foi adicionada.
+
+**Disposição proposta para P29:** POC técnico Code-only concluído; manter o workflow manual e não-required. A fonte revisada não mostrou caminho explorável a partir de request nos achados, mas o volume de ruído e as 11 ocorrências Critical justificam manter o gate desligado. A conclusão e a classificação dos findings ficam sujeitas à sua revisão; ainda há sete tokens Agent (CI) visíveis no tenant e não foi feita rotação/revogação.
+
 ### Ponto 30 — CodeRabbit assistivo; CI como autoridade
 
 **Estado:** aceito em 2026-09-25, com Q1 aprovada.
