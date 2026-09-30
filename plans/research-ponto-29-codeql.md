@@ -132,3 +132,10 @@ Se a execução autogerida conectada necessária não estiver disponível no tie
 
 - A documentação pública confirma limite Free, payload declarado, modos e capacidade de execução em runner próprio; não resolve a classificação contratual “custom CI/CD integration” para esta integração GitHub Actions. A política efetiva, permissões de ambiente, AI e Managed Scans só podem ser confirmadas no tenant/configuração Semgrep, que não foi acessado.
 - Dados e recursos comerciais são declarações do fornecedor; foram consultados em fontes primárias disponíveis em 2026-09-30. O release/tag/digest foi validado contra GitHub e Docker Hub oficiais nesta data. Não executei o POC e não alterei workflow/configuração externa.
+
+## Revalidação operacional pós-merge — 2026-09-30
+
+- O PR #2 foi integrado à `main` no merge commit `d08e5bd`; `.github/workflows/semgrep-poc.yml` agora existe no default branch. Os checks do PR passaram, mas a CI do merge (`36762595493`) falhou no gate `audit:baseline` por duas descobertas em `@grpc/grpc-js@1.14.4`. A baseline verde exigida por P22, portanto, não estava vigente para iniciar o POC.
+- A resolução transitiva foi atualizada para `@grpc/grpc-js@1.14.5` na branch isolada `codex/fix-grpc-security-advisories`, sem allowlist/quarentena ou override. O audit e `verify:quick` passaram localmente; a CI remota da correção ainda precisa confirmar a baseline.
+- O Environment GitHub `semgrep-poc` continua inexistente (API 404); não consultei nem criei secrets. A elegibilidade comercial do runner próprio no Semgrep Free ainda não foi confirmada no tenant. Nenhum scan foi disparado.
+- Sequência mantida: primeiro CI remota verde com a correção de advisories; depois confirmar no tenant o entitlement do modo conectado e aceitar os metadados enviados; então configurar Environment/token e política Monitor com AI/Managed Scans desligados; só então executar o POC. Se o modo conectado Free não estiver elegível, não trocar silenciosamente para Managed Scans nem para regras CE sem licença validada.
