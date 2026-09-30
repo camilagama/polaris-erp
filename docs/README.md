@@ -43,5 +43,5 @@ O [plano mestre](../plans/fundacao-polaris-erp.md) registra a sequência da fund
 1. [README principal](../README.md): produto, stack, setup e comandos.
 2. [PRODUCT.md](../PRODUCT.md), [DESIGN.md](../DESIGN.md) e [CONTEXT.md](../CONTEXT.md): intenção de produto, regras de interface e vocabulário de domínio.
 3. [Visão arquitetural](architecture/overview.md) e [glossário técnico](glossary.md): estrutura e termos de implementação.
-4. [Ambientes de banco, E2E e RLS](architecture/database-environments.md) e [estratégia de testes](testing/strategy.md): limites técnicos e evidência de teste.
+4. [Ambientes de banco, E2E e RLS](architecture/database-environments.md), [estratégia de testes](testing/strategy.md) e [testes E2E](testing/end-to-end.md): isolamento de ambiente e evidências de teste.
 5. P43 e o runbook específico antes de qualquer operação externa.

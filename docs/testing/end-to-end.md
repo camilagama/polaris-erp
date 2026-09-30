@@ -1,6 +1,12 @@
 # Testes end-to-end
 
-Os testes E2E são Playwright e exercitam aplicações locais após build. O web usa porta 3001; o admin, 3002. A configuração habilita duas tentativas em CI e trace apenas na primeira repetição para diagnóstico.
+Os testes E2E são Playwright e exercitam aplicações locais após build. O web usa porta 3001; o admin, 3002. A configuração habilita duas tentativas em CI e preserva trace/screenshot de falhas para diagnóstico.
+
+## Evidências de falha na CI
+
+Web e Admin produzem relatório HTML/JSON, trace e screenshot apenas para testes que falham; o CI envia os diretórios `playwright-report/` e `test-results/` em artefatos separados somente quando a etapa E2E correspondente falha. Cada artefato expira após 7 dias. Vídeo e logs genéricos do servidor permanecem desligados.
+
+Traces incluem DOM, capturas de tela e dados de requisições/respostas. Use somente os bancos E2E não produtivos e fixtures sintéticas. Os artefatos ficam acessíveis a qualquer pessoa com leitura do repositório privado; não são storage público nem evidência durável de produção.
 
 ## Cobertura observada
 

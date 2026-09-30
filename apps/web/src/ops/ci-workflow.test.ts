@@ -20,6 +20,12 @@ const TURBO_CONFIG_PATH = fileURLToPath(
 const VERCEL_WEB_CONFIG_PATH = fileURLToPath(
   new URL("../../../../apps/web/vercel.json", import.meta.url)
 );
+const WEB_PLAYWRIGHT_CONFIG_PATH = fileURLToPath(
+  new URL("../../../../apps/web/playwright.config.ts", import.meta.url)
+);
+const ADMIN_PLAYWRIGHT_CONFIG_PATH = fileURLToPath(
+  new URL("../../../../apps/admin/playwright.config.ts", import.meta.url)
+);
 const REPOSITORY_ROOT_PATH = fileURLToPath(
   new URL("../../../../", import.meta.url)
 );
@@ -61,6 +67,10 @@ const readProductionReadinessPlan = () =>
   readFileSync(PRODUCTION_READINESS_PLAN_PATH, "utf8");
 const readTurboConfig = () => readFileSync(TURBO_CONFIG_PATH, "utf8");
 const readPackageJson = () => readFileSync(PACKAGE_JSON_PATH, "utf8");
+const readWebPlaywrightConfig = () =>
+  readFileSync(WEB_PLAYWRIGHT_CONFIG_PATH, "utf8");
+const readAdminPlaywrightConfig = () =>
+  readFileSync(ADMIN_PLAYWRIGHT_CONFIG_PATH, "utf8");
 const TOP_LEVEL_WORKFLOW_JOB_PATTERN = /^ {2}[a-z0-9_-]+:$/i;
 const WORKFLOW_LINE_SEPARATOR_PATTERN = /\r?\n/;
 const normalizePath = (filePath: string) =>
@@ -353,7 +363,7 @@ describe("CI workflow", () => {
 
   it("pins every external workflow dependency to a full commit SHA with a release comment", () => {
     const workflows = [
-      { content: readCiWorkflow(), expectedCount: 12 },
+      { content: readCiWorkflow(), expectedCount: 14 },
       { content: readOperationsWorkflow(), expectedCount: 19 },
     ];
 
@@ -569,6 +579,64 @@ describe("CI workflow", () => {
     expect(workflow).toContain("secrets.E2E_DATABASE_URL");
     expect(workflow).toContain("secrets.ADMIN_E2E_DATABASE_URL");
     expect(workflow).toMatch(ADMIN_E2E_DATABASE_URL_SECRET_PATTERN);
+  });
+
+  it("configures Web and Admin Playwright reports and failure diagnostics", () => {
+    for (const config of [
+      readWebPlaywrightConfig(),
+      readAdminPlaywrightConfig(),
+    ]) {
+      expect(config).toContain('trace: "retain-on-failure"');
+      expect(config).toContain('screenshot: "only-on-failure"');
+      expect(config).toContain('video: "off"');
+      expect(config).toContain('outputDir: "test-results"');
+      expect(config).toContain("reporter: process.env.CI");
+      expect(config).toContain('["html",');
+      expect(config).toContain('["json",');
+      expect(config).toContain('outputFolder: "playwright-report"');
+      expect(config).toContain('outputFile: "test-results/report.json"');
+    }
+  });
+
+  it("uploads separate E2E artifacts only when the matching test step fails", () => {
+    const workflow = readCiWorkflow();
+    const webE2eJob = getWorkflowJobSection(workflow, "e2e");
+    const adminE2eJob = getWorkflowJobSection(workflow, "admin-e2e");
+    const artifactAction = "actions/upload-artifact@";
+
+    const jobArtifacts = [
+      {
+        appPath: "apps/web",
+        artifactNamePrefix: "polaris-web-e2e-",
+        job: webE2eJob,
+        testStepId: "e2e-tests",
+      },
+      {
+        appPath: "apps/admin",
+        artifactNamePrefix: "polaris-admin-e2e-",
+        job: adminE2eJob,
+        testStepId: "admin-e2e-tests",
+      },
+    ];
+
+    for (const {
+      appPath,
+      artifactNamePrefix,
+      job,
+      testStepId,
+    } of jobArtifacts) {
+      expect(job).toContain(
+        `${artifactAction}043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1`
+      );
+      expect(job).toContain(`steps.${testStepId}.outcome == 'failure'`);
+      expect(job).toContain(`${appPath}/playwright-report/`);
+      expect(job).toContain(`${appPath}/test-results/`);
+      expect(job).toContain(
+        `name: ${artifactNamePrefix}\${{ github.run_id }}-\${{ github.run_attempt }}`
+      );
+      expect(job).toContain("retention-days: 7");
+      expect(job).toContain("if-no-files-found: warn");
+    }
   });
 
   it("runs PostgreSQL behavior checks on the current stable PostgreSQL 18 patch", () => {

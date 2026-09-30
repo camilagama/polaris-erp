@@ -13,9 +13,18 @@ export default defineConfig({
   testMatch: "**/*.e2e.ts",
   fullyParallel: true,
   retries: process.env.CI ? 2 : 0,
+  outputDir: "test-results",
+  reporter: process.env.CI
+    ? [
+        ["html", { outputFolder: "playwright-report", open: "never" }],
+        ["json", { outputFile: "test-results/report.json" }],
+      ]
+    : "list",
   use: {
     baseURL: "http://127.0.0.1:3002",
-    trace: "on-first-retry",
+    screenshot: "only-on-failure",
+    trace: "retain-on-failure",
+    video: "off",
   },
   webServer: {
     command: "bun run build && bun x next start --port 3002",
