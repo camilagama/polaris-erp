@@ -139,3 +139,9 @@ Se a execução autogerida conectada necessária não estiver disponível no tie
 - A resolução transitiva foi atualizada para `@grpc/grpc-js@1.14.5` na branch isolada `codex/fix-grpc-security-advisories`, sem allowlist/quarentena ou override. O audit e `verify:quick` passaram localmente; a CI remota da correção ainda precisa confirmar a baseline.
 - O Environment GitHub `semgrep-poc` continua inexistente (API 404); não consultei nem criei secrets. A elegibilidade comercial do runner próprio no Semgrep Free ainda não foi confirmada no tenant. Nenhum scan foi disparado.
 - Sequência mantida: primeiro CI remota verde com a correção de advisories; depois confirmar no tenant o entitlement do modo conectado e aceitar os metadados enviados; então configurar Environment/token e política Monitor com AI/Managed Scans desligados; só então executar o POC. Se o modo conectado Free não estiver elegível, não trocar silenciosamente para Managed Scans nem para regras CE sem licença validada.
+
+## Revalidação após correção da baseline — 2026-09-30
+
+- P22 voltou a verde em `main`: PR #3 atualizou a resolução transitiva para `@grpc/grpc-js@1.14.5`; merge `9e41e5f` e run `36766776406` passaram em `verify`, E2E Web/Admin e PostgreSQL. O log do gate confirmou zero advisories. A condição técnica de baseline para o POC está satisfeita.
+- O Environment `semgrep-poc` continua retornando 404 pela API do GitHub e a elegibilidade do `semgrep ci` em runner próprio no plano Free continua sem confirmação no tenant. Não foi consultado nem configurado token, nem executado scan.
+- Próxima condição do POC: confirmar o entitlement no tenant e aceitar os metadados do modo conectado; depois configurar Environment limitado a `main`, token e política Monitor com AI/Managed Scans desativados. O POC permanece não bloqueante e nenhum resultado SAST foi avaliado.
