@@ -221,6 +221,8 @@ As recomendações do relatório são hipóteses de trabalho, não instruções 
 
 **Pesquisa de apoio:** [pesquisa do ponto 11 sobre ADRs](research-ponto-11-adrs.md).
 
+**Backfill executado e aprovado em 2026-09-30:** as três decisões seletivas receberam ADRs `Accepted` com data de registro atual e data original explicitamente desconhecida. O estado de implementação foi mantido separado e parcial quando aplicável; alternativas e rationale históricos não foram inventados. `docs/README.md` indexa os registros. Commit `9b97c66`; `docs:check`, `git diff --check` e `verify:quick` no pre-push passaram. A revisão independente não encontrou problemas; a CI remota ainda estava pendente no momento do registro.
+
 ### Ponto 12 — freshness da documentação
 
 **Estado:** aceito em 2026-09-24, com metadados seletivos e aviso não bloqueante.
@@ -1233,6 +1235,8 @@ Antes do go-live, verificar a major e as extensões do branch Neon real por font
 **Etapa 2 aprovada em 2026-09-29:** `CONTEXT.md` foi criado com a definição validada de Organização; os glossários de negócio e técnico, o índice e o guia de manutenção foram reconciliados no commit `96f4293` e aprovados pelo usuário ao autorizar prosseguir. `docs:check`, Ultracite e `verify:quick` passaram. A etapa 5 de P63 atualizará o `AGENTS.md` depois dos destinos documentais previstos.
 
 **Etapa 3 aprovada em 2026-09-30:** `PRODUCT.md` e `DESIGN.md` foram mesclados com P9/P35/P36/P58/P59, e `.impeccable/design.json` foi reconciliado aos tokens CSS e padrões compartilhados no commit `b404884`. A remoção de `## Register` foi aprovada. A reconciliação dos documentos legados de produto foi concluída em P9 no commit `1434f22`; P36 mantém pendentes Axe e avaliação das jornadas, e P58/P59 mantêm pendentes as correções de código previstas em P69.
+
+**Etapa 4 aprovada em 2026-09-30:** o backfill seletivo de P11 criou `docs/adr/0001-tenant-platform-authorization-rls.md`, `0002-transactional-outbox.md` e `0003-normalized-billing-adapters.md`, indexados em `docs/README.md`. As ADRs registram escolhas vigentes sem atribuir data, alternativas ou rationale não comprovados à história original e distinguem decisão aceita de implementação parcial. Commit `9b97c66`; `docs:check`, `git diff --check`, `verify:quick` e revisão independente passaram. A CI remota ainda estava pendente no momento do registro. A etapa 5 atualiza os ponteiros documentais do `AGENTS.md`, sem duplicar o índice ou o checklist de `docs/maintenance.md`.
 
 ### Ponto 64 — CI e segurança após estabilizar o workflow
 
