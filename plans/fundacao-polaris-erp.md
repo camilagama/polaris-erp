@@ -257,6 +257,8 @@ As recomendações do relatório são hipóteses de trabalho, não instruções 
 
 **Pesquisa de apoio:** [pesquisa do ponto 14 sobre autoridade e memória de agentes](research-ponto-14-aidd-docs-authority.md).
 
+**Implementação aprovada em 2026-09-30:** `AGENTS.md` agora usa `docs/README.md` como mapa de fontes vigentes, não afirma que specs/planos atuais vivem em `aidd_docs/` e não carrega toda a memória automaticamente. `aidd_docs/` foi mantido como contexto histórico sob demanda, com revalidação de afirmações atuais e lifecycle antes de executar planos antigos. Commit `014e5d0`; `docs:check`, `git diff --check` e `verify:quick` passaram.
+
 ### Ponto 15 — instruções do agente e manutenção da documentação
 
 **Estado:** aceito em 2026-09-24; a implementação será consolidada com P14 e P7.
@@ -268,6 +270,8 @@ As recomendações do relatório são hipóteses de trabalho, não instruções 
 **Direção aprovada:** adicionar no `AGENTS.md` ponteiros concisos ao índice canônico e ao guia de manutenção; atualizar o índice para listar `docs/maintenance.md`. Manter o lembrete de atualizar fontes canônicas no mesmo PR quando a semântica/contrato documentado mudar; conservar a matriz/checklist detalhada apenas em `docs/maintenance.md`.
 
 **Pesquisa de apoio:** [pesquisa do ponto 15 sobre instruções de agente](research-ponto-15-agent-instructions.md).
+
+**Implementação aprovada em 2026-09-30:** `AGENTS.md` ganhou ponteiros concisos para `docs/README.md` e, quando a tarefa altera documentação ou comportamento documentado, `docs/maintenance.md`; mantém o lembrete de atualizar a fonte canônica no mesmo PR sem duplicar a matriz/checklist. O índice já listava `docs/maintenance.md`. Commit `014e5d0`; `docs:check`, `git diff --check` e `verify:quick` passaram.
 
 ### Ponto 16 — reduzir o `AGENTS.md` raiz
 
@@ -996,7 +1000,7 @@ O acesso ao deployment do Admin fica limitado aos operadores internos que tenham
 
 **Evidência revalidada:** antes da implementação P51, `docs/README.md` ainda apresentava a cobertura e as perguntas abertas de julho como atuais e não classificava fontes, estado operacional, decisões e histórico. O mapa foi atualizado nos commits `251b39d` e `fa4b321` e aprovado pelo usuário em 2026-09-29. `AGENTS.md` ainda dá prioridade documental a `aidd_docs/` e carrega automaticamente sua memória quando o bloco está vazio. `aidd_docs/memory/project-state.md` permanece um snapshot arquitetural de julho; a afirmação anterior sobre Vercel ativa foi removida e o ponteiro P43 foi atualizado em P50, sem reauditoria completa. `docs/reports/` e `docs/superpowers/plans/` contêm estados e avisos mistos; planos podem conter comandos imperativos. P12–P15 já definem metadados seletivos, freshness não universal, `docs/README.md` como mapa e ponteiros curtos no `AGENTS.md`.
 
-**Implementação parcial aprovada:** o mapa e o ponteiro do README raiz foram reconciliados na etapa 1 de P63. P51 permanece em andamento: a atualização do `AGENTS.md` e o backfill de lifecycle estão sequenciados após a criação de `CONTEXT.md` e dos ADRs seletivos.
+**Implementação parcial revalidada em 2026-09-30:** o mapa e o ponteiro do README raiz foram reconciliados na etapa 1 de P63. `AGENTS.md` agora aponta para o mapa, trata `aidd_docs/` como contexto histórico sob demanda e orienta verificar o lifecycle antes de executar planos antigos; commit `014e5d0`. P51 permanece em andamento até o backfill de lifecycle dirigido por risco na etapa 6 de P63.
 
 **Comparação com Hub:** o Hub mostra um mapa de autoridade e marca planos substituídos com `execution_status`, `superseded_by` e “Não executar”, mas seus status e `docs/reviews/` também são inconsistentes. Aproveitar os controles pontuais, sem copiar a taxonomia inteira nem criar pastas por simetria.
 
@@ -1237,6 +1241,8 @@ Antes do go-live, verificar a major e as extensões do branch Neon real por font
 **Etapa 3 aprovada em 2026-09-30:** `PRODUCT.md` e `DESIGN.md` foram mesclados com P9/P35/P36/P58/P59, e `.impeccable/design.json` foi reconciliado aos tokens CSS e padrões compartilhados no commit `b404884`. A remoção de `## Register` foi aprovada. A reconciliação dos documentos legados de produto foi concluída em P9 no commit `1434f22`; P36 mantém pendentes Axe e avaliação das jornadas, e P58/P59 mantêm pendentes as correções de código previstas em P69.
 
 **Etapa 4 aprovada em 2026-09-30:** o backfill seletivo de P11 criou `docs/adr/0001-tenant-platform-authorization-rls.md`, `0002-transactional-outbox.md` e `0003-normalized-billing-adapters.md`, indexados em `docs/README.md`. As ADRs registram escolhas vigentes sem atribuir data, alternativas ou rationale não comprovados à história original e distinguem decisão aceita de implementação parcial. Commit `9b97c66`; `docs:check`, `git diff --check`, `verify:quick` e revisão independente passaram. A CI remota ainda estava pendente no momento do registro. A etapa 5 atualiza os ponteiros documentais do `AGENTS.md`, sem duplicar o índice ou o checklist de `docs/maintenance.md`.
+
+**Etapa 5 aprovada em 2026-09-30:** `AGENTS.md` agora aponta para o mapa canônico `docs/README.md`, para o guia condicional `docs/maintenance.md` e trata snapshots AIDD como contexto histórico sob demanda; o carregamento automático de toda a memória foi removido. O ponteiro específico para `packages/db/AGENTS.md` foi preservado, sem expandir a etapa para a redução geral P16. Commit `014e5d0`; `docs:check`, `git diff --check` e `verify:quick` passaram. P14/P15 estão implementados; P51 segue parcial até a classificação de lifecycle da etapa 6.
 
 ### Ponto 64 — CI e segurança após estabilizar o workflow
 
