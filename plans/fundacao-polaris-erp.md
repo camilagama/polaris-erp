@@ -173,7 +173,7 @@ As recomendações do relatório são hipóteses de trabalho, não instruções 
 
 **Pesquisa de apoio:** [pesquisa do ponto 8 sobre vocabulário de domínio](research-ponto-08-contexto-glossario.md).
 
-**Implementação concluída e aprovada em 2026-09-29:** `CONTEXT.md` registra somente a definição aprovada de Organização; o glossário de negócio aponta para ele e o glossário técnico distingue `organization`, `tenant` e as roles atuais. `docs/README.md` indexa a fonte e `docs/maintenance.md` encaminha novas definições para o arquivo canônico. Commit `96f4293`; `docs:check`, Ultracite e `verify:quick` passaram. O ponteiro no `AGENTS.md` continua sequenciado na etapa 5 de P63.
+**Implementação concluída e aprovada em 2026-09-29:** `CONTEXT.md` registra somente a definição aprovada de Organização; o glossário de negócio aponta para ele e o glossário técnico distingue `organization`, `tenant` e as roles atuais. `docs/README.md` indexa a fonte e `docs/maintenance.md` encaminha novas definições para o arquivo canônico. Commit `96f4293`; `docs:check`, Ultracite e `verify:quick` passaram. O usuário aprovou a implementação ao autorizar prosseguir. O ponteiro no `AGENTS.md` continua sequenciado na etapa 5 de P63.
 
 ### Ponto 9 — ampliar `PRODUCT.md`
 
@@ -1218,7 +1218,7 @@ Antes do go-live, verificar a major e as extensões do branch Neon real por font
 
 **Implementação da etapa 1 aprovada em 2026-09-29:** `docs/README.md` foi reconciliado como mapa de autoridade e o README raiz passou a apontar para ele; commits `251b39d` e `fa4b321`. `docs:check`, Ultracite e `verify:quick` passaram antes dos pushes. A etapa 2 é a criação do `CONTEXT.md` raiz; as demais etapas permanecem pendentes na ordem aprovada.
 
-**Etapa 2 aprovada em 2026-09-29:** `CONTEXT.md` foi criado com a definição validada de Organização; os glossários de negócio e técnico, o índice e o guia de manutenção foram reconciliados no commit `96f4293`. `docs:check`, Ultracite e `verify:quick` passaram. A etapa 5 de P63 atualizará o `AGENTS.md` depois dos destinos documentais previstos.
+**Etapa 2 aprovada em 2026-09-29:** `CONTEXT.md` foi criado com a definição validada de Organização; os glossários de negócio e técnico, o índice e o guia de manutenção foram reconciliados no commit `96f4293` e aprovados pelo usuário ao autorizar prosseguir. `docs:check`, Ultracite e `verify:quick` passaram. A etapa 5 de P63 atualizará o `AGENTS.md` depois dos destinos documentais previstos.
 
 ### Ponto 64 — CI e segurança após estabilizar o workflow
 
