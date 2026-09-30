@@ -6,17 +6,12 @@ import {
 } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const {
-  adminUsersFindFirstMock,
-  getPlatformAdminContextMock,
-  getSessionMock,
-  requirePlatformAdminMock,
-} = vi.hoisted(() => ({
-  adminUsersFindFirstMock: vi.fn(),
-  getPlatformAdminContextMock: vi.fn(),
-  getSessionMock: vi.fn(),
-  requirePlatformAdminMock: vi.fn(),
-}));
+const { adminUsersFindFirstMock, getSessionMock, requirePlatformAdminMock } =
+  vi.hoisted(() => ({
+    adminUsersFindFirstMock: vi.fn(),
+    getSessionMock: vi.fn(),
+    requirePlatformAdminMock: vi.fn(),
+  }));
 
 vi.mock("server-only", () => ({}));
 
@@ -49,7 +44,6 @@ vi.mock("@/features/auth/actions", () => ({
 }));
 
 vi.mock("@/lib/platform-admin-auth", () => ({
-  getPlatformAdminContext: getPlatformAdminContextMock,
   requirePlatformAdmin: requirePlatformAdminMock,
 }));
 
@@ -105,7 +99,6 @@ describe("Admin dashboard layout authorization", () => {
 
   it("does not render dashboard children when admin authorization redirects", async () => {
     const redirectError = new Error("NEXT_REDIRECT: /sign-in");
-    getPlatformAdminContextMock.mockResolvedValue(null);
     getSessionMock.mockResolvedValue(null);
     requirePlatformAdminMock.mockRejectedValue(redirectError);
 
