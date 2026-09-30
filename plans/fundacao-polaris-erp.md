@@ -187,7 +187,11 @@ As recomendações do relatório são hipóteses de trabalho, não instruções 
 
 **Pesquisa de apoio:** [pesquisa do ponto 9 sobre o contrato de produto](research-ponto-09-product-contract.md).
 
-**Implementação do brief aprovada em 2026-09-30:** `PRODUCT.md` foi convertido em brief conciso com público/problema confirmados pelo responsável, prioridades aprovadas, jornadas macro, limites do lançamento e sinais sem metas numéricas. O público/problema não tem artefato de pesquisa versionado. Commit `b404884`. A reconciliação detalhada de `docs/product/01-regras-de-negocio.md` e `docs/product/roadmap.md` continua pendente como subetapa do P9; não fechar P9 antes dela.
+**Implementação do brief aprovada em 2026-09-30:** `PRODUCT.md` foi convertido em brief conciso com público/problema confirmados pelo responsável, prioridades aprovadas, jornadas macro, limites do lançamento e sinais sem metas numéricas. O público/problema não tem artefato de pesquisa versionado. Commit `b404884`.
+
+**Reconciliação legada concluída e aprovada em 2026-09-30:** `docs/product/01-regras-de-negocio.md` foi identificado como snapshot histórico de 2026-04-02; seu conteúdo foi preservado com aviso e ponteiros às fontes vigentes. `docs/product/roadmap.md` foi marcado como superseded e “Não executar”, com reconciliação do escopo aprovado e conteúdo antigo preservado como histórico. Nenhuma ideia antiga foi promovida a regra ou prioridade. Commit `1434f22`. `docs:check`, `git diff --check` e `verify:quick` no pre-push passaram; os testes PostgreSQL que dependem de banco dedicado foram ignorados pelo guard local. O commit foi enviado à PR #2.
+
+**P9 concluído e aprovado pelo usuário em 2026-09-30.** A fonte da validação de público/problema continua sem artefato versionado, conforme registrado no brief.
 
 ### Ponto 10 — sistema explícito de regras de domínio
 
@@ -1228,7 +1232,7 @@ Antes do go-live, verificar a major e as extensões do branch Neon real por font
 
 **Etapa 2 aprovada em 2026-09-29:** `CONTEXT.md` foi criado com a definição validada de Organização; os glossários de negócio e técnico, o índice e o guia de manutenção foram reconciliados no commit `96f4293` e aprovados pelo usuário ao autorizar prosseguir. `docs:check`, Ultracite e `verify:quick` passaram. A etapa 5 de P63 atualizará o `AGENTS.md` depois dos destinos documentais previstos.
 
-**Etapa 3 aprovada em 2026-09-30:** `PRODUCT.md` e `DESIGN.md` foram mesclados com P9/P35/P36/P58/P59, e `.impeccable/design.json` foi reconciliado aos tokens CSS e padrões compartilhados no commit `b404884`. A remoção de `## Register` foi aprovada. A reconciliação de `docs/product/01-regras-de-negocio.md` e `docs/product/roadmap.md` permanece como subetapa pendente do P9; P36 mantém pendentes Axe e avaliação das jornadas, e P58/P59 mantêm pendentes as correções de código previstas em P69.
+**Etapa 3 aprovada em 2026-09-30:** `PRODUCT.md` e `DESIGN.md` foram mesclados com P9/P35/P36/P58/P59, e `.impeccable/design.json` foi reconciliado aos tokens CSS e padrões compartilhados no commit `b404884`. A remoção de `## Register` foi aprovada. A reconciliação dos documentos legados de produto foi concluída em P9 no commit `1434f22`; P36 mantém pendentes Axe e avaliação das jornadas, e P58/P59 mantêm pendentes as correções de código previstas em P69.
 
 ### Ponto 64 — CI e segurança após estabilizar o workflow
 
