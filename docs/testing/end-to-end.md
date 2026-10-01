@@ -8,6 +8,12 @@ Web e Admin produzem relatório HTML/JSON, trace e screenshot apenas para testes
 
 Traces incluem DOM, capturas de tela e dados de requisições/respostas. Use somente os bancos E2E não produtivos e fixtures sintéticas. Os artefatos ficam acessíveis a qualquer pessoa com leitura do repositório privado; não são storage público nem evidência durável de produção.
 
+## Regressão visual
+
+O conjunto inicial compara somente as telas de login sem sessão de Web e Admin. As duas telas usam conteúdo estático; dashboard, catálogo, vendas e console Admin ficam adiados até haver fixtures determinísticas para essas superfícies. Os testes visuais rodam apenas nos jobs E2E da CI, fixados em `ubuntu-24.04`, Chromium e Playwright resolvido pelo lockfile; cada app usa um worker. O teste define viewport, locale, fuso, tema e movimento reduzido; a captura espera as fontes e neutraliza a integração externa de Google One Tap.
+
+O Playwright está configurado com `updateSnapshots: "none"`: execução normal nunca cria nem substitui baselines. Se um baseline estiver ausente, o teste anexa uma captura candidata ao artifact E2E de falha; se divergir, o Playwright também registra `actual` e `diff`. Para aceitar uma mudança visual intencional, revisar a captura candidata/diff, copiar a imagem escolhida para o diretório de snapshots do teste na branch e executar a CI novamente. Não gerar nem atualizar imagens no Windows local. Baselines e artifacts usam apenas telas de autenticação estáticas; nunca dados ou capturas de Production.
+
 ## Cobertura observada
 
 | Aplicação | Suites | Fluxo exercitado |

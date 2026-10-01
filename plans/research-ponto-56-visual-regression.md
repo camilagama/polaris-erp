@@ -63,8 +63,9 @@ As discussões públicas consultadas são anedóticas, não uma amostra represen
 ## Recomendação para P56
 
 - **Aprovar** visual regression seletiva com Playwright nativo e `toHaveScreenshot`, sem Chromatic/Percy no início.
-- **Condicionar a criação das baselines** à conclusão do refinamento visual do P35 e ao runtime canônico reproduzível; registrar a política agora para não atrasar o restante da fundação.
-- Começar por poucas vistas da jornada de lançamento: login Web, shell/dashboard Web, uma tabela/etapa representativa de venda e shell Admin. Incluir billing somente se estiver no escopo do lançamento e houver fixture estável. Reusar as jornadas E2E existentes quando possível.
+- **Refinamento aprovado em 2026-10-01:** começar apenas pelas telas sem sessão de login Web e Admin. O conteúdo é estático e não depende dos usuários, organizações e registros dinâmicos encontrados nos fluxos autenticados. Dashboard/shell Web, catálogo, vendas e console Admin ficam adiados até fixtures determinísticas existirem. Billing só entra se estiver no escopo do lançamento e houver fixture estável.
+- **Condicionar a criação das baselines** ao contrato visual P35 reconciliado e ao runtime canônico reproduzível; registrar a política agora para não atrasar o restante da fundação.
+- Reusar as jornadas E2E existentes quando possível, sem capturar todos os passos dos fluxos nem páginas com dados voláteis.
 - Usar Chromium/Linux no primeiro ciclo, snapshots commitados em Git, geração/atualização explícita em ambiente canônico e review de cada diff. Não ajustar tolerâncias globais para acomodar deriva do ambiente.
 - Expandir, trocar ferramenta ou incluir outros browsers depois de evidência de necessidade: falhas visuais escapadas, volume/conflito de baselines, demanda de review cloud ou cobertura cross-browser.
 

@@ -14,6 +14,7 @@ export default defineConfig({
   fullyParallel: true,
   retries: process.env.CI ? 2 : 0,
   workers: 1,
+  updateSnapshots: "none",
   outputDir: "test-results",
   reporter: process.env.CI
     ? [
