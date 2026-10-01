@@ -93,7 +93,7 @@ jobs:
           NEXT_PUBLIC_GOOGLE_CLIENT_ID: dummy-google-client-id
 
   e2e:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: verify
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -183,7 +183,7 @@ jobs:
           POSTGRES_BEHAVIOR_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/polaris_behavior
 
   admin-e2e:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: verify
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
