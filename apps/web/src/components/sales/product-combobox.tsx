@@ -106,7 +106,7 @@ export function ProductCombobox({
                   value={option.id}
                 >
                   <span className="truncate">{option.name}</span>
-                  <span className="ml-auto shrink-0 text-muted-foreground">
+                  <span className="ml-auto shrink-0 text-muted-foreground group-data-selected/command-item:text-foreground">
                     {option.stock} un.
                   </span>
                 </CommandItem>
