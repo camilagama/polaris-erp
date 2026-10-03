@@ -52,6 +52,7 @@ test("scans inventory and sale surfaces in both themes", async ({ page }) => {
   const darkSaleDialog = page.getByRole("dialog");
 
   await expect(darkSaleDialog).toBeVisible();
+  await expect(darkSaleDialog.getByLabel("Qtd.")).toHaveCount(1);
   await expectNoWcagViolations(page);
   const darkProductCombobox = darkSaleDialog
     .getByRole("combobox", { name: productComboboxRegex })

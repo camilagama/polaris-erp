@@ -295,6 +295,8 @@ function SaleProductRow({
       product.id === item.productId || !selectedByOthers.has(product.id)
   );
 
+  const quantityInputId = `sale-quantity-${item.id}`;
+
   return (
     <div className="grid items-center gap-3 rounded-md p-1.5 transition-colors hover:bg-muted/30 sm:grid-cols-[minmax(0,1fr)_80px_100px_100px_40px]">
       <div className="flex flex-col gap-1">
@@ -320,11 +322,15 @@ function SaleProductRow({
       </div>
 
       <div className="flex flex-col gap-1">
-        <Label className="text-[11px] text-muted-foreground sm:hidden">
+        <Label
+          className="text-[11px] text-muted-foreground sm:sr-only"
+          htmlFor={quantityInputId}
+        >
           Qtd.
         </Label>
         <Input
           className="h-7 bg-background"
+          id={quantityInputId}
           min="1"
           onChange={(event) => {
             const nextQuantityValue = event.target.value;
