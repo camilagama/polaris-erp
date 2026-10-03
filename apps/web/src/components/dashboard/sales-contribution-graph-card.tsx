@@ -148,6 +148,7 @@ export function SalesContributionGraphCard({
                               aria-label={`${longDate}: ${formatCurrency(sold)}, ${salesCount} vendas, ${levelBandLabel(activity.level)}`}
                               className="transition-opacity hover:opacity-80"
                               dayIndex={dayIndex}
+                              role="img"
                               weekIndex={weekIndex}
                             />
                           </g>

@@ -890,7 +890,9 @@ export function CreateSaleDialog({
                     </Label>
                     <InputGroup className="h-8 w-32">
                       <InputGroupAddon>
-                        <InputGroupText className="text-xs">R$</InputGroupText>
+                        <InputGroupText className="text-foreground text-xs">
+                          R$
+                        </InputGroupText>
                       </InputGroupAddon>
                       <InputGroupInput
                         className="h-8 text-right text-sm placeholder:text-muted-foreground"
@@ -915,7 +917,9 @@ export function CreateSaleDialog({
                     </Label>
                     <InputGroup className="h-8 w-32">
                       <InputGroupAddon>
-                        <InputGroupText className="text-xs">R$</InputGroupText>
+                        <InputGroupText className="text-foreground text-xs">
+                          R$
+                        </InputGroupText>
                       </InputGroupAddon>
                       <InputGroupInput
                         className="h-8 text-right text-sm placeholder:text-muted-foreground"
@@ -940,7 +944,9 @@ export function CreateSaleDialog({
                     </Label>
                     <InputGroup className="h-8 w-32">
                       <InputGroupAddon>
-                        <InputGroupText className="text-xs">R$</InputGroupText>
+                        <InputGroupText className="text-foreground text-xs">
+                          R$
+                        </InputGroupText>
                       </InputGroupAddon>
                       <InputGroupInput
                         className="h-8 text-right text-sm placeholder:text-muted-foreground"
@@ -1000,7 +1006,7 @@ export function CreateSaleDialog({
                   </div>
                 ) : null}
 
-                <div className="flex items-center justify-between text-chart-6 text-sm">
+                <div className="flex items-center justify-between text-emerald-700 text-sm dark:text-emerald-400">
                   <span className="font-medium">Valor recebido</span>
                   <span className="font-medium">
                     {formatCurrency(displayReceivedAmount)}
