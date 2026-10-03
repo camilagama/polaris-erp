@@ -1,7 +1,10 @@
 import { getPlatformUserDetailForAdmin } from "@polaris/platform/directory";
 import { listPlatformSupportCasesForAdmin } from "@polaris/platform/support-cases";
 import { listPlatformSupportNotesForAdmin } from "@polaris/platform/support-notes";
-import { formatDateTime } from "@polaris/ui/lib/formatters";
+import {
+  BusinessTimeZoneNotice,
+  TimeValue,
+} from "@polaris/ui/components/shared/time-value";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
@@ -69,6 +72,8 @@ const UserDetailContent = async ({ params }: UserDetailPageProps) => {
         </div>
       </div>
 
+      <BusinessTimeZoneNotice />
+
       <div className="grid gap-4 md:grid-cols-3">
         {counts.map((item) => (
           <article
@@ -91,11 +96,18 @@ const UserDetailContent = async ({ params }: UserDetailPageProps) => {
         </h2>
         <div className="mt-4 grid gap-2 text-muted-foreground text-sm sm:grid-cols-2">
           <p>
-            Ultima criada: {formatDateTime(user.sessionSummary.latestCreatedAt)}
+            Ultima criada:{" "}
+            <TimeValue
+              kind="instant"
+              value={user.sessionSummary.latestCreatedAt}
+            />
           </p>
           <p>
             Ultima expiracao:{" "}
-            {formatDateTime(user.sessionSummary.latestExpiresAt)}
+            <TimeValue
+              kind="instant"
+              value={user.sessionSummary.latestExpiresAt}
+            />
           </p>
         </div>
       </section>
@@ -127,7 +139,7 @@ const UserDetailContent = async ({ params }: UserDetailPageProps) => {
               <span className="text-foreground">{organization.status}</span>
               <span className="text-foreground">{organization.role}</span>
               <span className="text-muted-foreground">
-                {formatDateTime(organization.createdAt)}
+                <TimeValue kind="instant" value={organization.createdAt} />
               </span>
             </Link>
           ))
@@ -254,7 +266,7 @@ const UserDetailContent = async ({ params }: UserDetailPageProps) => {
                   {note.body}
                 </p>
                 <p className="mt-2 text-muted-foreground text-xs">
-                  {formatDateTime(note.createdAt)} -{" "}
+                  <TimeValue kind="instant" value={note.createdAt} /> -{" "}
                   {note.authorPlatformAdminId?.slice(0, 8) ?? "sem autor"}
                 </p>
               </article>

@@ -23,7 +23,8 @@
     "db:studio": "drizzle-kit studio",
     "test": "vitest run",
     "test:postgres": "bun ../../scripts/require-postgres-behavior-database.ts && vitest run src/postgres-behavior.test.ts",
-    "typecheck": "tsc --noEmit --project tsconfig.json"
+    "typecheck": "tsc --noEmit --project tsconfig.json",
+    "test:platform-postgres": "bun scripts/prepare-and-run-platform-postgres.ts"
   },
   "devDependencies": {
     "drizzle-kit": "^0.31.11"

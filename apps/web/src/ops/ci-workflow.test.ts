@@ -581,6 +581,27 @@ describe("CI workflow", () => {
     expect(workflow).toMatch(ADMIN_E2E_DATABASE_URL_SECRET_PATTERN);
   });
 
+  it("keeps external billing credentials out of CI", () => {
+    const workflow = readCiWorkflow();
+
+    expect(workflow).not.toContain("ASAAS_API_KEY");
+    expect(workflow).not.toContain("WOOVI_API_KEY");
+  });
+
+  it("uses Sandbox payment endpoints in the environment example", () => {
+    const envExample = readEnvExample();
+
+    expect(envExample).toContain(
+      'ASAAS_API_BASE_URL="https://api-sandbox.asaas.com/v3"'
+    );
+    expect(envExample).toContain(
+      'WOOVI_API_BASE_URL="https://api.woovi-sandbox.com"'
+    );
+    expect(envExample).toContain('ASAAS_API_KEY=""');
+    expect(envExample).toContain('WOOVI_API_KEY=""');
+    expect(envExample).toContain("ADMIN_E2E_DATABASE_URL");
+  });
+
   it("configures Web and Admin Playwright reports and failure diagnostics", () => {
     for (const config of [
       readWebPlaywrightConfig(),

@@ -2,8 +2,8 @@
 
 import { ShoppingBag02Icon } from "@hugeicons/core-free-icons";
 import { DonutChart } from "@polaris/ui/components/shared/donut-chart";
-import type { ChartConfig } from "@/components/ui/chart";
-import { Empty } from "@/components/ui/empty";
+import type { ChartConfig } from "@polaris/ui/components/ui/chart";
+import { Empty } from "@polaris/ui/components/ui/empty";
 import type { SalesStatusSummary } from "@/features/sales/contracts";
 
 const STATUS_COLORS = {

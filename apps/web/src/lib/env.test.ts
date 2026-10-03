@@ -213,4 +213,78 @@ describe("serverEnv", () => {
       }),
     });
   });
+
+  it.each([
+    {
+      baseUrl: "https://api.asaas.com./v3",
+      baseUrlName: "ASAAS_API_BASE_URL",
+      nodeEnv: "development",
+      vercelEnv: undefined,
+      target: "local development",
+    },
+    {
+      baseUrl: "https://api.woovi.com",
+      baseUrlName: "WOOVI_API_BASE_URL",
+      nodeEnv: "production",
+      vercelEnv: undefined,
+      target: "a CI production build",
+    },
+    {
+      baseUrl: "https://api.asaas.com/v3",
+      baseUrlName: "ASAAS_API_BASE_URL",
+      nodeEnv: "production",
+      vercelEnv: "preview",
+      target: "a Vercel Preview",
+    },
+  ])("rejects a Production provider endpoint in $target", async ({
+    baseUrl,
+    baseUrlName,
+    nodeEnv,
+    vercelEnv,
+  }) => {
+    stubRequiredEnv({
+      [baseUrlName]: baseUrl,
+      NODE_ENV: nodeEnv,
+      VERCEL_ENV: vercelEnv,
+    });
+
+    await expect(import("@/lib/env")).rejects.toThrow(
+      `${baseUrlName} must not use a Production provider endpoint outside Vercel Production.`
+    );
+  });
+
+  it("accepts Sandbox provider endpoints in non-production environments", async () => {
+    stubRequiredEnv({
+      ASAAS_API_BASE_URL: "https://api-sandbox.asaas.com/v3",
+      NODE_ENV: "production",
+      VERCEL_ENV: "preview",
+      WOOVI_API_BASE_URL: "https://api.woovi-sandbox.com",
+    });
+
+    await expect(import("@/lib/env")).resolves.toMatchObject({
+      serverEnv: expect.objectContaining({
+        ASAAS_API_BASE_URL: "https://api-sandbox.asaas.com/v3",
+        WOOVI_API_BASE_URL: "https://api.woovi-sandbox.com",
+      }),
+    });
+  });
+
+  it("allows Production provider endpoints in Vercel Production", async () => {
+    stubRequiredEnv({
+      ASAAS_API_BASE_URL: "https://api.asaas.com/v3",
+      INTERNAL_R2_HEALTH_SECRET: "a".repeat(32),
+      NODE_ENV: "production",
+      PRODUCT_IMAGE_RECONCILE_SECRET: "b".repeat(32),
+      SUPPORT_EMAIL: "support@example.com",
+      VERCEL_ENV: "production",
+      WOOVI_API_BASE_URL: "https://api.woovi.com",
+    });
+
+    await expect(import("@/lib/env")).resolves.toMatchObject({
+      serverEnv: expect.objectContaining({
+        ASAAS_API_BASE_URL: "https://api.asaas.com/v3",
+        WOOVI_API_BASE_URL: "https://api.woovi.com",
+      }),
+    });
+  });
 });

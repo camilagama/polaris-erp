@@ -9,6 +9,10 @@ Separar URLs e roles por finalidade para evitar dois erros de producao:
 
 Dados de teste (`e2e+...@dgimports.local`, categorias `Categoria E2E`, etc.) devem existir apenas em branches dedicadas.
 
+## Ambientes da aplicacao
+
+O Polaris usa quatro ambientes canonicos: Local, CI, Staging e Producao. Um Preview por PR e uma modalidade temporaria de deploy nao produtivo, nao um quinto ambiente. A linha `Preview/dev` abaixo descreve um destino de banco para desenvolvimento ou Preview; nao altera a taxonomia dos ambientes da aplicacao. Quando Preview por PR for configurado, cada PR que precise escrever no banco deve usar sua propria branch Neon descartavel. A homologacao persistente usa um alvo separado e nao exige uma branch Git permanente chamada `staging`.
+
 ## Modelo recomendado
 
 | Finalidade | Neon branch | Secret/env | Role esperada |

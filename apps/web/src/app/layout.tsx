@@ -1,11 +1,11 @@
+import { Toaster } from "@polaris/ui/components/ui/sonner";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { type ReactNode, Suspense } from "react";
-import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
+import { TooltipProvider } from "@polaris/ui/components/ui/tooltip";
+import { cn } from "@polaris/ui/lib/utils";
 import { ThemeProvider } from "@/components/theme-provider";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

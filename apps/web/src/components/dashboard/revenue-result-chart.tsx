@@ -1,6 +1,14 @@
 "use client";
 
 import {
+  type ChartConfig,
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@polaris/ui/components/ui/chart";
+import {
   Area,
   AreaChart,
   CartesianGrid,
@@ -8,14 +16,6 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import {
-  type ChartConfig,
-  ChartContainer,
-  ChartLegend,
-  ChartLegendContent,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
 import type { DashboardPeriodComparisonPoint } from "@/features/dashboard/contracts";
 import { formatCompactCurrency, formatCurrency } from "@/lib/formatters";
 

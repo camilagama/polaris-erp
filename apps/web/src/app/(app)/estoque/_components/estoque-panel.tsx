@@ -1,17 +1,14 @@
 "use client";
+import { TimeValue } from "@polaris/ui/components/shared/time-value";
 
-import { usePaginatedListState } from "@polaris/ui/hooks/use-paginated-list";
-import { cn } from "@polaris/ui/lib/utils";
-import Link from "next/link";
-import { useCallback } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@polaris/ui/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@polaris/ui/components/ui/card";
 import {
   Table,
   TableBody,
@@ -19,7 +16,11 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@polaris/ui/components/ui/table";
+import { usePaginatedListState } from "@polaris/ui/hooks/use-paginated-list";
+import { cn } from "@polaris/ui/lib/utils";
+import Link from "next/link";
+import { useCallback } from "react";
 import { loadMoreInventoryMovementsAction } from "@/features/products/actions";
 import type {
   InventoryMovementFilterProduct,
@@ -27,7 +28,7 @@ import type {
   InventoryMovementItem,
   InventoryMovementType,
 } from "@/features/products/contracts";
-import { formatCurrency, formatDate } from "@/lib/formatters";
+import { formatCurrency } from "@/lib/formatters";
 import { EstoqueFilterBar } from "./estoque-filter-bar";
 
 const movementTypeLabels: Record<InventoryMovementType, string> = {
@@ -131,7 +132,7 @@ export function EstoquePanel({
                     {items.map((item) => (
                       <TableRow className="border-border/40" key={item.id}>
                         <TableCell className="whitespace-nowrap pl-4">
-                          {formatDate(item.date)}
+                          <TimeValue kind="civil-date" value={item.date} />
                         </TableCell>
                         <TableCell className="min-w-48">
                           <Link

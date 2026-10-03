@@ -1,7 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useRef, useState, useTransition } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,9 +9,11 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
-import { toast } from "@/components/ui/sonner";
+} from "@polaris/ui/components/ui/alert-dialog";
+import { Button } from "@polaris/ui/components/ui/button";
+import { toast } from "@polaris/ui/components/ui/sonner";
+import { useRouter } from "next/navigation";
+import { useRef, useState, useTransition } from "react";
 import { cancelSaleAction } from "@/features/sales/actions";
 import type { SaleDetail } from "@/features/sales/contracts";
 

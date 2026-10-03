@@ -1,17 +1,17 @@
 "use client";
 
+import { Button } from "@polaris/ui/components/ui/button";
 import { DateRangePicker } from "@polaris/ui/components/ui/date-range-picker";
-import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
+import { Label } from "@polaris/ui/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@polaris/ui/components/ui/select";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
 import type {
   InventoryMovementFilterProduct,
   InventoryMovementFilters,

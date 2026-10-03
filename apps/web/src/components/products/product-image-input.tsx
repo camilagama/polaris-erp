@@ -6,11 +6,11 @@ import {
   ImageUploadIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { Button } from "@polaris/ui/components/ui/button";
+import { useFileUpload } from "@polaris/ui/hooks/use-file-upload";
 import Image from "next/image";
 import { useEffect, useMemo } from "react";
-import { Button } from "@/components/ui/button";
 import type { ProductImageAsset } from "@/features/products/contracts";
-import { useFileUpload } from "@/hooks/use-file-upload";
 import { isSessionProxiedProductImageSrc } from "@/lib/product-image-client";
 
 interface ProductImageInputProps {

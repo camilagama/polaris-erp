@@ -30,11 +30,13 @@ const createTxMock = () => {
 describe("platform events", () => {
   it("returns event overview through the platform module", async () => {
     const db = { execute: vi.fn() };
+    const dateRange = { from: "2026-07-07", to: "2026-07-13" };
     listEventOutboxMock.mockResolvedValueOnce([
       {
         attempts: 1,
         availableAt: "2026-07-13T00:00:00.000Z",
         correlationId: "correlation-1",
+        createdAt: "2026-07-13T00:00:00.000Z",
         eventType: "payment.created",
         id: "event-1",
         lastError: null,
@@ -54,7 +56,7 @@ describe("platform events", () => {
       },
     ]);
 
-    await expect(getPlatformEventsOverview(db)).resolves.toEqual({
+    await expect(getPlatformEventsOverview(db, dateRange)).resolves.toEqual({
       outbox: [
         expect.objectContaining({
           id: "event-1",
@@ -68,8 +70,14 @@ describe("platform events", () => {
         }),
       ],
     });
-    expect(listEventOutboxMock).toHaveBeenCalledWith(db);
-    expect(listWebhookEventsMock).toHaveBeenCalledWith(db);
+    expect(listEventOutboxMock).toHaveBeenCalledWith(db, {
+      ...dateRange,
+      timeZone: "America/Sao_Paulo",
+    });
+    expect(listWebhookEventsMock).toHaveBeenCalledWith(db, {
+      ...dateRange,
+      timeZone: "America/Sao_Paulo",
+    });
   });
 
   it("retries outbox event and writes platform audit in one transaction", async () => {

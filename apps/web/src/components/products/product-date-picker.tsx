@@ -2,17 +2,17 @@
 
 import { Calendar01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { format, parseISO } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
+import { Button } from "@polaris/ui/components/ui/button";
+import { Calendar } from "@polaris/ui/components/ui/calendar";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
+} from "@polaris/ui/components/ui/popover";
+import { cn } from "@polaris/ui/lib/utils";
+import { format, parseISO } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { useState } from "react";
 
 const toDate = (value: string) => parseISO(`${value}T00:00:00`);
 

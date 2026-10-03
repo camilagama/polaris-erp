@@ -500,6 +500,7 @@ export const eventOutbox = pgTable(
       table.status,
       table.availableAt
     ),
+    index("event_outbox_created_at_idx").on(table.createdAt),
     index("event_outbox_status_lease_expires_at_idx").on(
       table.status,
       table.leaseExpiresAt
@@ -585,6 +586,7 @@ export const webhookEvents = pgTable(
       table.status,
       table.createdAt
     ),
+    index("webhook_events_created_at_idx").on(table.createdAt),
     index("webhook_events_correlation_id_idx").on(table.correlationId),
     check(
       "webhook_events_status_known_check",

@@ -2,11 +2,7 @@
 
 import { Add01Icon, Delete02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { useRouter } from "next/navigation";
-import { useCallback, useRef, useState, useTransition } from "react";
-import { ProductDatePicker } from "@/components/products/product-date-picker";
-import { ProductCombobox } from "@/components/sales/product-combobox";
-import { Button } from "@/components/ui/button";
+import { Button } from "@polaris/ui/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -14,25 +10,29 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Field, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
+} from "@polaris/ui/components/ui/dialog";
+import { Field, FieldLabel } from "@polaris/ui/components/ui/field";
+import { Input } from "@polaris/ui/components/ui/input";
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
   InputGroupText,
-} from "@/components/ui/input-group";
-import { Label } from "@/components/ui/label";
+} from "@polaris/ui/components/ui/input-group";
+import { Label } from "@polaris/ui/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { toast } from "@/components/ui/sonner";
-import { Textarea } from "@/components/ui/textarea";
+} from "@polaris/ui/components/ui/select";
+import { toast } from "@polaris/ui/components/ui/sonner";
+import { Textarea } from "@polaris/ui/components/ui/textarea";
+import { useRouter } from "next/navigation";
+import { useCallback, useRef, useState, useTransition } from "react";
+import { ProductDatePicker } from "@/components/products/product-date-picker";
+import { ProductCombobox } from "@/components/sales/product-combobox";
 import {
   type CardInstallmentRule,
   findCardInstallmentRule,

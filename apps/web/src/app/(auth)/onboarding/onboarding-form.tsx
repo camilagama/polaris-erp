@@ -1,14 +1,14 @@
 "use client";
 
-import { useActionState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@polaris/ui/components/ui/button";
 import {
   Field,
   FieldError,
   FieldGroup,
   FieldLabel,
-} from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
+} from "@polaris/ui/components/ui/field";
+import { Input } from "@polaris/ui/components/ui/input";
+import { useActionState } from "react";
 import { completeOnboardingAction } from "@/features/onboarding/actions";
 import { initialOnboardingActionState } from "@/features/onboarding/state";
 

@@ -1,5 +1,37 @@
 "use client";
 
+import { Button } from "@polaris/ui/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@polaris/ui/components/ui/dialog";
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@polaris/ui/components/ui/field";
+import { Input } from "@polaris/ui/components/ui/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+  InputGroupText,
+  InputGroupTextarea,
+} from "@polaris/ui/components/ui/input-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@polaris/ui/components/ui/select";
+import { toast } from "@polaris/ui/components/ui/sonner";
 import { useForm } from "@tanstack/react-form";
 import { useRouter } from "next/navigation";
 import { type ChangeEvent, useState } from "react";
@@ -10,38 +42,6 @@ import {
   ProductPriceMarkupIndicator,
   ProductPriceSuggestionGuide,
 } from "@/components/products/product-pricing-fields";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Field,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-  InputGroupText,
-  InputGroupTextarea,
-} from "@/components/ui/input-group";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { toast } from "@/components/ui/sonner";
 import { createProductAction } from "@/features/products/actions";
 import { createProductSchema as productSchema } from "@/features/products/schema";
 import { OTHERS_CATEGORY_KEY } from "@/lib/catalog-defaults";

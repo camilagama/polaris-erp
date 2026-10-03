@@ -2,7 +2,6 @@
 
 import { ArrowDown01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { useState } from "react";
 import {
   Command,
   CommandEmpty,
@@ -10,13 +9,14 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command";
+} from "@polaris/ui/components/ui/command";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
+} from "@polaris/ui/components/ui/popover";
+import { cn } from "@polaris/ui/lib/utils";
+import { useState } from "react";
 
 interface ProductComboboxOption {
   id: string;

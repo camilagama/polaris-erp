@@ -26,4 +26,8 @@ O dispatcher limita cada evento de outbox a cinco tentativas, com backoff expone
 
 O console interno permite visualizar eventos terminais, mas a entrega de alerta e a configuração de regra no Sentry continuam gates externos: devem ser comprovadas no ambiente promovido antes de sustentar um SLO ou release público.
 
+## Consulta de eventos no Admin
+
+A página de eventos filtra Outbox por `event_outbox.created_at` e Webhooks por `webhook_events.created_at`. As datas civis inclusivas de São Paulo são convertidas em limites de instante semiabertos `[início do primeiro dia, início do dia seguinte ao último)` e comparadas diretamente com `created_at`. A coluna “Disponível em” continua mostrando `event_outbox.available_at`, usado para disponibilidade e retry, sem afetar o filtro. Cada fonte exibe até 50 registros mais recentes; períodos inválidos, duplicados ou invertidos retornam ao intervalo padrão dos últimos sete dias e são sinalizados na página.
+
 Fontes: `apps/web/src/instrumentation.ts:register`, `apps/web/src/instrumentation.ts:onRequestError`, `apps/web/src/instrumentation-client.ts:onRouterTransitionStart`, `apps/admin/src/instrumentation.ts:register`, `apps/admin/src/instrumentation.ts:onRequestError`, `apps/web/src/lib/rate-limit.ts:checkRateLimit`, `apps/web/src/app/api/health/route.ts:GET`, `apps/admin/src/app/api/health/route.ts:GET`.

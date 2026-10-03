@@ -29,7 +29,7 @@
     "test": "turbo run test --filter=@polaris/web",
     "test:admin": "turbo run test --filter=@polaris/admin",
     "test:all": "turbo run test",
-    "test:postgres": "bun run --filter @polaris/db test:postgres && bun run --filter @polaris/events test:postgres && bun run --filter @polaris/web test:postgres",
+    "test:postgres": "bun run --filter @polaris/db test:postgres && bun run --filter @polaris/db test:platform-postgres && bun run --filter @polaris/events test:postgres && bun run --filter @polaris/web test:postgres",
     "test:e2e": "turbo run test:e2e --filter=@polaris/web",
     "test:e2e:admin": "turbo run test:e2e --filter=@polaris/admin",
     "test:e2e:all": "bun run test:e2e && bun run test:e2e:admin",

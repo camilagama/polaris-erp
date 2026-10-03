@@ -11,6 +11,36 @@ import {
   MobileListCardHeader,
   MobileListCardTitle,
 } from "@polaris/ui/components/shared/mobile-list-card";
+import { TimeValue } from "@polaris/ui/components/shared/time-value";
+import { Badge } from "@polaris/ui/components/ui/badge";
+import { Button } from "@polaris/ui/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@polaris/ui/components/ui/card";
+import { Empty } from "@polaris/ui/components/ui/empty";
+import { Input } from "@polaris/ui/components/ui/input";
+import { Label } from "@polaris/ui/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@polaris/ui/components/ui/select";
+import { Separator } from "@polaris/ui/components/ui/separator";
+import { toast } from "@polaris/ui/components/ui/sonner";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@polaris/ui/components/ui/table";
 import { usePaginatedListState } from "@polaris/ui/hooks/use-paginated-list";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -20,35 +50,6 @@ import { CreateSaleDialog } from "@/components/sales/create-sale-dialog";
 import { PaymentMethodChart } from "@/components/sales/payment-method-chart";
 import { SalesPerformanceChart } from "@/components/sales/sales-performance-chart";
 import { SalesStatusChart } from "@/components/sales/sales-status-chart";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Empty } from "@/components/ui/empty";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import { toast } from "@/components/ui/sonner";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import type { CardInstallmentRule } from "@/features/catalog/payment-rules";
 import type {
   SaleListItem,
@@ -65,7 +66,11 @@ import {
   getOperationalSaleStatusLabel,
 } from "@/features/sales/sale-display-labels";
 import { canRolePerform, type OrganizationRole } from "@/lib/app-context";
-import { formatCurrency, formatDate, formatPercent } from "@/lib/formatters";
+import {
+  formatCivilDate,
+  formatCurrency,
+  formatPercent,
+} from "@/lib/formatters";
 
 const getStatusLabel = (status: SaleListItem["status"]) =>
   getOperationalSaleStatusLabel(status);
@@ -460,7 +465,7 @@ export function SalesPanel({
                 <MobileListCardGrid>
                   <MobileListCardGridItem
                     label="Data"
-                    value={formatDate(sale.occurredOn)}
+                    value={formatCivilDate(sale.occurredOn)}
                   />
                   <MobileListCardGridItem
                     label="Total"
@@ -513,7 +518,9 @@ export function SalesPanel({
                         {sale.customerName || "Sem cliente"}
                       </Link>
                     </TableCell>
-                    <TableCell>{formatDate(sale.occurredOn)}</TableCell>
+                    <TableCell>
+                      <TimeValue kind="civil-date" value={sale.occurredOn} />
+                    </TableCell>
                     <TableCell>{getPaymentMethodLabel(sale)}</TableCell>
                     <TableCell className="text-center">
                       {sale.itemCount}

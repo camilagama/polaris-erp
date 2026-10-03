@@ -183,6 +183,7 @@ export interface EventOutboxListItem {
   attempts: number;
   availableAt: string | null;
   correlationId: string;
+  createdAt: string | null;
   eventType: string;
   id: string;
   lastError: string | null;
@@ -200,6 +201,12 @@ export interface WebhookEventListItem {
   providerEventId: string;
   receivedAt: string | null;
   status: string;
+}
+
+export interface EventCreatedAtDateRange {
+  from: string;
+  timeZone: string;
+  to: string;
 }
 
 export const buildWebhookEventKey = (
@@ -375,13 +382,24 @@ const toIsoString = (value: unknown): string | null => {
 const toStringValue = (value: unknown, fallback = ""): string =>
   typeof value === "string" ? value : fallback;
 
+const createdAtDateRangeSql = ({
+  from,
+  timeZone,
+  to,
+}: EventCreatedAtDateRange): SQL => sql`
+  created_at >= (${from}::date::timestamp at time zone ${timeZone})
+  and created_at < ((${to}::date + 1)::timestamp at time zone ${timeZone})
+`;
+
 export const listEventOutbox = async (
-  db: QueryableDb
+  db: QueryableDb,
+  dateRange: EventCreatedAtDateRange
 ): Promise<EventOutboxListItem[]> => {
   const rows = toRows(
     await db.execute(sql`
-      select id, topic, event_type, correlation_id, status, attempts, available_at, last_error
+      select id, topic, event_type, correlation_id, status, attempts, created_at, available_at, last_error
       from event_outbox
+      where ${createdAtDateRangeSql(dateRange)}
       order by created_at desc
       limit 50
     `)
@@ -391,6 +409,7 @@ export const listEventOutbox = async (
     attempts: toNumber(row.attempts),
     availableAt: toIsoString(row.available_at),
     correlationId: toStringValue(row.correlation_id),
+    createdAt: toIsoString(row.created_at),
     eventType: toStringValue(row.event_type),
     id: toStringValue(row.id),
     lastError: toStringValue(row.last_error) || null,
@@ -554,12 +573,14 @@ export const markOutboxEventFailed = async ({
 };
 
 export const listWebhookEvents = async (
-  db: QueryableDb
+  db: QueryableDb,
+  dateRange: EventCreatedAtDateRange
 ): Promise<WebhookEventListItem[]> => {
   const rows = toRows(
     await db.execute(sql`
       select id, provider, provider_event_id, correlation_id, status, last_error, created_at
       from webhook_events
+      where ${createdAtDateRangeSql(dateRange)}
       order by created_at desc
       limit 50
     `)

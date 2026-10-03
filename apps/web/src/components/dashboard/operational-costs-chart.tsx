@@ -1,13 +1,12 @@
 "use client";
 
-import { Bar, BarChart, XAxis, YAxis } from "recharts";
-
 import {
   type ChartConfig,
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-} from "@/components/ui/chart";
+} from "@polaris/ui/components/ui/chart";
+import { Bar, BarChart, XAxis, YAxis } from "recharts";
 import { formatCurrency } from "@/lib/formatters";
 
 const chartConfig = {

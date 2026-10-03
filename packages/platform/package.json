@@ -24,6 +24,10 @@
   },
   "scripts": {
     "test": "vitest run",
-    "typecheck": "tsc --noEmit --project tsconfig.json"
+    "typecheck": "tsc --noEmit --project tsconfig.json",
+    "test:postgres": "bun ../../scripts/require-postgres-behavior-database.ts && vitest run src/platform-admin-admission.postgres.test.ts"
+  },
+  "devDependencies": {
+    "pg": "^8.22.0"
   }
 }

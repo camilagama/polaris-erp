@@ -1,8 +1,8 @@
 "use client";
 
+import { Button } from "@polaris/ui/components/ui/button";
+import { toast } from "@polaris/ui/components/ui/sonner";
 import { useState, useTransition } from "react";
-import { Button } from "@/components/ui/button";
-import { toast } from "@/components/ui/sonner";
 import {
   getHostedCardCheckoutAction,
   requestHostedCardCheckoutAction,

@@ -1,7 +1,10 @@
 import { DatabaseIcon, Link04Icon } from "@hugeicons/core-free-icons";
-import { formatBusinessDate } from "@polaris/date";
 import { getPlatformEventsOverviewForAdmin } from "@polaris/platform/events";
 import { PageHeader } from "@polaris/ui/components/shared/page-header";
+import {
+  BusinessTimeZoneNotice,
+  TimeValue,
+} from "@polaris/ui/components/shared/time-value";
 import { Button } from "@polaris/ui/components/ui/button";
 import { Empty } from "@polaris/ui/components/ui/empty";
 import { Input } from "@polaris/ui/components/ui/input";
@@ -13,11 +16,11 @@ import {
   TableHeader,
   TableRow,
 } from "@polaris/ui/components/ui/table";
-import { formatDateTime } from "@polaris/ui/lib/formatters";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { requirePlatformAdmin } from "@/lib/platform-admin-auth";
 import { retryOutboxEventAction } from "./actions";
+import { resolveEventsDateRange } from "./events-date-range";
 
 const guardPlatformAdmin = async () => requirePlatformAdmin();
 
@@ -35,39 +38,53 @@ import { EventsDateFilter } from "./events-date-filter";
 const EventsContent = async ({
   searchParams,
 }: {
-  searchParams: { from?: string; to?: string; preset?: string };
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) => {
   await connection();
+  const dateRange = resolveEventsDateRange(await searchParams);
   const platformAdmin = await guardPlatformAdmin();
 
   const { outbox, webhooks } = await getPlatformEventsOverviewForAdmin(
-    platformAdmin.platformAdminId
+    platformAdmin.platformAdminId,
+    dateRange
   );
 
   return (
     <section className="grid gap-6">
       <PageHeader
         backLink={{ href: "/" }}
-        description="Observabilidade basica de outbox e webhooks capturados."
+        description="O período usa criação/recebimento. Disponível em indica a próxima tentativa; cada lista mostra até 50 eventos."
         title="Eventos"
       >
         <EventsDateFilter
-          from={searchParams.from ?? formatBusinessDate()}
-          preset={searchParams.preset ?? "last-7-days"}
-          to={searchParams.to ?? formatBusinessDate()}
+          from={dateRange.from}
+          preset={dateRange.preset}
+          to={dateRange.to}
         />
+        {dateRange.invalidInput ? (
+          <p
+            aria-live="polite"
+            className="text-muted-foreground text-sm"
+            role="status"
+          >
+            Intervalo inválido. Exibindo os últimos 7 dias.
+          </p>
+        ) : null}
       </PageHeader>
+
+      <BusinessTimeZoneNotice />
 
       <section className="overflow-x-auto rounded-xl border border-border bg-card">
         <div className="border-border border-b px-4 py-3">
           <h2 className="font-semibold text-lg tracking-tight">Outbox</h2>
         </div>
-        <Table className="min-w-[720px]">
+        <Table className="min-w-[900px]">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead className="pl-4">Tópico</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Tentativas</TableHead>
+              <TableHead>Criado em</TableHead>
               <TableHead>Disponível em</TableHead>
               <TableHead className="pr-4 text-right">Ações</TableHead>
             </TableRow>
@@ -75,10 +92,10 @@ const EventsContent = async ({
           <TableBody>
             {outbox.length === 0 ? (
               <TableRow className="hover:bg-transparent">
-                <TableCell className="h-48 text-center" colSpan={5}>
+                <TableCell className="h-48 text-center" colSpan={6}>
                   <Empty
                     className="border-none shadow-none"
-                    description="Nenhum evento de outbox pendente ou falho."
+                    description="Nenhum evento de outbox foi criado neste período."
                     icon={DatabaseIcon}
                     title="Nenhum evento"
                   />
@@ -98,7 +115,10 @@ const EventsContent = async ({
                   <TableCell>{event.status}</TableCell>
                   <TableCell>{event.attempts}</TableCell>
                   <TableCell className="text-muted-foreground">
-                    {formatDateTime(event.availableAt)}
+                    <TimeValue kind="instant" value={event.createdAt} />
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    <TimeValue kind="instant" value={event.availableAt} />
                   </TableCell>
                   <TableCell className="pr-4 text-right align-top">
                     {canRetry({
@@ -157,7 +177,7 @@ const EventsContent = async ({
                 <TableCell className="h-48 text-center" colSpan={4}>
                   <Empty
                     className="border-none shadow-none"
-                    description="Nenhum webhook capturado recentemente."
+                    description="Nenhum webhook foi recebido neste período."
                     icon={Link04Icon}
                     title="Nenhum webhook"
                   />
@@ -179,7 +199,7 @@ const EventsContent = async ({
                   </TableCell>
                   <TableCell>{event.status}</TableCell>
                   <TableCell className="pr-4 text-right text-muted-foreground">
-                    {formatDateTime(event.receivedAt)}
+                    <TimeValue kind="instant" value={event.receivedAt} />
                   </TableCell>
                 </TableRow>
               ))
@@ -200,7 +220,7 @@ const EventsFallback = () => (
 export default function EventsPage({
   searchParams,
 }: {
-  searchParams: { from?: string; to?: string; preset?: string };
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   return (
     <main className="min-h-screen bg-background text-foreground">

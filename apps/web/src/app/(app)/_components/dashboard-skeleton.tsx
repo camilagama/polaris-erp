@@ -1,5 +1,5 @@
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent, CardHeader } from "@polaris/ui/components/ui/card";
+import { Skeleton } from "@polaris/ui/components/ui/skeleton";
 
 export function DashboardSkeleton() {
   return (

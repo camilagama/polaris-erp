@@ -18,7 +18,7 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from "recharts";
-import { cn } from "@/lib/utils";
+import { cn } from "../../lib/utils";
 
 const THEMES = { light: "", dark: ".dark" } as const;
 const INITIAL_DIMENSION = { height: 200, width: 320 } as const;

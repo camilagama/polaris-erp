@@ -70,7 +70,10 @@ export function ActivityGraph({ data }: ActivityGraphProps) {
             blockSize={BLOCK_SIZE}
             data={visibleData.activities}
             fontSize={12}
-            labels={{ legend: { less: "Menos", more: "Mais" } }}
+            labels={{
+              legend: { less: "Menos", more: "Mais" },
+              totalCount: "Eventos em {{year}}: {{count}}",
+            }}
             maxLevel={4}
             weekStart={1}
           >

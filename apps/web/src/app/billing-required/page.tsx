@@ -1,8 +1,8 @@
+import { DGImportsLogo } from "@polaris/ui/components/ui/svgs/logo";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
-import { DGImportsLogo } from "@/components/ui/svgs/logo";
 import { getAppContext } from "@/lib/app-session";
 import { serverEnv } from "@/lib/env";
 import { getSession } from "@/lib/session";

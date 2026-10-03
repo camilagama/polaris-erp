@@ -1,5 +1,8 @@
 import { listPlatformAuditEventsForAdmin } from "@polaris/platform/audit-events";
-import { formatDateTime } from "@polaris/ui/lib/formatters";
+import {
+  BusinessTimeZoneNotice,
+  TimeValue,
+} from "@polaris/ui/components/shared/time-value";
 import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
@@ -54,6 +57,7 @@ const AuditContent = async ({ searchParams }: AuditPageProps) => {
           <p className="mt-1 text-muted-foreground text-sm">
             Eventos administrativos redigidos e filtraveis.
           </p>
+          <BusinessTimeZoneNotice />
         </div>
       </div>
 
@@ -95,7 +99,7 @@ const AuditContent = async ({ searchParams }: AuditPageProps) => {
           <span>Subject</span>
           <span>Actor admin</span>
           <span>Actor user</span>
-          <span>Data</span>
+          <span>Data e hora</span>
         </div>
         {events.length === 0 ? (
           <p className="px-4 py-8 text-muted-foreground text-sm">
@@ -123,7 +127,7 @@ const AuditContent = async ({ searchParams }: AuditPageProps) => {
                 {event.actorAdminUserId ?? "sem user"}
               </span>
               <span className="text-muted-foreground">
-                {formatDateTime(event.createdAt)}
+                <TimeValue kind="instant" value={event.createdAt} />
               </span>
             </div>
           ))

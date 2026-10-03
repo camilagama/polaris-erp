@@ -9,14 +9,7 @@ import {
   MoreVerticalIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, useTransition } from "react";
-import { ProductDatePicker } from "@/components/products/product-date-picker";
-import { ProductEditFields } from "@/components/products/product-edit-fields";
-import { ProductImageInput } from "@/components/products/product-image-input";
-import { uploadProductImageToStaging } from "@/components/products/product-image-upload";
-import { Button } from "@/components/ui/button";
+import { Button } from "@polaris/ui/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -24,25 +17,32 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@polaris/ui/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from "@polaris/ui/components/ui/dropdown-menu";
+import { Input } from "@polaris/ui/components/ui/input";
+import { Label } from "@polaris/ui/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { toast } from "@/components/ui/sonner";
-import { Textarea } from "@/components/ui/textarea";
+} from "@polaris/ui/components/ui/select";
+import { toast } from "@polaris/ui/components/ui/sonner";
+import { Textarea } from "@polaris/ui/components/ui/textarea";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { ProductDatePicker } from "@/components/products/product-date-picker";
+import { ProductEditFields } from "@/components/products/product-edit-fields";
+import { ProductImageInput } from "@/components/products/product-image-input";
+import { uploadProductImageToStaging } from "@/components/products/product-image-upload";
 import {
   addProductImageAction,
   addProductStockAction,

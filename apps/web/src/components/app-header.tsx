@@ -1,9 +1,9 @@
 "use client";
 
+import { ThemeToggle } from "@polaris/ui/components/shared/theme-toggle";
 import { Separator } from "@polaris/ui/components/ui/separator";
 import { SidebarTrigger } from "@polaris/ui/components/ui/sidebar";
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
-import { ThemeToggle } from "@/components/theme-toggle";
 
 export function AppHeader() {
   return (

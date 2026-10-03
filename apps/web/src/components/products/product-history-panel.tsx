@@ -1,9 +1,23 @@
 "use client";
+import {
+  BusinessTimeZoneNotice,
+  TimeValue,
+} from "@polaris/ui/components/shared/time-value";
+import { Button } from "@polaris/ui/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@polaris/ui/components/ui/card";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@polaris/ui/components/ui/tabs";
 import { useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { formatCurrency, formatDate, formatDateTime } from "@/lib/formatters";
+import { formatCurrency } from "@/lib/formatters";
 
 // Using any here temporarily because the types come from complex queries in parent component.
 // We will destructure normally so structural typing handles it.
@@ -68,7 +82,8 @@ export function ProductHistoryPanel({
                           {item.quantityLabel}
                         </p>
                         <p className="mt-0.5 text-muted-foreground text-xs">
-                          {item.label} em {formatDate(item.date)}
+                          {item.label} em{" "}
+                          <TimeValue kind="civil-date" value={item.date} />
                         </p>
                         {item.notes && (
                           <p className="mt-1.5 text-muted-foreground/80 text-xs italic">
@@ -126,6 +141,7 @@ export function ProductHistoryPanel({
           </TabsContent>
 
           <TabsContent className="flex flex-col gap-4" value="precos">
+            <BusinessTimeZoneNotice />
             {priceChanges.length > 0 ? (
               <div className="relative ml-2 flex flex-col gap-6 border-border/50 border-l pl-5 sm:ml-3">
                 {visiblePriceChanges.map((change) => (
@@ -139,7 +155,7 @@ export function ProductHistoryPanel({
                         </span>
                       </div>
                       <p className="text-muted-foreground text-xs sm:text-right">
-                        {formatDateTime(change.createdAt)}
+                        <TimeValue kind="instant" value={change.createdAt} />
                       </p>
                     </div>
                   </div>

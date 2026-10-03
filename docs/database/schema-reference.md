@@ -33,7 +33,7 @@ Os estados textuais de billing, outbox, webhook e e-mail são protegidos por `CH
 - `sales` e `sale_items`: snapshots de produto, preço e custo; valores financeiros, pagamento, cancelamento e `idempotency_key`.
 - `goals`: métrica, valor alvo, período, resolução e status.
 - `billing_subscriptions`: organização, plano, status, períodos e cancelamento; `billing_provider_links` guarda identificadores externos e somente marca/últimos quatro dígitos de cartão quando presentes.
-- `event_outbox`: status, tentativas, lease e token de claim; `webhook_events` armazena hash do body e headers/payload redigidos.
+- `event_outbox`: status, tentativas, lease e token de claim; `webhook_events` armazena hash do body e headers/payload redigidos. A migration `20261001220238_long_hammerhead.sql` acrescenta índices B-tree em `created_at` para as listagens temporais; no Admin Events, `created_at` determina o período e `available_at` permanece o instante operacional de retry.
 
 Timestamps são `timestamp with time zone` onde declarados pelo helper `timestamps`; IDs de domínio são UUID e IDs Better Auth são texto. Não foram encontrados views, materialized views ou triggers versionados nas migrations analisadas. A extensão versionada é `pg_trgm` para busca textual.
 

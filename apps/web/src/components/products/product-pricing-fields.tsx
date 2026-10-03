@@ -1,9 +1,12 @@
 "use client";
 
-import { InputGroupAddon, InputGroupText } from "@/components/ui/input-group";
+import {
+  InputGroupAddon,
+  InputGroupText,
+} from "@polaris/ui/components/ui/input-group";
+import { cn } from "@polaris/ui/lib/utils";
 import { calculateSuggestedPrices } from "@/features/catalog/pricing";
 import { formatCurrency } from "@/lib/formatters";
-import { cn } from "@/lib/utils";
 
 interface ProductPricingSettings {
   idealMarkupPercent: number;

@@ -2,6 +2,15 @@ import { Image01Icon, ShoppingBag02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { RevenueProfitChart } from "@polaris/ui/components/shared/revenue-profit-chart";
 import { SalesCountChart } from "@polaris/ui/components/shared/sales-count-chart";
+import { Badge } from "@polaris/ui/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@polaris/ui/components/ui/card";
+import { Empty } from "@polaris/ui/components/ui/empty";
 import Image from "next/image";
 import Link from "next/link";
 import type { CSSProperties } from "react";
@@ -11,15 +20,6 @@ import { OperationalCostsChart } from "@/components/dashboard/operational-costs-
 import { ProfitMarginChart } from "@/components/dashboard/profit-margin-chart";
 import { RevenueResultChart } from "@/components/dashboard/revenue-result-chart";
 import { SalesContributionGraphCard } from "@/components/dashboard/sales-contribution-graph-card";
-import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Empty } from "@/components/ui/empty";
 import {
   getDashboardContributionGraph,
   getDashboardGlobalStats,

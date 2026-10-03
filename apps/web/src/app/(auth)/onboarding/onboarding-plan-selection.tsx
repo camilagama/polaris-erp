@@ -2,9 +2,7 @@ import {
   FREE_PLAN_ENTITLEMENTS,
   PAID_MONTHLY_PLAN_ENTITLEMENTS,
 } from "@polaris/billing";
-import Link from "next/link";
-import { SubscriptionUpgradeControl } from "@/components/settings/subscription-upgrade-control";
-import { Button } from "@/components/ui/button";
+import { Button } from "@polaris/ui/components/ui/button";
 import {
   Card,
   CardContent,
@@ -12,7 +10,9 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@polaris/ui/components/ui/card";
+import Link from "next/link";
+import { SubscriptionUpgradeControl } from "@/components/settings/subscription-upgrade-control";
 
 const PlanLimits = ({
   maxActiveGoals,

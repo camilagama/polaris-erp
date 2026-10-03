@@ -106,7 +106,7 @@ Mutações de produto, estoque, venda, meta, plano, billing, soft delete, permis
 
 ### ADMIN-002 — Grants e dados de suporte
 
-Somente platform owner ativo PODE gerir grants temporários, sempre com motivo, expiração e auditoria. Suporte vê PII somente quando necessária a um caso, com motivo e auditoria de leitura; tokens, payloads brutos e segredos nunca são exibidos. [DEC-BR-060]
+Somente platform owner ativo PODE gerir grants temporários, sempre com motivo, expiração e auditoria. O prazo máximo é 14 dias para support, 30 para operator e 90 para owner; cada dia equivale a 24 horas decorridas. Enrollment expira em até 168 horas, sem ultrapassar a expiração do grant, e NÃO PODE ser consumido quando o grant já expirou. A entrada de horário usa São Paulo; horários inexistentes ou repetidos DEVEM ser recusados. Suporte vê PII somente quando necessária a um caso, com motivo e auditoria de leitura; tokens, payloads brutos e segredos nunca são exibidos. [DEC-BR-060]
 
 ### PRIVACY-001 — Solicitações, retenção e incidentes
 

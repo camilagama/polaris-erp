@@ -20,7 +20,7 @@ Production-readiness pointer updated: 2026-09-29 (UTC); architecture was not re-
 - `@polaris/platform` now provides shared platform admin queries, mutations, audit/support helpers and dashboard data.
 - `@polaris/platform-auth` now provides Better Auth session-based platform admin grant validation and admin rate limiting. `apps/admin/src/lib/platform-admin-auth.ts` is only a local session-injection wrapper. The intended Admin perimeter is a separate `apps/admin` Vercel project with Vercel Authentication/deployment protection plus in-app platform admin grants; the external configuration status is tracked in the production-readiness register.
 - `@polaris/auth` now provides the shared Better Auth factory, auth env contract, session helpers and workspace management policy. The web app injects tenant login audit; the admin uses a local wrapper without importing from `apps/web`.
-- `@polaris/ui` and `@polaris/domain` are intentionally not extracted yet.
+- `@polaris/ui` is the shared UI package for public primitives, tokens and common patterns; `@polaris/domain` remains unextracted until stable domain responsibilities justify it.
 
 ## Production Readiness Authority
 

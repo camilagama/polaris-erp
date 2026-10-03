@@ -36,7 +36,7 @@ vi.mock("@/components/products/product-image-upload", () => ({
   uploadProductImageToStaging: vi.fn(),
 }));
 
-vi.mock("@/components/ui/sonner", () => ({
+vi.mock("@polaris/ui/components/ui/sonner", () => ({
   toast: {
     error: vi.fn(),
     success: vi.fn(),

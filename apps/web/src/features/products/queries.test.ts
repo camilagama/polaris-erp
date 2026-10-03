@@ -1,3 +1,6 @@
+import { sales } from "@polaris/db/schema";
+import type { SQL } from "drizzle-orm";
+import { PgDialect } from "drizzle-orm/pg-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
@@ -15,6 +18,7 @@ vi.mock("@polaris/db", () => ({
 }));
 
 type MockFn = ReturnType<typeof vi.fn>;
+const whereConditions: SQL[] = [];
 
 const resolveMocks = async () => {
   const dbModule = await import("@polaris/db");
@@ -31,18 +35,24 @@ const resolveMocks = async () => {
 describe("products queries", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
+    whereConditions.length = 0;
 
     const { mockDb } = await resolveMocks();
 
     mockDb.transaction.mockImplementation(async (callback) => callback(mockDb));
-    mockDb.select.mockReturnValue({
-      from: () => ({
-        where: () => ({
-          orderBy: () => ({
-            limit: () => Promise.resolve([]),
-          }),
-        }),
-      }),
+    mockDb.select.mockImplementation(() => {
+      const queryBuilder = {
+        from: () => queryBuilder,
+        innerJoin: () => queryBuilder,
+        limit: () => Promise.resolve([]),
+        orderBy: () => queryBuilder,
+        where: (condition: SQL) => {
+          whereConditions.push(condition);
+          return queryBuilder;
+        },
+      };
+
+      return queryBuilder;
     });
   });
 
@@ -83,5 +93,36 @@ describe("products queries", () => {
         type: "unknown",
       })
     ).toEqual({});
+  });
+
+  it("projects and filters sale reversals with the persisted civil date", async () => {
+    const { getInventoryMovementsQuery } = await import(
+      "@/features/products/queries"
+    );
+    const { mockDb } = await resolveMocks();
+
+    await getInventoryMovementsQuery({
+      filters: {
+        from: "2026-03-01",
+        to: "2026-03-31",
+        type: "sale_reversal",
+      },
+      organizationId: "org_dg_imports",
+    });
+
+    const reversalSelection = mockDb.select.mock.calls
+      .map(([selection]) => selection as Record<string, unknown>)
+      .find((selection) => Object.hasOwn(selection, "saleId"));
+    expect(reversalSelection?.date).toBe(sales.cancelledOn);
+    expect(reversalSelection?.createdAt).toBe(sales.cancelledAt);
+
+    const reversalFilterSql = whereConditions
+      .map((condition) => new PgDialect().sqlToQuery(condition).sql)
+      .find((query) => query.includes("cancelled_on"));
+
+    expect(reversalFilterSql).toContain('"sales"."cancelled_on" >= $');
+    expect(reversalFilterSql).toContain('"sales"."cancelled_on" <= $');
+    expect(reversalFilterSql).toContain('"sales"."cancelled_on" is not null');
+    expect(reversalFilterSql).not.toContain('date("sales"."cancelled_at")');
   });
 });

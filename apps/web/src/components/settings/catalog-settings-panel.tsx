@@ -7,7 +7,6 @@ import {
   Tick01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { useEffect, useState, useTransition } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,15 +16,15 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
+} from "@polaris/ui/components/ui/alert-dialog";
+import { Button } from "@polaris/ui/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@polaris/ui/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -33,23 +32,23 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+} from "@polaris/ui/components/ui/dialog";
+import { Input } from "@polaris/ui/components/ui/input";
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
   InputGroupText,
-} from "@/components/ui/input-group";
-import { Label } from "@/components/ui/label";
+} from "@polaris/ui/components/ui/input-group";
+import { Label } from "@polaris/ui/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { toast } from "@/components/ui/sonner";
+} from "@polaris/ui/components/ui/select";
+import { toast } from "@polaris/ui/components/ui/sonner";
 import {
   Table,
   TableBody,
@@ -57,7 +56,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@polaris/ui/components/ui/table";
+import { useEffect, useState, useTransition } from "react";
 import {
   createCategoryAction,
   deleteCategoryAction,

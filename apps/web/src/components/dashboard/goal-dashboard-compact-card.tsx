@@ -1,18 +1,23 @@
 "use client";
 
-import { format, parseISO } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { Bar, BarChart, XAxis, YAxis } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@polaris/ui/components/ui/card";
 import {
   type ChartConfig,
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-} from "@/components/ui/chart";
+} from "@polaris/ui/components/ui/chart";
+import { cn } from "@polaris/ui/lib/utils";
+import { format, parseISO } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Bar, BarChart, XAxis, YAxis } from "recharts";
 import type { DashboardGoalCard } from "@/features/goals/contracts";
 import { formatCurrency } from "@/lib/formatters";
-import { cn } from "@/lib/utils";
 
 const chartConfig = {
   progress: {

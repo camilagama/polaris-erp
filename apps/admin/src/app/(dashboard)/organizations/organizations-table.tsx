@@ -2,9 +2,10 @@
 
 import { Search02Icon } from "@hugeicons/core-free-icons";
 import { DataTable } from "@polaris/ui/components/shared/data-table";
+import { TimeValue } from "@polaris/ui/components/shared/time-value";
 import { Button } from "@polaris/ui/components/ui/button";
 import { Empty } from "@polaris/ui/components/ui/empty";
-import { formatDate, formatNumber } from "@polaris/ui/lib/formatters";
+import { formatNumber } from "@polaris/ui/lib/formatters";
 import type { ColumnDef } from "@tanstack/react-table";
 import Link from "next/link";
 
@@ -56,7 +57,7 @@ const columns: ColumnDef<OrganizationDto>[] = [
     header: "Criada em",
     cell: ({ row }) => (
       <span className="text-muted-foreground">
-        {formatDate(row.original.createdAt)}
+        <TimeValue kind="instant" value={row.original.createdAt} />
       </span>
     ),
   },
