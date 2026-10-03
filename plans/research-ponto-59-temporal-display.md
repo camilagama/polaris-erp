@@ -360,3 +360,14 @@ Estado: **implementado e aprovado pelo usuário em 2026-10-02**. Não foi commit
 ### Follow-up P58 descoberto
 
 O controle `datetime-local` em Admin Access envia `YYYY-MM-DDTHH:mm` sem timezone; `apps/admin/src/app/(dashboard)/admin-access/actions.ts` usa `new Date(value)`, que interpreta a hora no timezone do runtime. Isso conflita com a regra P58 de instante não depender do servidor/runtime e fuso global São Paulo. Registrar como subetapa P58 separada: rotular a hora de parede como São Paulo, converter explicitamente essa hora em instante de São Paulo e testar entrada futura/ inválida. Nenhuma mudança de criação de grant foi feita em P59.
+
+## Estado após aprovação P59 e CI — 2026-10-03
+
+O follow-up de integração descoberto no primeiro Admin E2E foi corrigido em
+`packages/platform/src/internal/query-results.ts`, mantendo intacto o parser
+ISO estrito de `@polaris/ui`. A suíte `query-results.test.ts` cobre o formato
+PostgreSQL observado, offsets, precisão de milissegundos e data inválida. O
+usuário aprovou a implementação nesta data; o run CI final `37123671646`
+passou em `verify`, Web E2E, Admin E2E e PostgreSQL. O código está no PR #7
+(SHA de cabeça `9532e7e`), que permanece Draft e não foi mesclado. P59 está
+aprovado e verificado na branch; isso não conclui Gate A nem os gates de go-live.

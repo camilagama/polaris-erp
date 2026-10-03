@@ -356,3 +356,15 @@ O usuário pediu usar banco de teste isolado, se possível. O URL informado era 
 **Estado:** implementação aprovada pelo usuário em 2026-10-03; execução real no job CI PostgreSQL 18.6 pendente. Nenhum banco remoto conectado, migration nova, commit ou push.
 CodeRabbit review foi tentado no diff de `packages/platform`, mas a revisão automática de aprovação bloqueou compartilhar o conteúdo potencialmente privado com esse serviço externo por falta de autorização específica para esse payload. Não contornei o bloqueio nem tentei uma rota alternativa. Revisão local independente Luna: sem achados concretos.
 **Revisão do usuário:** aprovada em 2026-10-03 (“prossiga”). A implementação local está aceita; P58 como um todo continua parcial até a execução dos quatro testes no job PostgreSQL 18.6 e confirmação da migration/replay.
+
+## Status reconciliado após CI e revisão — 2026-10-03
+
+O estado pendente acima foi superado no PR #7. O job `postgres-behavior` do run
+`37121491774` aplicou as migrations no serviço descartável PostgreSQL 18.6 e
+passou nas suites de migrations/RLS (10 testes), admissão real da plataforma
+(4 testes) e Events (3 testes). A admissão verificou grant/auditoria, grant
+expirado, convite legado acima do teto e rollback se o grant expira durante o
+claim. A verificação final do PR (`37123671646`) passou nos quatro jobs. O
+usuário aprovou P58; sua implementação está completa na branch do PR, mas o PR
+continua Draft e ainda não foi integrado em `main`. Nenhum banco Neon ou remoto
+foi usado.
