@@ -39,4 +39,22 @@ describe("query result parsing", () => {
     expect(toNullableString("")).toBeNull();
     expect(toNullableString("value")).toBe("value");
   });
+
+  it("normalizes PostgreSQL timestamp text to canonical ISO instants", () => {
+    expect(toIsoString("2026-10-03 12:07:53.236765+00")).toBe(
+      "2026-10-03T12:07:53.236Z"
+    );
+    expect(toIsoString("2026-10-03 07:07:53.236765-05")).toBe(
+      "2026-10-03T12:07:53.236Z"
+    );
+    expect(toIsoString("2026-10-03 17:37:53.236765+05:30")).toBe(
+      "2026-10-03T12:07:53.236Z"
+    );
+  });
+
+  it("preserves invalid PostgreSQL timestamp text for downstream validation", () => {
+    expect(toIsoString("2026-02-30 12:07:53.236765+00")).toBe(
+      "2026-02-30 12:07:53.236765+00"
+    );
+  });
 });
