@@ -5,7 +5,7 @@ import {
 } from "@polaris/ui/components/shared/time-value";
 import Link from "next/link";
 import { connection } from "next/server";
-import { Suspense } from "react";
+import { type ReactNode, Suspense } from "react";
 import { requirePlatformAdmin } from "@/lib/platform-admin-auth";
 
 interface AuditPageProps {
@@ -27,6 +27,17 @@ const getFilter = async (
   return typeof value === "string" ? value : "";
 };
 
+// biome-ignore-start lint/a11y/noNoninteractiveTabindex: Axe confirms keyboard access is required for horizontal table scrolling.
+const AuditTableScrollRegion = ({ children }: { children: ReactNode }) => (
+  <section
+    aria-label="Eventos de auditoria da plataforma"
+    className="overflow-x-auto rounded-lg border border-border bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+    tabIndex={0}
+  >
+    {children}
+  </section>
+);
+// biome-ignore-end lint/a11y/noNoninteractiveTabindex: Axe confirms keyboard access is required for horizontal table scrolling.
 const AuditContent = async ({ searchParams }: AuditPageProps) => {
   await connection();
   const platformAdmin = await guardPlatformAdmin();
@@ -93,7 +104,7 @@ const AuditContent = async ({ searchParams }: AuditPageProps) => {
         </form>
       </search>
 
-      <section className="overflow-x-auto rounded-lg border border-border bg-card">
+      <AuditTableScrollRegion>
         <table className="w-full min-w-[780px] border-collapse text-sm">
           <caption className="sr-only">
             Eventos de auditoria da plataforma
@@ -159,7 +170,7 @@ const AuditContent = async ({ searchParams }: AuditPageProps) => {
             )}
           </tbody>
         </table>
-      </section>
+      </AuditTableScrollRegion>
     </section>
   );
 };

@@ -166,6 +166,7 @@ export function ProductImageInput({
   const selectedFile =
     state.files[0]?.file instanceof File ? state.files[0].file : null;
   const error = translateUploadError(state.errors[0]);
+  const descriptionId = description ? `${id}-description` : undefined;
 
   const displayImage = useMemo(
     () =>
@@ -194,6 +195,7 @@ export function ProductImageInput({
       <input
         {...actions.getInputProps({
           accept: PRODUCT_IMAGE_ACCEPT,
+          "aria-describedby": descriptionId,
           disabled,
           id,
         })}
@@ -210,9 +212,14 @@ export function ProductImageInput({
 
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <div className="mb-1 flex flex-col gap-0.5">
-            <p className="font-semibold text-sm leading-tight">{label}</p>
+            <label className="font-semibold text-sm leading-tight" htmlFor={id}>
+              {label}
+            </label>
             {description ? (
-              <p className="text-[10px] text-muted-foreground/80 leading-tight">
+              <p
+                className="text-[10px] text-muted-foreground leading-tight"
+                id={descriptionId}
+              >
                 {description}
               </p>
             ) : null}
