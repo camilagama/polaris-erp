@@ -94,44 +94,71 @@ const AuditContent = async ({ searchParams }: AuditPageProps) => {
       </search>
 
       <section className="overflow-x-auto rounded-lg border border-border bg-card">
-        <div className="grid w-full min-w-[780px] grid-cols-[1.1fr_0.9fr_1fr_1fr_0.8fr] gap-4 border-border border-b px-4 py-3 text-muted-foreground text-xs uppercase">
-          <span>Action</span>
-          <span>Subject</span>
-          <span>Actor admin</span>
-          <span>Actor user</span>
-          <span>Data e hora</span>
-        </div>
-        {events.length === 0 ? (
-          <p className="px-4 py-8 text-muted-foreground text-sm">
-            Nenhum evento encontrado.
-          </p>
-        ) : (
-          events.map((event) => (
-            <div
-              className="grid w-full min-w-[780px] grid-cols-[1.1fr_0.9fr_1fr_1fr_0.8fr] gap-4 border-border border-b px-4 py-3 text-sm"
-              key={event.id}
-            >
-              <span className="truncate font-medium text-foreground">
-                {event.action}
-              </span>
-              <span className="min-w-0 text-foreground">
-                <span className="block truncate">{event.subjectType}</span>
-                <span className="block truncate text-muted-foreground">
-                  {event.subjectId ?? "sem subject"}
-                </span>
-              </span>
-              <span className="truncate text-muted-foreground">
-                {event.actorPlatformAdminId ?? "sem admin"}
-              </span>
-              <span className="truncate text-muted-foreground">
-                {event.actorAdminUserId ?? "sem user"}
-              </span>
-              <span className="text-muted-foreground">
-                <TimeValue kind="instant" value={event.createdAt} />
-              </span>
-            </div>
-          ))
-        )}
+        <table className="w-full min-w-[780px] border-collapse text-sm">
+          <caption className="sr-only">
+            Eventos de auditoria da plataforma
+          </caption>
+          <thead className="bg-muted/30 text-muted-foreground text-xs uppercase">
+            <tr className="border-border border-b">
+              <th className="px-4 py-3 text-left" scope="col">
+                Action
+              </th>
+              <th className="px-4 py-3 text-left" scope="col">
+                Subject
+              </th>
+              <th className="px-4 py-3 text-left" scope="col">
+                Actor admin
+              </th>
+              <th className="px-4 py-3 text-left" scope="col">
+                Actor user
+              </th>
+              <th className="px-4 py-3 text-left" scope="col">
+                Data e hora
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {events.length === 0 ? (
+              <tr>
+                <td
+                  className="px-4 py-8 text-center text-muted-foreground"
+                  colSpan={5}
+                >
+                  Nenhum evento encontrado.
+                </td>
+              </tr>
+            ) : (
+              events.map((event) => (
+                <tr
+                  className="border-border border-b hover:bg-muted/50"
+                  key={event.id}
+                >
+                  <th
+                    className="px-4 py-3 text-left font-medium text-foreground"
+                    scope="row"
+                  >
+                    {event.action}
+                  </th>
+                  <td className="min-w-0 px-4 py-3 text-foreground">
+                    <span className="block truncate">{event.subjectType}</span>
+                    <span className="block truncate text-muted-foreground">
+                      {event.subjectId ?? "sem subject"}
+                    </span>
+                  </td>
+                  <td className="truncate px-4 py-3 text-muted-foreground">
+                    {event.actorPlatformAdminId ?? "sem admin"}
+                  </td>
+                  <td className="truncate px-4 py-3 text-muted-foreground">
+                    {event.actorAdminUserId ?? "sem user"}
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">
+                    <TimeValue kind="instant" value={event.createdAt} />
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
       </section>
     </section>
   );

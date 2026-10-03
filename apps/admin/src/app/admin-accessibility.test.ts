@@ -69,4 +69,13 @@ describe("admin accessibility source checks", () => {
 
     expect(tableSource).toContain("overflow-x-auto");
   });
+
+  it("renders audit events with native table semantics", () => {
+    const auditSource = readAppSource("audit/page.tsx");
+
+    expect(auditSource).toContain("<table");
+    expect(auditSource).toContain("<caption");
+    expect(auditSource).toContain('scope="col"');
+    expect(auditSource).toContain('scope="row"');
+  });
 });
