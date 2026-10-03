@@ -193,8 +193,8 @@ const AdminDashboard = async () => {
                 <span
                   className={
                     card.ok
-                      ? "font-medium text-emerald-500 text-sm"
-                      : "font-medium text-amber-500 text-sm"
+                      ? "font-medium text-emerald-700 text-sm dark:text-emerald-400"
+                      : "font-medium text-amber-700 text-sm dark:text-amber-300"
                   }
                 >
                   {getHealthLabel(card.ok)}
