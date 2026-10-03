@@ -6,7 +6,7 @@ import {
 
 const DEFAULT_EVENTS_PRESET = "last-7-days";
 
-export type EventsDatePreset = "last-7-days" | "last-30-days";
+type EventsDatePreset = "last-7-days" | "last-30-days";
 
 export interface EventsDateRange {
   from: string;
