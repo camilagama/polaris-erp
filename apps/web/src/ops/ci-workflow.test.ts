@@ -614,11 +614,15 @@ describe("CI workflow", () => {
     expect(envExample).toContain("ADMIN_E2E_DATABASE_URL");
   });
 
-  it("configures Web and Admin Playwright reports and failure diagnostics", () => {
-    for (const config of [
-      readWebPlaywrightConfig(),
-      readAdminPlaywrightConfig(),
-    ]) {
+  it("configures isolated Web and Admin Playwright servers and reports", () => {
+    const configs = [
+      { app: "web", source: readWebPlaywrightConfig() },
+      { app: "admin", source: readAdminPlaywrightConfig() },
+    ] as const;
+
+    for (const { app, source: config } of configs) {
+      expect(config).toContain(`createE2eServerEnv(process.env, "${app}")`);
+      expect(config).toContain("sanitizeE2eRunnerEnvironment(process.env)");
       expect(config).toContain('trace: "retain-on-failure"');
       expect(config).toContain('screenshot: "only-on-failure"');
       expect(config).toContain('video: "off"');

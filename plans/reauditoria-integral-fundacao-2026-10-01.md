@@ -345,12 +345,26 @@ A pedido do usuário, foi adicionada integração real via clone descartável lo
 
 Esta auditoria continua sendo a fotografia das fontes e configurações verificadas em 2026-10-01. Esta nota substitui somente os rótulos de execução e “próximo item” que ficaram antigos; não reescreve decisões P1–P70 nem declara Gate A/B concluído.
 
-- **P5:** contrato de exemplo, Sandbox, host guard e mapeamento dos bancos E2E foram implementados e aprovados; estado e evidências constam no plano principal. A exposição remota de `VERCEL_ENV` e o escopo Vercel Preview/Staging continuam dependentes de P4.
+- **P5:** a implementação-base está aprovada; o residual de isolamento de 2026-10-04 foi implementado localmente e aguarda revisão do usuário. Servidor e workers Web/Admin recebem ambientes controlados; o guard de database recusa URL malformada, role neondb_owner e alvos conhecidos iguais, incluindo pool/direct da mesma branch Neon. Foram validados 40 testes focais no conjunto de três suites, typechecks dos três pacotes e Ultracite; CI ainda não rodou no código novo. Nenhum arquivo dotenv real foi lido e nenhum banco/provider remoto foi usado. O target/role do secret E2E remoto não foi revalidado; `VERCEL_ENV` e Preview/Staging remotos continuam dependentes de P4.
 - **P36:** baseline Axe e correções automatizadas implementadas/aprovadas. Revisão manual de teclado, foco e leitor de tela continua gate pré-produção; P36 não é a próxima implementação.
 - **P37/P39:** implementação aprovada e validada no PR #7. O PR permanece Draft e não integrado à `main`.
 - **P58/P59:** implementações aprovadas e validadas nos quatro checks do PR #7; isso não declara integração em `main`.
 - **P69/P70:** não repetir P5, automação P36, P37/P39 ou P58/P59. Gate A continua aberto; a integração do PR #7 e os itens restantes do plano ainda são necessários. Gate B continua não comprovado.
 - **P71:** experimento pré-Staging executado no commit `7d10f79` do PR #7. Em três tentativas no mesmo SHA, todos os quatro checks passaram; a mediana de parede caiu de 12,30 para 7,25 minutos. O detalhe, a ressalva de falha do `verify` e os limites da amostra estão no ponto P71 do plano principal. A revisão mais ampla antes de adicionar triggers de Staging continua pendente.
-- **Próximo item recomendado:** P34, distribuição clone-safe de Impeccable sem hook automático. A análise do release estável atual e do procedimento será apresentada antes da instalação.
+- **P34:** a recomendação de distribuição clone-safe foi substituída pela escolha do usuário por instalação global, implementada e aprovada em 2026-10-04; ver adendo abaixo. O próximo item pendente indicado pelo plano principal é P5.
 
 O commit `7d10f79` permanece no PR #7 Draft, sem merge. Nenhum estado remoto de Vercel, Neon, Production, recuperação ou Staging foi inferido das execuções da CI.
+
+### Adendo P34 — Impeccable global — 2026-10-04
+
+Após a recomendação anterior de distribuição clone-safe, o usuário escolheu atualizar e usar a skill global. Neste perfil Codex, a instalação foi atualizada pelo CLI Impeccable 4.1.0 para a skill 4.5.0 e engine 0.1.11; a instalação usou `--no-hooks`. O plano principal foi ajustado para não adicionar cópia, exceção ao `.gitignore` ou ponteiro local no `AGENTS.md`. O usuário aprovou a instalação e a alteração de plano em 2026-10-04.
+
+Essa escolha substitui a distribuição versionada aprovada em 2026-10-01: outros perfis e clones não recebem a skill automaticamente. Reabrir P34 antes de exigir Impeccable em outro colaborador ou de depender dela como requisito reproduzível do repositório. O status aqui é de configuração local; nenhum hook ou arquivo da skill foi adicionado ao repo.
+
+### Follow-up P5 — isolamento do servidor E2E local — 2026-10-04
+
+Auditoria somente leitura encontrou que ambos os `playwright.config.ts` carregavam variáveis do repositório/app com `@next/env` e passavam `process.env` ao servidor. O Admin ainda relia dotenv com precedência sobre o ambiente do processo. CI mantém as chaves Asaas/Woovi ausentes, e os fluxos E2E atuais não iniciam checkout desses providers. Não foi observada chamada externa ou lido qualquer arquivo dotenv real.
+
+Isso reabriu somente a conclusão de P5: a regra aprovada de providers fake/sem credenciais para CI/E2E não era demonstrável no processo E2E local. A implementação local agora mascara variáveis atuais e o contrato do `.env.example`, restaura apenas URLs loopback e valores sintéticos, sanitiza também os workers Playwright e impede dotenv específico de Production no build E2E. A autenticação Admin ignora dotenv só quando o marker E2E está ativo; o comportamento normal foi preservado. O target E2E é validado contra aliases de banco disponíveis no processo e role Neon owner, mas branch/role remoto não foram consultados. A implementação aguarda revisão do usuário e CI no SHA atualizado; não houve chamada autenticada, banco remoto ou leitura de valores dotenv. A auditoria remota de `VERCEL_ENV`/Preview continua uma tarefa de P4.
+
+O P5-base já concluído continua registrado; o residual é de defesa preventiva para E2E local/futuro, sem evidência de incidente. A decisão de Sandbox e as URLs aprovadas não mudam. A pesquisa atualizada dos endpoints e limites dos providers está em `research-ponto-05-environments.md`.

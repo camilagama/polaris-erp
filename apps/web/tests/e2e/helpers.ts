@@ -7,14 +7,13 @@ import {
 } from "@playwright/test";
 import {
   E2E_DEFAULT_INTERNAL_BOOTSTRAP_SECRET,
+  E2E_WEB_BASE_URL,
   parseE2eSetCookie,
 } from "@polaris/e2e-support";
 
-const e2eBaseUrl = process.env.E2E_BASE_URL ?? "http://127.0.0.1:3001";
+const e2eBaseUrl = E2E_WEB_BASE_URL;
 const e2eUserName = process.env.E2E_NAME ?? "Polaris E2E";
-const e2eBootstrapSecret =
-  process.env.E2E_INTERNAL_BOOTSTRAP_SECRET ??
-  E2E_DEFAULT_INTERNAL_BOOTSTRAP_SECRET;
+const e2eBootstrapSecret = E2E_DEFAULT_INTERNAL_BOOTSTRAP_SECRET;
 const e2eNavigationTimeoutMs = 15_000;
 const WCAG_AA_TAGS = [
   "wcag2a",

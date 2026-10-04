@@ -1,15 +1,13 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
 import {
+  E2E_ADMIN_BASE_URL,
   E2E_DEFAULT_INTERNAL_BOOTSTRAP_SECRET,
   parseE2eSetCookie,
 } from "@polaris/e2e-support";
 
-const e2eAdminBaseUrl =
-  process.env.E2E_ADMIN_BASE_URL ?? "http://127.0.0.1:3002";
-const e2eBootstrapSecret =
-  process.env.E2E_INTERNAL_BOOTSTRAP_SECRET ??
-  E2E_DEFAULT_INTERNAL_BOOTSTRAP_SECRET;
+const e2eAdminBaseUrl = E2E_ADMIN_BASE_URL;
+const e2eBootstrapSecret = E2E_DEFAULT_INTERNAL_BOOTSTRAP_SECRET;
 const darkThemeClassRegex = /\bdark\b/;
 const lightThemeClassRegex = /\blight\b/;
 const openInvoiceSummaryRegex = /invoices em aberto/;

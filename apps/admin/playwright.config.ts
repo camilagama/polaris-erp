@@ -1,12 +1,22 @@
 import { loadEnvConfig } from "@next/env";
 import { defineConfig } from "@playwright/test";
-import { createE2eServerEnv } from "@polaris/e2e-support";
+import {
+  createE2eServerEnv,
+  E2E_ADMIN_BASE_URL,
+  sanitizeE2eRunnerEnvironment,
+} from "@polaris/e2e-support";
 
 loadEnvConfig("../..");
 loadEnvConfig(process.cwd());
 
 const isStaticAnalysis = process.argv.some((arg) => arg.includes("knip"));
-const webServerEnv = isStaticAnalysis ? {} : createE2eServerEnv(process.env);
+const webServerEnv = isStaticAnalysis
+  ? {}
+  : createE2eServerEnv(process.env, "admin");
+
+if (!isStaticAnalysis) {
+  sanitizeE2eRunnerEnvironment(process.env);
+}
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -23,7 +33,7 @@ export default defineConfig({
       ]
     : "list",
   use: {
-    baseURL: "http://127.0.0.1:3002",
+    baseURL: E2E_ADMIN_BASE_URL,
     screenshot: "only-on-failure",
     trace: "retain-on-failure",
     video: "off",
