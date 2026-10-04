@@ -67,12 +67,6 @@ const AdminDashboard = async () => {
       detail: "outbox e webhooks",
       href: "/events",
     },
-    {
-      label: "Billing",
-      value: 0,
-      detail: "assinaturas e invoices",
-      href: "/billing",
-    },
   ] as const;
 
   const healthCards = [
@@ -129,7 +123,7 @@ const AdminDashboard = async () => {
         </CardHeader>
       </Card>
 
-      <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
+      <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-5">
         {summaryCards.map((card) => {
           const cardContent = (
             <CardContent className="p-4">

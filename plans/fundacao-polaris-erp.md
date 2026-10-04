@@ -748,7 +748,7 @@ As quatro sample-rate vars sem consumidor foram removidas do `.env.example` e do
 
 ### Ponto 36 — contrato conciso de acessibilidade
 
-**Estado:** aceito em 2026-09-25, com Q1–Q3 aprovadas.
+**Estado:** implementação concluída e aprovada pelo usuário em 2026-10-03; CI #117 verde. Revisão manual separada de teclado/foco e leitor de tela fica como gate de pré-produção; decisão original aceita em 2026-09-25, com Q1–Q3 aprovadas.
 
 **Proposta do relatório:** tornar verificáveis as expectativas de acessibilidade, cobrindo navegação por teclado, foco visível, HTML semântico, labels e nomes acessíveis, alvos de interação, estados que não dependem só de cor, tabelas e diálogos.
 
@@ -764,11 +764,11 @@ As quatro sample-rate vars sem consumidor foram removidas do `.env.example` e do
 
 **Contrato documental aprovado em 2026-09-30:** `DESIGN.md` registra WCAG 2.2 AA como alvo interno sem alegar conformidade global; variantes pequenas exigem revisão do alvo efetivo ou da exceção de espaçamento. Axe em CI e avaliação das jornadas existentes permanecem pendentes conforme a decisão deste ponto.
 
-**Baseline P36 iniciada em 2026-10-03 no PR #7:** `@axe-core/playwright@4.13.0` foi adicionado como dependência de desenvolvimento; as suítes E2E representam login/dashboard Web e Admin, operações centrais Web, os dois temas e leituras de organizações/usuários/auditoria no Admin. A regra `target-size` está explicitamente habilitada e resultados `incomplete` são reportados para revisão manual, separados de violações. O primeiro teste encontrou que a lista de auditoria Admin era CSS Grid sem semântica de tabela; foi convertida para tabela HTML com caption, cabeçalhos/escopo e cobertura de teste. Tests focais de acessibilidade Admin (7) e de preço Web (2), typechecks Web/Admin e Ultracite passaram. As suítes E2E não foram executadas localmente sem `E2E_DATABASE_URL`. A primeira CI (#110) encontrou contraste insuficiente no rodapé compartilhado de login (`text-muted-foreground/70`), corrigido para `text-muted-foreground`. A CI #111 confirmou essa correção e encontrou uma região de rolagem horizontal da tabela Admin sem foco por teclado (`scrollable-region-focusable`); a região agora tem nome, `tabIndex=0` e foco visível. O helper contém uma exceção de lint restrita a esse requisito confirmado por Axe; o scan E2E continua obrigatório. A mesma CI encontrou contraste insuficiente no indicador de markup Web (`opacity-70`) e ausência de label no input `#register-product-image`; o indicador agora usa cores de alto contraste nos dois temas, e o arquivo tem label e descrição associados. A CI #112 confirmou a correção do scroller no percurso Admin em tema escuro, mas encontrou novos contrastes no dashboard Admin em tema claro: fallback de avatar, mensagem de alerta e textos de status verdes/âmbar. O fallback agora usa `text-foreground`; alertas usam texto foreground preservando severidade por fundo/borda/ponto; status usam tons AA por tema. A mesma CI ainda falhou no Web em `shell.e2e` pelo fallback de avatar compartilhado e no percurso `accessibility.e2e` do diálogo de produto; a causa comum de avatar no segundo caso é uma hipótese a confirmar, não uma conclusão. A CI #113 confirmou os ajustes de Admin/UI nos temas escuro e claro, e os testes PostgreSQL passaram. O E2E Web falhou apenas no teste de inventário/venda: `input[min="1"]` não tinha nome acessível por falta de associação ao rótulo “Qtd.”. O campo agora recebe um ID estável por linha, o rótulo aponta para ele e permanece na árvore de acessibilidade em desktop (`sm:sr-only`); o E2E verifica o nome antes do scan. A CI #114 confirmou que o E2E reconhece o rótulo “Qtd.”. O scan do diálogo de venda no tema claro encontrou contraste insuficiente nos três prefixos “R$” e nos dois valores textuais de “Valor recebido”; os prefixos agora usam `text-foreground` e o resumo usa `text-emerald-700 dark:text-emerald-400`. O E2E do dashboard encontrou `aria-prohibited-attr` nas células do gráfico de contribuição, que recebiam `aria-label` sem papel ARIA; elas agora são explicitamente `role="img"`. A CI #115 confirmou que o label “Qtd.”, os campos de valor e as células do gráfico não repetiram as falhas anteriores; Web, Admin e PostgreSQL avançaram com sucesso. Ao abrir a busca de produto, o Axe encontrou contraste insuficiente no texto de estoque da opção ativa (`.ml-auto.shrink-0`), que conservava `text-muted-foreground` sobre o fundo selecionado `bg-muted`. A variante de item selecionado agora troca esse texto para `text-foreground`, seguindo o padrão existente em `CommandShortcut`; A CI #116 (run 37155613135) passou em 2026-10-03: verify, E2E Web/Admin e PostgreSQL ficaram verdes, incluindo o scan da opção selecionada na combobox. P36 permanece aberto até revisão manual de teclado/foco e revisão do usuário; não há alegação de conformidade global.
+**Baseline P36 iniciada em 2026-10-03 no PR #7:** `@axe-core/playwright@4.13.0` foi adicionado como dependência de desenvolvimento; as suítes E2E representam login/dashboard Web e Admin, operações centrais Web, os dois temas e leituras de organizações/usuários/auditoria no Admin. A regra `target-size` está explicitamente habilitada e resultados `incomplete` são reportados para revisão manual, separados de violações. O primeiro teste encontrou que a lista de auditoria Admin era CSS Grid sem semântica de tabela; foi convertida para tabela HTML com caption, cabeçalhos/escopo e cobertura de teste. Tests focais de acessibilidade Admin (7) e de preço Web (2), typechecks Web/Admin e Ultracite passaram. As suítes E2E não foram executadas localmente sem `E2E_DATABASE_URL`. A primeira CI (#110) encontrou contraste insuficiente no rodapé compartilhado de login (`text-muted-foreground/70`), corrigido para `text-muted-foreground`. A CI #111 confirmou essa correção e encontrou uma região de rolagem horizontal da tabela Admin sem foco por teclado (`scrollable-region-focusable`); a região agora tem nome, `tabIndex=0` e foco visível. O helper contém uma exceção de lint restrita a esse requisito confirmado por Axe; o scan E2E continua obrigatório. A mesma CI encontrou contraste insuficiente no indicador de markup Web (`opacity-70`) e ausência de label no input `#register-product-image`; o indicador agora usa cores de alto contraste nos dois temas, e o arquivo tem label e descrição associados. A CI #112 confirmou a correção do scroller no percurso Admin em tema escuro, mas encontrou novos contrastes no dashboard Admin em tema claro: fallback de avatar, mensagem de alerta e textos de status verdes/âmbar. O fallback agora usa `text-foreground`; alertas usam texto foreground preservando severidade por fundo/borda/ponto; status usam tons AA por tema. A mesma CI ainda falhou no Web em `shell.e2e` pelo fallback de avatar compartilhado e no percurso `accessibility.e2e` do diálogo de produto; a causa comum de avatar no segundo caso é uma hipótese a confirmar, não uma conclusão. A CI #113 confirmou os ajustes de Admin/UI nos temas escuro e claro, e os testes PostgreSQL passaram. O E2E Web falhou apenas no teste de inventário/venda: `input[min="1"]` não tinha nome acessível por falta de associação ao rótulo “Qtd.”. O campo agora recebe um ID estável por linha, o rótulo aponta para ele e permanece na árvore de acessibilidade em desktop (`sm:sr-only`); o E2E verifica o nome antes do scan. A CI #114 confirmou que o E2E reconhece o rótulo “Qtd.”. O scan do diálogo de venda no tema claro encontrou contraste insuficiente nos três prefixos “R$” e nos dois valores textuais de “Valor recebido”; os prefixos agora usam `text-foreground` e o resumo usa `text-emerald-700 dark:text-emerald-400`. O E2E do dashboard encontrou `aria-prohibited-attr` nas células do gráfico de contribuição, que recebiam `aria-label` sem papel ARIA; elas agora são explicitamente `role="img"`. A CI #115 confirmou que o label “Qtd.”, os campos de valor e as células do gráfico não repetiram as falhas anteriores; Web, Admin e PostgreSQL avançaram com sucesso. Ao abrir a busca de produto, o Axe encontrou contraste insuficiente no texto de estoque da opção ativa (`.ml-auto.shrink-0`), que conservava `text-muted-foreground` sobre o fundo selecionado `bg-muted`. A variante de item selecionado agora troca esse texto para `text-foreground`, seguindo o padrão existente em `CommandShortcut`; A CI #116 (run 37155613135) passou em 2026-10-03: verify, E2E Web/Admin e PostgreSQL ficaram verdes, incluindo o scan da opção selecionada na combobox. **Resultado:** axe baseline ativo nas jornadas Web/Admin e temas representados; CI #117 (run 37166464822) confirmou `verify`, E2E Web/Admin e PostgreSQL verdes. Os testes exercitam teclado/foco em fluxos selecionados, mas não houve sessão manual separada nem teste dirigido de leitor de tela; ambos permanecem gates de pré-produção. A aprovação do usuário em 2026-10-03 fecha a implementação P36. Sem alegação de conformidade global.
 
 ### Ponto 37 — `@polaris/ui` como fundação visual única
 
-**Estado:** aceito em 2026-09-25, com Q1–Q3 aprovadas.
+**Estado:** decisão aceita em 2026-09-25; implementação inicial aprovada em 2026-10-01 (commit `106ee87`, PR #7). Uma correção final foi reaberta em 2026-10-03 para remover um valor Billing hardcoded, e aguarda CI #118 e revisão do usuário.
 
 **Proposta do relatório:** manter primitives compartilhadas em `packages/ui`, composições específicas em app/feature e não criar um segundo design system local.
 
@@ -788,11 +788,13 @@ O `tsconfig` base usa `moduleResolution: "bundler"`; a documentação TypeScript
 
 **Correções aprovadas para a implementação:** manter primitives genéricas de gráfico em `@polaris/ui`, mas levar as composições de vendas/lucro para a área de negócio correta. A área admin deve usar métricas e rótulos próprios da plataforma ou remover/adiar a visualização até existirem dados reais, sem reutilizar gráficos de vendas com zeros. Tornar os rótulos de `ContributionGraph` contextuais. Consolidar `ThemeToggle` entre apps se a verificação confirmar a mesma política e comportamento. Atualizar a memória arquitetural stale como parte da reconciliação documental aprovada.
 
+**Implementação inicial — commit `106ee87`:** removidos aliases que desviavam de `@polaris/ui`, migradas 153 referências Web para exports públicos, consolidado `ThemeToggle`, alinhado o Admin a dados/termos da plataforma e removida a visualização de desempenho de vendas com zeros. O guard de UI e a memória arquitetural também foram atualizados; CI #117 passou. **Correção P37 em andamento:** a reauditoria encontrou um cartão “Billing: 0” hardcoded apesar de o dashboard não obter esse total. O cartão foi removido, a grade ajustada e o Admin E2E verifica a ausência do texto placeholder; a CI #118 validará. A página Billing mantém seu overview real.
+
 **Pesquisa de apoio:** [pesquisa do ponto 37 sobre a fronteira de UI](research-ponto-37-shared-ui.md), revalidada com a implementação e os exports atuais em 2026-10-01.
 
 ### Ponto 38 — não criar um pacote `domain` genérico
 
-**Estado:** aceito em 2026-09-25, com critério refinado.
+**Estado:** revalidado e concluído sem alteração de código em 2026-10-03; a decisão aceita em 2026-09-25 permanece alinhada ao checkout atual.
 
 **Proposta do relatório:** manter a prudência de não criar packages por estética; exigir uma fronteira conceitual estável e compartilhamento/necessidade reais, evitando dezenas de pacotes microscópicos.
 
@@ -806,7 +808,7 @@ O `tsconfig` base usa `moduleResolution: "bundler"`; a documentação TypeScript
 
 ### Ponto 39 — contrato executável de fronteiras do workspace
 
-**Estado:** aceito em 2026-09-25, com Q1–Q2 aprovadas.
+**Estado:** implementação concluída e aprovada pelo usuário em 2026-10-01 (commit `106ee87`, PR #7 draft); CI #117 verificou o guard. Ainda não foi integrada à `main`.
 
 **Proposta do relatório:** formalizar um grafo simples em que as aplicações dependem de packages, não importam source uma da outra e packages não importam apps; validar as direções com testes/scripts pequenos.
 
@@ -824,9 +826,11 @@ A pesquisa de implementação confirmou que a recomendação previamente aprovad
 
 **Pesquisa de apoio:** [pesquisa do ponto 39 sobre fronteiras](research-ponto-39-boundaries.md).
 
+**Implementação P39 — commit `106ee87`:** `workspace-boundaries.test.ts` aplica a matriz a `apps/*/src` e `packages/*/src`, usando AST TypeScript, `tsconfig` real e exports dos manifests; bloqueia imports entre apps, packages→apps, dependências workspace ausentes, subpaths privados e ciclos de packages. Os fixtures cobrem as formas de import aprovadas e violação/permitido. Os 17 testes focais e `verify:quick` passaram no registro original; a CI #117 confirmou o workspace atual. O commit permanece no PR #7 aberto, fora de `main`.
+
 ### Ponto 40 — template curto de pull request
 
-**Estado:** aceito em 2026-09-25, com Q1 aprovada.
+**Estado:** implementado e integrado à `main` no commit `e3c9252`; CI #117 verificou o checkout.
 
 **Proposta do relatório:** criar um template curto para registrar objetivo, mudanças, risco, banco/migrations, providers, documentação, validação e homologação, especialmente útil em PRs preparados por IA.
 
@@ -834,11 +838,13 @@ A pesquisa de implementação confirmou que a recomendação previamente aprovad
 
 **Decisão aprovada:** criar um único `.github/pull_request_template.md` em português com prompts centrais de problema/resultado esperado, solução/escopo e verificação relevante para revisão humana. Incluir um bloco condicional para impactos de banco/migrations/RLS, providers/ambiente, documentação e rollout/reversão quando aplicável; nunca pedir valores de secrets ou dados reais. Não repetir lint/typecheck/test/build que a CI já mostra, não exigir CodeRabbit/Copilot ou aprovação humana, não fixar base `staging`/hotfix e não exigir homologação em PRs enquanto o ambiente não estiver configurado. Preview/Staging será informado quando existir e for relevante. O campo de risco usará os níveis definidos no ponto 41.
 
+**Implementação:** `.github/pull_request_template.md` contém objetivo/resultado, solução/escopo, nível e justificativa de risco e verificações focais, com bloco operacional condicional; não exige labels, reviewers, secrets ou repetição dos checks de CI.
+
 **Pesquisa de apoio:** [pesquisa do ponto 40 sobre template de PR](research-ponto-40-pr-template.md).
 
 ### Ponto 41 — classificação de mudança por risco
 
-**Estado:** aceito em 2026-09-25, com Q1–Q2 aprovadas.
+**Estado:** implementado e integrado à `main` no commit `fb5fea5`; CI #117 verificou o checkout.
 
 **Proposta do relatório:** usar três níveis (`low`, `medium`, `high`) e associar a cada um um nível proporcional de verificação.
 
@@ -852,17 +858,21 @@ A pesquisa de implementação confirmou que a recomendação previamente aprovad
 
 **Relação com P40:** o template registra um único nível de risco com justificativa concisa, sem copiar esta matriz ou a lista de verificações. Os procedimentos específicos por domínio permanecem nas fontes técnicas/runbooks correspondentes.
 
+**Implementação:** a matriz Low/Medium/High está em `docs/testing/strategy.md`; todos os níveis mantêm CI obrigatório e exigem evidência focal proporcional, sem label ou aprovação humana obrigatória.
+
 **Pesquisa de apoio:** [pesquisa do ponto 41 sobre classificação de risco](research-ponto-41-risk.md).
 
 ### Ponto 42 — Definition of Done por risco
 
-**Estado:** aceito em 2026-09-25, com Q1 aprovada.
+**Estado:** implementado e integrado à `main` no commit `fb5fea5`; CI #117 verificou o checkout.
 
 **Proposta do relatório:** tornar explícito em `AGENTS.md` o que cada nível Low/Medium/High precisa provar antes de declarar o trabalho concluído.
 
 **Evidência:** `AGENTS.md` já tem um critério geral de conclusão, mas não aponta à matriz aprovada no P41 nem exige teste focal para mudança comportamental. `docs/testing/strategy.md` já descreve as camadas e limitações dos testes, e é a fonte adequada para abrigar a matriz operacional. `docs/README.md` ainda não lista esse guia diretamente. `docs/maintenance.md` cobre atualização documental e deve manter esse escopo. P15/P16 orientam usar ponteiros curtos e evitar duplicação no arquivo raiz.
 
 **Decisão aprovada:** manter `docs/testing/strategy.md` como fonte única para a matriz Low/Medium/High de P41 e suas evidências proporcionais. Indexá-la em `docs/README.md`. Em `AGENTS.md`, preservar o critério geral de conclusão e acrescentar um ponteiro acionável: em implementação/refatoração/mudança de comportamento, classificar o risco, consultar a estratégia e provar o comportamento afetado com teste focal; compilação/typecheck isolados não demonstram comportamento correto. Não copiar a matriz inteira para `AGENTS.md`. Manter `docs/maintenance.md` dedicado à matriz de atualização documental. Enquanto P20/P21 ainda não forem implementados, não apresentar `verify:quick`/`verify` ou hooks futuros como comandos existentes.
+
+**Implementação:** `AGENTS.md` aponta para `docs/testing/strategy.md` para classificar risco e provar comportamento alterado; `docs/README.md` indexa a fonte, sem duplicar a matriz.
 
 **Pesquisa de apoio:** [pesquisa do ponto 42 sobre Definition of Done](research-ponto-42-dod.md).
 
@@ -1481,7 +1491,7 @@ Esta atualização substitui os rótulos de execução antigos quando eles contr
 - P63: a sequência documental foi executada, mas isso não fecha conteúdo que o próprio P9 deixou como subetapa: reconciliar `docs/product/01-regras-de-negocio.md` e `docs/product/roadmap.md` com `PRODUCT.md`. Também permanecem gaps próprios de P12/P13 e a memória arquitetural de `aidd_docs` precisa deixar de afirmar que `@polaris/ui` não foi extraído.
 - P2/P52: não declarar a stack atualizada até o lote estável ser reavaliado. Em 2026-10-01, `bun outdated` sob Bun 1.4.2 listou 37 pacotes: 27 têm atualização dentro das faixas declaradas; 10 permanecem na versão atual por pins/faixas e mostram uma versão mais nova em `Latest`. Esse inventário é evidência de defasagem, não prova de vulnerabilidade nem ordem para atualizar tudo de uma vez.
 - P5: a política de quatro ambientes e o refinamento Sandbox/live foram aprovados; a implementação de `.env.example`, host guard, variáveis E2E no exemplo e teste focal ainda está pendente. A credencial de Staging só poderá ser configurada depois que P4 definir o escopo de branch do Preview persistente.
-- P37/P39/P58/P59: P37 tem alias de UI que ainda bypassa `@polaris/ui`; P39 tem guards parciais para app↔app e packages→apps/dependências; P58/P59 têm divergências temporais concretas. O filtro de Admin Events foi definido como criação/recebimento, mantendo `available_at` separado. P59 também precisa diferenciar tipos nos formatters e exibir a indicação de fuso aprovada. Esses gaps de implementação impedem marcar Gate A como concluído. P57 não bloqueia Gate A: Asaas é gate P43 obrigatório antes do go-live com plano pago; Woovi permanece fora do primeiro lançamento.
+- P37/P39: implementação no commit `106ee87` do PR #7 e CI #117 verde; P37 tem uma correção adicional para o cartão Billing hardcoded em andamento, pendente da CI #118 e revisão do usuário. P39 está implementado, mas ainda não integrado à `main`. P40/P41/P42 estão implementados em `main` (`e3c9252`/`fb5fea5`). P58/P59 têm divergências temporais concretas. O filtro de Admin Events foi definido como criação/recebimento, mantendo `available_at` separado. P59 também precisa diferenciar tipos nos formatters e exibir a indicação de fuso aprovada. Esses gaps de implementação impedem marcar Gate A como concluído. P57 não bloqueia Gate A: Asaas é gate P43 obrigatório antes do go-live com plano pago; Woovi permanece fora do primeiro lançamento.
 
 ### Ordem remanescente
 
