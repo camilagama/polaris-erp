@@ -181,7 +181,7 @@ describe("E2E support", () => {
     });
   });
 
-  it("removes credentials and database URLs from Playwright workers", () => {
+  it("keeps the dedicated E2E URL but removes external and privileged targets from workers", () => {
     const environment = {
       ASAAS_API_KEY: "real-asaas-key",
       CI: "true",
@@ -201,6 +201,7 @@ describe("E2E support", () => {
 
     expect(environment).toEqual({
       CI: "true",
+      E2E_DATABASE_URL: isolatedDatabaseUrl,
       E2E_NAME: "Polaris E2E",
       GITHUB_ACTIONS: "true",
       NODE_ENV: "test",
