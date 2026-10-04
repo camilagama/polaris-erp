@@ -160,13 +160,17 @@ const getTotals = async (
   };
 };
 
+export const getPlatformBillingTotals = async (
+  queryableDb: QueryableDb = db
+): Promise<PlatformBillingOverview["totals"]> => getTotals(queryableDb);
+
 export const getPlatformBillingOverview = async (
   queryableDb: QueryableDb = db
 ): Promise<PlatformBillingOverview> => {
   const [subscriptions, invoices, totals] = await Promise.all([
     listSubscriptions(queryableDb),
     listInvoices(queryableDb),
-    getTotals(queryableDb),
+    getPlatformBillingTotals(queryableDb),
   ]);
 
   return { invoices, subscriptions, totals };

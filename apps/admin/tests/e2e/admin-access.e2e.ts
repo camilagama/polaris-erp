@@ -12,6 +12,7 @@ const e2eBootstrapSecret =
   E2E_DEFAULT_INTERNAL_BOOTSTRAP_SECRET;
 const darkThemeClassRegex = /\bdark\b/;
 const lightThemeClassRegex = /\blight\b/;
+const openInvoiceSummaryRegex = /invoices em aberto/;
 const wcagAaTags = [
   "wcag2a",
   "wcag2aa",
@@ -133,9 +134,7 @@ test("allows a bootstrapped platform admin to open the internal dashboard", asyn
   await expect(
     page.getByRole("heading", { name: "Console operacional" })
   ).toBeVisible();
-  await expect(
-    page.getByText("assinaturas e invoices", { exact: true })
-  ).toHaveCount(0);
+  await expect(page.getByText(openInvoiceSummaryRegex)).toBeVisible();
   await expect(page.locator("html")).toHaveClass(darkThemeClassRegex);
   await expectNoWcagViolations(page);
   await expect(
