@@ -351,7 +351,7 @@ Esta auditoria continua sendo a fotografia das fontes e configurações verifica
 - **P58/P59:** implementações aprovadas e validadas nos quatro checks do PR #7; isso não declara integração em `main`.
 - **P69/P70:** não repetir P5, automação P36, P37/P39 ou P58/P59. Gate A continua aberto; a integração do PR #7 e os itens restantes do plano ainda são necessários. Gate B continua não comprovado.
 - **P71:** experimento pré-Staging executado no commit `7d10f79` do PR #7. Em três tentativas no mesmo SHA, todos os quatro checks passaram; a mediana de parede caiu de 12,30 para 7,25 minutos. O detalhe, a ressalva de falha do `verify` e os limites da amostra estão no ponto P71 do plano principal. A revisão mais ampla antes de adicionar triggers de Staging continua pendente.
-- **P34:** a recomendação de distribuição clone-safe foi substituída pela escolha do usuário por instalação global, implementada e aprovada em 2026-10-04; ver adendo abaixo. A próxima análise indicada pelo plano principal é P2/P52, para revalidar e ordenar os updates estáveis aprovados.
+- **P34:** a recomendação de distribuição clone-safe foi substituída pela escolha do usuário por instalação global, implementada e aprovada em 2026-10-04; ver adendo abaixo. O primeiro batch P2/P52 (Next.js/@next/env 16.3.8) foi concluído no commit 697d92e e passou os quatro checks; P2/P52 continua aberto para os demais updates estáveis.
 
 O commit `7d10f79` permanece no PR #7 Draft, sem merge. Nenhum estado remoto de Vercel, Neon, Production, recuperação ou Staging foi inferido das execuções da CI.
 
