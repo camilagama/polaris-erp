@@ -1,6 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 
 export const E2E_DEFAULT_INTERNAL_BOOTSTRAP_SECRET =
   "dgimports-e2e-bootstrap-local-only";
@@ -45,10 +44,26 @@ const SAFE_E2E_RUNNER_ENVIRONMENT_KEYS = new Set([
 const ENVIRONMENT_VARIABLE_PATTERN = /^([A-Z][A-Z0-9_]*)=/gm;
 const LEADING_SLASHES_PATTERN = /^\/+/;
 const NEON_POOLER_HOST_PATTERN = /^([^.]+)-pooler(?=\.)/u;
-const ENV_EXAMPLE_PATH = fileURLToPath(
-  new URL("../../../.env.example", import.meta.url)
-);
-const REPOSITORY_ROOT_PATH = dirname(ENV_EXAMPLE_PATH);
+const REPOSITORY_ROOT_PATH = (() => {
+  let directory = process.cwd();
+
+  while (true) {
+    if (existsSync(resolve(directory, ".env.example"))) {
+      return directory;
+    }
+
+    const parent = resolve(directory, "..");
+
+    if (parent === directory) {
+      throw new Error(
+        "E2E support could not find .env.example from the current directory."
+      );
+    }
+
+    directory = parent;
+  }
+})();
+const ENV_EXAMPLE_PATH = resolve(REPOSITORY_ROOT_PATH, ".env.example");
 const E2E_APP_PATHS = {
   admin: "apps/admin",
   web: "apps/web",
