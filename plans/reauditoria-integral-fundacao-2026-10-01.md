@@ -333,9 +333,24 @@ Os testes de admissão são mocks; execução SQL e rollback real devem ser comp
 no PostgreSQL 18 descartável junto do replay pendente. Nenhum banco remoto foi
 acessado. Sem migration nova nesta subetapa, commit ou push. O usuário aprovou esta subetapa em 2026-10-02.
 **Verificação do estado final (2026-10-02):** `bun run verify:quick` passou após a correção de enrollment legado: documentação (13 testes/122 arquivos), Ultracite (621 arquivos), typecheck do workspace e suites unitárias. Testes focais desta subetapa: 16 no Admin e 25 na plataforma, incluindo limite máximo e máximo +1ms por papel, recusa durante o claim e convite legado excessivo. O Web final passou 578 testes; um teste PostgreSQL permanece condicional e não executado. `git diff --check` também passou. Sem prova de SQL/rollback real até PostgreSQL 18 descartável; sem banco remoto, commit ou push. Implementação aprovada pelo usuário em 2026-10-02.
+
 ### Status após revisão do usuário — follow-up P58 — 2026-10-02
 
 O usuário aprovou a implementação local do follow-up de expiração de grants. O status “aguarda revisão” registrado acima está superado. A subetapa está aprovada, sem commit/integração; P58 como um todo continua parcial até replay da migration e prova comportamental/rollback real em PostgreSQL 18 descartável. A próxima análise está em `research-ponto-58-timezone.md`.
 ### Follow-up P58 — suíte PostgreSQL 18 de admissão implementada e aprovada — 2026-10-03
 
 A pedido do usuário, foi adicionada integração real via clone descartável loopback do serviço PostgreSQL 18.6 no CI. O URL Neon pooled fornecido não foi usado; guard loopback não foi relaxado. A implementação local foi aprovada pelo usuário em 2026-10-03; `verify:quick` passou, mas os quatro novos testes foram skipped por falta do alvo PostgreSQL local. A prova efetiva de execução e rollback depende do job CI com `POSTGRES_BEHAVIOR_DATABASE_URL` e `DATABASE_URL` temporários para o clone. Nenhum banco remoto ou commit foi acessado.
+
+## Reconciliação de execução posterior à auditoria — 2026-10-04
+
+Esta auditoria continua sendo a fotografia das fontes e configurações verificadas em 2026-10-01. Esta nota substitui somente os rótulos de execução e “próximo item” que ficaram antigos; não reescreve decisões P1–P70 nem declara Gate A/B concluído.
+
+- **P5:** contrato de exemplo, Sandbox, host guard e mapeamento dos bancos E2E foram implementados e aprovados; estado e evidências constam no plano principal. A exposição remota de `VERCEL_ENV` e o escopo Vercel Preview/Staging continuam dependentes de P4.
+- **P36:** baseline Axe e correções automatizadas implementadas/aprovadas. Revisão manual de teclado, foco e leitor de tela continua gate pré-produção; P36 não é a próxima implementação.
+- **P37/P39:** implementação aprovada e validada no PR #7. O PR permanece Draft e não integrado à `main`.
+- **P58/P59:** implementações aprovadas e validadas nos quatro checks do PR #7; isso não declara integração em `main`.
+- **P69/P70:** não repetir P5, automação P36, P37/P39 ou P58/P59. Gate A continua aberto; a integração do PR #7 e os itens restantes do plano ainda são necessários. Gate B continua não comprovado.
+- **P71:** experimento pré-Staging executado no commit `7d10f79` do PR #7. Em três tentativas no mesmo SHA, todos os quatro checks passaram; a mediana de parede caiu de 12,30 para 7,25 minutos. O detalhe, a ressalva de falha do `verify` e os limites da amostra estão no ponto P71 do plano principal. A revisão mais ampla antes de adicionar triggers de Staging continua pendente.
+- **Próximo item recomendado:** P34, distribuição clone-safe de Impeccable sem hook automático. A análise do release estável atual e do procedimento será apresentada antes da instalação.
+
+O commit `7d10f79` permanece no PR #7 Draft, sem merge. Nenhum estado remoto de Vercel, Neon, Production, recuperação ou Staging foi inferido das execuções da CI.

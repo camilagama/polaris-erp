@@ -48,7 +48,7 @@ As recomendações do relatório são hipóteses de trabalho, não instruções 
 - **P43 — registro de prontidão de produção:** concluído e aprovado pelo usuário em 2026-09-29, commit `5959446` na branch `codex/foundation-hook`. `docs/operations/production-readiness.md` concentra gates/evidências e distingue configuração externa de validação; `docs/operations/environments-and-deployment.md`, `docs/README.md` e a memória do projeto apontam para o registro. Status externos não verificados permanecem `desconhecido`; a divergência P65 do checker e o bypass administrativo do Environment `Production` estão explícitos. Nenhuma configuração ou credencial de provider foi alterada. `docs:check`, `git diff --cached --check` e `verify:quick` do pre-push passaram.
 - **P44 — estratégia de backup e recuperação:** runbook e referências documentais implementados e aprovados pelo usuário em 2026-09-29, commit `997cf4f` na branch `codex/foundation-hook`. `docs/runbooks/backup-and-recovery.md` registra RPO/RTO aprovados, camadas PITR/cópia externa/imagens, limites, procedimento-alvo e critérios de restore drill; o checker foi explicitamente mantido como verificador declarativo. **P44 permanece parcial:** Neon PITR, dump externo cifrado/R2, plano/cadência/retention e restore drill real não foram configurados ou medidos; nenhum recurso externo foi consultado ou alterado. `docs:check`, `git diff --cached --check`, triagem documental e `verify:quick` do pre-push passaram.
 
-**Ordem curta de trabalho:** (1) recuperar baseline, hook e perfis de verificação; alinhar PG18 e dependências estáveis (P2/P20–22/P34/P52/P54/P61); (2) separar/endurecer CI e operações, medir, transferir o repo e proteger `main` após checks verdes (P3/P23–27/P61–64); (3) em paralelo, reconciliar contrato de ambiente, documentação, fronteiras de código e semântica temporal (P5/P7–18/P35–42/P58–59/P63); (4) comprovar Gate A antes de features amplas (P69/P70); (5) provisionar Staging, recuperação, migração e release por SHA, fechando Gate B antes de dados reais/go-live (P4/P43–49/P65/P70). Otimizações de cache, SAST, snapshots visuais e Graphify seguem seus critérios de medição; Blacksmith não é aplicável ao ownership aprovado.
+**Fila atual, reconciliada em 2026-10-04:** P34 é o próximo item recomendado para implementação; P2/P52 ainda exigem reconciliação dos updates estáveis aprovados. P5, a automação de acessibilidade P36, P37/P39 e P58/P59 foram implementados e aprovados no PR #7, mas ainda não integrados à `main`; não repetir essas subetapas. P71 concluiu um experimento pré-Staging e deve ser reavaliado antes de ampliar os triggers para Staging. Gate A continua aberto até os itens restantes de P69/P70 e a integração do PR #7 serem comprovados; Gate B continua condicionado a P4/P43–49/P65/P70. Cache remoto, SAST, snapshots visuais e Graphify mantêm seus critérios de medição; Blacksmith não é aplicável ao ownership aprovado.
 
 ## Decisões revisadas
 
@@ -1259,7 +1259,7 @@ Antes do go-live, verificar a major e as extensões do branch Neon real por font
 
 As implementações P58 e P59 estão concluídas e aprovadas no PR #7, segundo o critério deste plano de artefato, verificação e evidência vinculada. P58 inclui o follow-up `datetime-local` e o teste real de admissão/rollback: o job `postgres-behavior` do run `37121491774` executou com PostgreSQL 18.6, e o run final `37123671646` passou nos quatro jobs requeridos. P59 inclui o contrato civil/instante, as correções de consumidores e a normalização de timestamps PostgreSQL reconhecidos; o mesmo run final passou em `verify`, Web E2E, Admin E2E e PostgreSQL. O usuário aprovou este resultado em 2026-10-03 (“prossiga”). Esta atualização substitui os registros anteriores que diziam P58 parcial por replay/admissão pendentes ou P59 aguardando revisão. A branch `codex/foundation-plan-audit` está no SHA `9532e7e`; PR #7 permanece Draft e não foi mesclado, portanto nada aqui declara integração em `main` ou conclusão do Gate A.
 
-**Próximo item recomendado:** P36 — estabelecer baseline automatizada de acessibilidade nas jornadas E2E representativas de Web/Admin, corrigir achados antes de fazer o Axe um check obrigatório e complementar a automação com teclado/foco e revisão manual direcionada. A condição de E2E não produtivo já está presente na CI; a análise detalhada de escopo, tags WCAG 2.2 e custo incremental segue antes da implementação.
+**Próximo item recomendado após a revisão P71:** P34 — distribuir a skill Impeccable de forma clone-safe, sem hook automático. A automação Axe e as correções aprovadas de P36 já foram implementadas; a revisão manual de teclado, foco e leitor de tela continua como gate pré-produção, não como uma nova implementação P36.
 
 ### Ponto 60 — árvore-alvo como mapa reconciliado
 
@@ -1516,11 +1516,28 @@ Esta atualização substitui os rótulos de execução antigos quando eles contr
 
 ### P71 — revisar duração e simplificar CI antes de expandir para Staging
 
-**Estado:** revisão aprovada pelo usuário em 2026-10-01; **pendente e condicionada à preparação de Staging**. Não amplia os triggers atuais nem cria uma branch `staging`.
+**Estado em 2026-10-04:** o usuário reabriu a revisão após várias execuções lentas. O experimento controlado de paralelizar Web E2E com `verify` foi implementado e medido em três tentativas reais no PR #7; **a revisão mais ampla de fila, reruns `strict=true`, push pós-merge e futura CI de Staging continua pendente**. Nenhum trigger ou branch `staging` foi adicionado.
 
 **Motivo e linha de base:** a CI pós-merge `36832817188` levou aproximadamente 14,1 minutos de relógio. As durações dos quatro jobs somaram 16,8 runner-minutos: `verify` 5,58 min, `e2e` 8,35 min, `admin-e2e` 2,10 min e `postgres-behavior` 0,78 min. É uma amostra única de execução em `main`, não uma média ou p95. Os workflows atuais rodam em `push`/PR para `main`; o custo de repetir checks strict em branches abertas deve ser medido separadamente. **Não há hoje CI configurada em Staging**, portanto os 14 minutos não representam uma medição de push/PR para Staging.
 
-**Gatilho:** iniciar antes de adicionar a branch persistente `staging` a triggers obrigatórios ou fazer a CI completa rodar em todo push/PR de Staging; também reabrir se medições repetidas mostrarem atrasos/custo que prejudiquem o feedback de desenvolvimento.
+**Medição pré-mudança em PRs:** quatro PRs verdes recentes (runs `37155613135`, `37166464822`, `37169673318`, `37172326956`) tiveram mediana de **12,30 min de parede** e **15,63 runner-min**, com faixas de 10,58–13,02 e 13,64–16,21 min. A run `37168749696` falhou em `verify` após 1,92 min e os três jobs dependentes foram pulados.
+
+**Experimento implementado:** no commit `7d10f79` do PR #7, somente `needs: verify` foi removido do job `e2e` Web. Admin E2E e `postgres-behavior` continuam com `needs: verify`; os quatro nomes de checks e toda a cobertura requerida foram preservados. `apps/web/src/ops/ci-workflow.test.ts` agora protege essa relação. As três tentativas da mesma run (`37173931803`) passaram nos quatro jobs:
+
+| Tentativa | Parede | Runner-min |
+| --- | ---: | ---: |
+| 1 | 6,77 min | 13,60 min |
+| 2 | 7,25 min | 14,70 min |
+| 3 | 7,45 min | 15,32 min |
+| **Mediana** | **7,25 min** | **14,70 min** |
+
+A mediana de parede caiu 5,05 min (cerca de 41%) frente aos quatro PRs pré-mudança. O job Web E2E em si levou 6,70, 7,17 e 7,37 min, próximo da mediana anterior de 7,08 min: o ganho observado vem da sobreposição com `verify`, não de testes mais rápidos. A mediana runner-min caiu cerca de 0,93 min, mas essa variação não pode ser atribuída à dependência removida; o objetivo demonstrado foi reduzir espera de parede.
+
+**Comparação com Hub:** cinco PRs verdes recentes do Hub tiveram mediana de 8,45 min de parede e 8,40 runner-min. O workflow do Hub usa um job sequencial para uma aplicação e uma matriz de jornadas Chromium desktop/mobile selecionadas; não há cache de Actions nem filtros por paths. O número menor não demonstra que sua topologia seja mais eficiente ou equivalente à cobertura Web/Admin do Polaris; não copiar essa configuração.
+
+**Trade-off e limites:** após esta mudança, Web E2E roda mesmo quando `verify` falha; isso pode gastar os minutos do E2E em PR inválido. Não foi provocada uma falha pós-mudança para medir esse custo. Não houve redução de check, `--affected`, path filter ou cache. As três tentativas são amostra pequena e não permitem calcular p95; tempo de fila, reruns causados por `strict=true` e push pós-merge não foram isolados.
+
+**Gatilho remanescente:** reavaliar antes de adicionar a branch persistente `staging` a triggers obrigatórios ou executar a CI completa em cada push/PR de Staging; também reabrir se a espera/custo voltar a prejudicar o feedback.
 
 **Escopo da revisão:**
 
@@ -1531,4 +1548,4 @@ Esta atualização substitui os rótulos de execução antigos quando eles contr
 
 **Invariantes:** não remover checks requeridos de `main` nem enfraquecer migrations, E2E, PostgreSQL/RLS ou proteções para reduzir minutos sem cobertura equivalente demonstrada. A otimização de Staging deve deixar a CI de `main` com a cobertura completa necessária ao merge/release; a revisão não aprova automaticamente auto-merge ou branch de Staging.
 
-**Saída/pronto:** registrar baseline representativa e percentis, explicar duplicação/custo e recomendar um perfil de PR/Staging/main com checks exatos, gatilhos e fallback. Validar o perfil por PRs reais antes de configurá-lo como required; se o ganho líquido não justificar a complexidade, manter o workflow atual e não ativar triggers de Staging redundantes.
+**Resultado parcial:** o perfil atual de PR foi validado em três execuções reais e recomenda-se manter a sobreposição limitada a Web E2E. P71 só ficará totalmente encerrado quando, antes dos triggers de Staging, o perfil necessário for reavaliado com tempos de fila, reruns strict e escopo dos checks de `main`/Staging, validado por PR real; se o ganho não justificar a complexidade, não ampliar os triggers.
