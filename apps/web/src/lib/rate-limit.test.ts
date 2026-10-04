@@ -42,6 +42,7 @@ const stubRequiredEnv = () => {
 
 describe("checkRateLimit", () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
     limitMock.mockReset();
@@ -52,6 +53,37 @@ describe("checkRateLimit", () => {
     vi.useRealTimers();
     vi.resetModules();
     vi.unstubAllEnvs();
+  });
+
+  it("disables optional Upstash telemetry and identifier analytics", async () => {
+    const resetAt = Date.parse("2026-01-01T00:01:00.000Z");
+    limitMock.mockResolvedValueOnce({
+      remaining: 4,
+      reset: resetAt,
+      success: true,
+    });
+
+    const { checkRateLimit } = await import("@/lib/rate-limit");
+
+    await expect(
+      checkRateLimit({
+        key: "auth-google:203.0.113.10",
+        limit: 5,
+        windowMs: 60_000,
+      })
+    ).resolves.toEqual({ ok: true, remaining: 4, resetAt });
+
+    const { Redis } = await import("@upstash/redis");
+    const { Ratelimit } = await import("@upstash/ratelimit");
+
+    expect(Redis).toHaveBeenCalledWith({
+      enableTelemetry: false,
+      token: "upstash-token",
+      url: "https://upstash.example.com",
+    });
+    expect(Ratelimit).toHaveBeenCalledWith(
+      expect.objectContaining({ analytics: false })
+    );
   });
 
   it("fails closed when Upstash is temporarily unavailable in production", async () => {
