@@ -581,6 +581,18 @@ describe("CI workflow", () => {
     expect(workflow).toMatch(ADMIN_E2E_DATABASE_URL_SECRET_PATTERN);
   });
 
+  it("runs Web E2E alongside verify while retaining Admin and PostgreSQL gates", () => {
+    const workflow = readCiWorkflow();
+
+    expect(getWorkflowJobSection(workflow, "e2e")).not.toContain(
+      "needs: verify"
+    );
+
+    for (const jobId of ["admin-e2e", "postgres-behavior"]) {
+      expect(getWorkflowJobSection(workflow, jobId)).toContain("needs: verify");
+    }
+  });
+
   it("keeps external billing credentials out of CI", () => {
     const workflow = readCiWorkflow();
 
