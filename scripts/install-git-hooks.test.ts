@@ -4,6 +4,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -11,6 +12,7 @@ import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
+import { parse } from "yaml";
 
 const installScriptPath = fileURLToPath(
   new URL("./install-git-hooks.mjs", import.meta.url)
@@ -65,6 +67,15 @@ afterEach(() => {
 });
 
 describe("Git hook installation", () => {
+  it("disables automatic hook synchronization during hook runs", () => {
+    const configurationPath = fileURLToPath(
+      new URL("../lefthook.yml", import.meta.url)
+    );
+    const configuration = parse(readFileSync(configurationPath, "utf8"));
+
+    expect(configuration).toMatchObject({ no_auto_install: true });
+  });
+
   it("skips install when .git is a linked-worktree pointer file", () => {
     const fixture = createFixture("file");
     const result = spawnSync(process.execPath, [installScriptPath], {

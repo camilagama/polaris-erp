@@ -33,6 +33,8 @@ O runtime web protege a area operacional por sessao, contexto de app e guards de
 2. Instale dependências com `bun install`.
 3. Inicie o web com `bun dev` ou o admin com `bun run dev:admin`.
 
+`bun install` instala os hooks Lefthook no checkout principal. Worktrees usam o diretório compartilhado de hooks e pulam essa instalação automática. Como `lefthook.yml` desativa a sincronização automática ao executar hooks, depois de alterar nomes ou definições de hooks execute `bun x lefthook install` no checkout principal.
+
 Categorias de ambiente:
 
 - URLs canonicas e Better Auth/Google;
