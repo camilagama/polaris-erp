@@ -355,6 +355,13 @@ Esta auditoria continua sendo a fotografia das fontes e configurações verifica
 
 O commit `7d10f79` permanece no PR #7 Draft, sem merge. Nenhum estado remoto de Vercel, Neon, Production, recuperação ou Staging foi inferido das execuções da CI.
 
+### Reconciliação posterior — P2/P52 batch 9 e fila — 2026-10-05
+
+Esta atualização substitui apenas o próximo item de P2/P52 registrado acima; mantém o relatório como fotografia da auditoria de 2026-10-01 e não altera as decisões P1–P70 nem declara Gate A/B concluído.
+
+- O batch 9, Tailwind CSS/PostCSS 4.3.3, foi implementado e aprovado pelo usuário no commit `c9348ba` do PR #7. `bun install --frozen-lockfile`, Ultracite, `bun audit` (zero advisories), `verify:quick` e `build:all` passaram localmente com valores sintéticos/loopback sem conexão a serviços; CI `37268997052` passou nos quatro jobs, inclusive E2E Web/Admin e PostgreSQL. Nenhum CSS, configuração ou baseline visual mudou; os testes visuais de login passaram na CI. Build local não certificou upload de source maps Sentry, nem esta alteração acessou banco ou provider.
+- A consulta atual `bun outdated` lista Turborepo `2.11.5` → `2.11.7` como patch elegível. A release oficial 2.11.6 inclui normalização de inputs para detecção de afetados e hash; 2.11.7 corrige inputs de `.env.local` diante da rotação do token OIDC Vercel. O `turbo.json` do Polaris não define tags de tarefa, e a configuração de CI não usa `--affected`. Próxima análise proposta: avaliar o diff oficial e impacto nos hashes; ainda não há autorização para alterar essa dependência nesta etapa. A atualização não é apresentada como solução para o tempo da CI.
+
 ### Adendo P34 — Impeccable global — 2026-10-04
 
 Após a recomendação anterior de distribuição clone-safe, o usuário escolheu atualizar e usar a skill global. Neste perfil Codex, a instalação foi atualizada pelo CLI Impeccable 4.1.0 para a skill 4.5.0 e engine 0.1.11; a instalação usou `--no-hooks`. O plano principal foi ajustado para não adicionar cópia, exceção ao `.gitignore` ou ponteiro local no `AGENTS.md`. O usuário aprovou a instalação e a alteração de plano em 2026-10-04.
