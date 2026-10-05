@@ -1,11 +1,18 @@
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { statSync } from "node:fs";
 
 if (process.env.CI === "true" || process.env.VERCEL === "1") {
   process.exit(0);
 }
 
-if (!existsSync(".git")) {
+let gitMetadataIsDirectory = false;
+try {
+  gitMetadataIsDirectory = statSync(".git").isDirectory();
+} catch {
+  process.exit(0);
+}
+
+if (!gitMetadataIsDirectory) {
   process.exit(0);
 }
 
