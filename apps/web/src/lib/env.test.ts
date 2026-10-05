@@ -236,22 +236,20 @@ describe("serverEnv", () => {
       vercelEnv: "preview",
       target: "a Vercel Preview",
     },
-  ])("rejects a Production provider endpoint in $target", async ({
-    baseUrl,
-    baseUrlName,
-    nodeEnv,
-    vercelEnv,
-  }) => {
-    stubRequiredEnv({
-      [baseUrlName]: baseUrl,
-      NODE_ENV: nodeEnv,
-      VERCEL_ENV: vercelEnv,
-    });
+  ])(
+    "rejects a Production provider endpoint in $target",
+    async ({ baseUrl, baseUrlName, nodeEnv, vercelEnv }) => {
+      stubRequiredEnv({
+        [baseUrlName]: baseUrl,
+        NODE_ENV: nodeEnv,
+        VERCEL_ENV: vercelEnv,
+      });
 
-    await expect(import("@/lib/env")).rejects.toThrow(
-      `${baseUrlName} must not use a Production provider endpoint outside Vercel Production.`
-    );
-  });
+      await expect(import("@/lib/env")).rejects.toThrow(
+        `${baseUrlName} must not use a Production provider endpoint outside Vercel Production.`
+      );
+    }
+  );
 
   it("accepts Sandbox provider endpoints in non-production environments", async () => {
     stubRequiredEnv({

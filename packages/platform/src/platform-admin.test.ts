@@ -139,62 +139,65 @@ describe("platform admin helpers", () => {
     ["support", 14],
     ["operator", 30],
     ["owner", 90],
-  ] as const)("accepts the %s grant boundary and rejects one millisecond beyond it", async (role, maxDays) => {
-    vi.useFakeTimers();
-    const now = new Date("2030-01-01T00:00:00.000Z");
-    vi.setSystemTime(now);
-    const maxExpiry = new Date(now.getTime() + maxDays * 24 * 60 * 60 * 1000);
-    const overExpiry = new Date(maxExpiry.getTime() + 1);
-    const bootstrapTx = createInsertMock();
-    const bootstrapDb = {
-      transaction: vi.fn(async (callback) => callback(bootstrapTx)),
-    };
-    const bootstrapInput = {
-      expiresAt: maxExpiry,
-      reason: "Boundary grant",
-      role,
-      adminUserId: "boundary-admin",
-    };
-
-    try {
-      await bootstrapPlatformAdmin(bootstrapInput, bootstrapDb as never);
-      expect(() =>
-        bootstrapPlatformAdmin(
-          { ...bootstrapInput, expiresAt: overExpiry },
-          bootstrapDb as never
-        )
-      ).toThrow(`${role} grant expiration exceeds its allowed window`);
-
-      const grantTx = {
-        ...createInsertMock(),
-        execute: vi
-          .fn()
-          .mockResolvedValueOnce({ rows: [{ id: "platform-admin-1" }] })
-          .mockResolvedValueOnce({ rows: [{ id: "grant-1" }] }),
+  ] as const)(
+    "accepts the %s grant boundary and rejects one millisecond beyond it",
+    async (role, maxDays) => {
+      vi.useFakeTimers();
+      const now = new Date("2030-01-01T00:00:00.000Z");
+      vi.setSystemTime(now);
+      const maxExpiry = new Date(now.getTime() + maxDays * 24 * 60 * 60 * 1000);
+      const overExpiry = new Date(maxExpiry.getTime() + 1);
+      const bootstrapTx = createInsertMock();
+      const bootstrapDb = {
+        transaction: vi.fn(async (callback) => callback(bootstrapTx)),
       };
-      const grantDb = {
-        transaction: vi.fn(async (callback) => callback(grantTx)),
-      };
-      const grantInput = {
-        actorAdminUserId: "owner-admin",
-        actorPlatformAdminId: "platform-admin-owner",
+      const bootstrapInput = {
         expiresAt: maxExpiry,
         reason: "Boundary grant",
         role,
-        targetAdminUserId: "boundary-admin",
+        adminUserId: "boundary-admin",
       };
 
-      await grantPlatformAdminAccess(grantInput, grantDb as never);
-      expect(() =>
-        grantPlatformAdminAccess(
-          { ...grantInput, expiresAt: overExpiry },
-          grantDb as never
-        )
-      ).toThrow(`${role} grant expiration exceeds its allowed window`);
-    } finally {
-      vi.useRealTimers();
+      try {
+        await bootstrapPlatformAdmin(bootstrapInput, bootstrapDb as never);
+        expect(() =>
+          bootstrapPlatformAdmin(
+            { ...bootstrapInput, expiresAt: overExpiry },
+            bootstrapDb as never
+          )
+        ).toThrow(`${role} grant expiration exceeds its allowed window`);
+
+        const grantTx = {
+          ...createInsertMock(),
+          execute: vi
+            .fn()
+            .mockResolvedValueOnce({ rows: [{ id: "platform-admin-1" }] })
+            .mockResolvedValueOnce({ rows: [{ id: "grant-1" }] }),
+        };
+        const grantDb = {
+          transaction: vi.fn(async (callback) => callback(grantTx)),
+        };
+        const grantInput = {
+          actorAdminUserId: "owner-admin",
+          actorPlatformAdminId: "platform-admin-owner",
+          expiresAt: maxExpiry,
+          reason: "Boundary grant",
+          role,
+          targetAdminUserId: "boundary-admin",
+        };
+
+        await grantPlatformAdminAccess(grantInput, grantDb as never);
+        expect(() =>
+          grantPlatformAdminAccess(
+            { ...grantInput, expiresAt: overExpiry },
+            grantDb as never
+          )
+        ).toThrow(`${role} grant expiration exceeds its allowed window`);
+      } finally {
+        vi.useRealTimers();
+      }
     }
-  });
+  );
 
   it("limits enrollments to seven days and prevents them outlasting the grant", async () => {
     const tx = { ...createInsertMock(), execute: vi.fn() };
@@ -364,53 +367,58 @@ describe("platform admin helpers", () => {
     ["support", 14],
     ["operator", 30],
     ["owner", 90],
-  ] as const)("accepts the %s enrollment grant boundary and rejects one millisecond beyond it", async (role, maxDays) => {
-    vi.useFakeTimers();
-    const now = new Date("2030-01-01T00:00:00.000Z");
-    vi.setSystemTime(now);
-    const maxGrantExpiry = new Date(
-      now.getTime() + maxDays * 24 * 60 * 60 * 1000
-    );
-    const overGrantExpiry = new Date(maxGrantExpiry.getTime() + 1);
-    const maxEnrollmentExpiry = new Date(
-      now.getTime() + 7 * 24 * 60 * 60 * 1000
-    );
-    const overEnrollmentExpiry = new Date(maxEnrollmentExpiry.getTime() + 1);
-    const tx = {
-      ...createInsertMock(),
-      execute: vi.fn().mockResolvedValue({ rows: [{ id: "enrollment-1" }] }),
-    };
-    const db = {
-      transaction: vi.fn((callback) => callback(tx)),
-    };
-    const input = {
-      actorAdminUserId: "owner-admin",
-      actorPlatformAdminId: "platform-admin-owner",
-      email: "boundary@example.com",
-      enrollmentExpiresAt: maxEnrollmentExpiry,
-      grantExpiresAt: maxGrantExpiry,
-      reason: "Boundary enrollment",
-      role,
-    };
+  ] as const)(
+    "accepts the %s enrollment grant boundary and rejects one millisecond beyond it",
+    async (role, maxDays) => {
+      vi.useFakeTimers();
+      const now = new Date("2030-01-01T00:00:00.000Z");
+      vi.setSystemTime(now);
+      const maxGrantExpiry = new Date(
+        now.getTime() + maxDays * 24 * 60 * 60 * 1000
+      );
+      const overGrantExpiry = new Date(maxGrantExpiry.getTime() + 1);
+      const maxEnrollmentExpiry = new Date(
+        now.getTime() + 7 * 24 * 60 * 60 * 1000
+      );
+      const overEnrollmentExpiry = new Date(maxEnrollmentExpiry.getTime() + 1);
+      const tx = {
+        ...createInsertMock(),
+        execute: vi.fn().mockResolvedValue({ rows: [{ id: "enrollment-1" }] }),
+      };
+      const db = {
+        transaction: vi.fn((callback) => callback(tx)),
+      };
+      const input = {
+        actorAdminUserId: "owner-admin",
+        actorPlatformAdminId: "platform-admin-owner",
+        email: "boundary@example.com",
+        enrollmentExpiresAt: maxEnrollmentExpiry,
+        grantExpiresAt: maxGrantExpiry,
+        reason: "Boundary enrollment",
+        role,
+      };
 
-    try {
-      await createPlatformAdminEnrollment(input, db as never);
-      await expect(
-        createPlatformAdminEnrollment(
-          { ...input, enrollmentExpiresAt: overEnrollmentExpiry },
-          db as never
-        )
-      ).rejects.toThrow("enrollment expiration must be within 7 days");
-      await expect(
-        createPlatformAdminEnrollment(
-          { ...input, grantExpiresAt: overGrantExpiry },
-          db as never
-        )
-      ).rejects.toThrow(`${role} grant expiration exceeds its allowed window`);
-    } finally {
-      vi.useRealTimers();
+      try {
+        await createPlatformAdminEnrollment(input, db as never);
+        await expect(
+          createPlatformAdminEnrollment(
+            { ...input, enrollmentExpiresAt: overEnrollmentExpiry },
+            db as never
+          )
+        ).rejects.toThrow("enrollment expiration must be within 7 days");
+        await expect(
+          createPlatformAdminEnrollment(
+            { ...input, grantExpiresAt: overGrantExpiry },
+            db as never
+          )
+        ).rejects.toThrow(
+          `${role} grant expiration exceeds its allowed window`
+        );
+      } finally {
+        vi.useRealTimers();
+      }
     }
-  });
+  );
 
   it("rejects a permanent or unexplained grant before opening a transaction", () => {
     const db = { transaction: vi.fn() };

@@ -37,16 +37,14 @@ describe("grant expiration in São Paulo", () => {
     );
   });
 
-  it.each([
-    "2026-10-03T12:30Z",
-    "2026-10-03T12:30:00",
-    "2026-10-03",
-    "",
-  ])("rejects non-form input %s", (value) => {
-    expect(() => parseGrantExpiration(formWith(value))).toThrow(
-      "uma única data"
-    );
-  });
+  it.each(["2026-10-03T12:30Z", "2026-10-03T12:30:00", "2026-10-03", ""])(
+    "rejects non-form input %s",
+    (value) => {
+      expect(() => parseGrantExpiration(formWith(value))).toThrow(
+        "uma única data"
+      );
+    }
+  );
 
   it("rejects duplicate expiration fields", () => {
     const form = formWith("2099-01-01T12:00");
