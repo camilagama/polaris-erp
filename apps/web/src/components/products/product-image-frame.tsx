@@ -2,9 +2,9 @@
 
 import { Image01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { cn } from "@polaris/ui/lib/utils";
 import Image from "next/image";
 import type { ProductImageAsset } from "@/features/products/contracts";
-import { cn } from "@/lib/utils";
 
 export function ProductImageFrame({
   alt,

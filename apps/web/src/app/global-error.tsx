@@ -2,10 +2,10 @@
 
 import { Alert02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { Button } from "@polaris/ui/components/ui/button";
 import { captureException } from "@sentry/nextjs";
 import Link from "next/link";
 import { useEffect } from "react";
-import { Button } from "@/components/ui/button";
 import { createSafeOperationalError } from "@/lib/observability";
 
 export default function GlobalError({

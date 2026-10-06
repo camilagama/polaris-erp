@@ -1,8 +1,8 @@
 "use client";
 
+import { Button } from "@polaris/ui/components/ui/button";
+import { Input } from "@polaris/ui/components/ui/input";
 import { useState, useTransition } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { startPreSignupPaidCheckout } from "@/features/onboarding/pre-signup-checkout";
 
 export function PricingCheckoutForm() {

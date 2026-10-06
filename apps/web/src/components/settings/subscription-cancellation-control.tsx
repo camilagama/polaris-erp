@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useTransition } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,9 +10,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
-import { toast } from "@/components/ui/sonner";
+} from "@polaris/ui/components/ui/alert-dialog";
+import { Button } from "@polaris/ui/components/ui/button";
+import { toast } from "@polaris/ui/components/ui/sonner";
+import { useState, useTransition } from "react";
 import { requestSubscriptionCancellationAction } from "@/features/account/actions";
 
 export function SubscriptionCancellationControl() {

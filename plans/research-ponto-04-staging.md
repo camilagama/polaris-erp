@@ -78,3 +78,58 @@ Durante a fase atual, a recomendação é manter um único tronco `main` protegi
 - DORA recomenda pequenas mudanças em branches curtas que se integram frequentemente ao trunk/main; isto pesa contra manter uma segunda branch de integração por hábito. A recomendação é sobre integração de código e não descarta um branch de release/ambiente quando há uma necessidade operacional explícita. [Continuous Integration](https://dora.dev/capabilities/continuous-integration/), [working in small batches](https://dora.dev/capabilities/working-in-small-batches/).
 - Neon descreve padrões de branch por PR e staging persistente como alternativas/combinações possíveis, incluindo a manutenção necessária para staging. [Practical Guide to Database Branching](https://neon.com/blog/practical-guide-to-database-branching).
 
+## Revalidação de Vercel Hobby e acesso ao Preview — 2026-10-01
+
+### Fatos confirmados em fontes Vercel
+
+- Para um repositório pessoal privado no GitHub, o Owner precisa importar/conectar
+  o projeto; um Collaborator não consegue criar ou conectar o projeto Vercel.
+  Isso sustenta `camilagama` como importer/owner do projeto.
+- A página atual de Git, atualizada em 2026-09-18, diz que o filtro de acesso do
+  commit author se aplica a repositórios de organização/workspace e **não** a
+  colaboradores de contas Git pessoais. A documentação de troubleshooting,
+  atualizada em 2026-01-07, ainda afirma genericamente que commits de Hobby
+  devem ser autoria do owner da conta Vercel. As páginas oficiais divergem em
+  escopo/recência; para este repositório pessoal, a página Git mais recente e
+  específica indica que `juniordinim` poderá gerar Preview como colaborador do
+  repo, mas isso deve ser comprovado no primeiro PR protegido antes de tornar
+  Preview um gate.
+- Hobby admite apenas um usuário externo por vez para acesso concedido a
+  deployments. Esse grant permite visualizar o deployment autorizado, mas não
+  torna o usuário membro do time/projeto nem lhe dá controle de configuração.
+  Usar `juniordinim` como o único viewer externo atende o operador atual; novos
+  usuários exigem rever o limite/acesso. Não usar Shareable Links, pois eles
+  ignoram Vercel Authentication.
+- Vercel Authentication com Standard Protection está disponível no Hobby.
+  Desde o anúncio de 2026-09-09 e a documentação atualizada em 2026-09-15,
+  All Deployments (incluindo domínio Production) também não exige add-on/plano
+  pago. A identidade precisa ter acesso à deployment; não basta ter login
+  Vercel.
+- Vercel documenta `vercel pull`, `vercel build` e `vercel deploy --prebuilt`
+  em GitHub Actions para workflows próprios. A documentação consultada não
+  afirma que essa via contorna as regras de autoria do Git integration; não a
+  tratar como workaround garantido sem prova.
+
+### Decisão de acesso resultante da autorização do usuário
+
+Manter a conta Vercel `camilagama` como owner/importer e conceder a
+`juniordinim` somente visualização individual dos deployments protegidos
+necessários. Habilitar Vercel Authentication; não criar Shareable Links. A
+configuração remota, o caminho do primeiro Preview e o Staging persistente
+continuam pendentes de provisionamento. Antes de apoiar gates de release em
+Preview, testar uma PR de `juniordinim` em repositório pessoal privado e
+confirmar: deploy criado, URL protegida e acesso permitido somente à conta
+convidada. No Admin Production, provar também o acesso do operador autorizado
+e a negação a usuários sem grant/role; `All Deployments` protege o perímetro,
+mas não substitui a autorização `platform_admin`.
+
+### Fontes atuais
+
+- [Vercel — Git e deployments de repositórios privados](https://vercel.com/docs/git): página atualizada em 2026-09-18; contém a exceção para colaboradores de contas Git pessoais e os caminhos de Hobby/Pro.
+- [Vercel — GitHub projects](https://vercel.com/docs/git/vercel-for-github): import/connect exige o owner do repositório pessoal.
+- [Vercel — troubleshooting de colaboração](https://vercel.com/docs/deployments/troubleshoot-project-collaboration): orientação genérica anterior sobre autoria Hobby; manter registrada a divergência com a página Git mais recente.
+- [Vercel — compartilhar Preview deployments](https://vercel.com/docs/deployments/sharing-deployments): convite externo, escopo de visualização e limite Hobby.
+- [Vercel — Vercel Authentication](https://vercel.com/docs/deployment-protection/methods-to-protect-deployments/vercel-authentication): grants de acesso e limite Hobby de usuário externo.
+- [Vercel — Deployment Protection](https://vercel.com/docs/deployment-protection): atualização de 2026-09-15 confirma Standard e All Deployments disponíveis em todos os planos com Vercel Authentication.
+- [Vercel Changelog — All Deployments free on every plan](https://vercel.com/changelog/protect-production-deployments-for-free-on-every-plan): anunciado em 2026-09-09.
+

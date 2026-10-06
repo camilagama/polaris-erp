@@ -29,7 +29,7 @@ vi.mock("@/features/catalog/actions", () => ({
   updateCategoryAction: settingsMocks.updateCategoryAction,
 }));
 
-vi.mock("@/components/ui/sonner", () => ({
+vi.mock("@polaris/ui/components/ui/sonner", () => ({
   toast: {
     error: settingsMocks.toastError,
     success: settingsMocks.toastSuccess,

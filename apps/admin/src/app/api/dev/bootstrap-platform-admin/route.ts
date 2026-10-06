@@ -188,11 +188,14 @@ export async function POST(request: Request) {
       role,
     });
 
-    user = await ctx.internalAdapter.createUser({
-      email: normalizedEmail,
-      emailVerified: true,
-      name: name ?? normalizedEmail,
-    });
+    user = await ctx.internalAdapter.createUser(
+      {
+        email: normalizedEmail,
+        emailVerified: true,
+        name: name ?? normalizedEmail,
+      },
+      { method: "admin" }
+    );
   }
 
   const session = await ctx.internalAdapter.createSession(user.id);

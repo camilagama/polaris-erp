@@ -19,7 +19,7 @@ vi.mock("@/features/sales/pagination", () => ({
   loadMoreSalesAction: salesMocks.loadMoreSalesAction,
 }));
 
-vi.mock("@/components/ui/sonner", () => ({
+vi.mock("@polaris/ui/components/ui/sonner", () => ({
   toast: {
     error: salesMocks.toastError,
   },

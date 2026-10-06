@@ -15,9 +15,12 @@ describe("@polaris/emails", () => {
     ["email.suppressed", "suppressed"],
     ["email.sent", "accepted"],
     ["email.unknown", null],
-  ] as const)("maps %s to the internal delivery state %s", (eventType, status) => {
-    expect(resolveResendEmailStatus(eventType)).toBe(status);
-  });
+  ] as const)(
+    "maps %s to the internal delivery state %s",
+    (eventType, status) => {
+      expect(resolveResendEmailStatus(eventType)).toBe(status);
+    }
+  );
 
   it("renders a versioned welcome template", () => {
     const email = renderWelcomeEmail({

@@ -7,6 +7,10 @@ import {
 } from "@polaris/platform/admin";
 import { assertAdminRateLimit } from "@polaris/platform-auth/admin-rate-limit";
 import { revalidatePath } from "next/cache";
+import {
+  getEnrollmentExpiration,
+  parseGrantExpiration,
+} from "@/lib/grant-expiration";
 import { requirePlatformAdmin } from "@/lib/platform-admin-auth";
 
 const getRequiredFormValue = (formData: FormData, key: string): string => {
@@ -29,27 +33,10 @@ const getGrantRole = (formData: FormData): "operator" | "owner" | "support" => {
   throw new Error("Unsupported platform admin role.");
 };
 
-const getFutureExpiration = (formData: FormData): Date => {
-  const expiresAt = new Date(getRequiredFormValue(formData, "expiresAt"));
-
-  if (Number.isNaN(expiresAt.getTime()) || expiresAt.getTime() <= Date.now()) {
-    throw new Error("Platform admin grant requires a future expiration.");
-  }
-
-  return expiresAt;
-};
-
-const getEnrollmentExpiration = (): Date => {
-  const expiration = new Date();
-
-  expiration.setDate(expiration.getDate() + 7);
-  return expiration;
-};
-
 export async function createPlatformAdminEnrollmentAction(formData: FormData) {
   const context = await requirePlatformAdmin({ minimumRole: "owner" });
   const email = getRequiredFormValue(formData, "email");
-  const grantExpiresAt = getFutureExpiration(formData);
+  const grantExpiresAt = parseGrantExpiration(formData);
   const reason = getRequiredFormValue(formData, "reason");
   const role = getGrantRole(formData);
 
@@ -62,7 +49,7 @@ export async function createPlatformAdminEnrollmentAction(formData: FormData) {
     actorAdminUserId: context.adminUserId,
     actorPlatformAdminId: context.platformAdminId,
     email,
-    enrollmentExpiresAt: getEnrollmentExpiration(),
+    enrollmentExpiresAt: getEnrollmentExpiration(grantExpiresAt),
     grantExpiresAt,
     reason,
     role,
@@ -72,7 +59,7 @@ export async function createPlatformAdminEnrollmentAction(formData: FormData) {
 
 export async function grantPlatformAdminAccessAction(formData: FormData) {
   const context = await requirePlatformAdmin({ minimumRole: "owner" });
-  const expiresAt = getFutureExpiration(formData);
+  const expiresAt = parseGrantExpiration(formData);
   const reason = getRequiredFormValue(formData, "reason");
   const role = getGrantRole(formData);
   const targetAdminUserId = getRequiredFormValue(formData, "targetAdminUserId");

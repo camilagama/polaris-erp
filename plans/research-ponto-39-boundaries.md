@@ -67,3 +67,29 @@ Se a implementação do check próprio começar a replicar um grafo/resolvedor e
 ## Limite desta recomendação
 
 Os testes não devem validar arquitetura de negócio inteira, impor que cada módulo vire package, nem replicar todos os testes de camada existentes no Web. O alvo é somente o grafo de dependências entre aplicações e packages e o uso das APIs públicas. Nenhum teste foi executado e nenhum código/configuração foi alterado nesta pesquisa.
+
+## Revalidação da cobertura executável — 2026-10-01
+
+O root declara workspaces `apps/*` e `packages/*`; os manifests observados mostram dependências coerentes já declaradas para os packages usados por Web/Admin e relações package-to-package como `auth → db`, `events → db`, `platform → billing/db/date/events`, `platform-auth → db` e `ui → date`. `turbo.json` programa `^build`, `^test`, `^check`, `^typecheck` e outras tasks, mas seu grafo operacional não substitui regra de direção de import.
+
+O guard `apps/web/src/lib/package-boundary.test.ts` cobre parte de packages→Web e os subpaths públicos da UI; a variante Admin cobre alguns imports `@/`/relativos de Web, mas não uma relação app→app simétrica. Os dois não validam de forma geral packages→Admin, dependências internas declaradas para todos os packages, ciclos, imports relativos entre source packages, ou resolução efetiva dos aliases `tsconfig`. `packages/ui/src/package-interface.test.ts` só valida o manifesto da UI e seus imports runtime declarados.
+
+A decisão P39 já aprovou AST TypeScript e os testes Vitest existentes. A execução mínima permanece: expandir os dois guards simetricamente; resolver specifiers por alias com os `tsconfig` reais onde necessário; verificar `workspace:*` para imports package-to-package e ciclos; incluir casos permitidos/proibidos pequenos. Manter `audit:boundaries` separado porque sua finalidade atual é auditoria transacional.
+
+**Revalidação do Turborepo:** o checkout declara Turbo `2.11.5`; a referência oficial ainda marca `turbo boundaries` e tags como experimentais. O recurso detecta imports fora da raiz do package, pacotes não declarados e permite regras `allow`/`deny` por tags; é tecnicamente relevante, mas não deve substituir o gate próprio já aprovado enquanto permanecer experimental. Fontes: [Turborepo Boundaries](https://turborepo.dev/docs/reference/boundaries), [RFC oficial](https://github.com/vercel/turborepo/discussions/9435), [TypeScript module resolution](https://www.typescriptlang.org/docs/handbook/modules/reference), [TypeScript `paths`](https://www.typescriptlang.org/tsconfig/paths.html).
+
+A comparação atual do Hub permanece limitada: o projeto usa um único app com `src/components/ui`, sem `apps/*`, `packages/*` ou workspaces no mesmo sentido. Ele não determina a matriz do Polaris nem justifica adicionar uma ferramenta.
+
+**Estado:** nenhuma implementação ou teste foi executado nesta revalidação; a estratégia aprovada não foi alterada.
+
+## Revalidação após P37, antes da implementação P39 — 2026-10-01
+
+P37 foi implementado e aprovado. O guard `package-boundary.test.ts` agora rejeita os aliases de `@polaris/ui` removidos e imports públicos fora dos exports; o guard package→Web também cobre `@/` em `packages/ui`, cujos imports internos passaram a ser relativos. Neste snapshot anterior à implementação P39, os guards restantes ainda usavam regex, não cobriam simetricamente Web↔Admin nem packages→Admin, não validavam todas as dependências workspace/ciclos e a matriz ainda não estava registrada em `docs/architecture/overview.md` com ponteiro em `AGENTS.md`.
+
+## Implementacao P39 — 2026-10-01 (aprovada)
+
+A implementacao estende os helpers existentes com o parser AST TypeScript, leitura de `tsconfig` e resolucao pelo compiler API. O novo `workspace-boundaries.test.ts` percorre `apps/*/src` e `packages/*/src`, valida imports diretos `workspace:*` e `exports`, proibe imports entre apps e de packages para apps, e detecta ciclos no grafo declarado dos packages. A matriz roda na suite Vitest existente; `audit:boundaries` e mantido separado.
+
+Os testes incluem imports estaticos, type-only, side-effect, re-exports, dinamicos com options, imports em tipos, `import = require()` e chamadas literais a `require()`, resolucao real do alias `@/` e de um export publico da UI, um package DAG valido e fixtures que cobrem imports permitidos e proibidos. A matriz foi registrada em `docs/architecture/overview.md`, com ponteiro em `AGENTS.md`.
+
+**Estado:** P39 concluído e aprovado pelo usuário em 2026-10-01; implementação commitada como `106ee87` e presente no PR #7 aberto. A CI #117 (run 37166464822) passou `verify`, E2E Web/Admin e PostgreSQL. O commit ainda não foi integrado à `main`. Os 17 testes focais passaram. `bun run verify:quick` passou em 2026-10-01: 12 tarefas de typecheck, 11 tarefas de teste, `docs:check` com 122 arquivos Markdown e Ultracite em 613 arquivos. O novo teste de varredura levou 2,47 s na execução paralela. Os testes PostgreSQL reais permanecem ignorados pelo perfil rápido conforme seu guard existente.

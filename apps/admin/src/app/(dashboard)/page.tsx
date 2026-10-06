@@ -1,11 +1,12 @@
-import { BUSINESS_TIME_ZONE } from "@polaris/date";
 import { getPlatformDashboardDataForAdmin } from "@polaris/platform/dashboard";
 import {
   AlertBanner,
   type AlertBannerMessage,
 } from "@polaris/ui/components/shared/alert-banner";
-import { RevenueProfitChart } from "@polaris/ui/components/shared/revenue-profit-chart";
-import { SalesCountChart } from "@polaris/ui/components/shared/sales-count-chart";
+import {
+  BusinessTimeZoneNotice,
+  TimeValue,
+} from "@polaris/ui/components/shared/time-value";
 import {
   Card,
   CardContent,
@@ -24,20 +25,6 @@ const getAdminContext = async () => requirePlatformAdmin();
 
 const formatNumber = (value: number) =>
   new Intl.NumberFormat("pt-BR").format(value);
-
-const formatEventDate = (value: string | null) => {
-  if (!value) {
-    return "Sem data";
-  }
-
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    month: "2-digit",
-    timeZone: BUSINESS_TIME_ZONE,
-  }).format(new Date(value));
-};
 
 const getHealthLabel = (isHealthy: boolean) =>
   isHealthy ? "Operacional" : "Pendente";
@@ -82,8 +69,8 @@ const AdminDashboard = async () => {
     },
     {
       label: "Billing",
-      value: 0,
-      detail: "assinaturas e invoices",
+      value: dashboard.summary.billingSubscriptions,
+      detail: `${formatNumber(dashboard.summary.openBillingInvoices)} invoices em aberto`,
       href: "/billing",
     },
   ] as const;
@@ -118,21 +105,6 @@ const AdminDashboard = async () => {
       severity: "negative",
     });
   }
-
-  const realChartData = dashboard.activity.slice(-7).map((d) => {
-    const dObj = new Date(`${d.date}T12:00:00Z`);
-    const label = new Intl.DateTimeFormat("pt-BR", {
-      timeZone: BUSINESS_TIME_ZONE,
-      weekday: "short",
-    }).format(dObj);
-    return {
-      label: label.charAt(0).toUpperCase() + label.slice(1),
-      salesCount: 0,
-      costs: 0,
-      result: 0,
-      sold: 0,
-    };
-  });
 
   return (
     <section className="grid gap-6">
@@ -221,8 +193,8 @@ const AdminDashboard = async () => {
                 <span
                   className={
                     card.ok
-                      ? "font-medium text-emerald-500 text-sm"
-                      : "font-medium text-amber-500 text-sm"
+                      ? "font-medium text-emerald-700 text-sm dark:text-emerald-400"
+                      : "font-medium text-amber-700 text-sm dark:text-amber-300"
                   }
                 >
                   {getHealthLabel(card.ok)}
@@ -233,25 +205,11 @@ const AdminDashboard = async () => {
         </Card>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_1.5fr]">
-        <Card className="flex flex-col">
-          <CardHeader>
-            <CardTitle className="text-lg">Desempenho Geral</CardTitle>
-            <CardDescription>
-              Métricas de atividade da plataforma (Real)
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-1 flex-col justify-between">
-            <div className="mb-4 min-h-[140px] w-full flex-1">
-              <SalesCountChart data={realChartData} />
-            </div>
-            <RevenueProfitChart profit={0} revenue={0} />
-          </CardContent>
-        </Card>
-
+      <div className="grid gap-4">
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Eventos recentes</CardTitle>
+            <BusinessTimeZoneNotice />
           </CardHeader>
           <CardContent className="grid gap-3">
             {dashboard.events.length === 0 ? (
@@ -269,7 +227,7 @@ const AdminDashboard = async () => {
                       {event.label}
                     </span>
                     <span className="font-mono text-muted-foreground text-xs">
-                      {formatEventDate(event.occurredAt)}
+                      <TimeValue kind="instant" value={event.occurredAt} />
                     </span>
                   </div>
                   <p className="text-muted-foreground text-xs">

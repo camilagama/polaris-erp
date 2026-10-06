@@ -78,3 +78,18 @@ Isso não é prova de que migrations estão aplicadas, que o runtime do deploy n
 - `packages/platform-auth/src/admin-guard.ts:requirePlatformAdmin`
 - `packages/db/src/tenant-context.ts`
 - `packages/db/src/migrations/20260713090000_platform_admin_rls_validation.sql`
+
+## Expiração de acesso temporário
+
+`ADMIN-002` limita grants de support/operator/owner a 14/30/90 períodos de 24 horas,
+inclusive no bootstrap, grant direto e enrollment. O formulário de acesso recebe
+`datetime-local` em `America/Sao_Paulo`; o parser server-only rejeita datas inválidas,
+horários inexistentes/repetidos e campos duplicados. O runtime não define o fuso.
+
+Enrollment vale por até 168 horas e nunca além do grant. A admissão consulta ambos
+os prazos e revalida-os com `clock_timestamp()` ao consumir o enrollment e inserir
+o grant na mesma transação; se o prazo vencer durante a operação, a transação falha.
+Essas verificações não prorrogam grants existentes e não alteram o banco por migration.
+
+Fontes: `apps/admin/src/lib/grant-expiration.ts`,
+`packages/platform/src/platform-admin.ts` e seus testes focais.

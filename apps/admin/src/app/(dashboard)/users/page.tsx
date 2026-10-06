@@ -1,8 +1,8 @@
 import { listPlatformUsersForAdmin } from "@polaris/platform/directory";
 import { PageHeader } from "@polaris/ui/components/shared/page-header";
+import { TimeValue } from "@polaris/ui/components/shared/time-value";
 import { Button } from "@polaris/ui/components/ui/button";
 import { Input } from "@polaris/ui/components/ui/input";
-import { formatDateTime } from "@polaris/ui/lib/formatters";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { requirePlatformAdmin } from "@/lib/platform-admin-auth";
@@ -58,8 +58,12 @@ const UsersContent = async ({ searchParams }: UsersPageProps) => {
       <UsersTable data={users} />
 
       <p className="text-muted-foreground text-xs">
-        Ultima sessao exibida apenas como data:{" "}
-        {users[0] ? formatDateTime(users[0].latestSessionAt) : "Sem dados"}
+        Ultima sessao:{" "}
+        {users[0] ? (
+          <TimeValue kind="instant" value={users[0].latestSessionAt} />
+        ) : (
+          "Sem dados"
+        )}
       </p>
     </section>
   );

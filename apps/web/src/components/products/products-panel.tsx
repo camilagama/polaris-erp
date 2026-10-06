@@ -7,6 +7,41 @@ import {
   Search02Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { Button } from "@polaris/ui/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@polaris/ui/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@polaris/ui/components/ui/dropdown-menu";
+import { Empty } from "@polaris/ui/components/ui/empty";
+import { Input } from "@polaris/ui/components/ui/input";
+import { Label } from "@polaris/ui/components/ui/label";
+import { Separator } from "@polaris/ui/components/ui/separator";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@polaris/ui/components/ui/sheet";
+import { toast } from "@polaris/ui/components/ui/sonner";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@polaris/ui/components/ui/table";
 import { usePaginatedListState } from "@polaris/ui/hooks/use-paginated-list";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -16,41 +51,6 @@ import { ProductImageFrame } from "@/components/products/product-image-frame";
 import { uploadProductImageToStaging } from "@/components/products/product-image-upload";
 import { ProductCatalogPerformanceChart } from "@/components/products/product-sales-chart";
 import { RegisterProductDialog } from "@/components/products/register-product-dialog";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Empty } from "@/components/ui/empty";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import { toast } from "@/components/ui/sonner";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   archiveProductAction,
   removeProductImageAction,

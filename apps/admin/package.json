@@ -6,6 +6,7 @@
     "node": "24.x"
   },
   "dependencies": {
+    "@js-temporal/polyfill": "0.5.1",
     "@polaris/auth": "workspace:*",
     "@polaris/date": "workspace:*",
     "@polaris/db": "workspace:*",

@@ -37,6 +37,15 @@ const createDbMock = () => {
     .mockResolvedValueOnce({
       rows: [
         {
+          active_access_subscriptions: "3",
+          open_invoices: "2",
+          subscriptions: "6",
+        },
+      ],
+    })
+    .mockResolvedValueOnce({
+      rows: [
+        {
           action: "should-not-leak",
           actor_admin_user_id: "admin-user-secret",
           count: null,
@@ -82,8 +91,10 @@ describe("getPlatformDashboardData", () => {
 
     expect(data.summary).toEqual({
       activeOrganizations: 8,
+      billingSubscriptions: 6,
       disabledPlatformAdmins: 1,
       members: 14,
+      openBillingInvoices: 2,
       organizations: 10,
       platformAdmins: 2,
       users: 12,
@@ -110,7 +121,7 @@ describe("getPlatformDashboardData", () => {
     expect(JSON.stringify(data)).not.toContain("secret");
     expect(JSON.stringify(data)).not.toContain("actor_admin_user_id");
     expect(JSON.stringify(data)).not.toContain("metadata");
-    expect(db.execute).toHaveBeenCalledTimes(4);
+    expect(db.execute).toHaveBeenCalledTimes(5);
     expect(healthMock).not.toHaveBeenCalled();
   });
 });

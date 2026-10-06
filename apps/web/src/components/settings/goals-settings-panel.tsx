@@ -7,10 +7,6 @@ import {
   Target02Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { format, parseISO } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { useState, useTransition } from "react";
-import { GoalFormDialog } from "@/components/settings/goal-form-dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,23 +16,23 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
+} from "@polaris/ui/components/ui/alert-dialog";
+import { Button } from "@polaris/ui/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@polaris/ui/components/ui/card";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { toast } from "@/components/ui/sonner";
+} from "@polaris/ui/components/ui/dialog";
+import { toast } from "@polaris/ui/components/ui/sonner";
 import {
   Table,
   TableBody,
@@ -44,7 +40,11 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@polaris/ui/components/ui/table";
+import { format, parseISO } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { useState, useTransition } from "react";
+import { GoalFormDialog } from "@/components/settings/goal-form-dialog";
 import {
   archiveGoalAction,
   unarchiveGoalAction,

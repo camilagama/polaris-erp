@@ -85,7 +85,16 @@ const createOrganizationAuthPlugin = () =>
     },
     requireEmailVerificationOnInvitation: true,
     schema: {
+      // Keep the plugin's physical table names singular while core models map
+      // explicitly to their existing plural physical tables below.
+      invitation: {
+        modelName: "invitation",
+      },
+      member: {
+        modelName: "member",
+      },
       organization: {
+        modelName: "organization",
         additionalFields: {
           status: {
             defaultValue: "active",
@@ -159,15 +168,15 @@ export const createPolarisAuth = ({
     database: drizzleAdapter(db, {
       provider: "pg",
       schema: {
-        accounts,
+        account: accounts,
         invitation,
         member,
         organization,
-        sessions,
-        users,
-        verifications,
+        session: sessions,
+        user: users,
+        verification: verifications,
       },
-      usePlural: true,
+      usePlural: false,
     }),
     databaseHooks: {
       session: {

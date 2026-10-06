@@ -1,8 +1,9 @@
 import "server-only";
 
-import { db } from "@polaris/db";
+import { BUSINESS_TIME_ZONE } from "@polaris/date";
 import { withPlatformAdminContext } from "@polaris/db/tenant-context";
 import {
+  type EventCreatedAtDateRange,
   type EventOutboxListItem,
   listEventOutbox,
   listWebhookEvents,
@@ -15,6 +16,11 @@ import { recordPlatformAuditEvent } from "./platform-admin";
 export interface PlatformEventsOverview {
   outbox: EventOutboxListItem[];
   webhooks: WebhookEventListItem[];
+}
+
+export interface PlatformEventsDateRange {
+  from: string;
+  to: string;
 }
 
 export interface RetryPlatformOutboxEventInput {
@@ -37,20 +43,28 @@ interface PlatformOutboxMutationDb {
 }
 
 export const getPlatformEventsOverview = async (
-  queryableDb: QueryableDb = db
+  queryableDb: QueryableDb,
+  dateRange: PlatformEventsDateRange
 ): Promise<PlatformEventsOverview> => {
+  const eventDateRange: EventCreatedAtDateRange = {
+    ...dateRange,
+    timeZone: BUSINESS_TIME_ZONE,
+  };
   const [outbox, webhooks] = await Promise.all([
-    listEventOutbox(queryableDb),
-    listWebhookEvents(queryableDb),
+    listEventOutbox(queryableDb, eventDateRange),
+    listWebhookEvents(queryableDb, eventDateRange),
   ]);
 
   return { outbox, webhooks };
 };
 
 export const getPlatformEventsOverviewForAdmin = async (
-  platformAdminId: string
+  platformAdminId: string,
+  dateRange: PlatformEventsDateRange
 ): Promise<PlatformEventsOverview> =>
-  withPlatformAdminContext(platformAdminId, getPlatformEventsOverview);
+  withPlatformAdminContext(platformAdminId, (queryableDb) =>
+    getPlatformEventsOverview(queryableDb, dateRange)
+  );
 
 const retryPlatformOutboxEventInTransaction = async (
   input: RetryPlatformOutboxEventInput,

@@ -8,10 +8,11 @@ A estratégia versionada combina testes unitários/integração em Vitest, E2E e
 | --- | --- | --- |
 | Checks estáticos | Ultracite/Biome, typecheck, Knip, boundaries e auditoria baseline | Tipos, estilo, imports e higiene de dependências. |
 | Vitest por aplicação | `bun run test` e `bun run test:admin` | Lógica de domínio, handlers e componentes cobertos por suites locais. |
-| PostgreSQL comportamental | `bun run test:postgres` em serviço efêmero | Migrações, grants e comportamento do banco em PostgreSQL. |
+| PostgreSQL comportamental | `bun run test:postgres` em serviço PostgreSQL 18.6 efêmero | Replay de migrations, RLS, grants e admissão real de platform admins. |
 | E2E web/admin | Playwright em aplicações buildadas | Fluxos de shell, acesso administrativo, operações e API de imagens. |
 | Documentação e ambiente | `docs:check` e `env:check` | Links/estrutura de docs e configuração esperada. |
 
+O job PostgreSQL aplica as migrations no banco efêmero `polaris_behavior`. Depois que a suite `@polaris/db` termina e libera conexões, `test:postgres` valida novamente o alvo loopback, clona esse schema migrado para um banco com nome aleatório `polaris_platform_behavior_*` e executa `@polaris/platform` com `DATABASE_URL` apontando apenas para o clone e `POSTGRES_BEHAVIOR_DATABASE_URL` mantendo o banco de comportamento distinto. A suite chama `admitPlatformAdminSession` real e verifica grant/auditoria, expiração, grant legado acima do teto e rollback se a expiração muda durante a admissão. O helper recusa origem remota, sessão ativa na origem e remove o clone ao terminar. O job destrói seu serviço ao final; URL Neon/E2E não é utilizada.
 Vitest usa ambiente Node e timeout de 10 segundos no web; o admin mantém configuração Node equivalente. Playwright sobe servidores locais buildados: web na porta 3001 e admin na 3002. No CI, as suites admitem duas tentativas e coletam trace na primeira repetição; web limita workers a um, reduzindo disputa por estado compartilhado.
 
 ## Classificação de risco e evidência proporcional
@@ -32,4 +33,4 @@ O ambiente PostgreSQL efêmero cobre comportamento de banco. E2E usa configuraç
 
 Testes de Asaas, Woovi e Resend encontrados são unitários/de fonte ou usam doubles. Não são prova de chamadas remotas, assinatura real ou reconciliação em sandbox. Também não há, no repositório, prova automatizada de backup/restore de produção, alertas ou retenção de observabilidade.
 
-Fontes: `package.json:scripts.test`, `package.json:scripts.test:admin`, `.github/workflows/ci.yml:verify`, `.github/workflows/ci.yml:postgres-behavior`, `apps/web/vitest.config.ts:default`, `apps/admin/vitest.config.ts:default`, `apps/web/playwright.config.ts:default`, `apps/admin/playwright.config.ts:default`.
+Fontes: `package.json:scripts.test`, `package.json:scripts.test:admin`, `.github/workflows/ci.yml:verify`, `.github/workflows/ci.yml:postgres-behavior`, `apps/web/vitest.config.ts:default`, `apps/admin/vitest.config.ts:default`, `apps/web/playwright.config.ts:default`, `apps/admin/playwright.config.ts:default`, `packages/db/scripts/prepare-and-run-platform-postgres.ts`, `packages/platform/src/platform-admin-admission.postgres.test.ts`.

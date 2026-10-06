@@ -81,3 +81,23 @@ Os exemplos são padrões de organização, não prova de que o Polaris deva cop
 Registrar a regra do relatório, com a interpretação acima: `shared primitive → @polaris/ui`; `feature-specific composition → app/feature`; não manter um segundo conjunto de tokens/primitivas locais. Tratar os componentes de `components/shared` que têm um único consumidor como itens para avaliação individual, não como falha automática. A inclusão no pacote deve ser decidida pela responsabilidade e pelo contrato compartilhado, e não pelo nome da pasta.
 
 Esta nota é pesquisa para apoiar a decisão. Não altera o plano principal, o código ou a estrutura dos componentes. Nenhum teste foi executado.
+
+## Revalidação da fronteira implementada — 2026-10-01
+
+`apps/web/tsconfig.json` e `apps/admin/tsconfig.json` continuam direcionando `@/components/ui/*`, `@/hooks/*` e `@/lib/utils` a `packages/ui/src`. A auditoria independente encontrou aproximadamente 150 desses imports em Web e nenhum consumidor atual em Admin; ambos os apps ainda mantêm as entradas de alias. Os dois manifests já declaram `@polaris/ui` por `workspace:*`; `packages/ui/package.json` declara exports para componentes, hooks, utils e CSS.
+
+Há dois guards existentes, com escopos distintos: `packages/ui/src/package-interface.test.ts` compara exports esperados e dependências do pacote; `apps/web/src/lib/package-boundary.test.ts` verifica imports `@polaris/ui/*` em relação ao mapa `exports`. O segundo não reprova `@/components/ui`, `@/hooks`, `@/lib/utils` nem paths equivalentes em `tsconfig`. O plano P37 já aprovou retirar os aliases e usar imports públicos; a revalidação adiciona o alias wildcard `@polaris/ui/*` à lista de entradas redundantes a remover.
+
+`packages/config/tsconfig/base.json` usa `moduleResolution: "bundler"`. A referência TypeScript atual explica que quando `paths` casa com um specifier, a resolução segue o caminho configurado e deixa de usar as regras de lookup de pacote, incluindo `exports`; workspaces tornam o lookup de pacote real. As aplicações usam App Router. O guia Next incluído em `node_modules/next/dist/docs/01-app/03-api-reference/05-config/01-next-config-js/transpilePackages.md` para Next `16.3.6` informa que Turbopack transpila pacotes workspace automaticamente e que Webpack também faz isso no App Router; portanto não adicionar `transpilePackages` como tentativa preventiva nesta mudança.
+
+O Hub atual não contém `packages/ui`; mantém componentes em um app único. Esse contraste confirma que as topologias diferem e não justifica remover o pacote compartilhado do Polaris. A revalidação anterior à implementação não alterou código nem executou checks de aplicação.
+
+## Implementação P37 — concluída e aprovada pelo usuário (2026-10-01)
+
+- Migradas 153 referências de alias nos apps (149 import/export/dynamic specifiers e quatro `vi.mock`), todas no Web; Admin não tinha consumidores ativos. Ambos os `tsconfig.json` dos apps perderam `@/components/ui/*`, `@/hooks/*`, `@/lib/utils` e `@polaris/ui/*`; `@/*` permanece para código local.
+- Os typechecks revelaram mais 45 imports internos `@/...` em `packages/ui/src`, dependentes do `tsconfig` do app consumidor. Foram convertidos a caminhos relativos e o alias local removido do `packages/ui/tsconfig.json`.
+- `ThemeToggle` tornou-se um padrão compartilhado em `@polaris/ui`; o wrapper Admin mantém seu ID. O Admin informa que o total do gráfico são eventos e remove o card de desempenho que mostrava valores de vendas/receita zerados como dados reais.
+- O guard Vitest passou a rejeitar os aliases privados e suas entradas nos três `tsconfig.json`. A memória `project-state.md` já reconhece o pacote UI existente.
+- Verificação local: Web (47 testes/4 arquivos), Admin layout (1 teste), UI package (10 testes), `verify:quick` (570 testes passaram; 1 Postgres ignorado), typecheck Web/Admin/UI, builds Web/Admin, Ultracite e `docs:check` (13 testes/122 Markdown) passaram. Os builds usaram valores CI sintéticos sem credenciais de provider; o Web exibiu avisos de Better Auth por chave API ausente. O detector Impeccable examinou 80 alvos TSX alterados e não reportou achados.
+
+P37 foi implementado e aprovado pelo usuário em 2026-10-01 no commit `106ee87`, no PR #7. A reauditoria de 2026-10-03 encontrou o cartão de Billing com 0 hardcoded no dashboard Admin; o resumo usa o helper canônico `getPlatformBillingTotals` no mesmo contexto Admin; commit `e466ab6` e CI #119 (run 37169673318) passaram, incluindo o Admin E2E. O usuário aprovou P37 em 2026-10-03; a consulta adicional teve custo não medido. P39 também já foi implementado e aprovado em 2026-10-01 no mesmo commit; ver seu registro de pesquisa.

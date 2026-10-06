@@ -1,6 +1,10 @@
 import { Invoice01Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
 import { getPlatformBillingOverviewForAdmin } from "@polaris/platform/billing";
 import { PageHeader } from "@polaris/ui/components/shared/page-header";
+import {
+  BusinessTimeZoneNotice,
+  TimeValue,
+} from "@polaris/ui/components/shared/time-value";
 import { Button } from "@polaris/ui/components/ui/button";
 import { Empty } from "@polaris/ui/components/ui/empty";
 import { Input } from "@polaris/ui/components/ui/input";
@@ -12,7 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@polaris/ui/components/ui/table";
-import { formatCurrency, formatDateTime } from "@polaris/ui/lib/formatters";
+import { formatCurrency } from "@polaris/ui/lib/formatters";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { requirePlatformAdmin } from "@/lib/platform-admin-auth";
@@ -43,6 +47,7 @@ const BillingContent = async () => {
         description="Estado canonico de assinaturas, invoices e acesso derivado."
         title="Billing"
       />
+      <BusinessTimeZoneNotice />
 
       <div className="grid gap-4 md:grid-cols-3">
         <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
@@ -126,7 +131,10 @@ const BillingContent = async () => {
                     </span>
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {formatDateTime(subscription.currentPeriodEnd)}
+                    <TimeValue
+                      kind="instant"
+                      value={subscription.currentPeriodEnd}
+                    />
                   </TableCell>
                   <TableCell className="pr-4 align-top">
                     <form
@@ -239,7 +247,7 @@ const BillingContent = async () => {
                     {formatCurrency(invoice.totalCents / 100)}
                   </TableCell>
                   <TableCell className="pr-4 text-right text-muted-foreground">
-                    {formatDateTime(invoice.createdAt)}
+                    <TimeValue kind="instant" value={invoice.createdAt} />
                   </TableCell>
                 </TableRow>
               ))

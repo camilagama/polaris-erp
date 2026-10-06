@@ -116,6 +116,56 @@ interface QueryableDb {
 const normalizeAdminEmail = (email: string): string =>
   email.trim().toLowerCase();
 
+const MAX_GRANT_DURATION_MS = {
+  support: 14 * 24 * 60 * 60 * 1000,
+  operator: 30 * 24 * 60 * 60 * 1000,
+  owner: 90 * 24 * 60 * 60 * 1000,
+} as const;
+const MAX_ENROLLMENT_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
+
+const isPlatformAdminRole = (value: string): value is PlatformAdminRole =>
+  value === "owner" || value === "operator" || value === "support";
+
+const requireGrantExpiry = (expiresAt: Date, role: PlatformAdminRole): void => {
+  const duration = expiresAt.getTime() - Date.now();
+
+  if (
+    Number.isNaN(expiresAt.getTime()) ||
+    duration <= 0 ||
+    duration > MAX_GRANT_DURATION_MS[role]
+  ) {
+    throw new Error(
+      `Platform admin ${role} grant expiration exceeds its allowed window.`
+    );
+  }
+};
+
+const getClaimableEnrollment = (
+  enrollment: Record<string, unknown>
+): {
+  enrollmentId: string;
+  reason: string;
+  role: PlatformAdminRole;
+} => {
+  const enrollmentRole = toNullableString(enrollment.role);
+  const role =
+    enrollmentRole && isPlatformAdminRole(enrollmentRole)
+      ? enrollmentRole
+      : null;
+  const enrollmentId = toNullableString(enrollment.id);
+  const reason = toNullableString(enrollment.reason);
+  const grantExpiresAtIso = toIsoString(enrollment.grant_expires_at);
+  const grantExpiresAt = grantExpiresAtIso ? new Date(grantExpiresAtIso) : null;
+
+  if (!(role && enrollmentId && reason && grantExpiresAt)) {
+    throw new Error("Admin enrollment is incomplete.");
+  }
+
+  requireGrantExpiry(grantExpiresAt, role);
+
+  return { enrollmentId, reason, role };
+};
+
 export const hasActivePlatformAdminEnrollment = async (
   email: string
 ): Promise<boolean> => {
@@ -129,7 +179,8 @@ export const hasActivePlatformAdminEnrollment = async (
           and(
             eq(platformAdminEnrollments.email, normalizeAdminEmail(email)),
             isNull(platformAdminEnrollments.claimedAt),
-            gt(platformAdminEnrollments.enrollmentExpiresAt, new Date())
+            gt(platformAdminEnrollments.enrollmentExpiresAt, new Date()),
+            gt(platformAdminEnrollments.grantExpiresAt, new Date())
           )
         )
         .limit(1)
@@ -150,7 +201,7 @@ export const admitPlatformAdminSession = async (
         where pa.admin_user_id = ${adminUserId}
           and pa.status = 'active'
           and pag.revoked_at is null
-          and pag.expires_at > now()
+          and pag.expires_at > clock_timestamp()
         limit 1
       `)
     );
@@ -166,7 +217,8 @@ export const admitPlatformAdminSession = async (
         inner join admin_users au on au.email = pae.email
         where au.id = ${adminUserId}
           and pae.claimed_at is null
-          and pae.enrollment_expires_at > now()
+          and pae.enrollment_expires_at > clock_timestamp()
+          and pae.grant_expires_at > clock_timestamp()
         for update
       `)
     );
@@ -175,6 +227,8 @@ export const admitPlatformAdminSession = async (
     if (!enrollment) {
       throw new Error("Admin identity does not have an active enrollment.");
     }
+
+    const { enrollmentId, reason, role } = getClaimableEnrollment(enrollment);
 
     const existingAdminRows = toRows(
       await tx.execute(sql`
@@ -192,6 +246,22 @@ export const admitPlatformAdminSession = async (
       );
     }
 
+    const claimedRows = toRows(
+      await tx.execute(sql`
+      update platform_admin_enrollments
+      set claimed_at = clock_timestamp(), updated_at = clock_timestamp()
+      where id = ${enrollmentId}
+        and claimed_at is null
+        and enrollment_expires_at > clock_timestamp()
+        and grant_expires_at > clock_timestamp()
+      returning id
+    `)
+    );
+
+    if (claimedRows.length === 0) {
+      throw new Error("Admin enrollment expired before it could be claimed.");
+    }
+
     const platformAdminRows = existingAdmin
       ? [existingAdmin]
       : toRows(
@@ -202,36 +272,43 @@ export const admitPlatformAdminSession = async (
           `)
         );
     const platformAdminId = toNullableString(platformAdminRows[0]?.id);
-    const role = toNullableString(enrollment.role);
-    const enrollmentId = toNullableString(enrollment.id);
-    const reason = toNullableString(enrollment.reason);
-    const grantExpiresAt = enrollment.grant_expires_at;
 
-    if (
-      !(platformAdminId && role && enrollmentId && reason && grantExpiresAt)
-    ) {
-      throw new Error("Admin enrollment is incomplete.");
+    if (!platformAdminId) {
+      throw new Error("Platform admin could not be created for enrollment.");
     }
 
-    await tx.execute(sql`
+    const grantRows = toRows(
+      await tx.execute(sql`
       insert into platform_admin_grants (
         platform_admin_id,
         role,
         reason,
         expires_at
-      ) values (
-        ${platformAdminId},
-        ${role},
-        ${reason},
-        ${grantExpiresAt}
       )
-    `);
-    await tx.execute(sql`
-      update platform_admin_enrollments
-      set claimed_at = now(), updated_at = now()
-      where id = ${enrollmentId}
-        and claimed_at is null
-    `);
+      select
+        ${platformAdminId},
+        pae.role,
+        pae.reason,
+        pae.grant_expires_at
+      from platform_admin_enrollments pae
+      where pae.id = ${enrollmentId}
+        and pae.claimed_at is not null
+        and pae.enrollment_expires_at > clock_timestamp()
+        and pae.grant_expires_at > clock_timestamp()
+        and pae.grant_expires_at <= clock_timestamp() + case pae.role
+          when 'support' then interval '336 hours'
+          when 'operator' then interval '720 hours'
+          when 'owner' then interval '2160 hours'
+        end
+      returning id
+    `)
+    );
+
+    if (grantRows.length === 0) {
+      throw new Error(
+        "Admin enrollment expired before its grant could be created."
+      );
+    }
     await recordPlatformAuditEvent(tx as unknown as InsertableDb, {
       action: "platform_admin.enrollment_claimed",
       actorAdminUserId: adminUserId,
@@ -307,6 +384,8 @@ export const bootstrapPlatformAdmin = (
     );
   }
 
+  requireGrantExpiry(input.expiresAt, input.role);
+
   if (transactionalDb) {
     return transactionalDb.transaction((tx) =>
       bootstrapPlatformAdminInTransaction(input, tx)
@@ -330,12 +409,6 @@ const requireGrantReason = (reason: string): string => {
   return normalized;
 };
 
-const requireFutureExpiry = (expiresAt: Date): void => {
-  if (Number.isNaN(expiresAt.getTime()) || expiresAt.getTime() <= Date.now()) {
-    throw new Error("Platform admin grant requires a future expiration.");
-  }
-};
-
 const ADMIN_EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const requireAdminEmail = (email: string): string => {
@@ -355,8 +428,20 @@ const createPlatformAdminEnrollmentInTransaction = async (
 ): Promise<string> => {
   const email = requireAdminEmail(input.email);
   const reason = requireGrantReason(input.reason);
-  requireFutureExpiry(input.enrollmentExpiresAt);
-  requireFutureExpiry(input.grantExpiresAt);
+  const enrollmentDuration = input.enrollmentExpiresAt.getTime() - Date.now();
+  if (
+    Number.isNaN(input.enrollmentExpiresAt.getTime()) ||
+    enrollmentDuration <= 0 ||
+    enrollmentDuration > MAX_ENROLLMENT_DURATION_MS
+  ) {
+    throw new Error(
+      "Platform admin enrollment expiration must be within 7 days."
+    );
+  }
+  requireGrantExpiry(input.grantExpiresAt, input.role);
+  if (input.enrollmentExpiresAt.getTime() > input.grantExpiresAt.getTime()) {
+    throw new Error("Platform admin enrollment cannot outlast its grant.");
+  }
 
   const enrollmentRows = toRows(
     await tx.execute(sql`
@@ -468,7 +553,7 @@ const createPlatformAdminGrantInTransaction = async (
   tx: GrantTx
 ): Promise<string> => {
   const reason = requireGrantReason(input.reason);
-  requireFutureExpiry(input.expiresAt);
+  requireGrantExpiry(input.expiresAt, input.role);
 
   const createdRows = toRows(
     await tx.execute(sql`
@@ -532,7 +617,7 @@ export const grantPlatformAdminAccess = (
   transactionalDb?: GrantTransactionDb
 ): Promise<string> => {
   requireGrantReason(input.reason);
-  requireFutureExpiry(input.expiresAt);
+  requireGrantExpiry(input.expiresAt, input.role);
 
   if (transactionalDb) {
     return transactionalDb.transaction((tx) =>
@@ -591,9 +676,6 @@ export const revokePlatformAdminGrant = async (
     revokePlatformAdminGrantInTransaction(input, tx as unknown as GrantTx)
   );
 };
-
-const isPlatformAdminRole = (value: string): value is PlatformAdminRole =>
-  value === "owner" || value === "operator" || value === "support";
 
 export const listPlatformAdminGrants = async (
   queryableDb: QueryableDb

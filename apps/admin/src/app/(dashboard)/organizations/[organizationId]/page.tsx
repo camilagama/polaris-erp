@@ -1,7 +1,10 @@
 import { getPlatformOrganizationDetailForAdmin } from "@polaris/platform/directory";
 import { listPlatformSupportCasesForAdmin } from "@polaris/platform/support-cases";
 import { listPlatformSupportNotesForAdmin } from "@polaris/platform/support-notes";
-import { formatDateTime } from "@polaris/ui/lib/formatters";
+import {
+  BusinessTimeZoneNotice,
+  TimeValue,
+} from "@polaris/ui/components/shared/time-value";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
@@ -89,6 +92,8 @@ const OrganizationDetailContent = async ({
         </div>
       </div>
 
+      <BusinessTimeZoneNotice />
+
       <div className="grid gap-4 md:grid-cols-4">
         {counts.map((item) => (
           <article
@@ -112,11 +117,17 @@ const OrganizationDetailContent = async ({
         <div className="mt-4 grid gap-2 text-muted-foreground text-sm sm:grid-cols-2">
           <p>
             Ultima criada:{" "}
-            {formatDateTime(organization.sessionSummary.latestCreatedAt)}
+            <TimeValue
+              kind="instant"
+              value={organization.sessionSummary.latestCreatedAt}
+            />
           </p>
           <p>
             Ultima expiracao:{" "}
-            {formatDateTime(organization.sessionSummary.latestExpiresAt)}
+            <TimeValue
+              kind="instant"
+              value={organization.sessionSummary.latestExpiresAt}
+            />
           </p>
         </div>
       </section>
@@ -350,7 +361,7 @@ const OrganizationDetailContent = async ({
                   {note.body}
                 </p>
                 <p className="mt-2 text-muted-foreground text-xs">
-                  {formatDateTime(note.createdAt)} -{" "}
+                  <TimeValue kind="instant" value={note.createdAt} /> -{" "}
                   {note.authorPlatformAdminId?.slice(0, 8) ?? "sem autor"}
                 </p>
               </article>

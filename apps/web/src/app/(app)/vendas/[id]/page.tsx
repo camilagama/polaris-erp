@@ -1,7 +1,5 @@
-import Link from "next/link";
-import { notFound } from "next/navigation";
-import { SaleDetailActions } from "@/components/sales/sale-detail-actions";
-import { Badge } from "@/components/ui/badge";
+import { TimeValue } from "@polaris/ui/components/shared/time-value";
+import { Badge } from "@polaris/ui/components/ui/badge";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -9,7 +7,7 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
+} from "@polaris/ui/components/ui/breadcrumb";
 import {
   Table,
   TableBody,
@@ -17,7 +15,10 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@polaris/ui/components/ui/table";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { SaleDetailActions } from "@/components/sales/sale-detail-actions";
 import { calculateSaleReceivedAmount } from "@/features/sales/calculations";
 import type { SaleDetail } from "@/features/sales/contracts";
 import { getSaleByIdQuery } from "@/features/sales/queries";
@@ -26,7 +27,7 @@ import {
   getOperationalSaleStatusLabel,
 } from "@/features/sales/sale-display-labels";
 import { requirePageAppContext } from "@/lib/app-session";
-import { formatCurrency, formatDate, formatDateTime } from "@/lib/formatters";
+import { formatCurrency } from "@/lib/formatters";
 
 const getStatusLabel = (status: SaleDetail["status"]) =>
   getOperationalSaleStatusLabel(status);
@@ -138,7 +139,7 @@ export default async function VendaDetalhePage(
                 Data
               </p>
               <p className="font-medium text-sm">
-                {formatDate(sale.occurredOn)}
+                <TimeValue kind="civil-date" value={sale.occurredOn} />
               </p>
             </div>
             <div>
@@ -177,7 +178,7 @@ export default async function VendaDetalhePage(
                   Cancelada em
                 </p>
                 <p className="font-medium text-destructive text-sm">
-                  {formatDateTime(sale.cancelledAt)}
+                  <TimeValue kind="instant" value={sale.cancelledAt} />
                 </p>
               </div>
             ) : null}

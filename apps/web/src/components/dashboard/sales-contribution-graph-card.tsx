@@ -10,18 +10,18 @@ import {
   ContributionGraphBlock,
   ContributionGraphCalendar,
 } from "@polaris/ui/components/shared/contribution-graph";
-import { useContainerWidth } from "@polaris/ui/hooks/use-container-width";
-import { useMemo } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@polaris/ui/components/ui/card";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
+} from "@polaris/ui/components/ui/tooltip";
+import { useContainerWidth } from "@polaris/ui/hooks/use-container-width";
+import { cn } from "@polaris/ui/lib/utils";
+import { useMemo } from "react";
 import type { DashboardContributionGraph } from "@/features/dashboard/contracts";
 import { formatCurrency } from "@/lib/formatters";
-import { cn } from "@/lib/utils";
 
 /**
  * Tamanho e margem de cada célula do contribution graph.
@@ -148,6 +148,7 @@ export function SalesContributionGraphCard({
                               aria-label={`${longDate}: ${formatCurrency(sold)}, ${salesCount} vendas, ${levelBandLabel(activity.level)}`}
                               className="transition-opacity hover:opacity-80"
                               dayIndex={dayIndex}
+                              role="img"
                               weekIndex={weekIndex}
                             />
                           </g>

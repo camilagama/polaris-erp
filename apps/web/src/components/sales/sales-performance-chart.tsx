@@ -1,12 +1,12 @@
 "use client";
 
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import {
   type ChartConfig,
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-} from "@/components/ui/chart";
+} from "@polaris/ui/components/ui/chart";
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import type { SalesPerformancePoint } from "@/features/sales/contracts";
 import { formatCompactCurrency, formatCurrency } from "@/lib/formatters";
 

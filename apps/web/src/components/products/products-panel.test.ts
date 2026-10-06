@@ -30,7 +30,7 @@ vi.mock("@/features/products/pagination", () => ({
   loadMoreProductsAction: productMocks.loadMoreProductsAction,
 }));
 
-vi.mock("@/components/ui/sonner", () => ({
+vi.mock("@polaris/ui/components/ui/sonner", () => ({
   toast: {
     error: productMocks.toastError,
     success: vi.fn(),

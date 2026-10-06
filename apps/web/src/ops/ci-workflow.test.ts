@@ -581,11 +581,48 @@ describe("CI workflow", () => {
     expect(workflow).toMatch(ADMIN_E2E_DATABASE_URL_SECRET_PATTERN);
   });
 
-  it("configures Web and Admin Playwright reports and failure diagnostics", () => {
-    for (const config of [
-      readWebPlaywrightConfig(),
-      readAdminPlaywrightConfig(),
-    ]) {
+  it("runs Web E2E alongside verify while retaining Admin and PostgreSQL gates", () => {
+    const workflow = readCiWorkflow();
+
+    expect(getWorkflowJobSection(workflow, "e2e")).not.toContain(
+      "needs: verify"
+    );
+
+    for (const jobId of ["admin-e2e", "postgres-behavior"]) {
+      expect(getWorkflowJobSection(workflow, jobId)).toContain("needs: verify");
+    }
+  });
+
+  it("keeps external billing credentials out of CI", () => {
+    const workflow = readCiWorkflow();
+
+    expect(workflow).not.toContain("ASAAS_API_KEY");
+    expect(workflow).not.toContain("WOOVI_API_KEY");
+  });
+
+  it("uses Sandbox payment endpoints in the environment example", () => {
+    const envExample = readEnvExample();
+
+    expect(envExample).toContain(
+      'ASAAS_API_BASE_URL="https://api-sandbox.asaas.com/v3"'
+    );
+    expect(envExample).toContain(
+      'WOOVI_API_BASE_URL="https://api.woovi-sandbox.com"'
+    );
+    expect(envExample).toContain('ASAAS_API_KEY=""');
+    expect(envExample).toContain('WOOVI_API_KEY=""');
+    expect(envExample).toContain("ADMIN_E2E_DATABASE_URL");
+  });
+
+  it("configures isolated Web and Admin Playwright servers and reports", () => {
+    const configs = [
+      { app: "web", source: readWebPlaywrightConfig() },
+      { app: "admin", source: readAdminPlaywrightConfig() },
+    ] as const;
+
+    for (const { app, source: config } of configs) {
+      expect(config).toContain(`createE2eServerEnv(process.env, "${app}")`);
+      expect(config).toContain("sanitizeE2eRunnerEnvironment(process.env)");
       expect(config).toContain('trace: "retain-on-failure"');
       expect(config).toContain('screenshot: "only-on-failure"');
       expect(config).toContain('video: "off"');

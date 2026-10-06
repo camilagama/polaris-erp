@@ -2,11 +2,7 @@
 
 import { Add01Icon, Delete02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { useRouter } from "next/navigation";
-import { useCallback, useRef, useState, useTransition } from "react";
-import { ProductDatePicker } from "@/components/products/product-date-picker";
-import { ProductCombobox } from "@/components/sales/product-combobox";
-import { Button } from "@/components/ui/button";
+import { Button } from "@polaris/ui/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -14,25 +10,29 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Field, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
+} from "@polaris/ui/components/ui/dialog";
+import { Field, FieldLabel } from "@polaris/ui/components/ui/field";
+import { Input } from "@polaris/ui/components/ui/input";
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
   InputGroupText,
-} from "@/components/ui/input-group";
-import { Label } from "@/components/ui/label";
+} from "@polaris/ui/components/ui/input-group";
+import { Label } from "@polaris/ui/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { toast } from "@/components/ui/sonner";
-import { Textarea } from "@/components/ui/textarea";
+} from "@polaris/ui/components/ui/select";
+import { toast } from "@polaris/ui/components/ui/sonner";
+import { Textarea } from "@polaris/ui/components/ui/textarea";
+import { useRouter } from "next/navigation";
+import { useCallback, useRef, useState, useTransition } from "react";
+import { ProductDatePicker } from "@/components/products/product-date-picker";
+import { ProductCombobox } from "@/components/sales/product-combobox";
 import {
   type CardInstallmentRule,
   findCardInstallmentRule,
@@ -295,6 +295,8 @@ function SaleProductRow({
       product.id === item.productId || !selectedByOthers.has(product.id)
   );
 
+  const quantityInputId = `sale-quantity-${item.id}`;
+
   return (
     <div className="grid items-center gap-3 rounded-md p-1.5 transition-colors hover:bg-muted/30 sm:grid-cols-[minmax(0,1fr)_80px_100px_100px_40px]">
       <div className="flex flex-col gap-1">
@@ -320,11 +322,15 @@ function SaleProductRow({
       </div>
 
       <div className="flex flex-col gap-1">
-        <Label className="text-[11px] text-muted-foreground sm:hidden">
+        <Label
+          className="text-[11px] text-muted-foreground sm:sr-only"
+          htmlFor={quantityInputId}
+        >
           Qtd.
         </Label>
         <Input
           className="h-7 bg-background"
+          id={quantityInputId}
           min="1"
           onChange={(event) => {
             const nextQuantityValue = event.target.value;
@@ -884,7 +890,9 @@ export function CreateSaleDialog({
                     </Label>
                     <InputGroup className="h-8 w-32">
                       <InputGroupAddon>
-                        <InputGroupText className="text-xs">R$</InputGroupText>
+                        <InputGroupText className="text-foreground text-xs">
+                          R$
+                        </InputGroupText>
                       </InputGroupAddon>
                       <InputGroupInput
                         className="h-8 text-right text-sm placeholder:text-muted-foreground"
@@ -909,7 +917,9 @@ export function CreateSaleDialog({
                     </Label>
                     <InputGroup className="h-8 w-32">
                       <InputGroupAddon>
-                        <InputGroupText className="text-xs">R$</InputGroupText>
+                        <InputGroupText className="text-foreground text-xs">
+                          R$
+                        </InputGroupText>
                       </InputGroupAddon>
                       <InputGroupInput
                         className="h-8 text-right text-sm placeholder:text-muted-foreground"
@@ -934,7 +944,9 @@ export function CreateSaleDialog({
                     </Label>
                     <InputGroup className="h-8 w-32">
                       <InputGroupAddon>
-                        <InputGroupText className="text-xs">R$</InputGroupText>
+                        <InputGroupText className="text-foreground text-xs">
+                          R$
+                        </InputGroupText>
                       </InputGroupAddon>
                       <InputGroupInput
                         className="h-8 text-right text-sm placeholder:text-muted-foreground"
@@ -994,7 +1006,7 @@ export function CreateSaleDialog({
                   </div>
                 ) : null}
 
-                <div className="flex items-center justify-between text-chart-6 text-sm">
+                <div className="flex items-center justify-between text-emerald-700 text-sm dark:text-emerald-400">
                   <span className="font-medium">Valor recebido</span>
                   <span className="font-medium">
                     {formatCurrency(displayReceivedAmount)}

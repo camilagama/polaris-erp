@@ -26,6 +26,11 @@ const SAFE_VERIFY_ENV: Record<string, string> = {
 
 const QUICK_STEPS: VerificationStep[] = [
   { args: ["run", "docs:check"], label: "Documentation consistency" },
+  {
+    args: ["x", "vitest", "run", "scripts/install-git-hooks.test.ts"],
+    label: "Git hooks worktree safety",
+  },
+  { args: ["x", "lefthook", "validate"], label: "Git hooks configuration" },
   { args: ["x", "ultracite", "check"], label: "Workspace lint and format" },
   { args: ["run", "typecheck:all"], label: "Workspace typecheck" },
   { args: ["run", "test:all"], label: "Workspace unit tests" },

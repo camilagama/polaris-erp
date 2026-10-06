@@ -2,17 +2,23 @@
 
 import { Moon01Icon, Sun01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Button } from "@polaris/ui/components/ui/button";
+import { useTheme } from "next-themes";
+import { useEffect, useState } from "react";
+import { Button } from "../ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@polaris/ui/components/ui/dropdown-menu";
-import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+} from "../ui/dropdown-menu";
 
-export function ThemeToggle() {
+export interface ThemeToggleProps {
+  triggerId?: string;
+}
+
+export function ThemeToggle({
+  triggerId = "theme-toggle-trigger",
+}: ThemeToggleProps) {
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme } = useTheme();
 
@@ -33,7 +39,7 @@ export function ThemeToggle() {
       <DropdownMenuTrigger asChild>
         <Button
           aria-label="Alterar tema"
-          id="theme-toggle-trigger"
+          id={triggerId}
           size="icon"
           variant="ghost"
         >

@@ -25,9 +25,16 @@ const importRoute = async ({
       return Promise.resolve({ token: "admin-e2e-session" });
     }),
     createUser: vi.fn(
-      (user: { email: string; emailVerified: boolean; name: string }) => {
+      (
+        user: { email: string; emailVerified: boolean; name: string },
+        source: { method: "admin" }
+      ) => {
         callOrder.push("user");
-        return Promise.resolve({ id: "admin-e2e-user", ...user });
+        return Promise.resolve({
+          id: "admin-e2e-user",
+          ...user,
+          source: source.method,
+        });
       }
     ),
     findUserByEmail: vi.fn(() => {
@@ -198,6 +205,14 @@ describe("POST /api/dev/bootstrap-platform-admin", () => {
         enrollmentExpiresAt: expect.any(Date),
         grantExpiresAt: expect.any(Date),
       })
+    );
+    expect(internalAdapter.createUser).toHaveBeenCalledWith(
+      expect.objectContaining({
+        email: "admin@example.com",
+        emailVerified: true,
+        name: "admin@example.com",
+      }),
+      { method: "admin" }
     );
     expect(callOrder).toEqual(["find-user", "enrollment", "user", "session"]);
     expect(internalAdapter.createSession).toHaveBeenCalledOnce();

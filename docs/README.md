@@ -6,7 +6,7 @@ Este índice define onde encontrar contratos vigentes, evidência operacional, d
 ## Fontes canônicas e estado de reconciliação
 
 - [PRODUCT.md](../PRODUCT.md): fonte de produto para público, problema, resultado esperado e limites; brief reconciliado em P9 em 2026-09-30. A validação de público/problema foi confirmada pelo responsável, mas o artefato de pesquisa não está versionado.
-- [DESIGN.md](../DESIGN.md): fonte de design para linguagem visual, acessibilidade e apresentação de dados; contrato documental reconciliado na etapa 3 de P63 em 2026-09-30. Axe e avaliação das jornadas (P36), além das correções de código P58/P59 previstas em P69, seguem pendentes.
+- [DESIGN.md](../DESIGN.md): fonte de design para linguagem visual, acessibilidade e apresentação de dados; contrato documental reconciliado na etapa 3 de P63 em 2026-09-30. As implementações P58/P59 foram aprovadas no PR #7 e validadas pelos quatro checks de CI no SHA `9532e7e`; o PR segue Draft e não foi mesclado. Axe e avaliação das jornadas P36 continuam pendentes; o contrato não declara conformidade WCAG do produto inteiro.
 - [CONTEXT.md](../CONTEXT.md): vocabulário aprovado de produto e domínio, sem regras ou detalhes de implementação.
 - [Regras normativas aprovadas](business-rules/normative/README.md) definem o comportamento de negócio aprovado. Os documentos de arquitetura, módulos, API, segurança e banco descrevem seus contratos técnicos ou o comportamento observado; confronte implementação com código, schema, migrations e testes, e registre divergências na fonte documental correspondente.
 - O [glossário técnico](glossary.md) nomeia mecanismos e identificadores do código; não substitui o vocabulário de domínio em `CONTEXT.md`.

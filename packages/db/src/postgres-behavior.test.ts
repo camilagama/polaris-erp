@@ -125,6 +125,45 @@ behaviorDescribe("PostgreSQL behavior harness", () => {
     );
   }, migrationTimeoutMs);
 
+  it("indexes the creation-time event lists", async () => {
+    const result = await pool.query<{ indexname: string }>(
+      `SELECT indexname
+       FROM pg_indexes
+       WHERE schemaname = 'public'
+         AND indexname = ANY($1::text[])`,
+      [["event_outbox_created_at_idx", "webhook_events_created_at_idx"]]
+    );
+
+    expect(result.rows.map(({ indexname }) => indexname).sort()).toEqual([
+      "event_outbox_created_at_idx",
+      "webhook_events_created_at_idx",
+    ]);
+  });
+
+  it("aligns handcrafted foreign key names with the Drizzle schema", async () => {
+    const expectedConstraintNames = [
+      "command_executions_organization_id_organization_id_fk",
+      "platform_admins_admin_user_id_admin_users_id_fk",
+      "platform_audit_events_actor_admin_user_id_admin_users_id_fk",
+      "platform_support_cases_created_by_platform_admin_id_platform_admins_id_fk",
+      "platform_support_cases_organization_id_organization_id_fk",
+      "platform_support_cases_customer_user_id_users_id_fk",
+    ]
+      .map((name) => name.slice(0, 63))
+      .sort();
+    const result = await pool.query<{ name: string }>(
+      `SELECT conname::text AS name
+       FROM pg_constraint
+       WHERE contype = 'f'
+         AND conname::text = ANY($1::text[])`,
+      [expectedConstraintNames]
+    );
+
+    expect(result.rows.map(({ name }) => name).sort()).toEqual(
+      expectedConstraintNames
+    );
+  });
+
   afterAll(async () => {
     await removeRuntimeRole(pool);
     await pool.end();
@@ -279,6 +318,73 @@ behaviorDescribe("PostgreSQL behavior harness", () => {
       expect(utcSession.rows[0]?.occurred_on).toStrictEqual(
         saoPauloSession.rows[0]?.occurred_on
       );
+    } finally {
+      await deleteBehaviorOrganizations(client, [temporalOrganizationId]);
+      client.release();
+    }
+  });
+
+  it("keeps persisted cancellation date separate from session date casts", async () => {
+    const client = await pool.connect();
+
+    try {
+      await createBehaviorOrganization(
+        client,
+        temporalOrganizationId,
+        "Temporal behavior organization",
+        "behavior-temporal"
+      );
+
+      await client.query("BEGIN");
+      await client.query("SET LOCAL TIME ZONE 'UTC'");
+      const utcResult = await client.query<{
+        cancelled_on: string;
+        session_date: string;
+      }>(
+        `INSERT INTO sales (
+          organization_id,
+          idempotency_key,
+          status,
+          cancelled_at,
+          cancelled_on
+        ) VALUES ($1, $2, 'cancelled', $3, $4)
+        RETURNING cancelled_on::text, date(cancelled_at)::text AS session_date`,
+        [
+          temporalOrganizationId,
+          "behavior-cancellation-utc",
+          "2026-01-01T02:30:00.000Z",
+          "2025-12-31",
+        ]
+      );
+      await client.query("ROLLBACK");
+
+      await client.query("BEGIN");
+      await client.query("SET LOCAL TIME ZONE 'America/Sao_Paulo'");
+      const saoPauloResult = await client.query<{
+        cancelled_on: string;
+        session_date: string;
+      }>(
+        `INSERT INTO sales (
+          organization_id,
+          idempotency_key,
+          status,
+          cancelled_at,
+          cancelled_on
+        ) VALUES ($1, $2, 'cancelled', $3, $4)
+        RETURNING cancelled_on::text, date(cancelled_at)::text AS session_date`,
+        [
+          temporalOrganizationId,
+          "behavior-cancellation-sao-paulo",
+          "2026-01-01T02:30:00.000Z",
+          "2025-12-31",
+        ]
+      );
+      await client.query("ROLLBACK");
+
+      expect(utcResult.rows[0]?.cancelled_on).toBe("2025-12-31");
+      expect(saoPauloResult.rows[0]?.cancelled_on).toBe("2025-12-31");
+      expect(utcResult.rows[0]?.session_date).toBe("2026-01-01");
+      expect(saoPauloResult.rows[0]?.session_date).toBe("2025-12-31");
     } finally {
       await deleteBehaviorOrganizations(client, [temporalOrganizationId]);
       client.release();

@@ -172,7 +172,156 @@ do Shopify. [Shopify — Live View](https://help.shopify.com/en/manual/reports-a
   Relativos ficam fora da fundação e só podem voltar como complemento em
   atividade recente, mantendo o valor exato visível e acessível sem hover.
 
+## Revalidação do código em 2026-10-01
+
+O `DESIGN.md` agora contém o contrato visual aprovado: data civil sem conversão,
+instante em `America/Sao_Paulo`, indicação única do fuso em telas densas e valor
+absoluto como principal. A regra documental existe; a revisão abaixo trata da
+implementação que ainda falta.
+
+- **Consumidores Web confirmados:** `formatDate` recebe `sale.occurredOn`, datas
+  de movimentação (`item.date`) e datas do histórico de produto (`item.date`),
+  apresentadas como valores civis pelos contratos consultados. Os usos de
+  `formatDateTime` observados recebem `cancelledAt`, `createdAt` ou
+  `currentPeriodEnd`, que representam instantes.
+- **Defeito confirmado no Admin:**
+  `apps/admin/src/app/(dashboard)/organizations/organizations-table.tsx`
+  chama `formatDate` em `createdAt`; isso remove a hora e usa o timezone local
+  da execução. O campo representa um instante. Deve usar a apresentação de
+  instante aprovada, sem conversão de schema.
+- **Contrato permissivo demais:** `formatDate(value: Date | string)` não
+  distingue uma `DATE` de um timestamp. `formatDateTime` passa strings para
+  `new Date(value)`, mas sua assinatura não exige `Z` nem offset. Uma string
+  data-hora sem zona é interpretada como horário local do runtime; estreitar o
+  tipo ou validar o formato do instante antes de formatar. Os consumidores
+  atuais encontrados são compatíveis com a mudança, mas a migração deve
+  confirmar tipos nos contratos antes de alterar a assinatura.
+- **Dashboard Admin:** `formatEventDate` já usa `BUSINESS_TIME_ZONE`, então não
+  foi identificado erro de fuso; é uma implementação paralela que deve chamar o
+  helper compartilhado. O rótulo semanal do gráfico transforma `d.date` em um
+  timestamp ao meio-dia UTC e depois aplica São Paulo. O resultado atual
+  preserva o dia da semana, mas o fluxo deve tratar o valor como data civil e
+  formatá-lo diretamente.
+- **Nota de fuso ausente:** busca literal em `apps/` e `packages/` não encontrou
+  “Horários no fuso de São Paulo”. A implementação deve incluir uma indicação
+  uma vez nas telas densas aprovadas; não repetir em cada linha/célula.
+- **Cobertura existente:** `packages/ui/src/lib/formatters.test.ts` testa um
+  timestamp UTC no `formatDateTime`; `packages/date/src/index.test.ts` cobre
+  helpers de negócio, mas não substitui testes do formatter compartilhado nem
+  prova seus consumidores Admin/Web sob timezones de runtime distintos. Incluir
+  casos de fronteira na implementação, sem declarar que a suíte atual é
+  suficiente.
+
+### Revalidação do exemplo Hub
+
+O Hub centraliza `Intl.DateTimeFormat` em `src/lib/formatters.ts` e fixa
+`America/Sao_Paulo`, o que é um precedente útil para instantes. Porém seus
+helpers genéricos aceitam `Date | string` e convertem strings com `new Date`,
+sem distinguir `DATE` de instante. A inspeção de usos encontrou campos de
+certificados (`completedAt`, `issuedAt`, `revokedAt`), apresentados como
+instantes; não há evidência aqui de que esses chamadores passem `DATE` puro.
+Ainda assim, um futuro `YYYY-MM-DD` seria interpretado pelo JavaScript como
+meia-noite UTC e formatado em São Paulo no dia civil anterior. Logo, reutilizar
+a centralização e o timezone explícito, mas não copiar a assinatura ambígua.
+[MDN — parsing de `Date`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/parse)
+documenta a distinção entre ISO date-only (UTC) e data-hora sem zona (local).
+
+### Refinamento da implementação
+
+O contrato P59 continua aprovado e não requer nova pergunta. Implementar os
+helpers como tipos semânticos separados (`DATE`/data civil e instante), corrigir
+o consumidor Admin incorreto, consolidar o formatter local do dashboard e
+garantir que strings de instante sejam inequívocas. Adicionar a nota aprovada
+uma vez nas telas densas de auditoria, financeiro e operações, e testar datas
+civis sem deslocamento, fronteiras de dia do instante em São Paulo, entrada
+ISO sem zona rejeitada e valores iguais sob timezones de runtime diferentes.
+Não é necessária migration: os campos e a regra canônica existem; o gap é de
+projeção, apresentação e cobertura.
+
 ## Fontes
+
+### Revalidação para revisão de implementação — 2026-10-01
+
+O contrato temporal visual já está registrado em `DESIGN.md`, seção “Dates and
+times”: data civil `YYYY-MM-DD` aparece como `dd/MM/yyyy` em `pt-BR` sem
+conversão de fuso; instantes são apresentados em `America/Sao_Paulo`, sem
+dependência do fuso do navegador; telas densas em timestamps indicam uma vez
+“Horários no fuso de São Paulo”; valores absolutos permanecem primários nos
+fluxos operacionais. Essa revalidação não reabre nem altera as decisões P59
+aprovadas.
+
+O contexto visual anterior do usuário estabelece Web como superfície primária
+para as tarefas do produto e Admin como superfície operacional interna. Essa
+distinção orienta prioridade e exemplos de revisão visual, sem alterar o
+contrato temporal compartilhado. Nenhum browser ou URL local foi aberto nesta
+revalidação.
+
+**Estado no momento desta fotografia (2026-10-01):** a implementação ainda não
+havia sido autorizada nem iniciada. Este diagnóstico histórico foi sucedido pela
+implementação de P59, registrada ao final deste arquivo.
+
+#### Inventário confirmado dos formatadores e consumidores
+
+- `packages/ui/src/lib/formatters.ts` define `formatDate(value: Date | string
+  | null)`. Para strings, usa `date-fns` `parseISO`; em seguida, `format` sem
+  contexto de zona, que usa os campos locais do objeto `Date`. Portanto, a
+  representação pode depender do timezone do runtime e a assinatura não
+  distingue data civil de instante.
+- Os usos de `formatDate` encontrados no Web são: `sale.occurredOn` na página
+  de venda e na tabela/formulário de vendas; `item.date` no histórico de
+  estoque; `item.date` no histórico de produto. Os contratos consultados
+  representam esses campos como datas civis/`DATE` serializadas em strings.
+- O único uso de `formatDate` encontrado no Admin é
+  `row.original.createdAt` na tabela de organizações. O query de
+  `packages/platform/src/platform-directory.ts` lê `organization.created_at`,
+  campo timestamp com timezone; o DTO converte o valor em ISO via
+  `toIsoString`. A tabela o exibe atualmente apenas como data, descartando a
+  hora do instante.
+- `formatDateTime` usa `Intl.DateTimeFormat("pt-BR", { timeZone:
+  BUSINESS_TIME_ZONE })`, e `BUSINESS_TIME_ZONE` é `America/Sao_Paulo`. Para
+  strings, porém, chama `new Date(value)` sem validar a presença de `Z` ou
+  offset; uma string ISO de data-hora sem zona pode ser interpretada no fuso do
+  runtime antes da formatação explícita.
+- Usos de `formatDateTime` encontrados no Web: `sale.cancelledAt`,
+  `change.createdAt` no histórico de produto e `billing.currentPeriodEnd` nas
+  configurações da conta. Usos encontrados no Admin: validade de grant;
+  timestamp de auditoria; fim de período de assinatura e criação de invoice;
+  `event.availableAt` e `event.receivedAt` na tela Eventos; timestamps de
+  sessões/notas; `organization.createdAt` na página de usuário; e última sessão
+  no resumo de usuários. Os nomes dos campos e as queries os identificam como
+  instantes.
+- `apps/admin/src/app/(dashboard)/page.tsx` mantém um `formatEventDate` local
+  com locale e fuso de São Paulo explícitos, duplicando parte do contrato
+  compartilhado.
+- Na tela Eventos, `availableAt` é a data de disponibilidade do evento outbox;
+  `receivedAt` do webhook vem de `webhook_events.created_at` e é apresentado
+  como instante recebido. Ambas as células usam `formatDateTime`.
+- A cobertura compartilhada observada continua limitada a um timestamp UTC
+  que atravessa a fronteira de dia em São Paulo no
+  `packages/ui/src/lib/formatters.test.ts`; não cobre data civil, entrada sem
+  zona ou invariância entre timezones de runtime.
+
+#### Evidência oficial e limite da recomendação
+
+O comportamento documentado de `Date.parse` e `Date` diferencia strings
+date-only, interpretadas como UTC, de strings date-time sem offset, interpretadas
+como horário local; `Intl.DateTimeFormat` usa o timezone do runtime se
+`timeZone` não for informado. Isso sustenta a distinção P59 entre datas civis e
+instantes e a exigência de zona explícita para instantes. [MDN — `Date.parse`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/parse), [MDN — `Intl.DateTimeFormat`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat/DateTimeFormat).
+
+O projeto declara `date-fns` `^4.4.0`. A documentação oficial da versão 4.4.0
+explica que o suporte a timezone está disponível por extensão/contexto via
+`@date-fns/tz` e `@date-fns/utc`; não é uma capacidade automática de `format`
+para qualquer `Date`. Esse contexto não muda a recomendação P59: não adicionar
+agora `@date-fns/tz` nem migrar o formatter para date-fns por causa desta
+correção. `Intl.DateTimeFormat` já fornece a projeção de instante necessária;
+formatar datas civis deve continuar sem conversão de timezone. [date-fns v4.4.0 — time zones](https://github.com/date-fns/date-fns/blob/v4.4.0/pkgs/core/docs/timeZones.md).
+
+Context7 falhou com `npm EINVALIDTAGNAME` por causa do override do workspace; a
+consulta foi encerrada sem fallback ao conhecimento memorizado. Para esta
+revalidação, a evidência da API veio das páginas oficiais MDN e a evidência de
+date-fns veio do guia oficial versionado no repositório date-fns. Inspeção de
+código foi feita localmente, sem executar testes ou abrir interface.
 
 - [ECMA-402 — API internacionalização ECMAScript, edição 2026](https://402.ecma-international.org/): `Intl.DateTimeFormat`, zonas IANA e opções de apresentação de nomes de fuso. Context7 consultado com biblioteca `/mdn/content` para as opções da API; a documentação MDN confirma que omitir `timeZone` usa o timezone do runtime e descreve o fallback para nomes de fuso.
 - [MDN — construtor `Intl.DateTimeFormat`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat/DateTimeFormat): locale, `timeZone`, estilos e `timeZoneName`.
@@ -184,8 +333,41 @@ do Shopify. [Shopify — Live View](https://help.shopify.com/en/manual/reports-a
 
 ## Limitações
 
-Inspeção do relatório, dos formatadores relevantes de Polaris/Hub e de
-documentação pública. A inspeção não é inventário exaustivo de todos os
-consumidores de data. Nenhum código foi alterado; nenhum teste foi executado e
-nenhuma interface local foi aberta. A pesquisa estabelece uma recomendação para
-decisão, não registra P59 como aprovado.
+Inspeção direta dos usos de `formatDate`/`formatDateTime` em Web/Admin, dos
+formatadores e testes compartilhados, de amostras de chamadas do Hub e de
+documentação pública. O inventário cobre consumidores localizados por formatter
+compartilhado e não prova a inexistência de qualquer formatação ad hoc fora
+deles. A implementação P59 abaixo documenta a CLI Impeccable indisponível; não
+foi aberta interface local nem alterado banco/configuração remota. Context7
+falhou anteriormente com `npm EINVALIDTAGNAME`; o comportamento de parsing foi
+confirmado na página MDN vinculada acima.
+## Implementação P59 — aprovada pelo usuário — 2026-10-02
+
+### Alterações
+
+- O pacote `@polaris/ui` exporta formatadores semanticamente separados: `formatCivilDate` aceita data civil válida `YYYY-MM-DD` e projeta os componentes diretamente em `dd/MM/yyyy`; `formatInstantDateTime` aceita `Date` ou string ISO inequívoca com `Z`/offset e apresenta em `America/Sao_Paulo`.
+- O parser rejeita hora/minuto/segundo fora do intervalo, frações acima de milissegundos, offset inválido ou desconhecido (`-00:00`), data civil inválida e qualquer string sem fuso. Assim, o valor mostrado e `datetime` não divergem por normalização ou perda de precisão.
+- `TimeValue` marca valores civis/instantes com `<time dateTime>` e mantém texto de apresentação exato; `BusinessTimeZoneNotice` padroniza a indicação de fuso. A tabela de Organizações corrigiu `createdAt` para instante; o formatter local do dashboard Admin foi removido; consumidores Web/Admin usam helpers conforme seus contratos.
+- Os gráficos formatam datas civis sem converter ao fuso de negócio. A nota de fuso foi aplicada uma vez em telas densas de auditoria, billing, eventos, atividade do dashboard, detalhes de usuários e organizações, e no histórico de preços. Não foi aplicada em superfícies com apenas uma data/instante isolado.
+- Nenhuma migration, dependência, mudança de armazenamento ou alteração remota.
+
+### Verificação
+
+`bun run verify:quick` passou: `docs:check` (13 testes de checker; 122 arquivos Markdown), Ultracite sem correções, typecheck dos 13 pacotes e testes unitários do workspace. Os testes novos cobrem DATE válido/inválido, instante UTC e offset, rejeição de data-hora sem fuso, hora/offset inválidos, precisão, invariância a `UTC`/`Pacific/Honolulu` e a marcação `<time>`.
+
+Estado: **implementado e aprovado pelo usuário em 2026-10-02**. Não foi commitado nem integrado. A CLI Impeccable não estava instalada/resolúvel; o repo também proíbe abrir URLs locais, portanto não houve inspeção visual no browser.
+
+### Follow-up P58 descoberto
+
+O controle `datetime-local` em Admin Access envia `YYYY-MM-DDTHH:mm` sem timezone; `apps/admin/src/app/(dashboard)/admin-access/actions.ts` usa `new Date(value)`, que interpreta a hora no timezone do runtime. Isso conflita com a regra P58 de instante não depender do servidor/runtime e fuso global São Paulo. Registrar como subetapa P58 separada: rotular a hora de parede como São Paulo, converter explicitamente essa hora em instante de São Paulo e testar entrada futura/ inválida. Nenhuma mudança de criação de grant foi feita em P59.
+
+## Estado após aprovação P59 e CI — 2026-10-03
+
+O follow-up de integração descoberto no primeiro Admin E2E foi corrigido em
+`packages/platform/src/internal/query-results.ts`, mantendo intacto o parser
+ISO estrito de `@polaris/ui`. A suíte `query-results.test.ts` cobre o formato
+PostgreSQL observado, offsets, precisão de milissegundos e data inválida. O
+usuário aprovou a implementação nesta data; o run CI final `37123671646`
+passou em `verify`, Web E2E, Admin E2E e PostgreSQL. O código está no PR #7
+(SHA de cabeça `9532e7e`), que permanece Draft e não foi mesclado. P59 está
+aprovado e verificado na branch; isso não conclui Gate A nem os gates de go-live.

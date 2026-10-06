@@ -59,6 +59,7 @@ const getUpstashRedis = () => {
   }
 
   redis = new Redis({
+    enableTelemetry: false,
     token: process.env.UPSTASH_REDIS_REST_TOKEN,
     url: process.env.UPSTASH_REDIS_REST_URL,
   });
@@ -84,7 +85,7 @@ const getUpstashLimiter = ({
   }
 
   const limiter = new Ratelimit({
-    analytics: true,
+    analytics: false,
     limiter: Ratelimit.slidingWindow(limit, getWindowLabel(windowMs)),
     prefix: "dgimports:ratelimit",
     redis,

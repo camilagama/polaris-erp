@@ -5,6 +5,7 @@ import { db } from "@polaris/db";
 import { withPlatformAdminContext } from "@polaris/db/tenant-context";
 import { type SQL, sql } from "drizzle-orm";
 import { toIsoString, toNumber, toRows } from "./internal/query-results";
+import { getPlatformBillingTotals } from "./platform-billing";
 
 const BUSINESS_TIME_ZONE = "America/Sao_Paulo";
 
@@ -12,8 +13,10 @@ const RECENT_EVENT_LIMIT = 6;
 
 interface PlatformDashboardSummary {
   activeOrganizations: number;
+  billingSubscriptions: number;
   disabledPlatformAdmins: number;
   members: number;
+  openBillingInvoices: number;
   organizations: number;
   platformAdmins: number;
   users: number;
@@ -72,11 +75,14 @@ const getSummary = async (
         (select count(*) from platform_admins where status = 'disabled') as disabled_platform_admins
     `)
   );
+  const billingTotals = await getPlatformBillingTotals(queryableDb);
 
   return {
     activeOrganizations: toNumber(row.active_organizations),
+    billingSubscriptions: billingTotals.subscriptions,
     disabledPlatformAdmins: toNumber(row.disabled_platform_admins),
     members: toNumber(row.members),
+    openBillingInvoices: billingTotals.openInvoices,
     organizations: toNumber(row.organizations),
     platformAdmins: toNumber(row.platform_admins),
     users: toNumber(row.users),

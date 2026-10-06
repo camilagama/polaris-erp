@@ -7,6 +7,8 @@ describe("verification profiles", () => {
 
     expect(steps.map((step) => step.args)).toEqual([
       ["run", "docs:check"],
+      ["x", "vitest", "run", "scripts/install-git-hooks.test.ts"],
+      ["x", "lefthook", "validate"],
       ["x", "ultracite", "check"],
       ["run", "typecheck:all"],
       ["run", "test:all"],
@@ -28,6 +30,8 @@ describe("verification profiles", () => {
       "run audit:boundaries",
       "run env:check",
       "run docs:check",
+      "x vitest run scripts/install-git-hooks.test.ts",
+      "x lefthook validate",
       "x ultracite check",
       "run typecheck:all",
       "run test:all",

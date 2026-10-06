@@ -1,9 +1,3 @@
-import Link from "next/link";
-import { notFound } from "next/navigation";
-import { ProductDetailActions } from "@/components/products/product-detail-actions";
-import { ProductHistoryPanel } from "@/components/products/product-history-panel";
-import { ProductImageFrame } from "@/components/products/product-image-frame";
-import { ProductUnitsSoldChart } from "@/components/products/product-sales-chart";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -11,9 +5,20 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+} from "@polaris/ui/components/ui/breadcrumb";
+import { Button } from "@polaris/ui/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@polaris/ui/components/ui/card";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { ProductDetailActions } from "@/components/products/product-detail-actions";
+import { ProductHistoryPanel } from "@/components/products/product-history-panel";
+import { ProductImageFrame } from "@/components/products/product-image-frame";
+import { ProductUnitsSoldChart } from "@/components/products/product-sales-chart";
 import { loadProductDetailPage } from "@/features/products/detail-page";
 import { formatCurrency } from "@/lib/formatters";
 

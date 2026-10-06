@@ -1,6 +1,6 @@
+import { Button } from "@polaris/ui/components/ui/button";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { getSession } from "@/lib/session";
 
 const getMessage = (state: string | undefined) => {

@@ -44,6 +44,19 @@ const parseCivilDate = (value: string): CivilDateParts => {
   return parsed;
 };
 
+export const isValidCivilDate = (value: string): boolean => {
+  try {
+    parseCivilDate(value);
+    return true;
+  } catch (error) {
+    if (error instanceof RangeError) {
+      return false;
+    }
+
+    throw error;
+  }
+};
+
 export const formatBusinessDate = (value = new Date()): string => {
   const parts = businessDateFormatter.formatToParts(value);
   const values = Object.fromEntries(
@@ -61,11 +74,12 @@ export const formatBusinessDateLabel = (
   locale = "pt-BR"
 ): string => {
   const { day, month, year } = parseCivilDate(value);
+  // UTC is only a stable carrier for these civil fields; it is not a business-time conversion.
   const labelDate = new Date(Date.UTC(year, month - 1, day, 12));
 
   return new Intl.DateTimeFormat(locale, {
     ...options,
-    timeZone: BUSINESS_TIME_ZONE,
+    timeZone: "UTC",
   }).format(labelDate);
 };
 

@@ -69,4 +69,23 @@ describe("admin accessibility source checks", () => {
 
     expect(tableSource).toContain("overflow-x-auto");
   });
+
+  it("makes the audit table scroll region keyboard-accessible", () => {
+    const auditSource = readAppSource("audit/page.tsx");
+
+    expect(auditSource).toContain(
+      'aria-label="Eventos de auditoria da plataforma"'
+    );
+    expect(auditSource).toContain("tabIndex={0}");
+    expect(auditSource).toContain("focus-visible:ring-2");
+  });
+
+  it("renders audit events with native table semantics", () => {
+    const auditSource = readAppSource("audit/page.tsx");
+
+    expect(auditSource).toContain("<table");
+    expect(auditSource).toContain("<caption");
+    expect(auditSource).toContain('scope="col"');
+    expect(auditSource).toContain('scope="row"');
+  });
 });

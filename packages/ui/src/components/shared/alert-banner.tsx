@@ -21,9 +21,9 @@ interface AlertBannerProps {
 }
 
 const containerClassBySeverity: Record<AlertSeverity, string> = {
-  negative: "bg-destructive/8 text-destructive border border-destructive/20",
-  neutral: "bg-muted/50 text-muted-foreground border border-border/50",
-  positive: "bg-emerald-500/8 text-emerald-600 border border-emerald-500/20",
+  negative: "bg-destructive/8 text-foreground border border-destructive/20",
+  neutral: "bg-muted/50 text-foreground border border-border/50",
+  positive: "bg-emerald-500/8 text-foreground border border-emerald-500/20",
 };
 
 const dotClassBySeverity: Record<AlertSeverity, string> = {

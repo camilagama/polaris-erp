@@ -1,6 +1,7 @@
-import { BUSINESS_TIME_ZONE } from "@polaris/date";
-import { format, parseISO } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { BUSINESS_TIME_ZONE, isValidCivilDate } from "@polaris/date";
+
+const ISO_INSTANT_PATTERN =
+  /^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?(Z|([+-])(\d{2}):(\d{2}))$/;
 
 const currencyFormatter = new Intl.NumberFormat("pt-BR", {
   currency: "BRL",
@@ -23,6 +24,43 @@ const dateTimeFormatter = new Intl.DateTimeFormat("pt-BR", {
   year: "numeric",
 });
 
+const parseIsoInstant = (value: string): Date => {
+  const match = ISO_INSTANT_PATTERN.exec(value);
+  if (!(match && isValidCivilDate(match[1]))) {
+    throw new RangeError(`Invalid ISO instant: ${value}`);
+  }
+
+  const [
+    ,
+    ,
+    hour,
+    minute,
+    second = "00",
+    ,
+    offset,
+    ,
+    offsetHour,
+    offsetMinute,
+  ] = match;
+  const invalidTime =
+    Number(hour) > 23 || Number(minute) > 59 || Number(second) > 59;
+  const invalidOffset =
+    offset !== "Z" &&
+    (Number(offsetHour) > 23 ||
+      Number(offsetMinute) > 59 ||
+      offset === "-00:00");
+  if (invalidTime || invalidOffset) {
+    throw new RangeError(`Invalid ISO instant: ${value}`);
+  }
+
+  const instant = new Date(value);
+  if (Number.isNaN(instant.valueOf())) {
+    throw new RangeError(`Invalid ISO instant: ${value}`);
+  }
+
+  return instant;
+};
+
 export const formatCurrency = (value: number | string | null | undefined) =>
   currencyFormatter.format(Number(value) || 0);
 
@@ -35,22 +73,30 @@ export const formatCompactCurrency = (
   return `${prefix}${compactNumberFormatter.format(Math.abs(normalizedValue))}`;
 };
 
-export const formatDate = (value: Date | string | null) => {
+export const formatCivilDate = (value: string | null) => {
   if (!value) {
     return "-";
   }
 
-  const date = typeof value === "string" ? parseISO(value) : value;
-  return format(date, "dd/MM/yyyy", { locale: ptBR });
+  if (!isValidCivilDate(value)) {
+    throw new RangeError(`Invalid ISO civil date: ${value}`);
+  }
+
+  const [year, month, day] = value.split("-");
+  return `${day}/${month}/${year}`;
 };
 
-export const formatDateTime = (value: Date | string | null) => {
+export const formatInstantDateTime = (value: Date | string | null) => {
   if (!value) {
     return "-";
   }
 
-  const date = typeof value === "string" ? new Date(value) : value;
-  return dateTimeFormatter.format(date);
+  const instant = typeof value === "string" ? parseIsoInstant(value) : value;
+  if (Number.isNaN(instant.valueOf())) {
+    throw new RangeError("Invalid instant date value.");
+  }
+
+  return dateTimeFormatter.format(instant);
 };
 
 export const formatPercent = (

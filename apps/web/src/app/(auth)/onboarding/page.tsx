@@ -1,6 +1,6 @@
+import { DGImportsLogo } from "@polaris/ui/components/ui/svgs/logo";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { DGImportsLogo } from "@/components/ui/svgs/logo";
 import { getAppAccess } from "@/lib/app-session";
 import { getSession } from "@/lib/session";
 import { OnboardingForm } from "./onboarding-form";

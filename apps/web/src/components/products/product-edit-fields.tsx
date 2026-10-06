@@ -1,27 +1,27 @@
 "use client";
 
-import type { Dispatch, SetStateAction } from "react";
-import { ProductImageInput } from "@/components/products/product-image-input";
-import {
-  ProductPriceMarkupIndicator,
-  ProductPriceSuggestionGuide,
-} from "@/components/products/product-pricing-fields";
-import { Input } from "@/components/ui/input";
+import { Input } from "@polaris/ui/components/ui/input";
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
   InputGroupText,
-} from "@/components/ui/input-group";
-import { Label } from "@/components/ui/label";
+} from "@polaris/ui/components/ui/input-group";
+import { Label } from "@polaris/ui/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+} from "@polaris/ui/components/ui/select";
+import { Textarea } from "@polaris/ui/components/ui/textarea";
+import type { Dispatch, SetStateAction } from "react";
+import { ProductImageInput } from "@/components/products/product-image-input";
+import {
+  ProductPriceMarkupIndicator,
+  ProductPriceSuggestionGuide,
+} from "@/components/products/product-pricing-fields";
 import type { ProductImageAsset } from "@/features/products/contracts";
 import {
   formatCurrency,

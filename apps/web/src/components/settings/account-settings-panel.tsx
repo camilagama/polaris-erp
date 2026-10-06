@@ -1,16 +1,17 @@
+import { TimeValue } from "@polaris/ui/components/shared/time-value";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@polaris/ui/components/ui/card";
 import {
   type AccountBillingSummary,
   canRequestSubscriptionCancellation,
 } from "@/features/account/server";
 import type { OrganizationRole } from "@/lib/app-context";
-import { formatCurrency, formatDateTime } from "@/lib/formatters";
+import { formatCurrency } from "@/lib/formatters";
 import { SubscriptionCancellationControl } from "./subscription-cancellation-control";
 import { SubscriptionUpgradeControl } from "./subscription-upgrade-control";
 
@@ -73,9 +74,6 @@ export function AccountSettingsPanel({
   supportEmail,
   user,
 }: AccountSettingsPanelProps) {
-  const renewalText = billing.currentPeriodEnd
-    ? formatDateTime(billing.currentPeriodEnd)
-    : "Data nao definida";
   const canRequestUpgrade =
     billing.planId === "polaris-free" && asaasCardCheckoutEnabled;
 
@@ -122,8 +120,13 @@ export function AccountSettingsPanel({
             </p>
             <p className="text-muted-foreground text-xs">
               {billing.cancelAtPeriodEnd
-                ? `Cancela no fim do periodo: ${renewalText}`
-                : `Proximo ciclo: ${renewalText}`}
+                ? "Cancela no fim do periodo: "
+                : "Proximo ciclo: "}
+              {billing.currentPeriodEnd ? (
+                <TimeValue kind="instant" value={billing.currentPeriodEnd} />
+              ) : (
+                "Data nao definida"
+              )}
             </p>
             {canRequestSubscriptionCancellation(billing) ? (
               <div className="mt-2">

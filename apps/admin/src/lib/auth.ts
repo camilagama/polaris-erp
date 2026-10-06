@@ -8,8 +8,13 @@ import {
   hasActivePlatformAdminEnrollment,
 } from "@polaris/platform/admin";
 import { parse } from "dotenv";
+import { shouldLoadLocalAdminAuthEnvironment } from "@/lib/admin-auth-environment";
 
 const resolveAdminEnvironment = (): NodeJS.ProcessEnv => {
+  if (!shouldLoadLocalAdminAuthEnvironment(process.env)) {
+    return process.env;
+  }
+
   const candidates = [
     resolve(process.cwd(), ".env.local"),
     resolve(process.cwd(), "../../.env.local"),

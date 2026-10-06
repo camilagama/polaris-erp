@@ -1,9 +1,12 @@
 "use client";
 
-import { InputGroupAddon, InputGroupText } from "@/components/ui/input-group";
+import {
+  InputGroupAddon,
+  InputGroupText,
+} from "@polaris/ui/components/ui/input-group";
+import { cn } from "@polaris/ui/lib/utils";
 import { calculateSuggestedPrices } from "@/features/catalog/pricing";
 import { formatCurrency } from "@/lib/formatters";
-import { cn } from "@/lib/utils";
 
 interface ProductPricingSettings {
   idealMarkupPercent: number;
@@ -128,11 +131,11 @@ export function ProductPriceMarkupIndicator({
     <InputGroupAddon align="inline-end">
       <InputGroupText
         className={cn(
-          "font-medium text-[10px] opacity-70",
+          "font-medium text-[10px] text-muted-foreground",
           Number(price) > 0 &&
             (suggestion.isBelowMinimum
               ? "text-destructive"
-              : "text-emerald-500")
+              : "text-emerald-700 dark:text-emerald-400")
         )}
       >
         {currentMarkupPercent.toFixed(1)}%

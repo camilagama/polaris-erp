@@ -3,7 +3,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import type * as React from "react";
 
-import { cn } from "@/lib/utils";
+import { cn } from "../../lib/utils";
 
 interface EmptyProps extends React.HTMLAttributes<HTMLDivElement> {
   children?: React.ReactNode;

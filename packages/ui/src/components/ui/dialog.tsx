@@ -4,8 +4,8 @@ import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Dialog as DialogPrimitive } from "radix-ui";
 import type * as React from "react";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { cn } from "../../lib/utils";
+import { Button } from "./button";
 
 function Dialog({
   ...props

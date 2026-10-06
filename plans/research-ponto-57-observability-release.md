@@ -74,3 +74,143 @@ Resoluções oficiais/alta reputação e páginas consultadas: `/getsentry/sentr
 3. Separar smoke sem efeito (health, página de login, redirect, proteção) de canários externos (Sentry, evento Inngest, Resend, objeto R2, limite Upstash e sandbox de pagamento), com confirmação, isolamento e evidência individual.
 4. Não tratar `accepted`, HTTP 200, configuração no `.env`, CI verde ou a execução do checker de variáveis como prova de entrega/funcionamento remoto.
 5. Não aprovar a evidência Woovi até reconciliar a assinatura atual e o formato do webhook de teste com a implementação.
+
+## Revalidação Woovi — 2026-10-01
+
+### Fatos atuais confirmados
+
+- `apps/web/src/integrations/woovi/webhook.ts` lê `x-webhook-signature`, mas o
+  valida como HMAC-SHA256 com `WOOVI_WEBHOOK_SECRET`, aceitando digest hex ou
+  Base64. A documentação oficial atual recomenda RSA-SHA256 no
+  `x-webhook-signature`, usando a chave pública da Woovi; ela recomenda obter a
+  chave pela API para acompanhar rotação. O HMAC usa `X-OpenPix-Signature`, um
+  header diferente, e a página de HMAC-SHA1 está marcada como depreciada. Logo,
+  os testes locais provam somente que o código valida seu próprio formato de
+  teste; não provam compatibilidade com o contrato recomendado. A página de
+  webhook não prova qual método foi configurado na conta deste projeto.
+- O webhook de configuração documentado tem apenas `data_criacao` e `event` e
+  deve receber `200` com corpo vazio. O handler exige um ID de evento e devolve
+  `400` quando ele falta. A documentação consultada não esclarece se o ping de
+  configuração inclui assinatura; não presumir ausência. Mesmo depois de
+  corrigir autenticação, deve haver tratamento explícito para o corpo de teste,
+  sem criar evento de domínio.
+- O adapter e seus testes tratam especificamente eventos `PIX_AUTOMATIC_*`,
+  não uma integração genérica para todo Pix da Woovi. Os exemplos oficiais de
+  `PIX_AUTOMATIC_APPROVED` e `PIX_AUTOMATIC_COBR_COMPLETED` trazem
+  `globalID`/`correlationID` no nível superior; o extrator atual consegue ler
+  esses campos. Não há evidência nas páginas consultadas de que esses dois
+  eventos tenham problema de ID aninhado. Ainda é necessário homologar cada
+  transição realmente consumida e seu mapeamento para billing.
+- `docs/api/webhooks.md` está desalinhado com o handler atual: descreve HMAC no
+  header Woovi e reconciliação síncrona, enquanto o código captura o intake e
+  deixa a reconciliação para processamento durável pelo outbox. Alinhar esse
+  documento quando a integração for reconciliada; não usar o texto atual como
+  prova de runtime.
+- A regra normativa `PAY-001` especifica Asaas para cartão recorrente e Woovi
+  para Pix Automático. Ela manda ocultar Pix Automático se não estiver elegível,
+  homologado ou saudável, sem trocar por Pix manual mensal. Isso mantém
+  lançamento com Asaas como possibilidade, mas não prova que Asaas esteja
+  homologado nem decide sozinho o escopo comercial da primeira versão.
+
+### Consequência para o plano
+
+O risco de autenticidade é real e bloqueia qualquer lançamento que ofereça
+Woovi; assinatura inválida pode rejeitar eventos legítimos e uma verificação
+mais permissiva sem contrato também seria inadequada para notificações
+financeiras. Pela política P57/P65 já aprovada, este ponto só vira gate de
+go-live se Pix Automático via Woovi entrar no escopo. Fora dele, marcar `N/A`
+com motivo e gatilho para reabrir em P43; manter a capacidade oculta conforme
+`PAY-001`. Não é necessário atrasar Gate A ou ampliar o ambiente CI para
+resolver um provider ainda não selecionado.
+
+Se incluída, a tarefa precisa abranger: verificação RSA recomendada com chave
+pública obtida/rotacionada de modo seguro, decisão explícita sobre qualquer
+compatibilidade HMAC legada, resposta idempotente ao ping de configuração sem
+ID, parsing/mapeamento dos eventos Pix Automático necessários, documentação
+API coerente, testes de assinatura válida/inválida/body alterado/ping/duplicata/
+ordem e sandbox de Staging com dados sintéticos. Confirmar no ambiente Woovi
+qual assinatura ele envia; a documentação pública não comprova configuração
+remota da conta. Não testar pagamentos reais.
+
+### Decisão do usuário — 2026-10-01
+
+O usuário respondeu “prossiga” após a recomendação de adiar Woovi. Registro
+Pix Automático via Woovi como fora do primeiro lançamento: P43 deve mostrar
+`N/A` com motivo, sem declarar integração certificada nem bloquear Gate A; a
+capacidade fica oculta conforme PAY-001. Reabrir somente quando houver demanda
+confirmada e reservar a correção/homologação no plano do lançamento futuro.
+Essa decisão não seleciona nem certifica Asaas ou outros providers.
+
+### Ponto ainda pendente — Asaas e monetização no primeiro lançamento
+
+Os documentos aprovados não estão totalmente reconciliados com o registro
+operacional: `PLAN-001` define catálogo inicial Free + pago mensal de R$49,90;
+`SCOPE-001` inclui billing no lançamento; `PAY-001` exige upgrade self-service
+via checkout externo e confirmação confiável por webhook, atribuindo cartão
+recorrente ao Asaas e Pix Automático à Woovi. Como Woovi foi adiada, Asaas é o
+único provider de cartão recorrente aprovado. Em contraste, o P43 ainda diz que
+a lista exata de providers incluídos no primeiro lançamento não foi registrada.
+Isso não determina se o primeiro release público expõe o plano pago ou se há
+um período inicial explicitamente Free-only.
+
+### Auditoria local do caminho Asaas
+
+- `packages/billing/src/providers/asaas.ts` envia checkout hospedado para
+  `/v3/checkouts`, com `CREDIT_CARD`, `RECURRENT`, ciclo mensal, referência
+  externa e callback. `apps/web/src/features/onboarding/pre-signup-checkout.ts`
+  usa esse adapter; o fluxo de upgrade também possui `ASAAS_CARD_CHECKOUT_ENABLED`.
+- `apps/web/src/integrations/asaas/webhook.ts` valida
+  `asaas-access-token`, limita corpo, redige dados, usa ID do evento e grava
+  intake/outbox. `apps/web/src/lib/inngest-functions.ts` despacha o tópico
+  `asaas.webhook` para `reconcileAsaasBillingEvent` e marca resultado/revisão.
+  Portanto o desenho local é captura durável seguida de reconciliação
+  assíncrona, não confirmação síncrona pelo HTTP handler.
+- Os testes de adapter usam `fetch` falso; os testes de route constroem
+  requests sintéticas; a suíte PostgreSQL chama a reconciliação diretamente.
+  Nenhum deles prova integração com Sandbox. A implementação P5 aprovada ainda
+  precisa trocar o exemplo para URL Sandbox e aplicar guard de host.
+
+### Contrato e homologação Asaas
+
+A documentação oficial oferece Checkout hospedado com recorrência de cartão;
+criar o checkout não confirma pagamento. O sistema deve esperar evento de
+webhook e reconciliar por identificador externo/evento. O Sandbox suporta
+simular aprovações/recusas, criar assinaturas e exercitar entrega de webhook
+sem movimentar dinheiro real. O header oficial de autenticação de webhook é
+`asaas-access-token`. A entrega é pelo menos uma vez, pode repetir eventos e a
+fila pode ser interrompida após falhas consecutivas, com retenção limitada; o
+gate deve provar idempotência, projeção de pagamento/assinatura e tratamento de
+falha/retry, não apenas HTTP 200 ou link de checkout.
+
+As referências oficiais atuais são
+[Checkout de assinatura](https://docs.asaas.com/docs/checkout-with-subscription-recurring),
+[criar Checkout](https://docs.asaas.com/reference/create-new-checkout),
+[testar cartão no Sandbox](https://docs.asaas.com/docs/testing-credit-card-payment),
+[autenticar webhooks](https://docs.asaas.com/docs/about-webhooks) e
+[FAQ de webhooks/retries](https://docs.asaas.com/docs/webhooks-faq). A FAQ de
+Asaas diz que somente HTTP 200 conta como sucesso; outra página de introdução
+aceita 2xx. Adotar HTTP 200 no endpoint e confirmar na homologação.
+
+### Recomendação para P43/P65
+
+Se o primeiro lançamento público oferece o plano pago mensal já aprovado, o
+Asaas deve ser gate obrigatório de go-live, não de Gate A: Checkout real de
+Sandbox, confirmação via webhook, outbox/reconciliação de assinatura e
+pagamento, idempotência, renewal/falha/cancelamento e retorno a Free devem
+passar antes de expor o plano a clientes. Não enviar cobrança real como teste.
+
+Se a primeira versão for explicitamente Free-only, registrar Asaas como `N/A`
+temporário em P43 com gatilho “antes de ativar checkout pago”, esconder ou
+desabilitar o checkout pago e reconciliar `PLAN-001`/`PAY-001` com esse limite.
+Não manter um plano pago visível sem provider certificado. O escopo público
+Free-only não aparece aprovado nos documentos atuais; a escolha cabe ao
+responsável pelo produto.
+
+### Decisão do usuário — Asaas, 2026-10-01
+
+O usuário confirmou “Plano pago + Asaas”: manter o plano mensal pago no primeiro
+lançamento. Asaas/cartão recorrente é, portanto, gate obrigatório de P43 antes
+de expor checkout pago; isso não bloqueia Gate A. Woovi continua `N/A` e oculta
+no primeiro lançamento. Não há homologação Asaas Sandbox comprovada; P5
+(endpoints Sandbox/guard) e a validação ponta a ponta em Staging seguem
+pendentes. Não enviar cobrança real como teste.

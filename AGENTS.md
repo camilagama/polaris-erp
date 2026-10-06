@@ -72,6 +72,8 @@ Do not add a new rule until checking whether an existing rule already covers or 
 
 Use [`docs/README.md`](docs/README.md) to locate current canonical sources and task-specific guides; load only the material relevant to the task. For documentation edits or changes to documented behavior or contracts, follow [`docs/maintenance.md`](docs/maintenance.md) and update the canonical source in the same PR.
 
+For app/package dependency directions and public package imports, follow [`docs/architecture/overview.md`](docs/architecture/overview.md#direcao-de-dependencias).
+
 `aidd_docs/` contains historical snapshots and supporting context. Read only the files needed for historical context, and verify current claims against canonical docs, code, tests, or current external evidence. Before acting on an older plan, check its lifecycle and whether a later decision or plan superseded it.
 
 ## Database Operations

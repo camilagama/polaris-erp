@@ -13,8 +13,8 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { Locale } from "date-fns/locale";
 import { type ComponentProps, useEffect, useRef } from "react";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { cn } from "../../lib/utils";
+import { Button, buttonVariants } from "./button";
 
 function Calendar({
   className,

@@ -35,6 +35,21 @@ const optionalBooleanString = z.preprocess((value) => {
 
 const MINIMUM_AUTH_SECRET_LENGTH = 32;
 const MINIMUM_INTERNAL_SECRET_LENGTH = 32;
+const PRODUCTION_PROVIDER_HOSTS = {
+  ASAAS_API_BASE_URL: "api.asaas.com",
+  WOOVI_API_BASE_URL: "api.woovi.com",
+} as const;
+const TRAILING_DOTS_PATTERN = /\.+$/;
+
+const getNormalizedHostname = (value: string): string | undefined => {
+  try {
+    return new URL(value).hostname
+      .toLowerCase()
+      .replace(TRAILING_DOTS_PATTERN, "");
+  } catch {
+    return;
+  }
+};
 
 const canonicalAppUrl = resolveCanonicalAppUrl({
   APP_LOCAL_URL: process.env.APP_LOCAL_URL,
@@ -136,6 +151,24 @@ const serverEnvSchema = z
     WOOVI_WEBHOOK_SECRET: optionalNonEmptyString,
   })
   .superRefine((env, context) => {
+    if (env.VERCEL_ENV !== "production") {
+      for (const [variable, value] of [
+        ["ASAAS_API_BASE_URL", env.ASAAS_API_BASE_URL],
+        ["WOOVI_API_BASE_URL", env.WOOVI_API_BASE_URL],
+      ] as const) {
+        if (
+          value &&
+          getNormalizedHostname(value) === PRODUCTION_PROVIDER_HOSTS[variable]
+        ) {
+          context.addIssue({
+            code: "custom",
+            message: `${variable} must not use a Production provider endpoint outside Vercel Production.`,
+            path: [variable],
+          });
+        }
+      }
+    }
+
     if (
       env.NODE_ENV === "production" &&
       env.BETTER_AUTH_SECRET.length < MINIMUM_AUTH_SECRET_LENGTH

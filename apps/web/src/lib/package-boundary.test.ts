@@ -5,10 +5,10 @@ import { describe, expect, it } from "vitest";
 const PACKAGE_TEXT_FILE_PATTERN = /\.(json|jsonc|mjs|cjs|js|jsx|ts|tsx)$/;
 const APP_IMPORT_PATTERN =
   /(?:from\s+|import\s*\(\s*|import\s+)["'](?:@\/|(?:\.\.\/)+apps\/web\/src\/)/;
-const RELATIVE_WEB_IMPORT_PATTERN =
-  /(?:from\s+|import\s*\(\s*|import\s+)["'](?:\.\.\/)+apps\/web\/src\//;
 const SOURCE_FILE_PATTERN = /\.(ts|tsx)$/;
 const TEST_FILE_PATTERN = /\.(test|spec)\.(ts|tsx)$/;
+const UI_SOURCE_ALIAS_PATTERN =
+  /(?:from\s+|import\s*\(\s*|import\s+|vi\.mock\(\s*)["']@\/(?:components\/ui|hooks|lib\/utils)(?:\/[^"']*)?["']/;
 const IMPORT_SPECIFIER_PATTERN =
   /(?:import\s+(?:type\s+)?[\s\S]*?\s+from\s+|export\s+(?:type\s+)?[\s\S]*?\s+from\s+|import\s*\(\s*)["']([^"']+)["']/g;
 const UI_PUBLIC_IMPORT_PATTERN =
@@ -60,19 +60,42 @@ const findPackageFiles = (directory: string): string[] => {
 };
 
 describe("package boundaries", () => {
+  it("imports shared UI only through public package exports", () => {
+    const appDirs = [
+      join(process.cwd(), "src"),
+      join(process.cwd(), "..", "admin", "src"),
+    ];
+    const sourceFiles = appDirs.flatMap((appDir) =>
+      findPackageFiles(appDir).filter((file) => SOURCE_FILE_PATTERN.test(file))
+    );
+    const sourceAliasOffenders = sourceFiles
+      .filter((file) =>
+        UI_SOURCE_ALIAS_PATTERN.test(readFileSync(file, "utf8"))
+      )
+      .map((file) => relative(process.cwd(), file).replaceAll("\\", "/"));
+    const tsconfigPaths = [
+      join(process.cwd(), "tsconfig.json"),
+      join(process.cwd(), "..", "admin", "tsconfig.json"),
+    ].flatMap((tsconfigPath) => {
+      const tsconfig = JSON.parse(readFileSync(tsconfigPath, "utf8")) as {
+        compilerOptions?: { paths?: Record<string, unknown> };
+      };
+      const paths = tsconfig.compilerOptions?.paths ?? {};
+
+      return ["@/components/ui/*", "@/hooks/*", "@/lib/utils", "@polaris/ui/*"]
+        .filter((alias) => Object.hasOwn(paths, alias))
+        .map((alias) => `${relative(process.cwd(), tsconfigPath)} -> ${alias}`);
+    });
+
+    expect(sourceAliasOffenders).toEqual([]);
+    expect(tsconfigPaths).toEqual([]);
+  });
+
   it("keeps shared packages independent from the web app source tree", () => {
     const packageDir = join(process.cwd(), "..", "..", "packages");
     const offenders = findPackageFiles(packageDir)
       .filter((file) => {
-        const normalizedPath = relative(process.cwd(), file).replaceAll(
-          "\\",
-          "/"
-        );
         const source = readFileSync(file, "utf8");
-
-        if (normalizedPath.startsWith("../../packages/ui/")) {
-          return RELATIVE_WEB_IMPORT_PATTERN.test(source);
-        }
 
         return APP_IMPORT_PATTERN.test(source);
       })

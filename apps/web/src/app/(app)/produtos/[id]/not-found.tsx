@@ -1,5 +1,5 @@
+import { Button } from "@polaris/ui/components/ui/button";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
 
 export default function ProductNotFound() {
   return (

@@ -203,11 +203,14 @@ export async function POST(request: Request) {
     await ctx.internalAdapter.findUserByEmail(normalizedEmail);
   const user =
     existingUser?.user ??
-    (await ctx.internalAdapter.createUser({
-      email: normalizedEmail,
-      emailVerified: true,
-      name: name ?? normalizedEmail,
-    }));
+    (await ctx.internalAdapter.createUser(
+      {
+        email: normalizedEmail,
+        emailVerified: true,
+        name: name ?? normalizedEmail,
+      },
+      { method: "playwright-bootstrap" }
+    ));
 
   const session = await ctx.internalAdapter.createSession(user.id);
 

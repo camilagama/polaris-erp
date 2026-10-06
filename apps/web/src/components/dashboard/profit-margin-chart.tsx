@@ -1,7 +1,7 @@
 "use client";
 
 import { ProgressBarChart } from "@polaris/ui/components/shared/progress-bar-chart";
-import type { ChartConfig } from "@/components/ui/chart";
+import type { ChartConfig } from "@polaris/ui/components/ui/chart";
 
 const chartConfig = {
   profit: {

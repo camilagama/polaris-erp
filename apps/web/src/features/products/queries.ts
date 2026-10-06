@@ -28,7 +28,6 @@ import {
   lte,
   or,
   type SQL,
-  sql,
 } from "drizzle-orm";
 import { z } from "zod";
 import type {
@@ -536,11 +535,11 @@ const getSaleReversalMovements = ({
   filters,
   organizationId,
 }: InventoryMovementsQueryInput): Promise<InventoryMovementItem[]> => {
-  const reversalDate = sql<string>`date(${sales.cancelledAt})`;
+  const reversalDate = sales.cancelledOn;
   const reversalFilters: SQL[] = [
     eq(saleItems.organizationId, organizationId),
     eq(sales.organizationId, organizationId),
-    isNotNull(sales.cancelledAt),
+    isNotNull(sales.cancelledOn),
   ];
 
   if (filters.productId) {
@@ -585,20 +584,30 @@ const getSaleReversalMovements = ({
       .where(and(...reversalFilters))
       .orderBy(desc(sales.cancelledAt), desc(saleItems.createdAt))
       .limit(INVENTORY_MOVEMENTS_LIMIT)
-      .then((rows) =>
-        rows.map((row) => ({
-          createdAt: row.createdAt ?? new Date(`${row.date}T12:00:00Z`),
-          date: row.date,
-          id: `sale-reversal-${row.id}`,
-          notes: `Venda ${row.saleId} cancelada`,
-          productId: row.productId,
-          productName: row.productName,
-          quantity: Number(row.quantity),
-          totalValue: Number(row.quantity) * Number(row.unitCost),
-          type: "sale_reversal" as const,
-          unitCost: Number(row.unitCost),
-        }))
-      )
+      .then((rows) => {
+        const movements: InventoryMovementItem[] = [];
+
+        for (const row of rows) {
+          if (row.date === null) {
+            continue;
+          }
+
+          movements.push({
+            createdAt: row.createdAt ?? new Date(`${row.date}T12:00:00Z`),
+            date: row.date,
+            id: `sale-reversal-${row.id}`,
+            notes: `Venda ${row.saleId} cancelada`,
+            productId: row.productId,
+            productName: row.productName,
+            quantity: Number(row.quantity),
+            totalValue: Number(row.quantity) * Number(row.unitCost),
+            type: "sale_reversal" as const,
+            unitCost: Number(row.unitCost),
+          });
+        }
+
+        return movements;
+      })
   );
 };
 

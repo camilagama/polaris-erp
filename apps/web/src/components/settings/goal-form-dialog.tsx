@@ -1,9 +1,7 @@
 "use client";
 
-import { useForm } from "@tanstack/react-form";
-import { useEffect, useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { Button } from "@polaris/ui/components/ui/button";
+import { DateRangePicker } from "@polaris/ui/components/ui/date-range-picker";
 import {
   Dialog,
   DialogContent,
@@ -11,23 +9,25 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+} from "@polaris/ui/components/ui/dialog";
+import { Input } from "@polaris/ui/components/ui/input";
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
   InputGroupText,
-} from "@/components/ui/input-group";
-import { Label } from "@/components/ui/label";
+} from "@polaris/ui/components/ui/input-group";
+import { Label } from "@polaris/ui/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { toast } from "@/components/ui/sonner";
+} from "@polaris/ui/components/ui/select";
+import { toast } from "@polaris/ui/components/ui/sonner";
+import { useForm } from "@tanstack/react-form";
+import { useEffect, useMemo, useState } from "react";
 import { createGoalAction, updateGoalAction } from "@/features/goals/actions";
 import type { DashboardGoalCard } from "@/features/goals/contracts";
 import {

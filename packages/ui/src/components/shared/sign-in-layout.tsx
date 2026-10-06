@@ -51,7 +51,7 @@ export function SignInLayout({
                 </a>
               </Button>
 
-              <p className="mt-8 text-center text-muted-foreground/70 text-xs leading-relaxed">
+              <p className="mt-8 text-center text-muted-foreground text-xs leading-relaxed">
                 {footerText}
               </p>
             </div>

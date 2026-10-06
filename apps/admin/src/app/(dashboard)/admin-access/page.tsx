@@ -1,5 +1,5 @@
 import { listPlatformAdminGrantsForOwner } from "@polaris/platform/admin";
-import { formatDateTime } from "@polaris/ui/lib/formatters";
+import { TimeValue } from "@polaris/ui/components/shared/time-value";
 import { connection } from "next/server";
 import { requirePlatformAdmin } from "@/lib/platform-admin-auth";
 import {
@@ -29,7 +29,7 @@ export default async function PlatformAdminAccessPage() {
           className="mt-5 grid gap-3 md:grid-cols-2"
         >
           <label className="grid gap-2 text-sm">
-            ID do usuário autenticado
+            E-mail do usuário
             <input
               className="rounded-md border border-border bg-background px-3 py-2 font-mono text-sm"
               name="email"
@@ -50,14 +50,24 @@ export default async function PlatformAdminAccessPage() {
             </select>
           </label>
           <label className="grid gap-2 text-sm">
-            Expira em
+            Expira em (horário de São Paulo)
             <input
+              aria-describedby="expiration-help"
               className="rounded-md border border-border bg-background px-3 py-2 text-sm"
               name="expiresAt"
               required
+              step={60}
               type="datetime-local"
             />
           </label>
+          <p
+            className="text-muted-foreground text-sm md:col-span-2"
+            id="expiration-help"
+          >
+            Limites: Support 14 dias, Operator 30 dias e Owner 90 dias. Cada dia
+            equivale a 24 horas. O convite vale por até 7 dias, sem ultrapassar
+            a expiração do acesso.
+          </p>
           <label className="grid gap-2 text-sm md:col-span-2">
             Motivo, sem PII desnecessária
             <textarea
@@ -91,7 +101,9 @@ export default async function PlatformAdminAccessPage() {
           >
             <span className="truncate font-mono">{grant.adminUserId}</span>
             <span>{grant.role}</span>
-            <span>{formatDateTime(grant.expiresAt)}</span>
+            <span>
+              <TimeValue kind="instant" value={grant.expiresAt} />
+            </span>
             <span className="truncate">{grant.reason}</span>
             {grant.revokedAt ? (
               <span>Revogado</span>
