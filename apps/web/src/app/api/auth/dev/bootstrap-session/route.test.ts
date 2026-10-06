@@ -313,11 +313,14 @@ describe("POST /api/auth/dev/bootstrap-session", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(authContext.internalAdapter.createUser).toHaveBeenCalledWith({
-      email: "user@example.com",
-      emailVerified: true,
-      name: "User",
-    });
+    expect(authContext.internalAdapter.createUser).toHaveBeenCalledWith(
+      {
+        email: "user@example.com",
+        emailVerified: true,
+        name: "User",
+      },
+      { method: "playwright-bootstrap" }
+    );
     expect(authContext.internalAdapter.createSession).toHaveBeenCalledWith(
       "user-1"
     );

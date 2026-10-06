@@ -49,6 +49,7 @@ export const organization = pgTable("organization", {
   name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
   logo: text("logo"),
+  metadata: text("metadata"),
   status: text("status").default("active").notNull(),
   ...timestamps,
 });
