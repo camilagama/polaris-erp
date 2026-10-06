@@ -106,7 +106,7 @@
     "knip": "^6.24.0",
     "lefthook": "^2.1.9",
     "marked": "^18.0.14",
-    "postcss": "8.5.28",
+    "postcss": "8.5.29",
     "tailwindcss": "^4.3.3",
     "turbo": "^2.11.5",
     "typescript": "^6.0.3",
